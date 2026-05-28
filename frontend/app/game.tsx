@@ -119,7 +119,7 @@ export default function GameScreen() {
   const [reviveMessage, setReviveMessage] = useState('');
   
   const [currentUpgrades, setCurrentUpgrades] = useState<Record<string, number>>({});
-  const [runShopUpgrades, setRunShopUpgrades] = useState({ atk: 0, xp: 0, gold: 0 });
+  const [runShopUpgrades, setRunShopUpgrades] = useState({ atk: 0, gold: 0 });
   const [availableUpgrades, setAvailableUpgrades] = useState<Upgrade[]>([]);
   const [floatingNumbers, setFloatingNumbers] = useState<FloatingNumberData[]>([]);
   const [rerollsUsed, setRerollsUsed] = useState(0);
@@ -161,7 +161,7 @@ export default function GameScreen() {
   const baseDamage = stats.baseDamage * (1 + skinDamageBonus + (currentUpgrades['damage'] || 0) * 0.15 + runShopUpgrades.atk * 0.18);
   const critChance = stats.critChance + (currentUpgrades['critical'] || 0) * 5 + (currentUpgrades['criticalOverload'] || 0) * 2 + (skinPassive.type === 'crit_chance' ? skinPassive.value : 0);
   const coinMultiplier = stats.coinMultiplier * (1 + (currentUpgrades['coinBoost'] || 0) * 0.25 + (currentUpgrades['magnetCoins'] || 0) * 0.25 + runShopUpgrades.gold * 0.22 + (skinPassive.type === 'coin_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_starter_champion' || skinPassive.type === 'league_king_wave' ? skinPassive.value * 0.7 : 0));
-  const xpMultiplier = stats.xpMultiplier * (1 + (currentUpgrades['xpBoost'] || 0) * 0.25 + runShopUpgrades.xp * 0.2 + (skinPassive.type === 'xp_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_starter_champion' || skinPassive.type === 'league_king_wave' ? skinPassive.value * 0.55 : 0));
+  const xpMultiplier = stats.xpMultiplier * (1 + (currentUpgrades['xpBoost'] || 0) * 0.18 + (skinPassive.type === 'xp_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_starter_champion' || skinPassive.type === 'league_king_wave' ? skinPassive.value * 0.45 : 0));
   const speedMultiplier = 1 + (currentUpgrades['speed'] || 0) * 0.12 + (skinPassive.type === 'speed' ? skinPassive.value : 0);
   const perfectDiamondChance = Math.min(0.18, 0.03 + (currentUpgrades['perfectChance'] || 0) * 0.01 + (skinPassive.type === 'perfect_chance' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_king_wave' ? skinPassive.value : 0));
 
@@ -195,7 +195,7 @@ export default function GameScreen() {
     setScore(0);
     setDps(0);
     setCurrentUpgrades({});
-    setRunShopUpgrades({ atk: 0, xp: 0, gold: 0 });
+    setRunShopUpgrades({ atk: 0, gold: 0 });
     setRunRewards({
       coins: 0,
       gems: 0,
@@ -452,7 +452,7 @@ export default function GameScreen() {
     if (perfectEscape.ring && perfectEscape.index >= 0) {
       updatedRings[perfectEscape.index] = { ...perfectEscape.ring, status: 'cleared', hp: 0 };
       const perfectCoins = Math.max(2, Math.floor(5 * coinMultiplier));
-      const perfectXp = Math.floor((10 + Math.random() * 11) * xpMultiplier);
+      const perfectXp = Math.floor((10 + Math.random() * 8) * xpMultiplier);
       awardCoins(perfectCoins);
       awardXp(perfectXp);
       setRunRewards(prev => ({ ...prev, perfectEscapes: prev.perfectEscapes + 1 }));
@@ -486,7 +486,7 @@ export default function GameScreen() {
       if (ghostPass) {
         updatedRings[index] = { ...updatedRings[index], status: 'cleared', hp: 0 };
         setRunRewards(prev => ({ ...prev, perfectEscapes: prev.perfectEscapes + 1 }));
-        awardXp(Math.floor((8 + Math.random() * 8) * xpMultiplier));
+        awardXp(Math.floor((8 + Math.random() * 6) * xpMultiplier));
         addBonus('Phase!');
         addFloatingNumber('Phase!', ballPosRef.current.x, ballPosRef.current.y, false, '#dff7ff');
         registerCombo(ballPosRef.current.x, ballPosRef.current.y, 'Phase');
@@ -542,8 +542,8 @@ export default function GameScreen() {
         registerCombo(ballPosRef.current.x, ballPosRef.current.y, 'Break');
         triggerImpact('break');
         playSound('ringBreak', settings.sound);
-        awardCoins(Math.max(6, Math.floor(12 * coinMultiplier)));
-        awardXp(Math.floor((8 + Math.random() * 8) * xpMultiplier));
+        awardCoins(Math.max(6, Math.floor((closestRing.type === 'solid' ? 18 : 12) * coinMultiplier)));
+        awardXp(Math.floor(((closestRing.type === 'solid' ? 16 : 8) + Math.random() * (closestRing.type === 'solid' ? 12 : 7)) * xpMultiplier));
         if (currentUpgrades['chainBreak']) {
           updatedRings = updatedRings.map((ring, ringIndex) => {
             if (ringIndex <= index || ring.status !== 'active') return ring;
@@ -560,7 +560,7 @@ export default function GameScreen() {
         addBonus('Bonus Coins!');
         addFloatingNumber(`+${skinPassive.value} 💰`, ballPosRef.current.x, ballPosRef.current.y + 10, false, '#ffd700');
       }
-      const xpGained = Math.floor((isCrit ? 2 + Math.random() * 2 : 1) * xpMultiplier);
+      const xpGained = Math.floor((isCrit ? 2 : 1) * xpMultiplier);
       
       awardCoins(coinsGained);
       setScore(prev => prev + damage);
@@ -762,22 +762,26 @@ export default function GameScreen() {
     setShowAdReroll(false);
   };
 
-  const getRunUpgradeCost = (type: 'atk' | 'xp' | 'gold') => {
-    const base = type === 'atk' ? 20 : type === 'xp' ? 24 : 18;
+  const getRunUpgradeCost = (type: 'atk' | 'gold') => {
+    const base = type === 'atk' ? 20 : 18;
     return Math.floor(base * Math.pow(1.35, runShopUpgrades[type]));
   };
 
-  const buyRunUpgrade = (type: 'atk' | 'xp' | 'gold') => {
+  const buyRunUpgrade = (type: 'atk' | 'gold') => {
     const cost = getRunUpgradeCost(type);
-    if (coins < cost) return;
+    if (coins < cost) {
+      playSound('buttonError', settings.sound);
+      return;
+    }
     playSound('buttonConfirm', settings.sound);
     setCoins(prev => prev - cost);
     setRunShopUpgrades(prev => ({ ...prev, [type]: prev[type] + 1 }));
     setRunRewards(prev => ({ ...prev, runUpgrades: prev.runUpgrades + 1 }));
-    addFloatingNumber(type === 'atk' ? 'ATK+' : type === 'xp' ? 'XP+' : 'Gold+', CENTER_X - 12, CENTER_Y - 28, false, '#ffd700');
+    addFloatingNumber(type === 'atk' ? 'ATK+' : 'Gold+', CENTER_X - 12, CENTER_Y - 28, false, '#ffd700');
   };
 
   const openPauseMenu = () => {
+    playSound('buttonClick', settings.sound);
     setIsPaused(true);
     setShowPauseMenu(true);
   };
@@ -833,6 +837,7 @@ export default function GameScreen() {
   };
 
   const handleGiveUp = async () => {
+    playSound('buttonConfirm', settings.sound);
     if (gameLoopRef.current) clearInterval(gameLoopRef.current);
     setShowPauseMenu(false);
     setIsPaused(false);
@@ -841,7 +846,16 @@ export default function GameScreen() {
     setShowGameOver(true);
   };
 
+  const confirmGiveUp = () => {
+    playSound('buttonClick', settings.sound);
+    Alert.alert('Sair da partida?', 'A rodada será encerrada e as recompensas atuais poderão ser coletadas.', [
+      { text: 'Cancelar', style: 'cancel', onPress: () => playSound('buttonClick', settings.sound) },
+      { text: 'Sair', style: 'destructive', onPress: handleGiveUp },
+    ]);
+  };
+
   const handleRetry = async () => {
+    playSound('buttonConfirm', settings.sound);
     await saveRunRewards(false);
     initializeGame();
   };
@@ -856,6 +870,7 @@ export default function GameScreen() {
   };
 
   const handleCollectAndExit = async (won: boolean) => {
+    playSound('buttonConfirm', settings.sound);
     await saveRunRewards(won);
     if (won) {
       const nextPhase = Number(phase) + 1;
@@ -865,6 +880,7 @@ export default function GameScreen() {
   };
 
   const handleNextPhase = async () => {
+    playSound('buttonConfirm', settings.sound);
     await saveRunRewards(true);
     const nextPhase = Number(phase) + 1;
     if (nextPhase <= 50) await unlockPhase(nextPhase);
@@ -965,7 +981,8 @@ export default function GameScreen() {
                 if (ring.status !== 'active' || ring.hp <= 0) return null;
 
                 const circumference = 2 * Math.PI * ring.radius;
-                const gapLength = (ring.gapSize / (Math.PI * 2)) * circumference;
+                const isSolidRing = ring.type === 'solid';
+                const gapLength = isSolidRing ? 0 : (ring.gapSize / (Math.PI * 2)) * circumference;
                 const arcLength = circumference - gapLength;
                 const opacity = Math.max(0.4, ring.hp / ring.maxHp);
                 const rotationDeg = (ring.rotation * 180) / Math.PI;
@@ -980,11 +997,11 @@ export default function GameScreen() {
                     stroke={ring.color}
                     strokeWidth={ring.thickness}
                     fill="none"
-                    opacity={opacity}
-                    strokeDasharray={`${arcLength} ${gapLength}`}
+                    opacity={isSolidRing ? Math.max(0.65, opacity) : opacity}
+                    strokeDasharray={isSolidRing ? undefined : `${arcLength} ${gapLength}`}
                     strokeDashoffset={-(gapOffsetDeg / 360) * circumference}
                     transform={`rotate(${rotationDeg} ${CENTER_X} ${CENTER_Y})`}
-                    strokeLinecap="round"
+                    strokeLinecap={isSolidRing ? 'butt' : 'round'}
                   />
                 );
               })}
@@ -1046,7 +1063,6 @@ export default function GameScreen() {
       <View style={styles.runUpgradeBar}>
         {([
           ['atk', 'ATK', '⚔️'],
-          ['xp', 'XP', '⭐'],
           ['gold', 'Gold', '💰'],
         ] as const).map(([type, label, icon]) => {
           const cost = getRunUpgradeCost(type);
@@ -1076,7 +1092,7 @@ export default function GameScreen() {
                   <Text style={styles.buttonText}>REINICIAR</Text>
                 </LinearGradient>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.giveUpButton} onPress={handleGiveUp}>
+              <TouchableOpacity style={styles.giveUpButton} onPress={confirmGiveUp}>
                 <Text style={styles.giveUpText}>Sair para o menu</Text>
               </TouchableOpacity>
               <Text style={styles.pauseHint}>Configurações: som e vibração salvos no perfil local.</Text>

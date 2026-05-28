@@ -2,6 +2,7 @@ export type RingStatus = 'active' | 'broken' | 'cleared';
 
 export interface Ring {
   id: string;
+  type?: 'normal' | 'solid';
   radius: number;
   initialRadius: number;
   closingSpeed: number;
@@ -31,6 +32,8 @@ export interface RingConfig {
   baseThickness: number;
   closingSpeed: number;
   colors: string[];
+  solidCount?: number;
+  solidHpMultiplier?: number;
 }
 
 const TWO_PI = Math.PI * 2;
@@ -56,6 +59,18 @@ export const createRings = (config: RingConfig, phase: number): Ring[] => {
   const spacing = (config.outerRadius - config.innerRadius) / Math.max(1, count - 1);
   const minGap = Math.PI / 7.5;
   const phaseGap = Math.max(minGap, config.baseGapSize - (phase - 1) * 0.045);
+  const suggestedSolidCount =
+    phase <= 5 ? 1 :
+    phase <= 10 ? 1 + (phase >= 8 ? 1 : 0) :
+    phase <= 20 ? 2 + Math.floor((phase - 11) / 5) :
+    phase <= 35 ? 4 + Math.floor((phase - 21) / 6) :
+    6 + Math.floor((phase - 36) / 5);
+  const solidCount = Math.max(1, Math.min(count, config.solidCount ?? suggestedSolidCount));
+  const solidIndexes = new Set<number>([0]);
+  for (let s = 1; s < solidCount; s += 1) {
+    const slot = Math.max(1, count - 1 - Math.floor((s * count) / (solidCount + 1)));
+    solidIndexes.add(slot);
+  }
 
   for (let i = 0; i < count; i++) {
     const progress = count === 1 ? 0 : i / (count - 1);
@@ -64,11 +79,13 @@ export const createRings = (config: RingConfig, phase: number): Ring[] => {
     const patternShift = phase % 3 === 0 ? Math.sin(i * 0.9) * 0.18 : 0;
     const innerSpeedBias = 1.35 - progress * 0.55;
     const speedVariation = 0.86 + ((i * 17 + phase * 11) % 23) / 100;
-    const hp = Math.floor(config.baseHp * difficulty * (0.9 + progress * 1.55));
+    const isSolid = solidIndexes.has(i);
+    const hp = Math.floor(config.baseHp * difficulty * (0.9 + progress * 1.55) * (isSolid ? config.solidHpMultiplier ?? 1.45 : 1));
     const gapSize = Math.max(minGap, phaseGap * (1.08 - progress * 0.16));
 
     rings.push({
       id: `ring_${phase}_${i}`,
+      type: isSolid ? 'solid' : 'normal',
       radius,
       initialRadius: radius,
       closingSpeed: config.closingSpeed * difficulty * (0.75 + progress * 0.42),
@@ -76,12 +93,12 @@ export const createRings = (config: RingConfig, phase: number): Ring[] => {
       rotationSpeed: config.baseRotationSpeed * difficulty * innerSpeedBias * speedVariation * direction,
       rotationDirection: direction,
       gapStart: normalizeAngle(i * 0.83 + phase * 0.49 + patternShift),
-      gapSize,
+      gapSize: isSolid ? 0 : gapSize,
       hp,
       maxHp: hp,
       status: 'active',
-      thickness: config.baseThickness,
-      color: config.colors[i % config.colors.length],
+      thickness: isSolid ? config.baseThickness + 2 : config.baseThickness,
+      color: isSolid ? ['#ff3d00', '#ff0055', '#b000ff'][i % 3] : config.colors[i % config.colors.length],
       minRadius: 4,
     });
   }
@@ -146,7 +163,7 @@ export const checkRingCollision = (
   const isOverlapping = distFromRing <= ring.thickness / 2 + ballRadius;
   const angle = normalizeAngle(Math.atan2(dy, dx));
   const gapPadding = Math.min(0.08, ballRadius / Math.max(1, ring.radius));
-  const isInGap = isAngleInsideRingGap(angle, ring, gapPadding);
+  const isInGap = ring.type === 'solid' ? false : isAngleInsideRingGap(angle, ring, gapPadding);
 
   return {
     isOverlapping,
@@ -174,6 +191,7 @@ export const findClosestCollidingRing = (
   for (let i = 0; i < rings.length; i++) {
     const ring = rings[i];
     if (!ring || ring.status !== 'active' || !Number.isFinite(ring.radius)) continue;
+    if (ring.type === 'solid') continue;
     const result = checkRingCollision(ballX, ballY, ballRadius, ring, centerX, centerY);
 
     if (result.isOverlapping && result.distFromRing < closestDist) {
