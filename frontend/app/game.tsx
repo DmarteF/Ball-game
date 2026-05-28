@@ -482,7 +482,7 @@ export default function GameScreen() {
     if (closestRing && index >= 0 && isInSolidPart && canHit) {
       lastHitTimeRef.current = now;
 
-      const ghostPass = skinPassive.type === 'phase_solid' && Math.random() < (skinPassive.chance || 0);
+      const ghostPass = closestRing.type !== 'solid' && skinPassive.type === 'phase_solid' && Math.random() < (skinPassive.chance || 0);
       if (ghostPass) {
         updatedRings[index] = { ...updatedRings[index], status: 'cleared', hp: 0 };
         setRunRewards(prev => ({ ...prev, perfectEscapes: prev.perfectEscapes + 1 }));
@@ -728,6 +728,7 @@ export default function GameScreen() {
   };
 
   const selectUpgrade = (upgrade: Upgrade) => {
+    playSound('buttonConfirm', settings.sound);
     setCurrentUpgrades(prev => ({
       ...prev,
       [upgrade.id]: (prev[upgrade.id] || 0) + 1,
@@ -739,16 +740,22 @@ export default function GameScreen() {
   };
 
   const handleRerollAd = () => {
+    playSound('buttonConfirm', settings.sound);
     setShowAdReroll(true);
   };
 
   const handleRerollGems = async () => {
     if (gems < 10) {
+      playSound('buttonError', settings.sound);
       Alert.alert('Gemas insuficientes', 'Você precisa de 10 gemas para trocar as opções.');
       return;
     }
     const upgrades = getSafeUpgradeOptions(availableUpgrades);
-    if (upgrades.length < 3) return;
+    if (upgrades.length < 3) {
+      playSound('buttonError', settings.sound);
+      return;
+    }
+    playSound('buttonConfirm', settings.sound);
     await updateGems(-10);
     setAvailableUpgrades(upgrades);
     setRerollsUsed(prev => prev + 1);
@@ -1068,7 +1075,7 @@ export default function GameScreen() {
           const cost = getRunUpgradeCost(type);
           const canBuy = coins >= cost;
           return (
-            <TouchableOpacity key={type} style={[styles.runUpgradeButton, !canBuy && styles.disabled]} onPress={() => buyRunUpgrade(type)} disabled={!canBuy}>
+            <TouchableOpacity key={type} style={[styles.runUpgradeButton, !canBuy && styles.disabled]} onPress={() => buyRunUpgrade(type)}>
               <Text style={styles.runUpgradeIcon}>{icon}</Text>
               <Text style={styles.runUpgradeLabel}>{label} Lv.{runShopUpgrades[type]}</Text>
               <Text style={styles.runUpgradeCost}>{cost} 💰</Text>
@@ -1196,7 +1203,7 @@ export default function GameScreen() {
                   </View>
                 </ScrollView>
                 {rewardMultiplier === 1 && (
-                  <TouchableOpacity style={styles.actionButton} onPress={() => setShowAdDouble(true)}>
+                  <TouchableOpacity style={styles.actionButton} onPress={() => { playSound('buttonConfirm', settings.sound); setShowAdDouble(true); }}>
                     <LinearGradient colors={['#ffd700', '#ff8800']} style={styles.buttonGradient}>
                       <Text style={styles.buttonText}>DOBRAR RECOMPENSA — AD</Text>
                     </LinearGradient>
@@ -1214,7 +1221,7 @@ export default function GameScreen() {
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity style={styles.giveUpButton} onPress={async () => { await saveRunRewards(true); initializeGame(); }}>
+                <TouchableOpacity style={styles.giveUpButton} onPress={async () => { playSound('buttonConfirm', settings.sound); await saveRunRewards(true); initializeGame(); }}>
                   <Text style={styles.giveUpText}>Jogar novamente</Text>
                 </TouchableOpacity>
               </LinearGradient>
@@ -1259,7 +1266,7 @@ export default function GameScreen() {
                 {resultStatus !== 'quit' && (
                   <TouchableOpacity
                     style={styles.reviveButton}
-                    onPress={() => { setShowGameOver(false); setShowAdRevive(true); }}
+                    onPress={() => { playSound('buttonConfirm', settings.sound); setShowGameOver(false); setShowAdRevive(true); }}
                   >
                     <LinearGradient colors={['#ff0055', '#cc0000']} style={styles.buttonGradient}>
                       <Text style={styles.buttonText}>📺 REVIVER (AD)</Text>
@@ -1268,7 +1275,7 @@ export default function GameScreen() {
                 )}
 
                 {rewardMultiplier === 1 && (
-                  <TouchableOpacity style={styles.actionButton} onPress={() => setShowAdDouble(true)}>
+                  <TouchableOpacity style={styles.actionButton} onPress={() => { playSound('buttonConfirm', settings.sound); setShowAdDouble(true); }}>
                     <LinearGradient colors={['#ffd700', '#ff8800']} style={styles.buttonGradient}>
                       <Text style={styles.buttonText}>DOBRAR RECOMPENSA — AD</Text>
                     </LinearGradient>
@@ -1465,13 +1472,16 @@ const styles = StyleSheet.create({
   runUpgradeButton: {
     flex: 1,
     minHeight: 58,
-    borderRadius: 10,
-    backgroundColor: '#ffffff14',
-    borderWidth: 1,
-    borderColor: '#00f0ff55',
+    borderRadius: 12,
+    backgroundColor: '#06162a',
+    borderWidth: 1.5,
+    borderColor: '#00f0ffaa',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
+    shadowColor: '#00f0ff',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   runUpgradeIcon: { fontSize: 18 },
   runUpgradeLabel: { color: '#ffffff', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
@@ -1539,10 +1549,10 @@ const styles = StyleSheet.create({
   resultScroll: { maxHeight: 330, marginBottom: 10 },
   profileProgress: { height: 12, backgroundColor: '#00000055', borderRadius: 8, overflow: 'hidden', marginTop: 8 },
   profileProgressFill: { height: '100%', backgroundColor: '#00f0ff' },
-  actionButton: { height: 50, borderRadius: 12, overflow: 'hidden' },
-  reviveButton: { height: 50, borderRadius: 12, overflow: 'hidden', marginBottom: 10 },
-  giveUpButton: { padding: 10, alignItems: 'center' },
-  giveUpText: { color: '#ffffff88', fontSize: 14 },
+  actionButton: { height: 50, borderRadius: 12, overflow: 'hidden', borderWidth: 1.5, borderColor: '#00f0ffaa', marginTop: 8 },
+  reviveButton: { height: 50, borderRadius: 12, overflow: 'hidden', marginBottom: 10, borderWidth: 1.5, borderColor: '#ff4d6d' },
+  giveUpButton: { minHeight: 46, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#ff4d6d88', borderRadius: 12, marginTop: 8, backgroundColor: '#330816' },
+  giveUpText: { color: '#ffffff', fontSize: 14, fontWeight: 'bold' },
   buttonGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   buttonText: { fontSize: 16, fontWeight: 'bold', color: '#ffffff' },
 });

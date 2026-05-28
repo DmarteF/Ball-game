@@ -20,6 +20,7 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 const RARITIES: SkinRarity[] = ['common', 'rare', 'epic', 'legendary', 'ultimate'];
+const RARITY_ORDER: Record<SkinRarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4, ultimate: 5 };
 
 export default function TransformationsScreen() {
   const router = useRouter();
@@ -32,12 +33,24 @@ export default function TransformationsScreen() {
     if (filter === 'locked') return !owned;
     if (filter === 'all') return true;
     return skin.rarity === filter;
+  }).sort((a, b) => {
+    const aOwned = game.unlockedSkins.includes(a.id);
+    const bOwned = game.unlockedSkins.includes(b.id);
+    const aEquipped = game.ballTransformation === a.id;
+    const bEquipped = game.ballTransformation === b.id;
+    const aHidden = !aOwned && HIDDEN_RARITIES.includes(a.rarity);
+    const bHidden = !bOwned && HIDDEN_RARITIES.includes(b.rarity);
+    if (aEquipped !== bEquipped) return aEquipped ? -1 : 1;
+    if (aOwned !== bOwned) return aOwned ? -1 : 1;
+    if (RARITY_ORDER[a.rarity] !== RARITY_ORDER[b.rarity]) return RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity];
+    if (aHidden !== bHidden) return aHidden ? 1 : -1;
+    return a.name.localeCompare(b.name, 'pt-BR');
   });
 
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => { playSound('buttonClick', game.settings.sound); router.back(); }}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
         <View style={styles.headerLine}>
           <Text style={styles.title}>SKINS</Text>
           <Text style={styles.wallet}>💰 {game.coins}  💎 {game.gems}  🔑 {game.keys}</Text>
@@ -61,7 +74,7 @@ export default function TransformationsScreen() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
           {FILTERS.map(item => (
-            <TouchableOpacity key={item.id} style={[styles.filter, filter === item.id && styles.filterActive]} onPress={() => setFilter(item.id)}>
+            <TouchableOpacity key={item.id} style={[styles.filter, filter === item.id && styles.filterActive]} onPress={() => { playSound('buttonClick', game.settings.sound); setFilter(item.id); }}>
               <Text style={[styles.filterText, filter === item.id && styles.filterTextActive]}>{item.label}</Text>
             </TouchableOpacity>
           ))}
@@ -105,7 +118,7 @@ export default function TransformationsScreen() {
                         <Text style={styles.cardButtonText}>{selected ? 'USANDO' : 'EQUIPAR'}</Text>
                       </TouchableOpacity>
                       {skinLevel < 5 && (
-                        <TouchableOpacity style={[styles.cardButtonAlt, !canEvolve && styles.cardButtonDisabled]} disabled={!canEvolve} onPress={async () => { const ok = await game.upgradeSkinLevel(skin.id); playSound(ok ? 'levelUp' : 'buttonError', game.settings.sound); }}>
+                        <TouchableOpacity style={[styles.cardButtonAlt, !canEvolve && styles.cardButtonDisabled]} disabled={!canEvolve} onPress={async () => { const ok = await game.upgradeSkinLevel(skin.id); playSound(ok ? 'buttonConfirm' : 'buttonError', game.settings.sound); }}>
                           <Text style={styles.cardButtonText}>EVOLUIR</Text>
                         </TouchableOpacity>
                       )}

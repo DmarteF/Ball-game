@@ -66,7 +66,8 @@ export const createRings = (config: RingConfig, phase: number): Ring[] => {
     phase <= 35 ? 4 + Math.floor((phase - 21) / 6) :
     6 + Math.floor((phase - 36) / 5);
   const solidCount = Math.max(1, Math.min(count, config.solidCount ?? suggestedSolidCount));
-  const solidIndexes = new Set<number>([0]);
+  // The outer ring is reached last in the outward escape flow, so every stage ends on a solid ring.
+  const solidIndexes = new Set<number>([count - 1]);
   for (let s = 1; s < solidCount; s += 1) {
     const slot = Math.max(1, count - 1 - Math.floor((s * count) / (solidCount + 1)));
     solidIndexes.add(slot);
@@ -191,7 +192,6 @@ export const findClosestCollidingRing = (
   for (let i = 0; i < rings.length; i++) {
     const ring = rings[i];
     if (!ring || ring.status !== 'active' || !Number.isFinite(ring.radius)) continue;
-    if (ring.type === 'solid') continue;
     const result = checkRingCollision(ballX, ballY, ballRadius, ring, centerX, centerY);
 
     if (result.isOverlapping && result.distFromRing < closestDist) {
@@ -224,7 +224,7 @@ export const findPerfectEscapeRing = (
 
   for (let i = 0; i < rings.length; i++) {
     const ring = rings[i];
-    if (!ring || ring.status !== 'active' || !Number.isFinite(ring.radius)) continue;
+    if (!ring || ring.status !== 'active' || !Number.isFinite(ring.radius) || ring.type === 'solid') continue;
     const crossed = (prevDist - ring.radius) * (nextDist - ring.radius) <= 0;
     if (!crossed) continue;
     const near = Math.abs(nextDist - ring.radius) <= ballRadius + Math.abs(nextDist - prevDist) + ring.thickness;
