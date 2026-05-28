@@ -6,6 +6,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useGame } from '@/src/contexts/GameContext';
 import { BOSS_DIFFICULTIES, BossDifficultyId, chooseBossUpgrade, createBossPhaseConfig, getBossDifficulty } from '@/src/game/boss';
 import { getSkinById } from '@/src/game/skins';
+import { playSound } from '@/src/utils/audio';
 
 const { width } = Dimensions.get('window');
 const ARENA_SIZE = Math.min(width - 36, 230);
@@ -42,6 +43,7 @@ export default function BossScreen() {
 
   const startDuel = () => {
     if (!unlocked) return;
+    playSound('buttonConfirm', game.settings.sound);
     const nextConfig = createBossPhaseConfig(difficultyId);
     setPlayerProgress(0);
     setBossProgress(0);
@@ -95,6 +97,7 @@ export default function BossScreen() {
       ? { label: difficultyId === 'insane' ? 'Baú Épico do Boss' : 'Baú Raro do Boss', icon: '🎁', rarity: difficultyId === 'insane' ? 'epic' : 'rare' }
       : undefined;
     await game.recordBossResult({ difficulty: difficultyId, won, coins, profileXp: xp, gems, keys, fragments, chest });
+    playSound(won ? 'victory' : 'defeat', game.settings.sound);
     setResultRewards([
       `💰 +${coins}`,
       `👤 XP +${xp}`,

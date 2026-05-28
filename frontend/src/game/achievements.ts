@@ -42,6 +42,10 @@ export type AchievementProgressSource = {
   bossRuns: number;
   bossWins: number;
   bossBestDifficulty: number;
+  leagueTop10Finishes: number;
+  leagueFirstPlaceFinishes: number;
+  leagueUltimateFirstPlaceFinishes: number;
+  leagueInitialCrowns: number;
 };
 
 export const BOSS_DIFFICULTY_RANK: Record<string, number> = {
@@ -73,6 +77,11 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   { id: 'neon_rival', name: 'Rival Neon', description: 'Vença 5 partidas de Boss Mode.', category: 'boss', required: 5, reward: { type: 'chest', chestType: 'rare', amount: 1 }, rarity: 'epic' },
   { id: 'duel_master', name: 'Mestre dos Duelos', description: 'Vença o Boss na dificuldade difícil.', category: 'boss', required: 3, reward: { type: 'chest', chestType: 'epic', amount: 1 }, rarity: 'legendary' },
   { id: 'impossible', name: 'Impossível?', description: 'Vença o Boss na maior dificuldade.', category: 'boss', required: 4, reward: { type: 'legendaryKeys', amount: 1 }, rarity: 'ultimate' },
+  { id: 'neon_top_10', name: 'Top 10 Neon', description: 'Finalize uma temporada da Liga Neon no top 10.', category: 'especiais', required: 1, reward: { type: 'gems', amount: 60 }, rarity: 'epic' },
+  { id: 'league_champion', name: 'Campeão da Liga', description: 'Termine uma temporada da Liga Neon em #1.', category: 'especiais', required: 1, reward: { type: 'chest', chestType: 'epic', amount: 1 }, rarity: 'legendary' },
+  { id: 'supreme_champion', name: 'Campeão Supremo', description: 'Termine em #1 na divisão Ultimate da Liga Neon.', category: 'especiais', required: 1, reward: { type: 'fragments', skinId: 'league_king_neon', amount: 80 }, rarity: 'ultimate' },
+  { id: 'back_to_top', name: 'Retorno ao Topo', description: 'Volte ao #1 depois de uma temporada com rebaixamento.', category: 'especiais', required: 2, reward: { type: 'gems', amount: 70 }, rarity: 'legendary' },
+  { id: 'first_crown', name: 'Primeira Coroa', description: 'Primeira vez em #1 no rank inicial da Liga Neon.', category: 'especiais', required: 1, reward: { type: 'skin', skinId: 'initial_neon_champion' }, rarity: 'ultimate' },
 ];
 
 export const getAchievementProgress = (id: string, source: AchievementProgressSource) => {
@@ -98,6 +107,11 @@ export const getAchievementProgress = (id: string, source: AchievementProgressSo
     case 'neon_rival': return source.bossWins;
     case 'duel_master': return source.bossBestDifficulty;
     case 'impossible': return source.bossBestDifficulty;
+    case 'neon_top_10': return source.leagueTop10Finishes;
+    case 'league_champion': return source.leagueFirstPlaceFinishes;
+    case 'supreme_champion': return source.leagueUltimateFirstPlaceFinishes;
+    case 'back_to_top': return source.leagueFirstPlaceFinishes;
+    case 'first_crown': return source.leagueInitialCrowns;
     default: return 0;
   }
 };

@@ -157,13 +157,13 @@ export default function GameScreen() {
   // Calculated stats
   const equippedSkin = getSkinById(ballTransformation);
   const skinPassive = equippedSkin.passive;
-  const skinDamageBonus = skinPassive.type === 'damage_multiplier' || skinPassive.type === 'cosmic_critical' ? skinPassive.value : 0;
+  const skinDamageBonus = skinPassive.type === 'damage_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_king_wave' ? skinPassive.value : 0;
   const baseDamage = stats.baseDamage * (1 + skinDamageBonus + (currentUpgrades['damage'] || 0) * 0.15 + runShopUpgrades.atk * 0.18);
   const critChance = stats.critChance + (currentUpgrades['critical'] || 0) * 5 + (currentUpgrades['criticalOverload'] || 0) * 2 + (skinPassive.type === 'crit_chance' ? skinPassive.value : 0);
-  const coinMultiplier = stats.coinMultiplier * (1 + (currentUpgrades['coinBoost'] || 0) * 0.25 + (currentUpgrades['magnetCoins'] || 0) * 0.25 + runShopUpgrades.gold * 0.22 + (skinPassive.type === 'coin_multiplier' || skinPassive.type === 'cosmic_critical' ? skinPassive.value * 0.7 : 0));
-  const xpMultiplier = stats.xpMultiplier * (1 + (currentUpgrades['xpBoost'] || 0) * 0.25 + runShopUpgrades.xp * 0.2 + (skinPassive.type === 'xp_multiplier' || skinPassive.type === 'cosmic_critical' ? skinPassive.value * 0.55 : 0));
+  const coinMultiplier = stats.coinMultiplier * (1 + (currentUpgrades['coinBoost'] || 0) * 0.25 + (currentUpgrades['magnetCoins'] || 0) * 0.25 + runShopUpgrades.gold * 0.22 + (skinPassive.type === 'coin_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_starter_champion' || skinPassive.type === 'league_king_wave' ? skinPassive.value * 0.7 : 0));
+  const xpMultiplier = stats.xpMultiplier * (1 + (currentUpgrades['xpBoost'] || 0) * 0.25 + runShopUpgrades.xp * 0.2 + (skinPassive.type === 'xp_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_starter_champion' || skinPassive.type === 'league_king_wave' ? skinPassive.value * 0.55 : 0));
   const speedMultiplier = 1 + (currentUpgrades['speed'] || 0) * 0.12 + (skinPassive.type === 'speed' ? skinPassive.value : 0);
-  const perfectDiamondChance = Math.min(0.18, 0.03 + (currentUpgrades['perfectChance'] || 0) * 0.01 + (skinPassive.type === 'perfect_chance' || skinPassive.type === 'cosmic_critical' ? skinPassive.value : 0));
+  const perfectDiamondChance = Math.min(0.18, 0.03 + (currentUpgrades['perfectChance'] || 0) * 0.01 + (skinPassive.type === 'perfect_chance' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_king_wave' ? skinPassive.value : 0));
 
   const getSafeUpgradeOptions = (previous: Upgrade[] = []) => {
     const options = getRandomUpgrades(3, currentUpgrades, savedLevel, unlockedUpgrades)
@@ -280,6 +280,7 @@ export default function GameScreen() {
   const awardGem = async (amount: number) => {
     if (amount <= 0) return;
     setRunRewards(prev => ({ ...prev, gems: prev.gems + amount }));
+    playSound('diamondGain', settings.sound);
   };
 
   const awardXp = (amount: number) => {
@@ -323,7 +324,7 @@ export default function GameScreen() {
       addFloatingNumber(`${comboBonus.label} x${nextCombo}`, x - 18, y - 26, false, nextCombo >= 20 ? '#ffffff' : nextCombo >= 10 ? '#ffd700' : '#00f0ff');
       if (nextCombo === 5 || nextCombo === 10 || nextCombo === 20) {
         triggerImpact('critical');
-        playSound('combo', settings.sound);
+        playSound(nextCombo >= 20 ? 'sayPerfect' : 'combo', settings.sound);
       }
     } else if (label) {
       addFloatingNumber(label, x, y - 18, false, '#00f0ff');
@@ -502,7 +503,7 @@ export default function GameScreen() {
 
       updatedRings = applySkinImpact(updatedRings, index, damage, now);
       triggerImpact(isCrit ? 'critical' : 'hit');
-      playSound('hit', settings.sound);
+      playSound(isCrit ? 'hitHeavy' : 'hitLight', settings.sound);
       if (isCrit) setRunRewards(prev => ({ ...prev, criticals: prev.criticals + 1 }));
       
       const reflection = reflectBallOffRing(
@@ -540,6 +541,7 @@ export default function GameScreen() {
         setRunRewards(prev => ({ ...prev, ringsBroken: prev.ringsBroken + 1 }));
         registerCombo(ballPosRef.current.x, ballPosRef.current.y, 'Break');
         triggerImpact('break');
+        playSound('ringBreak', settings.sound);
         awardCoins(Math.max(6, Math.floor(12 * coinMultiplier)));
         awardXp(Math.floor((8 + Math.random() * 8) * xpMultiplier));
         if (currentUpgrades['chainBreak']) {
@@ -679,6 +681,29 @@ export default function GameScreen() {
       );
     }
 
+    if (skinPassive.type === 'league_starter_champion' && Math.random() < (skinPassive.chance || 0)) {
+      addBonus('Champion Guard!');
+      markSkinEffect();
+      const until = now + 950;
+      setInvincibleUntil(until);
+      invincibleUntilRef.current = until;
+      if (comboRef.current >= 8) {
+        awardCoins(Math.floor(18 * coinMultiplier));
+        addFloatingNumber('Crown Combo', ballPosRef.current.x, ballPosRef.current.y - 22, false, '#ffd700');
+      }
+    }
+
+    if (skinPassive.type === 'league_king_wave' && comboRef.current >= 12 && Math.random() < (skinPassive.chance || 0)) {
+      addBonus('Royal Wave!');
+      markSkinEffect();
+      playSound('legendaryDrop', settings.sound);
+      return next.map(other => {
+        if (other.status !== 'active') return other;
+        const hp = Math.max(0, other.hp - damage * skinPassive.value);
+        return { ...other, hp, status: hp <= 0 ? 'broken' as const : other.status };
+      });
+    }
+
     return next;
   };
 
@@ -697,6 +722,7 @@ export default function GameScreen() {
       const upgrades = getSafeUpgradeOptions(availableUpgrades);
       setAvailableUpgrades(upgrades);
       setShowLevelUp(true);
+      playSound('levelUp', settings.sound);
       return newLevel;
     });
   };
@@ -744,6 +770,7 @@ export default function GameScreen() {
   const buyRunUpgrade = (type: 'atk' | 'xp' | 'gold') => {
     const cost = getRunUpgradeCost(type);
     if (coins < cost) return;
+    playSound('buttonConfirm', settings.sound);
     setCoins(prev => prev - cost);
     setRunShopUpgrades(prev => ({ ...prev, [type]: prev[type] + 1 }));
     setRunRewards(prev => ({ ...prev, runUpgrades: prev.runUpgrades + 1 }));
@@ -757,6 +784,7 @@ export default function GameScreen() {
 
   const closePauseMenu = () => {
     setShowPauseMenu(false);
+    playSound('buttonClick', settings.sound);
     setIsPaused(false);
   };
 
@@ -771,6 +799,7 @@ export default function GameScreen() {
 
   const handleRevive = () => {
     recordAdUse('revive');
+    playSound('revive', settings.sound);
     const now = Date.now();
     isGameOverRef.current = false;
     setShowGameOver(false);

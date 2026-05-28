@@ -40,7 +40,9 @@ export default function InventoryScreen() {
     setTimeout(async () => {
       const reward = rollChestReward(chest, game.unlockedSkins);
       await game.grantChestReward(reward);
-      playSound(chest.id === 'common' ? 'chestOpen' : 'rareDrop', game.settings.sound);
+      playSound('chestOpen', game.settings.sound);
+      if (reward.rarity === 'legendary' || reward.rarity === 'ultimate' || reward.rarity === 'mythic') playSound('legendaryDrop', game.settings.sound);
+      else if (reward.rarity === 'rare' || reward.rarity === 'epic') playSound('rareDrop', game.settings.sound);
       triggerHaptic(chest.id === 'common' ? 'hit' : 'rareChest', game.settings.haptics);
       setCurrentReward(reward);
       setOpening(false);
@@ -70,6 +72,7 @@ export default function InventoryScreen() {
   const equipRewardSkin = async () => {
     if (currentReward?.skinId && currentReward.type === 'skin') {
       await game.setBallTransformation(currentReward.skinId);
+      playSound('buttonConfirm', game.settings.sound);
       setShowReward(false);
     }
   };

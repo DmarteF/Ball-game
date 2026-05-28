@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
 import { HIDDEN_RARITIES, SKINS, SkinRarity, getSkinEvolutionCost, getSkinRarityColor } from '@/src/game/skins';
+import { playSound } from '@/src/utils/audio';
 
 type Filter = 'all' | SkinRarity | 'owned' | 'locked';
 
@@ -100,11 +101,11 @@ export default function TransformationsScreen() {
 
                   {owned ? (
                     <View style={styles.actionRow}>
-                      <TouchableOpacity style={[styles.cardButton, selected && styles.cardButtonDisabled]} disabled={selected} onPress={() => game.setBallTransformation(skin.id)}>
+                      <TouchableOpacity style={[styles.cardButton, selected && styles.cardButtonDisabled]} disabled={selected} onPress={async () => { await game.setBallTransformation(skin.id); playSound('buttonConfirm', game.settings.sound); }}>
                         <Text style={styles.cardButtonText}>{selected ? 'USANDO' : 'EQUIPAR'}</Text>
                       </TouchableOpacity>
                       {skinLevel < 5 && (
-                        <TouchableOpacity style={[styles.cardButtonAlt, !canEvolve && styles.cardButtonDisabled]} disabled={!canEvolve} onPress={() => game.upgradeSkinLevel(skin.id)}>
+                        <TouchableOpacity style={[styles.cardButtonAlt, !canEvolve && styles.cardButtonDisabled]} disabled={!canEvolve} onPress={async () => { const ok = await game.upgradeSkinLevel(skin.id); playSound(ok ? 'levelUp' : 'buttonError', game.settings.sound); }}>
                           <Text style={styles.cardButtonText}>EVOLUIR</Text>
                         </TouchableOpacity>
                       )}

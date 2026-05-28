@@ -23,6 +23,27 @@ import {
   getWeeklyEvent,
 } from '@/src/game/retention';
 import { getLocalDayKey, getLocalWeekKey } from '@/src/utils/time';
+import { applyAudioSettings, DEFAULT_AUDIO_SETTINGS, AudioSettings } from '@/src/utils/audio';
+import {
+  LeagueRival,
+  LeagueSave,
+  LeagueSeasonReward,
+  calculateRankingScore,
+  compareDivision,
+  createLeagueRivals,
+  defaultLeagueSave,
+  getDayKey,
+  getDivisionForScore,
+  getDivisionMinScore,
+  getDivisionReward,
+  getFirstPlaceSkinForDivision,
+  getPreviousDivision,
+  getRankedLeague,
+  getSeasonKey,
+  getSeasonRewards,
+  progressRivals,
+  rewardToLabel,
+} from '@/src/game/league';
 
 const SAVE_KEY = 'neon_escape_save_v2';
 
@@ -92,7 +113,8 @@ interface SaveData {
     skinEffects: number;
     bestCombo: number;
   };
-  settings: { sound: boolean; haptics: boolean };
+  settings: { sound: boolean; haptics: boolean } & AudioSettings;
+  league: LeagueSave;
   dailyMissions: DailyMissionSave;
   weeklyEvent: WeeklyEventSave;
   wheel: WheelSave;
@@ -157,6 +179,11 @@ interface GameContextType extends SaveData {
   recordStorePurchase: () => Promise<void>;
   claimOfflineReward: (double?: boolean) => Promise<void>;
   refreshTimedSystems: () => Promise<void>;
+  updateAudioSettings: (patch: Partial<AudioSettings>) => Promise<void>;
+  getLeaguePlayer: () => LeagueRival;
+  getLeagueStandings: () => LeagueRival[];
+  collectDivisionReward: (division: string) => Promise<boolean>;
+  collectPendingSeasonReward: (equipSkin?: boolean) => Promise<boolean>;
 }
 
 const defaultStats: GameStats = {
@@ -174,8 +201,10 @@ const defaultAchievements = () =>
     return acc;
   }, {});
 
-const defaultSave = (): SaveData => ({
-  playerId: `player_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+const defaultSave = (): SaveData => {
+  const playerId = `player_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  return {
+  playerId,
   nickname: 'Player',
   avatar: '🔵',
   favoriteSkin: 'neon_blue',
@@ -221,13 +250,15 @@ const defaultSave = (): SaveData => ({
     skinEffects: 0,
     bestCombo: 0,
   },
-  settings: { sound: true, haptics: true },
+  settings: { sound: true, haptics: true, ...DEFAULT_AUDIO_SETTINGS },
+  league: defaultLeagueSave(playerId),
   dailyMissions: createDailyMissions(),
   weeklyEvent: createWeeklyEvent(),
   wheel: createWheelSave(),
   adLimits: createAdLimits(),
   lastSeenAt: Date.now(),
-});
+  };
+};
 
 const safeNumber = (value: unknown, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -259,7 +290,115 @@ const getSourceFromSave = (save: SaveData) => {
     bossRuns: save.lifetimeStats.bossRuns,
     bossWins: save.lifetimeStats.bossWins,
     bossBestDifficulty: BOSS_DIFFICULTY_RANK[save.lifetimeStats.bossBestDifficulty] || 0,
+    leagueTop10Finishes: save.league?.history?.top10Finishes || 0,
+    leagueFirstPlaceFinishes: save.league?.history?.firstPlaceFinishes || 0,
+    leagueUltimateFirstPlaceFinishes: save.league?.history?.ultimateFirstPlaceFinishes || 0,
+    leagueInitialCrowns: save.league?.history?.initialFirstPlaceFinishes || 0,
   };
+};
+
+const getCompletedAchievementCount = (save: SaveData) =>
+  Object.values(save.achievements || {}).filter(item => item.completed).length;
+
+const getPlayerRankingScore = (save: SaveData) =>
+  calculateRankingScore({
+    highestPhase: save.lifetimeStats.highestPhase,
+    profileLevel: save.level,
+    ringsDestroyed: save.lifetimeStats.ringsDestroyed,
+    perfectEscapes: save.lifetimeStats.perfectEscapes,
+    unlockedSkins: save.unlockedSkins.length,
+    bossWins: save.lifetimeStats.bossWins,
+    completedAchievements: getCompletedAchievementCount(save),
+  });
+
+const buildLeaguePlayer = (save: SaveData): LeagueRival => {
+  const score = getPlayerRankingScore(save);
+  const division = save.league?.forcedDivision || getDivisionForScore(score);
+  return {
+    id: save.playerId,
+    name: save.nickname || 'Player',
+    avatar: save.avatar || '🔵',
+    favoriteSkin: save.favoriteSkin || save.ballTransformation,
+    level: save.level,
+    score: Math.max(score, getDivisionMinScore(division)),
+    maxPhase: save.lifetimeStats.highestPhase,
+    bossWins: save.lifetimeStats.bossWins,
+    division,
+    title: 'Você',
+  };
+};
+
+const updateLeagueHistory = (save: SaveData): LeagueSave => {
+  const fallback = defaultLeagueSave(save.playerId, getPlayerRankingScore(save));
+  const league = save.league ? { ...save.league, history: { ...fallback.history, ...(save.league.history || {}) } } : fallback;
+  const player = buildLeaguePlayer({ ...save, league });
+  const standings = getRankedLeague(league.rivals, player);
+  const position = standings.findIndex(item => item.id === save.playerId) + 1 || 201;
+  const bestPosition = league.history.bestPosition ? Math.min(league.history.bestPosition, position) : position;
+  const bestDivision = compareDivision(player.division, league.history.bestDivision || 'Bronze') > 0 ? player.division : league.history.bestDivision || 'Bronze';
+  return { ...league, history: { ...league.history, bestPosition, bestDivision } };
+};
+
+const processLeagueSystems = (save: SaveData): SaveData => {
+  const fallbackLeague = defaultLeagueSave(save.playerId, getPlayerRankingScore(save));
+  let league = save.league ? { ...save.league, history: { ...fallbackLeague.history, ...(save.league.history || {}) } } : fallbackLeague;
+  if (!Array.isArray(league.rivals) || league.rivals.length < 190) {
+    league = { ...league, rivals: createLeagueRivals(save.playerId, getPlayerRankingScore(save), getSeasonKey()) };
+  }
+
+  const todayKey = getDayKey();
+  if (league.lastDailyProgressKey !== todayKey) {
+    const last = new Date(`${league.lastDailyProgressKey || todayKey}T00:00:00`).getTime();
+    const now = new Date(`${todayKey}T00:00:00`).getTime();
+    const days = Math.max(1, Math.min(14, Math.floor((now - last) / 86400000)));
+    league = { ...league, rivals: progressRivals(league.rivals, days, `${save.playerId}_${todayKey}`), lastDailyProgressKey: todayKey };
+  }
+
+  const currentSeason = getSeasonKey();
+  if (league.seasonKey !== currentSeason && !league.pendingSeasonReward) {
+    const player = buildLeaguePlayer({ ...save, league });
+    const standings = getRankedLeague(league.rivals, player);
+    const finalPosition = standings.findIndex(item => item.id === save.playerId) + 1 || 201;
+    const finalDivision = player.division;
+    const newDivision = getPreviousDivision(finalDivision);
+    const skinId = finalPosition === 1
+      ? finalDivision === 'Bronze' && !league.history.rankingSkinsObtained.includes('initial_neon_champion')
+        ? 'initial_neon_champion'
+        : getFirstPlaceSkinForDivision(finalDivision)
+      : undefined;
+    const firstInitialChampionUltimate = skinId === 'initial_neon_champion';
+    const pendingSeasonReward: LeagueSeasonReward = {
+      seasonKey: league.seasonKey,
+      finalDivision,
+      finalPosition,
+      newDivision,
+      rewards: getSeasonRewards(finalPosition, finalDivision),
+      skinId,
+      firstInitialChampionUltimate,
+      claimed: false,
+    };
+    league = {
+      ...league,
+      seasonKey: currentSeason,
+      lastDailyProgressKey: todayKey,
+      rivals: createLeagueRivals(save.playerId, getPlayerRankingScore(save), currentSeason),
+      pendingSeasonReward,
+      forcedDivision: newDivision,
+      history: {
+        ...league.history,
+        bestPosition: league.history.bestPosition ? Math.min(league.history.bestPosition, finalPosition) : finalPosition,
+        bestDivision: compareDivision(finalDivision, league.history.bestDivision || 'Bronze') > 0 ? finalDivision : league.history.bestDivision || 'Bronze',
+        seasonsPlayed: league.history.seasonsPlayed + 1,
+        firstPlaceFinishes: league.history.firstPlaceFinishes + (finalPosition === 1 ? 1 : 0),
+        top10Finishes: (league.history.top10Finishes || 0) + (finalPosition <= 10 ? 1 : 0),
+        ultimateFirstPlaceFinishes: (league.history.ultimateFirstPlaceFinishes || 0) + (finalPosition === 1 && finalDivision === 'Ultimate' ? 1 : 0),
+        initialFirstPlaceFinishes: (league.history.initialFirstPlaceFinishes || 0) + (finalPosition === 1 && finalDivision === 'Bronze' ? 1 : 0),
+        lastReward: getSeasonRewards(finalPosition, finalDivision).map(rewardToLabel).join(', '),
+      },
+    };
+  }
+
+  return { ...save, league: updateLeagueHistory({ ...save, league }) };
 };
 
 const syncAchievements = (save: SaveData): SaveData => {
@@ -297,7 +436,7 @@ const normalizeSave = (rawSave: Partial<SaveData> | null | undefined): SaveData 
   const wheel = parsed.wheel?.dayKey === dayKey ? parsed.wheel : createWheelSave();
   const adLimits = parsed.adLimits?.dayKey === dayKey ? parsed.adLimits : createAdLimits();
 
-  return resetTimedSystemsIfNeeded(syncAchievements({
+  const normalized = resetTimedSystemsIfNeeded(syncAchievements({
     ...base,
     ...parsed,
     playerId: safeString(parsed.playerId, base.playerId),
@@ -322,6 +461,7 @@ const normalizeSave = (rawSave: Partial<SaveData> | null | undefined): SaveData 
     stats: { ...defaultStats, ...(parsed.stats || {}) },
     lifetimeStats,
     settings: { ...base.settings, ...(parsed.settings || {}) },
+    league: parsed.league || defaultLeagueSave(safeString(parsed.playerId, base.playerId), 0),
     unlockedUpgrades: getUnlockedUpgradesForProfile(profileLevel, currentPhase),
     dailyMissions,
     weeklyEvent,
@@ -330,6 +470,7 @@ const normalizeSave = (rawSave: Partial<SaveData> | null | undefined): SaveData 
     lastSeenAt: safeNumber(parsed.lastSeenAt, Date.now()),
     pendingOfflineReward: parsed.pendingOfflineReward,
   }));
+  return processLeagueSystems(normalized);
 };
 
 export const getProfileXpNeeded = (level: number) => Math.floor(220 * Math.pow(level, 1.45));
@@ -451,9 +592,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const persist = async (next: SaveData) => {
-    const synced = syncAchievements(resetTimedSystemsIfNeeded({ ...next, lastSeenAt: Date.now() }));
+    const synced = processLeagueSystems(syncAchievements(resetTimedSystemsIfNeeded({ ...next, lastSeenAt: Date.now() })));
     saveRef.current = synced;
     setSave(synced);
+    applyAudioSettings(synced.settings);
     await storage.setItem(SAVE_KEY, JSON.stringify(synced));
     await storage.setItem('playerId', synced.playerId);
   };
@@ -912,6 +1054,65 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await persist(resetTimedSystemsIfNeeded(saveRef.current));
   };
 
+  const updateAudioSettings = async (patch: Partial<AudioSettings>) => {
+    const current = saveRef.current;
+    const settings = { ...current.settings, ...patch };
+    settings.sound = !settings.masterMuted && !settings.sfxMuted;
+    applyAudioSettings(settings);
+    await persist({ ...current, settings });
+  };
+
+  const getLeaguePlayer = () => buildLeaguePlayer(saveRef.current);
+
+  const getLeagueStandings = () => {
+    const current = saveRef.current;
+    return getRankedLeague(current.league.rivals, buildLeaguePlayer(current));
+  };
+
+  const collectDivisionReward = async (division: string) => {
+    const current = saveRef.current;
+    const player = buildLeaguePlayer(current);
+    if (compareDivision(player.division, division as any) < 0) return false;
+    if (current.league.claimedDivisionRewards.includes(division as any)) return false;
+    const rewards = getDivisionReward(division as any);
+    let next = { ...current, league: { ...current.league, claimedDivisionRewards: [...current.league.claimedDivisionRewards, division as any] } };
+    rewards.forEach(reward => {
+      next = applyGrant(next, reward);
+    });
+    await persist(next);
+    return true;
+  };
+
+  const collectPendingSeasonReward = async (equipSkin = false) => {
+    const current = saveRef.current;
+    const pending = current.league.pendingSeasonReward;
+    if (!pending || pending.claimed) return false;
+    let next = { ...current };
+    pending.rewards.forEach(reward => {
+      next = applyGrant(next, reward);
+    });
+    if (pending.skinId && !next.unlockedSkins.includes(pending.skinId)) {
+      next.unlockedSkins = [...next.unlockedSkins, pending.skinId];
+      next.skinLevels = { ...next.skinLevels, [pending.skinId]: 1 };
+      next.lifetimeStats = { ...next.lifetimeStats, skinsUnlocked: next.unlockedSkins.length };
+      next.league.history.rankingSkinsObtained = Array.from(new Set([...next.league.history.rankingSkinsObtained, pending.skinId]));
+      if (equipSkin) {
+        next.ballTransformation = pending.skinId;
+        next.favoriteSkin = pending.skinId;
+      }
+    }
+    next.league = {
+      ...next.league,
+      pendingSeasonReward: undefined,
+      history: {
+        ...next.league.history,
+        lastReward: [...pending.rewards.map(rewardToLabel), pending.skinId ? `Skin ${pending.skinId}` : ''].filter(Boolean).join(', '),
+      },
+    };
+    await persist(next);
+    return true;
+  };
+
   const value = useMemo<GameContextType>(() => ({
     ...save,
     loading,
@@ -945,6 +1146,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     recordStorePurchase,
     claimOfflineReward,
     refreshTimedSystems,
+    updateAudioSettings,
+    getLeaguePlayer,
+    getLeagueStandings,
+    collectDivisionReward,
+    collectPendingSeasonReward,
   }), [save, loading]);
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

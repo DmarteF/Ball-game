@@ -16,7 +16,9 @@ export type SkinPassiveType =
   | 'freeze_ring'
   | 'burn'
   | 'perfect_chance'
-  | 'cosmic_critical';
+  | 'cosmic_critical'
+  | 'league_starter_champion'
+  | 'league_king_wave';
 
 export interface SkinDefinition {
   id: string;
@@ -112,6 +114,18 @@ export const SKINS: SkinDefinition[] = [
   skin('divine_core', 'Núcleo Divino', 'ultimate', '🔱', '#fff7ad', '#22d3ee', 'Ultimate com bônus de dano, XP e controle.', { type: 'cosmic_critical', chance: 0.22, value: 0.34 }, 'Aura divina', 'Julgamento'),
   {
     ...skin('cosmic_champion', 'Campeão Cósmico', 'ultimate', '🌟', '#ffd700', '#7c3aed', 'Exclusiva por concluir os 20 estágios. Aumenta dano, moedas, XP, diamantes e pode repelir anéis em crítico.', { type: 'cosmic_critical', chance: 0.28, value: 0.4 }, 'Aura cósmica dourada', 'Repulsão crítica'),
+    exclusive: true,
+  },
+  {
+    ...skin('initial_neon_champion', 'Campeão Neon Inicial', 'ultimate', '🏅', '#ffd700', '#00aaff', 'Ultimate exclusiva da primeira coroa na Liga Neon Bronze. Amplifica moedas, XP, combo e proteção.', { type: 'league_starter_champion', chance: 0.08, value: 0.24 }, 'Trilha de campeão', 'Escudo de ranking'),
+    exclusive: true,
+  },
+  {
+    ...skin('league_bronze_champion', 'Coroa Bronze Neon', 'legendary', '🥉', '#cd7f32', '#00f0ff', 'Skin exclusiva por terminar em primeiro na divisão Bronze da Liga Neon.', { type: 'coin_multiplier', value: 0.18 }, 'Bronze neon', 'Coroa inicial'),
+    exclusive: true,
+  },
+  {
+    ...skin('league_king_neon', 'Rei da Liga Neon', 'ultimate', '👑', '#ffd700', '#8b5cf6', 'Ultimate máxima de ranking. Aumenta dano, moedas, XP, perfect diamonds e libera onda em combo alto.', { type: 'league_king_wave', chance: 0.18, value: 0.38 }, 'Coroas estelares', 'Onda real'),
     exclusive: true,
   },
 ];

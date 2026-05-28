@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { GameProvider } from "@/src/contexts/GameContext";
+import { AudioController } from "@/src/components/AudioController";
 
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
@@ -28,6 +29,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GameProvider>
+        <AudioController />
         <Stack screenOptions={{ headerShown: false }} />
       </GameProvider>
     </GestureHandlerRootView>

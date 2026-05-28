@@ -6,6 +6,7 @@ import { useGame, getProfileXpNeeded } from '@/src/contexts/GameContext';
 import { UPGRADES } from '@/src/game/upgrades';
 import { SKINS, getSkinById, getSkinRarityColor } from '@/src/game/skins';
 import { ACHIEVEMENTS } from '@/src/game/achievements';
+import { playSound } from '@/src/utils/audio';
 
 const AVATARS = ['🔵', '🐶', '🐱', '🐷', '🐰', '👻', '🤖', '🐉', '💀', '🌌'];
 
@@ -17,6 +18,8 @@ export default function ProfileScreen() {
   const xpProgress = Math.min(100, (game.profileXp / xpNeeded) * 100);
   const favoriteSkin = getSkinById(game.favoriteSkin);
   const completedAchievements = Object.values(game.achievements).filter(item => item.completed).length;
+  const leaguePlayer = game.getLeaguePlayer();
+  const leaguePosition = game.getLeagueStandings().findIndex(item => item.id === game.playerId) + 1;
 
   const saveNickname = async () => {
     const clean = nickname.trim().slice(0, 18) || 'Player';
@@ -88,6 +91,35 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.sectionTitle}>ÁUDIO</Text>
+          <View style={styles.toggleRow}>
+            <TouchableOpacity style={[styles.toggleButton, !game.settings.musicMuted && styles.toggleActive]} onPress={() => game.updateAudioSettings({ musicMuted: !game.settings.musicMuted })}>
+              <Text style={styles.toggleText}>Música {game.settings.musicMuted ? 'OFF' : 'ON'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toggleButton, !game.settings.sfxMuted && styles.toggleActive]} onPress={() => { game.updateAudioSettings({ sfxMuted: !game.settings.sfxMuted }); playSound('buttonClick'); }}>
+              <Text style={styles.toggleText}>Efeitos {game.settings.sfxMuted ? 'OFF' : 'ON'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toggleButton, !game.settings.masterMuted && styles.toggleActive]} onPress={() => game.updateAudioSettings({ masterMuted: !game.settings.masterMuted })}>
+              <Text style={styles.toggleText}>Tudo {game.settings.masterMuted ? 'OFF' : 'ON'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>LIGA NEON</Text>
+          <Text style={styles.stat}>Posição atual: #{leaguePosition}/201</Text>
+          <Text style={styles.stat}>Divisão atual: {leaguePlayer.division}</Text>
+          <Text style={styles.stat}>Pontuação: {leaguePlayer.score.toLocaleString('pt-BR')}</Text>
+          <Text style={styles.stat}>Melhor posição: #{game.league.history.bestPosition || leaguePosition}</Text>
+          <Text style={styles.stat}>Melhor divisão: {game.league.history.bestDivision}</Text>
+          <Text style={styles.stat}>Temporadas vencidas: {game.league.history.firstPlaceFinishes}</Text>
+          <Text style={styles.stat}>Skins de ranking: {game.league.history.rankingSkinsObtained.length}</Text>
+          <TouchableOpacity style={styles.achievementButton} onPress={() => router.push('/league' as any)}>
+            <Text style={styles.achievementButtonText}>🏅 Abrir Liga Neon</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.card}>
           <Text style={styles.sectionTitle}>ESTATÍSTICAS</Text>
           <Text style={styles.stat}>Partidas: {game.lifetimeStats.runsPlayed}</Text>
           <Text style={styles.stat}>Anéis destruídos: {game.lifetimeStats.ringsDestroyed}</Text>
@@ -147,4 +179,8 @@ const styles = StyleSheet.create({
   favoriteRarity: { fontSize: 11, fontWeight: 'bold', marginTop: 2 },
   achievementButton: { marginTop: 12, borderRadius: 10, backgroundColor: '#ffd70022', borderWidth: 1, borderColor: '#ffd70088', padding: 12, alignItems: 'center' },
   achievementButtonText: { color: '#ffd700', fontWeight: 'bold' },
+  toggleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  toggleButton: { flexGrow: 1, minWidth: 96, backgroundColor: '#ffffff14', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  toggleActive: { backgroundColor: '#00f0ff', borderColor: '#00f0ff' },
+  toggleText: { color: '#ffffff', fontWeight: 'bold', fontSize: 12 },
 });

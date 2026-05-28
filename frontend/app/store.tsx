@@ -6,6 +6,7 @@ import { useGame } from '@/src/contexts/GameContext';
 import { AdModal } from '@/src/components/AdModal';
 import { CHESTS, ChestDefinition, ChestReward, getChestById, rollChestReward } from '@/src/game/chests';
 import { getSkinRarityColor } from '@/src/game/skins';
+import { playSound } from '@/src/utils/audio';
 
 type Tab = 'chests' | 'gems' | 'keys' | 'specials' | 'free';
 
@@ -29,6 +30,9 @@ export default function StoreScreen() {
     const chest = CHESTS.find(item => item.id === chestId) || CHESTS[0];
     const chestReward = rollChestReward(chest, game.unlockedSkins);
     await game.grantChestReward(chestReward);
+    playSound('chestOpen', game.settings.sound);
+    if (chestReward.rarity === 'legendary' || chestReward.rarity === 'ultimate' || chestReward.rarity === 'mythic') playSound('legendaryDrop', game.settings.sound);
+    else if (chestReward.rarity === 'rare' || chestReward.rarity === 'epic') playSound('rareDrop', game.settings.sound);
     setReward(chestReward);
   };
 
@@ -55,12 +59,14 @@ export default function StoreScreen() {
   const pay = async (currency: string, cost: number) => {
     if (!canPay(currency, cost)) {
       Alert.alert('Saldo insuficiente', 'Você não tem recursos suficientes para essa compra simulada.');
+      playSound('buttonError', game.settings.sound);
       return false;
     }
     if (currency === 'coins') await game.updateCoins(-cost);
     if (currency === 'gems') await game.updateGems(-cost);
     if (currency === 'keys') await game.updateKeys(-cost);
     if (currency === 'legendaryKeys') await game.updateLegendaryKeys(-cost);
+    playSound('buttonConfirm', game.settings.sound);
     return true;
   };
 
@@ -75,6 +81,7 @@ export default function StoreScreen() {
     if (ad === 'chest') await simulateChest('common');
     if (ad === 'key') await game.updateKeys(1);
     if (ad === 'offline') await game.claimOfflineReward(true);
+    playSound('buttonConfirm', game.settings.sound);
     setAd(null);
   };
 

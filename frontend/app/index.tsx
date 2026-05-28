@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AdModal } from '@/src/components/AdModal';
 import { useGame } from '@/src/contexts/GameContext';
 import { getWeeklyEvent } from '@/src/game/retention';
+import { playSound } from '@/src/utils/audio';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function HomeScreen() {
     { label: 'Conquistas', icon: '🏆', route: '/achievements', color: '#ffd700' },
     { label: 'Missões', icon: '📅', route: '/daily', color: '#ff8800' },
     { label: 'Evento', icon: '⚡', route: '/events', color: weeklyEvent.color },
+    { label: 'Liga Neon', icon: '🏅', route: '/league', color: '#00ff88' },
     { label: 'Roleta', icon: '🎡', route: '/wheel', color: '#00ff88' },
     { label: 'Boss', icon: '👑', route: '/boss', color: '#ff0055' },
     { label: 'Configurações', icon: '⚙️', route: '/profile', color: '#b8f3ff' },
@@ -31,6 +33,7 @@ export default function HomeScreen() {
   ];
 
   const go = (route: string) => {
+    playSound('buttonClick', game.settings.sound);
     setMoreOpen(false);
     router.push(route as any);
   };
