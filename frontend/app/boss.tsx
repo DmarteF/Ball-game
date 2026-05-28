@@ -1,11 +1,21 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DualArenaView } from '@/src/components/DualArenaView';
 import { NeonButton } from '@/src/components/NeonButton';
 import { useGame } from '@/src/contexts/GameContext';
-import { BOSS_DIFFICULTIES, BossDifficultyId, createBossPhaseConfig, getBossDifficulty } from '@/src/game/boss';
+import {
+  BossLevelDefinition,
+  BossLevelId,
+  createBossRingConfig,
+  describeBossReward,
+  getBossMonthKey,
+  getMonthlyBoss,
+  getNextBossLevel,
+  isBossDailyComplete,
+  normalizeBossProgress,
+} from '@/src/game/boss';
 import { buyArenaUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
@@ -15,67 +25,79 @@ const ARENA_SIZE = Math.min(width - 42, 214);
 
 type DuelState = 'menu' | 'playing' | 'paused' | 'result';
 
-const difficultyLabel = (id: string) => BOSS_DIFFICULTIES.find(item => item.id === id)?.name || 'Nenhuma';
+const formatMs = (ms: number) => {
+  const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${String(minutes).padStart(2, '0')}min`;
+};
+
+const getResetTimes = () => {
+  const now = new Date();
+  const nextDay = new Date(now);
+  nextDay.setHours(24, 0, 0, 0);
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+  return { daily: formatMs(nextDay.getTime() - now.getTime()), monthly: formatMs(nextMonth.getTime() - now.getTime()) };
+};
 
 export default function BossScreen() {
   const router = useRouter();
   const game = useGame();
   const unlocked = game.lifetimeStats.highestPhase >= 5 || game.level >= 5;
-  const [difficultyId, setDifficultyId] = useState<BossDifficultyId>('medium');
+  const progress = normalizeBossProgress(game.bossProgress);
+  const monthlyBoss = getMonthlyBoss();
+  const currentLevel = getNextBossLevel(progress);
+  const completed = isBossDailyComplete(progress);
   const [duelState, setDuelState] = useState<DuelState>('menu');
   const [playerArena, setPlayerArena] = useState<DualArenaState | null>(null);
   const [bossArena, setBossArena] = useState<DualArenaState | null>(null);
+  const [activeLevel, setActiveLevel] = useState<BossLevelDefinition>(currentLevel);
   const [resultWon, setResultWon] = useState(false);
   const [resultRewards, setResultRewards] = useState<string[]>([]);
+  const [clock, setClock] = useState(getResetTimes());
   const finishing = useRef(false);
-  const difficulty = getBossDifficulty(difficultyId);
+  const playerArenaRef = useRef<DualArenaState | null>(null);
   const playerSkin = getSkinById(game.ballTransformation);
-  const bossSkin = getSkinById(difficulty.skinId);
-  const config = useMemo(() => createBossPhaseConfig(difficultyId), [difficultyId]);
+  const bossSkin = getSkinById(monthlyBoss.skinId);
 
-  const makeRingConfig = (count: number, side: 'player' | 'boss') => ({
-    count,
-    innerRadius: 24,
-    outerRadius: ARENA_SIZE / 2 - 14,
-    baseRotationSpeed: config.rotationSpeed * (side === 'boss' ? difficulty.speedMultiplier : 1),
-    baseHp: config.baseHp * (side === 'boss' ? difficulty.damageMultiplier : 1),
-    baseGapSize: config.gapSize,
-    baseThickness: 4,
-    closingSpeed: config.closingSpeed * (side === 'boss' ? difficulty.shrinkMultiplier : 1),
-    colors: [side === 'boss' ? bossSkin.primaryColor : playerSkin.primaryColor, '#ffffff88', '#ffd700aa'],
-    solidCount: difficulty.id === 'easy' ? 1 : difficulty.id === 'medium' ? 2 : difficulty.id === 'hard' ? 3 : 5,
-    solidHpMultiplier: difficulty.id === 'insane' ? 1.8 : difficulty.id === 'hard' ? 1.55 : 1.35,
-  });
+  useEffect(() => {
+    const interval = setInterval(() => setClock(getResetTimes()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    playerArenaRef.current = playerArena;
+  }, [playerArena]);
 
   const startDuel = () => {
     if (!unlocked) {
       playSound('buttonError', game.settings.sound);
       return;
     }
-    const nextConfig = createBossPhaseConfig(difficultyId);
-    const nextDifficulty = getBossDifficulty(difficultyId);
+    const level = completed ? monthlyBoss.levels[monthlyBoss.levels.length - 1] : getNextBossLevel(normalizeBossProgress(game.bossProgress));
+    setActiveLevel(level);
     setPlayerArena(createArenaState({
       id: 'player',
       name: game.nickname || 'Você',
       skinIcon: playerSkin.icon,
       skinColor: playerSkin.primaryColor,
       size: ARENA_SIZE,
-      phase: nextDifficulty.id === 'easy' ? 5 : nextDifficulty.id === 'medium' ? 8 : nextDifficulty.id === 'hard' ? 12 : 16,
-      ringConfig: makeRingConfig(nextConfig.playerRingCount, 'player'),
+      phase: level.phase,
+      ringConfig: createBossRingConfig(level, ARENA_SIZE, [playerSkin.primaryColor, '#ffffff88', '#ffd700aa'], 'player'),
       speedMultiplier: 1 + game.stats.baseSpeed / 900,
       damageMultiplier: 1 + game.stats.baseDamage / 180,
     }));
     setBossArena(createArenaState({
       id: 'boss',
-      name: `Boss ${nextDifficulty.name}`,
+      name: monthlyBoss.name,
       skinIcon: bossSkin.icon,
       skinColor: bossSkin.primaryColor,
       size: ARENA_SIZE,
-      phase: nextDifficulty.id === 'easy' ? 5 : nextDifficulty.id === 'medium' ? 8 : nextDifficulty.id === 'hard' ? 12 : 16,
-      ringConfig: makeRingConfig(nextConfig.bossRingCount, 'boss'),
-      aiQuality: nextDifficulty.aiQuality,
-      speedMultiplier: nextDifficulty.speedMultiplier,
-      damageMultiplier: nextDifficulty.damageMultiplier,
+      phase: level.phase,
+      ringConfig: createBossRingConfig(level, ARENA_SIZE, monthlyBoss.colors, 'boss'),
+      aiQuality: level.aiQuality,
+      speedMultiplier: level.bossSpeedMultiplier,
+      damageMultiplier: level.bossDamageMultiplier,
     }));
     finishing.current = false;
     setResultRewards([]);
@@ -85,40 +107,48 @@ export default function BossScreen() {
   useEffect(() => {
     if (duelState !== 'playing') return;
     const interval = setInterval(() => {
-      setPlayerArena(current => current ? tickArenaPhysics(current, { damageMultiplier: 1 + game.stats.baseDamage / 220 }).state : current);
+      setPlayerArena(current => current ? tickArenaPhysics(current, { damageMultiplier: 1 + game.stats.baseDamage / 240 }).state : current);
       setBossArena(current => current ? tickArenaPhysics(current, {
         isAi: true,
-        opponentProgress: playerArena ? getArenaProgress(playerArena) : 0,
-        shrinkMultiplier: difficulty.shrinkMultiplier,
-        damageMultiplier: difficulty.damageMultiplier,
+        opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
+        shrinkMultiplier: activeLevel.bossShrinkMultiplier,
+        damageMultiplier: activeLevel.bossDamageMultiplier,
       }).state : current);
     }, 34);
     return () => clearInterval(interval);
-  }, [duelState, difficultyId, playerArena?.id]);
+  }, [duelState, activeLevel.id, activeLevel.bossDamageMultiplier, activeLevel.bossShrinkMultiplier, game.stats.baseDamage]);
 
   useEffect(() => {
     if (duelState !== 'playing' || !playerArena || !bossArena || finishing.current) return;
     if (!playerArena.finished && !bossArena.finished && !playerArena.crushed && !bossArena.crushed) return;
-    const won = playerArena.finished || bossArena.crushed;
-    finishDuel(won);
+    finishDuel(playerArena.finished || bossArena.crushed);
   }, [playerArena?.finished, bossArena?.finished, playerArena?.crushed, bossArena?.crushed, duelState]);
 
   const finishDuel = async (won: boolean) => {
     if (finishing.current) return;
     finishing.current = true;
     setResultWon(won);
-    const rewards = difficulty.rewards;
-    const coins = won ? rewards.coins : Math.floor(rewards.coins * 0.35);
-    const xp = won ? rewards.xp : Math.floor(rewards.xp * 0.4);
-    const gems = won ? Math.max(0, Math.floor((BOSS_DIFFICULTIES.findIndex(item => item.id === difficultyId) + 1) * 3)) : 0;
-    const keys = won && Math.random() < rewards.keyChance ? 1 : 0;
-    const fragments = won && Math.random() < rewards.fragmentChance ? { skinId: bossSkin.id, amount: difficultyId === 'insane' ? 10 : difficultyId === 'hard' ? 7 : 4 } : undefined;
-    const chest = won && Math.random() < rewards.chestChance
-      ? { label: difficultyId === 'insane' ? 'Baú Épico do Boss' : 'Baú Raro do Boss', icon: '🎁', rarity: difficultyId === 'insane' ? 'epic' : 'rare' }
-      : undefined;
-    await game.recordBossResult({ difficulty: difficultyId, won, coins, profileXp: xp, gems, keys, fragments, chest });
+    const currentProgress = normalizeBossProgress(game.bossProgress);
+    const alreadyClaimed = currentProgress.dailyRewardsClaimed.includes(activeLevel.id);
+    const reward = activeLevel.reward;
+    const coins = won ? (alreadyClaimed ? 90 : reward.coins) : Math.floor(reward.coins * 0.25);
+    const xp = won ? (alreadyClaimed ? 35 : reward.xp) : Math.floor(reward.xp * 0.3);
+    const gems = won && !alreadyClaimed ? reward.gems || 0 : 0;
+    const keys = won && !alreadyClaimed ? reward.keys || 0 : 0;
+    const fragments = won && !alreadyClaimed && reward.fragments ? { skinId: bossSkin.id, amount: reward.fragments } : undefined;
+    const chest = won && !alreadyClaimed && reward.chest ? { label: `Baú ${reward.chest} do Boss`, icon: '🎁', rarity: reward.chest } : undefined;
+    await game.recordBossResult({ difficulty: activeLevel.id, levelId: activeLevel.id as BossLevelId, monthlyBossId: monthlyBoss.id, won, coins, profileXp: xp, gems, keys, fragments, chest });
     playSound(won ? 'victory' : 'defeat', game.settings.sound);
-    setResultRewards([`Moedas +${coins}`, `XP perfil +${xp}`, gems ? `Gemas +${gems}` : '', keys ? 'Chave +1' : '', fragments ? `Fragmentos +${fragments.amount} ${bossSkin.name}` : '', chest ? chest.label : ''].filter(Boolean));
+    setResultRewards([
+      alreadyClaimed && won ? 'Recompensa diária alta já coletada neste nível' : '',
+      `Moedas +${coins}`,
+      `XP perfil +${xp}`,
+      gems ? `Gemas +${gems}` : '',
+      keys ? `Chaves +${keys}` : '',
+      fragments ? `Fragmentos +${fragments.amount} ${bossSkin.name}` : '',
+      chest ? chest.label : '',
+      won && activeLevel.id === 'impossivel' ? 'Boss diário concluído' : '',
+    ].filter(Boolean));
     setDuelState('result');
   };
 
@@ -141,45 +171,48 @@ export default function BossScreen() {
     ]);
   };
 
+  const monthlyBest = progress.monthlyBestLevelWon === 'none' ? 'Nenhum' : monthlyBoss.levels.find(level => level.id === progress.monthlyBestLevelWon)?.name || 'Nenhum';
+
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
         <NeonButton title="← VOLTAR" variant="secondary" audioSettings={game.settings} onPress={() => router.back()} style={styles.backButton} />
         <Text style={styles.title}>BOSS MODE</Text>
-        <Text style={styles.subtitle}>Melhor vitória: {difficultyLabel(game.lifetimeStats.bossBestDifficulty)} • {game.lifetimeStats.bossWins}V/{game.lifetimeStats.bossLosses}D</Text>
+        <Text style={styles.subtitle}>Boss do mês: {monthlyBoss.name}</Text>
       </View>
 
       {duelState === 'menu' && (
         <ScrollView contentContainerStyle={styles.menuContent}>
           {!unlocked && <Text style={styles.lockText}>Complete a fase 5 ou alcance nível de perfil 5 para desbloquear.</Text>}
-          {BOSS_DIFFICULTIES.map(item => {
-            const boss = getSkinById(item.skinId);
-            return (
-              <NeonButton
-                key={item.id}
-                title={`${boss.icon} ${item.name} • IA ${Math.round(item.aiQuality * 100)}% • ${item.rewards.coins} moedas`}
-                variant={difficultyId === item.id ? 'primary' : 'secondary'}
-                sound="buttonClick"
-                audioSettings={game.settings}
-                onPress={() => setDifficultyId(item.id)}
-              />
-            );
-          })}
-          <NeonButton title="INICIAR BOSS" variant="primary" disabled={!unlocked} audioSettings={game.settings} onPress={startDuel} />
+          <View style={[styles.bossCard, { borderColor: bossSkin.primaryColor }]}>
+            <Text style={styles.bossIcon}>{bossSkin.icon}</Text>
+            <Text style={styles.bossName}>{monthlyBoss.name}</Text>
+            <Text style={styles.bossText}>Tema: {monthlyBoss.theme}</Text>
+            <Text style={styles.bossText}>{monthlyBoss.description}</Text>
+            <Text style={styles.bossText}>Passiva: {monthlyBoss.passive}</Text>
+            <Text style={styles.bossText}>Mês ativo: {getBossMonthKey()}</Text>
+          </View>
+          <View style={styles.progressBox}>
+            <Text style={styles.progressLine}>Nível atual: {completed ? 'Concluído hoje' : currentLevel.name}</Text>
+            <Text style={styles.progressLine}>Vitórias hoje: {Math.min(progress.dailyLevelWins.length, 5)}/5</Text>
+            <Text style={styles.progressLine}>Melhor nível do mês: {monthlyBest}</Text>
+            <Text style={styles.progressLine}>Vitórias no mês: {progress.monthlyTotalWins}</Text>
+            <Text style={styles.progressLine}>Impossível no mês: {progress.monthlyImpossibleWins}</Text>
+            <Text style={styles.progressLine}>Próxima recompensa: {completed ? 'Rejogue por recompensa reduzida' : describeBossReward(currentLevel.reward)}</Text>
+            <Text style={styles.progressLine}>Reset diário: {clock.daily}</Text>
+            <Text style={styles.progressLine}>Troca mensal: {clock.monthly}</Text>
+          </View>
+          <NeonButton title={completed ? 'ENFRENTAR NOVAMENTE' : 'ENFRENTAR'} variant="primary" disabled={!unlocked} audioSettings={game.settings} onPress={startDuel} />
         </ScrollView>
       )}
 
       {(duelState === 'playing' || duelState === 'paused') && playerArena && bossArena && (
         <View style={styles.duelContent}>
-          <DualArenaView arena={bossArena} meta={`Dificuldade ${difficulty.name}${bossArena.lastAiChoice ? ` • IA comprou ${bossArena.lastAiChoice}` : ''}`} accent="#ff4fd8" leader={getArenaProgress(bossArena) > getArenaProgress(playerArena)} />
-          <View style={styles.vsBand}>
-            <Text style={styles.vsText}>VS REAL</Text>
-            <Text style={styles.aiText}>Sólidos fechados nos dois lados. Resultado sai da física.</Text>
-          </View>
-          <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(bossArena)} />
+          <DualArenaView arena={bossArena} meta={`${activeLevel.name} • ${bossArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(bossArena) > getArenaProgress(playerArena)} />
+          <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp} • Lv.${playerArena.level}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(bossArena)} />
           <View style={styles.shopRow}>
-            <NeonButton title={`ATK ${getArenaUpgradeCost(playerArena, 'atk')} moedas`} variant="primary" audioSettings={game.settings} onPress={() => buy('atk')} />
-            <NeonButton title={`Gold ${getArenaUpgradeCost(playerArena, 'gold')} moedas`} variant="primary" audioSettings={game.settings} onPress={() => buy('gold')} />
+            <NeonButton title={`ATK ${getArenaUpgradeCost(playerArena, 'atk')}`} variant="primary" audioSettings={game.settings} onPress={() => buy('atk')} />
+            <NeonButton title={`Gold ${getArenaUpgradeCost(playerArena, 'gold')}`} variant="primary" audioSettings={game.settings} onPress={() => buy('gold')} />
             <NeonButton title={duelState === 'paused' ? 'RETOMAR' : 'PAUSAR'} variant="secondary" audioSettings={game.settings} onPress={() => setDuelState(duelState === 'paused' ? 'playing' : 'paused')} />
             <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={confirmExit} />
           </View>
@@ -190,9 +223,9 @@ export default function BossScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.resultModal}>
             <Text style={[styles.resultTitle, { color: resultWon ? '#00ff88' : '#ff0055' }]}>{resultWon ? 'VITÓRIA!' : 'DERROTA'}</Text>
-            <Text style={styles.resultSubtitle}>{resultWon ? 'Você concluiu a arena real primeiro.' : 'O Boss venceu na arena real.'}</Text>
+            <Text style={styles.resultSubtitle}>{resultWon ? 'Resultado decidido pela arena real.' : 'O Boss venceu na arena real.'}</Text>
             {resultRewards.map(item => <Text key={item} style={styles.rewardLine}>{item}</Text>)}
-            <NeonButton title="JOGAR NOVAMENTE" variant="primary" audioSettings={game.settings} onPress={startDuel} />
+            <NeonButton title="ENFRENTAR NOVAMENTE" variant="primary" audioSettings={game.settings} onPress={startDuel} />
             <NeonButton title="VOLTAR PARA BOSS" variant="secondary" audioSettings={game.settings} onPress={() => setDuelState('menu')} />
             <NeonButton title="VOLTAR PARA HOME" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
           </View>
@@ -210,10 +243,13 @@ const styles = StyleSheet.create({
   subtitle: { color: '#ffffffaa', marginTop: 4, fontWeight: 'bold' },
   menuContent: { padding: 16, gap: 12 },
   lockText: { color: '#ffd700', backgroundColor: '#ffd70018', borderWidth: 1, borderColor: '#ffd70066', padding: 12, borderRadius: 12, fontWeight: 'bold' },
+  bossCard: { backgroundColor: '#ffffff10', borderWidth: 1.5, borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },
+  bossIcon: { fontSize: 42 },
+  bossName: { color: '#ffffff', fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
+  bossText: { color: '#ffffffbb', fontWeight: 'bold', textAlign: 'center' },
+  progressBox: { backgroundColor: '#00000044', borderWidth: 1, borderColor: '#00f0ff55', borderRadius: 12, padding: 12, gap: 5 },
+  progressLine: { color: '#ffffff', fontWeight: 'bold' },
   duelContent: { flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 14, paddingBottom: 10 },
-  vsBand: { alignItems: 'center', paddingVertical: 2 },
-  vsText: { color: '#ffd700', fontSize: 18, fontWeight: 'bold' },
-  aiText: { color: '#ffffff99', fontSize: 11, marginTop: 2, textAlign: 'center' },
   shopRow: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   modalOverlay: { flex: 1, backgroundColor: '#000000cc', justifyContent: 'center', alignItems: 'center', padding: 18 },
   resultModal: { width: '100%', maxWidth: 390, backgroundColor: '#1a0a2e', borderWidth: 1, borderColor: '#00f0ff88', borderRadius: 18, padding: 18, gap: 10, alignItems: 'stretch' },

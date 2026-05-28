@@ -48,6 +48,7 @@ import {
   progressRivals,
   rewardToLabel,
 } from '@/src/game/league';
+import { BossLevelId, BossProgressSave, BOSS_LEVEL_RANK, createBossProgress, getMonthlyBoss, normalizeBossProgress } from '@/src/game/boss';
 
 const SAVE_KEY = 'neon_escape_save_v2';
 
@@ -118,6 +119,7 @@ interface SaveData {
     bestCombo: number;
     dailyRewardsCollected: number;
   };
+  bossProgress: BossProgressSave;
   settings: { sound: boolean; haptics: boolean } & AudioSettings;
   league: LeagueSave;
   dailyMissions: DailyMissionSave;
@@ -149,6 +151,8 @@ interface GameContextType extends SaveData {
   clearAchievementToast: () => Promise<void>;
   recordBossResult: (summary: {
     difficulty: string;
+    levelId?: BossLevelId;
+    monthlyBossId?: string;
     won: boolean;
     coins: number;
     profileXp: number;
@@ -268,6 +272,7 @@ const defaultSave = (): SaveData => {
     bestCombo: 0,
     dailyRewardsCollected: 0,
   },
+  bossProgress: createBossProgress(),
   settings: { sound: true, haptics: true, ...DEFAULT_AUDIO_SETTINGS },
   league: defaultLeagueSave(playerId),
   dailyMissions: createDailyMissions(),
@@ -329,7 +334,9 @@ const getSourceFromSave = (save: SaveData) => {
     noReviveWins: save.lifetimeStats.noReviveWins,
     bossRuns: save.lifetimeStats.bossRuns,
     bossWins: save.lifetimeStats.bossWins,
-    bossBestDifficulty: BOSS_DIFFICULTY_RANK[save.lifetimeStats.bossBestDifficulty] || 0,
+    bossBestDifficulty: BOSS_LEVEL_RANK[save.lifetimeStats.bossBestDifficulty] || BOSS_DIFFICULTY_RANK[save.lifetimeStats.bossBestDifficulty] || 0,
+    bossImpossibleWins: save.bossProgress?.monthlyImpossibleWins || 0,
+    bossImpossibleDays: save.bossProgress?.monthlyImpossibleDays?.length || 0,
     leagueTop10Finishes: save.league?.history?.top10Finishes || 0,
     leagueFirstPlaceFinishes: save.league?.history?.firstPlaceFinishes || 0,
     leagueUltimateFirstPlaceFinishes: save.league?.history?.ultimateFirstPlaceFinishes || 0,
@@ -533,6 +540,7 @@ const normalizeSave = (rawSave: Partial<SaveData> | null | undefined): SaveData 
     achievements: { ...defaultAchievements(), ...(parsed.achievements || {}) },
     stats: { ...defaultStats, ...(parsed.stats || {}) },
     lifetimeStats,
+    bossProgress: normalizeBossProgress(parsed.bossProgress),
     settings: { ...base.settings, ...(parsed.settings || {}) },
     league: parsed.league || defaultLeagueSave(safeString(parsed.playerId, base.playerId), 0),
     unlockedUpgrades: getUnlockedUpgradesForProfile(profileLevel, currentPhase),
@@ -651,6 +659,7 @@ const resetTimedSystemsIfNeeded = (save: SaveData) => {
   if (!next.wheel?.dayKey || next.wheel.dayKey !== dayKey) next.wheel = createWheelSave();
   if (!next.adLimits?.dayKey || next.adLimits.dayKey !== dayKey) next.adLimits = createAdLimits();
   if (!next.weeklyEvent?.weekKey || next.weeklyEvent.weekKey !== weekKey || !getWeeklyEvent(next.weeklyEvent.eventId)) next.weeklyEvent = createWeeklyEvent();
+  next.bossProgress = normalizeBossProgress(next.bossProgress);
   return next;
 };
 
@@ -943,6 +952,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const recordBossResult = async (summary: {
     difficulty: string;
+    levelId?: BossLevelId;
+    monthlyBossId?: string;
     won: boolean;
     coins: number;
     profileXp: number;
@@ -951,10 +962,32 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fragments?: { skinId: string; amount: number };
     chest?: { label: string; icon: string; rarity: string };
   }) => {
-    const current = saveRef.current;
+    const current = { ...saveRef.current, bossProgress: normalizeBossProgress(saveRef.current.bossProgress) };
     const withXp = applyProfileXp(current, summary.profileXp);
-    const currentRank = BOSS_DIFFICULTY_RANK[withXp.lifetimeStats.bossBestDifficulty] || 0;
-    const nextRank = BOSS_DIFFICULTY_RANK[summary.difficulty] || 0;
+    const levelId = summary.levelId || (summary.difficulty as BossLevelId);
+    const currentRank = BOSS_LEVEL_RANK[withXp.lifetimeStats.bossBestDifficulty] || BOSS_DIFFICULTY_RANK[withXp.lifetimeStats.bossBestDifficulty] || 0;
+    const nextRank = BOSS_LEVEL_RANK[levelId] || BOSS_LEVEL_RANK[summary.difficulty] || BOSS_DIFFICULTY_RANK[summary.difficulty] || 0;
+    const monthlyBoss = getMonthlyBoss();
+    let bossProgress = normalizeBossProgress(withXp.bossProgress);
+    const rewardAlreadyClaimed = bossProgress.dailyRewardsClaimed.includes(levelId);
+    if (summary.won && !bossProgress.dailyLevelWins.includes(levelId)) {
+      bossProgress = { ...bossProgress, dailyLevelWins: [...bossProgress.dailyLevelWins, levelId] };
+    }
+    if (summary.won && !rewardAlreadyClaimed) {
+      bossProgress = { ...bossProgress, dailyRewardsClaimed: [...bossProgress.dailyRewardsClaimed, levelId] };
+    }
+    if (summary.won) {
+      const bestRank = BOSS_LEVEL_RANK[bossProgress.monthlyBestLevelWon] || 0;
+      const nextBest = nextRank > bestRank ? levelId : bossProgress.monthlyBestLevelWon;
+      bossProgress = {
+        ...bossProgress,
+        bossId: summary.monthlyBossId || monthlyBoss.id,
+        monthlyBestLevelWon: nextBest,
+        monthlyTotalWins: bossProgress.monthlyTotalWins + 1,
+        monthlyImpossibleWins: bossProgress.monthlyImpossibleWins + (levelId === 'impossivel' ? 1 : 0),
+        monthlyImpossibleDays: levelId === 'impossivel' ? Array.from(new Set([...bossProgress.monthlyImpossibleDays, bossProgress.dayKey])) : bossProgress.monthlyImpossibleDays,
+      };
+    }
     let next: SaveData = {
       ...withXp,
       coins: withXp.coins + summary.coins,
@@ -965,8 +998,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         bossRuns: withXp.lifetimeStats.bossRuns + 1,
         bossWins: withXp.lifetimeStats.bossWins + (summary.won ? 1 : 0),
         bossLosses: withXp.lifetimeStats.bossLosses + (summary.won ? 0 : 1),
-        bossBestDifficulty: summary.won && nextRank > currentRank ? summary.difficulty : withXp.lifetimeStats.bossBestDifficulty,
+        bossBestDifficulty: summary.won && nextRank > currentRank ? levelId : withXp.lifetimeStats.bossBestDifficulty,
       },
+      bossProgress,
     };
 
     if (summary.fragments) {

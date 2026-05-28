@@ -91,9 +91,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 10,
   },
-  header: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 },
-  name: { color: '#ffffff', fontWeight: 'bold', flex: 1 },
-  meta: { color: '#ffffffaa', fontWeight: 'bold', fontSize: 11 },
+  header: { width: '100%', alignItems: 'center', gap: 3, marginBottom: 8 },
+  name: { color: '#ffffff', fontWeight: 'bold', textAlign: 'center', width: '100%' },
+  meta: { color: '#ffffffaa', fontWeight: 'bold', fontSize: 11, textAlign: 'center' },
   stage: { backgroundColor: '#00000055', borderWidth: 2, borderColor: '#ffffff18', overflow: 'hidden' },
   ball: {
     position: 'absolute',

@@ -26,6 +26,7 @@ export default function CompeteScreen() {
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const finishing = useRef(false);
+  const playerArenaRef = useRef<DualArenaState | null>(null);
 
   const rivalRank = useMemo(() => {
     const position = game.getLeagueStandings().findIndex(item => item.id === match.rival.id) + 1;
@@ -88,12 +89,16 @@ export default function CompeteScreen() {
   }, []);
 
   useEffect(() => {
+    playerArenaRef.current = playerArena;
+  }, [playerArena]);
+
+  useEffect(() => {
     if (paused || result) return;
     const interval = setInterval(() => {
       setPlayerArena(current => current ? tickArenaPhysics(current, { damageMultiplier: 1 + game.stats.baseDamage / 240 }).state : current);
       setRivalArena(current => current ? tickArenaPhysics(current, {
         isAi: true,
-        opponentProgress: playerArena ? getArenaProgress(playerArena) : 0,
+        opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
         shrinkMultiplier: 1 + Math.min(0.18, match.rival.trophies / 50000),
         damageMultiplier: 1 + Math.min(0.9, match.rival.trophies / 11000),
       }).state : current);
@@ -153,16 +158,16 @@ export default function CompeteScreen() {
       <View style={styles.header}>
         <NeonButton title="← LIGA" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} style={styles.backButton} />
         <Text style={styles.title}>COMPETIR</Text>
-        <Text style={styles.subtitle}>{match.map.theme} • {match.map.modifier} • Rival {rivalRank} • {match.rival.trophies.toLocaleString('pt-BR')} troféus</Text>
+        <Text style={styles.subtitle}>{match.map.theme} • {match.map.modifier} • {match.rival.trophies.toLocaleString('pt-BR')} troféus</Text>
       </View>
 
       {playerArena && rivalArena && (
         <View style={styles.arenas}>
-          <DualArenaView arena={rivalArena} meta={`${match.rival.division} • ${rivalArena.lastAiChoice ? `IA comprou ${rivalArena.lastAiChoice}` : 'IA ativa'}`} accent="#ff4fd8" leader={getArenaProgress(rivalArena) > getArenaProgress(playerArena)} />
-          <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(rivalArena)} />
+          <DualArenaView arena={rivalArena} meta={`${match.rival.division} • ${rivalArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(rivalArena) > getArenaProgress(playerArena)} />
+          <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp} • Lv.${playerArena.level}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(rivalArena)} />
           <View style={styles.shopRow}>
-            <NeonButton title={`ATK ${getArenaUpgradeCost(playerArena, 'atk')} moedas`} variant="primary" audioSettings={game.settings} onPress={() => buy('atk')} />
-            <NeonButton title={`Gold ${getArenaUpgradeCost(playerArena, 'gold')} moedas`} variant="primary" audioSettings={game.settings} onPress={() => buy('gold')} />
+            <NeonButton title={`ATK ${getArenaUpgradeCost(playerArena, 'atk')}`} variant="primary" audioSettings={game.settings} onPress={() => buy('atk')} />
+            <NeonButton title={`Gold ${getArenaUpgradeCost(playerArena, 'gold')}`} variant="primary" audioSettings={game.settings} onPress={() => buy('gold')} />
             <NeonButton title={paused ? 'RETOMAR' : 'PAUSAR'} variant="secondary" audioSettings={game.settings} onPress={() => setPaused(value => !value)} />
             <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={confirmExit} />
           </View>

@@ -42,6 +42,8 @@ export type AchievementProgressSource = {
   bossRuns: number;
   bossWins: number;
   bossBestDifficulty: number;
+  bossImpossibleWins: number;
+  bossImpossibleDays: number;
   leagueTop10Finishes: number;
   leagueFirstPlaceFinishes: number;
   leagueUltimateFirstPlaceFinishes: number;
@@ -56,10 +58,16 @@ export type AchievementProgressSource = {
 };
 
 export const BOSS_DIFFICULTY_RANK: Record<string, number> = {
+  none: 0,
   easy: 1,
+  normal: 1,
   medium: 2,
+  forte: 2,
   hard: 3,
-  insane: 4,
+  elite: 3,
+  lendario: 4,
+  insane: 5,
+  impossivel: 5,
 };
 
 export const ACHIEVEMENTS: AchievementDefinition[] = [
@@ -79,11 +87,13 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   { id: 'survivor', name: 'Sobrevivente', description: 'Vença uma fase sem usar revive.', category: 'progresso', required: 1, reward: { type: 'gems', amount: 12 }, rarity: 'rare' },
   { id: 'fearless', name: 'Sem Medo', description: 'Vença 5 fases sem usar revive.', category: 'progresso', required: 5, reward: { type: 'chest', chestType: 'epic', amount: 1 }, rarity: 'epic' },
   { id: 'stage_20_champion', name: 'Campeão dos 50 Estágios', description: 'Conclua todas as 50 fases principais.', category: 'especiais', required: 50, reward: { type: 'skin', skinId: 'cosmic_champion' }, rarity: 'special' },
-  { id: 'first_duel', name: 'Primeiro Duelo', description: 'Jogue o Boss Mode pela primeira vez.', category: 'boss', required: 1, reward: { type: 'coins', amount: 300 }, rarity: 'common' },
-  { id: 'boss_victory', name: 'Vitória Contra o Boss', description: 'Vença o Boss uma vez.', category: 'boss', required: 1, reward: { type: 'gems', amount: 20 }, rarity: 'rare' },
-  { id: 'neon_rival', name: 'Rival Neon', description: 'Vença 5 partidas de Boss Mode.', category: 'boss', required: 5, reward: { type: 'chest', chestType: 'rare', amount: 1 }, rarity: 'epic' },
-  { id: 'duel_master', name: 'Mestre dos Duelos', description: 'Vença o Boss na dificuldade difícil.', category: 'boss', required: 3, reward: { type: 'chest', chestType: 'epic', amount: 1 }, rarity: 'legendary' },
-  { id: 'impossible', name: 'Impossível?', description: 'Vença o Boss na maior dificuldade.', category: 'boss', required: 4, reward: { type: 'legendaryKeys', amount: 1 }, rarity: 'ultimate' },
+  { id: 'first_duel', name: 'Primeiro Boss', description: 'Enfrente o Boss mensal pela primeira vez.', category: 'boss', required: 1, reward: { type: 'coins', amount: 300 }, rarity: 'common' },
+  { id: 'boss_victory', name: 'Vitória Normal', description: 'Vença o Boss mensal no nível Normal.', category: 'boss', required: 1, reward: { type: 'gems', amount: 20 }, rarity: 'rare' },
+  { id: 'boss_elite', name: 'Chegou no Elite', description: 'Vença até o nível Elite do Boss mensal.', category: 'boss', required: 3, reward: { type: 'keys', amount: 1 }, rarity: 'epic' },
+  { id: 'boss_legendary', name: 'Lendário Derrotado', description: 'Vença o nível Lendário do Boss mensal.', category: 'boss', required: 4, reward: { type: 'chest', chestType: 'epic', amount: 1 }, rarity: 'legendary' },
+  { id: 'impossible', name: 'Impossível Vencido', description: 'Vença o Boss mensal no nível Impossível.', category: 'boss', required: 5, reward: { type: 'legendaryKeys', amount: 1 }, rarity: 'ultimate' },
+  { id: 'monthly_hunter', name: 'Caçador Mensal', description: 'Vença o Impossível 5 vezes no mesmo mês.', category: 'boss', required: 5, reward: { type: 'fragments', skinId: 'divine_core', amount: 20 }, rarity: 'ultimate' },
+  { id: 'month_dominator', name: 'Dominador do Mês', description: 'Vença o Impossível em 10 dias diferentes no mesmo mês.', category: 'boss', required: 10, reward: { type: 'chest', chestType: 'legendary', amount: 1 }, rarity: 'ultimate' },
   { id: 'neon_top_10', name: 'Top 10 Neon', description: 'Finalize uma temporada da Liga Neon no top 10.', category: 'especiais', required: 1, reward: { type: 'gems', amount: 60 }, rarity: 'epic' },
   { id: 'league_champion', name: 'Campeão da Liga', description: 'Termine uma temporada da Liga Neon em #1.', category: 'especiais', required: 1, reward: { type: 'chest', chestType: 'epic', amount: 1 }, rarity: 'legendary' },
   { id: 'supreme_champion', name: 'Campeão Supremo', description: 'Termine em #1 na divisão Ultimate da Liga Neon.', category: 'especiais', required: 1, reward: { type: 'fragments', skinId: 'league_king_neon', amount: 80 }, rarity: 'ultimate' },
@@ -119,10 +129,12 @@ export const getAchievementProgress = (id: string, source: AchievementProgressSo
     case 'fearless': return source.noReviveWins;
     case 'stage_20_champion': return source.highestPhase;
     case 'first_duel': return source.bossRuns;
-    case 'boss_victory':
-    case 'neon_rival': return source.bossWins;
-    case 'duel_master': return source.bossBestDifficulty;
+    case 'boss_victory': return source.bossBestDifficulty;
+    case 'boss_elite': return source.bossBestDifficulty;
+    case 'boss_legendary': return source.bossBestDifficulty;
     case 'impossible': return source.bossBestDifficulty;
+    case 'monthly_hunter': return source.bossImpossibleWins;
+    case 'month_dominator': return source.bossImpossibleDays;
     case 'neon_top_10': return source.leagueTop10Finishes;
     case 'league_champion': return source.leagueFirstPlaceFinishes;
     case 'supreme_champion': return source.leagueUltimateFirstPlaceFinishes;

@@ -134,7 +134,8 @@ export default function ProfileScreen() {
           <Text style={styles.stat}>Maior nível na partida: {game.lifetimeStats.highestRunLevel}</Text>
           <Text style={styles.stat}>Vitórias no Boss: {game.lifetimeStats.bossWins}</Text>
           <Text style={styles.stat}>Derrotas no Boss: {game.lifetimeStats.bossLosses}</Text>
-          <Text style={styles.stat}>Melhor dificuldade Boss: {game.lifetimeStats.bossBestDifficulty}</Text>
+          <Text style={styles.stat}>Melhor nível Boss: {game.lifetimeStats.bossBestDifficulty}</Text>
+          <Text style={styles.stat}>Impossível no mês: {game.bossProgress.monthlyImpossibleWins}</Text>
         </View>
 
         <View style={styles.card}>
