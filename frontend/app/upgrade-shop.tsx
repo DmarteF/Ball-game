@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useGame } from '@/src/contexts/GameContext';
 
 const UPGRADES = [
   { id: 'baseDamage', name: 'Dano Base', description: '+10% dano por nível', icon: '⚔️', baseCost: 100 },
@@ -14,22 +15,23 @@ const UPGRADES = [
 
 export default function UpgradeShopScreen() {
   const router = useRouter();
-  const [coins, setCoins] = useState(1000); // Mock coins
-  const [upgradeLevels, setUpgradeLevels] = useState<Record<string, number>>({});
+  const { coins, permanentUpgrades, purchaseUpgrade } = useGame();
 
   const getUpgradeCost = (upgrade: any) => {
-    const level = upgradeLevels[upgrade.id] || 0;
+    const level = permanentUpgrades[upgrade.id] || 0;
     return Math.floor(upgrade.baseCost * Math.pow(1.5, level));
   };
 
-  const purchaseUpgrade = (upgrade: any) => {
+  const handlePurchase = async (upgrade: any) => {
     const cost = getUpgradeCost(upgrade);
-    if (coins >= cost) {
-      setCoins(prev => prev - cost);
-      setUpgradeLevels(prev => ({
-        ...prev,
-        [upgrade.id]: (prev[upgrade.id] || 0) + 1
-      }));
+    const success = await purchaseUpgrade(upgrade.id, cost);
+    
+    if (!success) {
+      Alert.alert(
+        'Moedas Insuficientes',
+        `Você precisa de ${cost} moedas para comprar este upgrade.`,
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -47,7 +49,7 @@ export default function UpgradeShopScreen() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.upgradeList}>
         {UPGRADES.map((upgrade) => {
-          const level = upgradeLevels[upgrade.id] || 0;
+          const level = permanentUpgrades[upgrade.id] || 0;
           const cost = getUpgradeCost(upgrade);
           const canAfford = coins >= cost;
 
@@ -69,7 +71,7 @@ export default function UpgradeShopScreen() {
                 
                 <TouchableOpacity
                   style={[styles.buyButton, !canAfford && styles.buyButtonDisabled]}
-                  onPress={() => purchaseUpgrade(upgrade)}
+                  onPress={() => handlePurchase(upgrade)}
                   disabled={!canAfford}
                 >
                   <LinearGradient

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useGame } from '@/src/contexts/GameContext';
 
 const TRANSFORMATIONS = [
   { id: 'neon_blue', name: 'Neon Azul', colors: ['#00f0ff', '#0088ff'], unlocked: true, cost: 0 },
@@ -18,15 +19,29 @@ const TRANSFORMATIONS = [
 
 export default function TransformationsScreen() {
   const router = useRouter();
-  const [gems, setGems] = useState(5000); // Mock gems
-  const [selected, setSelected] = useState('neon_blue');
-  const [unlockedTransformations, setUnlockedTransformations] = useState(['neon_blue']);
+  const { gems, updateGems, ballTransformation, setBallTransformation: setTransformation } = useGame();
+  const [unlockedTransformations, setUnlockedTransformations] = React.useState(['neon_blue']);
 
-  const unlockTransformation = (transformation: any) => {
-    if (gems >= transformation.cost && !unlockedTransformations.includes(transformation.id)) {
-      setGems(prev => prev - transformation.cost);
+  const unlockTransformation = async (transformation: any) => {
+    if (gems < transformation.cost) {
+      Alert.alert(
+        'Gemas Insuficientes',
+        `Você precisa de ${transformation.cost} gemas para desbloquear esta transformação.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    if (!unlockedTransformations.includes(transformation.id)) {
+      await updateGems(-transformation.cost);
       setUnlockedTransformations(prev => [...prev, transformation.id]);
-      setSelected(transformation.id);
+      await setTransformation(transformation.id);
+    }
+  };
+
+  const selectTransformation = async (transformationId: string) => {
+    if (unlockedTransformations.includes(transformationId)) {
+      await setTransformation(transformationId);
     }
   };
 
@@ -45,13 +60,13 @@ export default function TransformationsScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.transformationList}>
         {TRANSFORMATIONS.map((transformation) => {
           const isUnlocked = unlockedTransformations.includes(transformation.id);
-          const isSelected = selected === transformation.id;
+          const isSelected = ballTransformation === transformation.id;
 
           return (
             <TouchableOpacity
               key={transformation.id}
               style={styles.transformationCard}
-              onPress={() => isUnlocked ? setSelected(transformation.id) : unlockTransformation(transformation)}
+              onPress={() => isUnlocked ? selectTransformation(transformation.id) : unlockTransformation(transformation)}
             >
               <LinearGradient
                 colors={isUnlocked ? [...transformation.colors, transformation.colors[0] + '44'] : ['#333333', '#222222']}
