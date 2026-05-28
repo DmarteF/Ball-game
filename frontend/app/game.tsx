@@ -859,7 +859,7 @@ export default function GameScreen() {
     await saveRunRewards(won);
     if (won) {
       const nextPhase = Number(phase) + 1;
-      if (nextPhase <= 20) await unlockPhase(nextPhase);
+      if (nextPhase <= 50) await unlockPhase(nextPhase);
     }
     router.replace('/');
   };
@@ -867,8 +867,8 @@ export default function GameScreen() {
   const handleNextPhase = async () => {
     await saveRunRewards(true);
     const nextPhase = Number(phase) + 1;
-    if (nextPhase <= 20) await unlockPhase(nextPhase);
-    router.replace({ pathname: '/game', params: { phase: Math.min(20, nextPhase) } });
+    if (nextPhase <= 50) await unlockPhase(nextPhase);
+    router.replace({ pathname: '/game', params: { phase: Math.min(50, nextPhase) } });
   };
 
   const handleDoubleRewards = async () => {
@@ -1191,7 +1191,7 @@ export default function GameScreen() {
                     <Text style={styles.buttonText}>COLETAR E SAIR</Text>
                   </LinearGradient>
                 </TouchableOpacity>
-                {Number(phase) < 20 && (
+                {Number(phase) < 50 && (
                   <TouchableOpacity style={styles.actionButton} onPress={handleNextPhase}>
                     <LinearGradient colors={['#00ff88', '#00aa66']} style={styles.buttonGradient}>
                       <Text style={styles.buttonText}>PRÓXIMA FASE</Text>

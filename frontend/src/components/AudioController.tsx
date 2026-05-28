@@ -14,7 +14,7 @@ export function AudioController() {
   useEffect(() => {
     if (loading) return;
     if (pathname.includes('/game')) playMusic('gameplay');
-    else if (pathname.includes('/boss')) playMusic('boss');
+    else if (pathname.includes('/boss') || pathname.includes('/compete')) playMusic('boss');
     else playMusic('menu');
   }, [pathname, loading]);
 

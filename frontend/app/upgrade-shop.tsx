@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'rea
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
+import { UPGRADES as RUN_UPGRADES } from '@/src/game/upgrades';
 
-const UPGRADES = [
+type ShopUpgrade = { id: string; name: string; description: string; icon: string; baseCost: number; unlockText: string; secret?: boolean };
+
+const UPGRADES: ShopUpgrade[] = [
   { id: 'baseDamage', name: 'Damage', description: '+10% dano por nível', icon: '⚔️', baseCost: 100, unlockText: 'Disponível desde o início' },
   { id: 'baseSpeed', name: 'Speed', description: '+8% velocidade por nível', icon: '⚡', baseCost: 120, unlockText: 'Disponível desde o início' },
   { id: 'coinMultiplier', name: 'Cash Gain', description: '+15% moedas por nível', icon: '💰', baseCost: 200, unlockText: 'Disponível desde o início' },
@@ -18,15 +21,33 @@ export default function UpgradeShopScreen() {
   const router = useRouter();
   const { coins, permanentUpgrades, unlockedUpgrades, purchaseUpgrade } = useGame();
 
-  const getUpgradeCost = (upgrade: any) => {
+  const secretUpgrades = RUN_UPGRADES
+    .filter(item => item.secret)
+    .map(item => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      icon: item.icon,
+      baseCost: 0,
+      unlockText: item.secretCondition || 'Conquista secreta',
+      secret: true,
+    }));
+  const allUpgrades = [...UPGRADES, ...secretUpgrades];
+
+  const getUpgradeCost = (upgrade: ShopUpgrade) => {
+    if (upgrade.secret) return 0;
     const level = permanentUpgrades[upgrade.id] || 0;
     return Math.floor(upgrade.baseCost * Math.pow(1.5, level));
   };
 
-  const handlePurchase = async (upgrade: any) => {
+  const handlePurchase = async (upgrade: ShopUpgrade) => {
     const cost = getUpgradeCost(upgrade);
     if (!unlockedUpgrades.includes(upgrade.id)) {
-      Alert.alert('Upgrade bloqueado', upgrade.unlockText, [{ text: 'OK' }]);
+      Alert.alert(upgrade.secret ? '???' : 'Upgrade bloqueado', upgrade.unlockText, [{ text: 'OK' }]);
+      return;
+    }
+    if (upgrade.secret) {
+      Alert.alert(upgrade.name, 'Upgrade secreto liberado. Ele pode aparecer nas escolhas de level up durante a partida.', [{ text: 'OK' }]);
       return;
     }
     const success = await purchaseUpgrade(upgrade.id, cost);
@@ -53,11 +74,11 @@ export default function UpgradeShopScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.upgradeList}>
-        {UPGRADES.map((upgrade) => {
+        {allUpgrades.map((upgrade) => {
           const level = permanentUpgrades[upgrade.id] || 0;
           const cost = getUpgradeCost(upgrade);
           const isUnlocked = unlockedUpgrades.includes(upgrade.id);
-          const canAfford = coins >= cost && isUnlocked;
+          const canAfford = coins >= cost && isUnlocked && !upgrade.secret;
 
           return (
             <View key={upgrade.id} style={styles.upgradeCard}>
@@ -70,22 +91,22 @@ export default function UpgradeShopScreen() {
                 </View>
                 
                 <View style={styles.upgradeInfo}>
-                  <Text style={styles.upgradeName}>{upgrade.name}</Text>
+                  <Text style={styles.upgradeName}>{upgrade.secret && !isUnlocked ? '???' : upgrade.name}</Text>
                   <Text style={styles.upgradeDescription}>{isUnlocked ? upgrade.description : `🔒 ${upgrade.unlockText}`}</Text>
-                  <Text style={styles.upgradeLevel}>Nível: {level}</Text>
+                  <Text style={styles.upgradeLevel}>{upgrade.secret ? (isUnlocked ? 'Secreto liberado' : 'Upgrade secreto') : `Nível: ${level}`}</Text>
                 </View>
                 
                 <TouchableOpacity
                   style={[styles.buyButton, !canAfford && styles.buyButtonDisabled]}
                   onPress={() => handlePurchase(upgrade)}
-                  disabled={!canAfford}
+                  disabled={!canAfford && !upgrade.secret}
                 >
                   <LinearGradient
-                    colors={canAfford ? ['#00f0ff', '#0088ff'] : ['#666666', '#444444']}
+                    colors={canAfford ? ['#00f0ff', '#0088ff'] : upgrade.secret && isUnlocked ? ['#ffd700', '#ff8800'] : ['#666666', '#444444']}
                     style={styles.buyButtonGradient}
                   >
-                    <Text style={styles.buyButtonText}>{isUnlocked ? cost : '🔒'}</Text>
-                    {isUnlocked && <Text style={styles.buyButtonIcon}>💰</Text>}
+                    <Text style={styles.buyButtonText}>{upgrade.secret ? (isUnlocked ? 'OK' : '🔒') : isUnlocked ? cost : '🔒'}</Text>
+                    {isUnlocked && !upgrade.secret && <Text style={styles.buyButtonIcon}>💰</Text>}
                   </LinearGradient>
                 </TouchableOpacity>
               </LinearGradient>

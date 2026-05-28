@@ -9,6 +9,8 @@ export interface Upgrade {
   maxLevel: number;
   unlockLevel: number;
   unlockRequirement?: string;
+  secret?: boolean;
+  secretCondition?: string;
   effects: {
     type: string;
     value: number;
@@ -291,6 +293,136 @@ export const UPGRADES: Upgrade[] = [
     unlockRequirement: 'Perfil nível 16',
     effects: [{ type: 'critOverload', value: 0.3 }],
   },
+  {
+    id: 'chronoBreak',
+    name: 'Chrono Break',
+    description: 'Pequena chance de congelar todos os anéis por alguns segundos.',
+    icon: '⏳',
+    rarity: 'legendary',
+    maxLevel: 3,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Fazer 100 Perfect Escapes',
+    effects: [{ type: 'timeFreeze', value: 1 }],
+  },
+  {
+    id: 'voidPulse',
+    name: 'Void Pulse',
+    description: 'Chance de causar dano em área ao quebrar um anel.',
+    icon: '🌑',
+    rarity: 'legendary',
+    maxLevel: 4,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Quebrar 1000 anéis',
+    effects: [{ type: 'areaDamage', value: 0.45 }],
+  },
+  {
+    id: 'diamondInstinct',
+    name: 'Diamond Instinct',
+    description: 'Aumenta chance de diamante em Perfect Escape.',
+    icon: '💠',
+    rarity: 'epic',
+    maxLevel: 4,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Ganhar 50 diamantes por Perfect',
+    effects: [{ type: 'perfectChance', value: 0.018 }],
+  },
+  {
+    id: 'comboOverdrive',
+    name: 'Combo Overdrive',
+    description: 'Combos altos aumentam dano e moedas temporariamente.',
+    icon: '🚀',
+    rarity: 'legendary',
+    maxLevel: 3,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Atingir combo x25',
+    effects: [{ type: 'comboBoost', value: 0.25 }],
+  },
+  {
+    id: 'lastShield',
+    name: 'Last Shield',
+    description: 'Uma vez por partida, evita morte por esmagamento.',
+    icon: '🛡️',
+    rarity: 'legendary',
+    maxLevel: 2,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Vencer 10 fases sem revive',
+    effects: [{ type: 'lastShield', value: 1 }],
+  },
+  {
+    id: 'royalBreaker',
+    name: 'Royal Breaker',
+    description: 'Aumenta dano contra anéis externos.',
+    icon: '👑',
+    rarity: 'legendary',
+    maxLevel: 4,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Terminar uma temporada da Liga Neon no top 3',
+    effects: [{ type: 'outerDamage', value: 0.22 }],
+  },
+  {
+    id: 'bossHunter',
+    name: 'Boss Hunter',
+    description: 'Aumenta dano e XP em modos competitivos.',
+    icon: '🎯',
+    rarity: 'epic',
+    maxLevel: 4,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Vencer 10 Boss Modes',
+    effects: [{ type: 'competitiveBoost', value: 0.18 }],
+  },
+  {
+    id: 'secretMagnet',
+    name: 'Secret Magnet',
+    description: 'Aumenta moedas gerais recebidas no final.',
+    icon: '🧲',
+    rarity: 'epic',
+    maxLevel: 5,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Coletar 20 recompensas diárias',
+    effects: [{ type: 'coinMultiplier', value: 0.18 }],
+  },
+  {
+    id: 'trophyInstinct',
+    name: 'Trophy Instinct',
+    description: 'Pequeno bônus de troféus ao vencer competições.',
+    icon: '🏆',
+    rarity: 'epic',
+    maxLevel: 3,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Vencer 25 competições na Liga Neon',
+    effects: [{ type: 'trophyBonus', value: 2 }],
+  },
+  {
+    id: 'rivalCrusher',
+    name: 'Rival Crusher',
+    description: 'Aumenta dano e XP em partidas competitivas.',
+    icon: '💢',
+    rarity: 'legendary',
+    maxLevel: 3,
+    unlockLevel: 1,
+    unlockRequirement: 'Conquista secreta',
+    secret: true,
+    secretCondition: 'Vencer 10 competições seguidas',
+    effects: [{ type: 'competitiveBoost', value: 0.24 }],
+  },
 ];
 
 export const getRarityColor = (rarity: UpgradeRarity): string => {
@@ -325,6 +457,7 @@ export const getRandomUpgrades = (
     Boolean(upgrade?.id && upgrade.name && upgrade.description && upgrade.icon) &&
     (currentUpgrades[upgrade.id] || 0) < upgrade.maxLevel &&
     unlocked.has(upgrade.id) &&
+    (!upgrade.secret || unlocked.has(upgrade.id)) &&
     (playerLevel >= upgrade.unlockLevel || fallbackIds.includes(upgrade.id));
 
   const available = UPGRADES.filter(isValid);

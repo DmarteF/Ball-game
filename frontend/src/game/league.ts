@@ -8,9 +8,13 @@ export interface LeagueRival {
   avatar: string;
   favoriteSkin: string;
   level: number;
+  trophies: number;
   score: number;
+  secondaryScore: number;
   maxPhase: number;
   bossWins: number;
+  competitionWins: number;
+  competitionLosses: number;
   division: LeagueDivision;
   title: string;
 }
@@ -31,9 +35,15 @@ export interface LeagueHistory {
   bestDivision: LeagueDivision;
   seasonsPlayed: number;
   firstPlaceFinishes: number;
+  top3Finishes: number;
   top10Finishes: number;
   ultimateFirstPlaceFinishes: number;
   initialFirstPlaceFinishes: number;
+  competitionWins: number;
+  competitionLosses: number;
+  currentWinStreak: number;
+  bestWinStreak: number;
+  totalTrophiesGained: number;
   rankingSkinsObtained: string[];
   lastReward?: string;
 }
@@ -46,21 +56,22 @@ export interface LeagueSave {
   pendingSeasonReward?: LeagueSeasonReward;
   history: LeagueHistory;
   forcedDivision?: LeagueDivision;
+  playerTrophies?: number;
 }
 
 export const DIVISIONS: { name: LeagueDivision; minScore: number }[] = [
   { name: 'Bronze', minScore: 0 },
-  { name: 'Prata', minScore: 5000 },
-  { name: 'Ouro', minScore: 15000 },
-  { name: 'Platina', minScore: 35000 },
-  { name: 'Diamante', minScore: 70000 },
-  { name: 'Mestre', minScore: 120000 },
-  { name: 'Lendário', minScore: 200000 },
-  { name: 'Ultimate', minScore: 350000 },
+  { name: 'Prata', minScore: 300 },
+  { name: 'Ouro', minScore: 800 },
+  { name: 'Platina', minScore: 1500 },
+  { name: 'Diamante', minScore: 2500 },
+  { name: 'Mestre', minScore: 4000 },
+  { name: 'Lendário', minScore: 6000 },
+  { name: 'Ultimate', minScore: 9000 },
 ];
 
 const avatars = ['🔵', '🟣', '🟡', '🤖', '👑', '💎', '⚡', '🔥', '❄️', '🌙', '🌟', '🌀'];
-const skins = ['neon_blue', 'robot', 'fire', 'ice', 'lightning', 'crystal', 'cosmic_eye', 'solar_orb', 'black_hole', 'divine_core'];
+const skins = ['neon_blue', 'hamster', 'panda', 'fox_common', 'wolf_rare', 'robot', 'fire', 'ice', 'lightning', 'crystal', 'astral_eye', 'solar_guardian', 'black_sun', 'league_king_neon'];
 const prefixes = ['Neon', 'Dark', 'Cosmic', 'Lucky', 'Pixel', 'Cyber', 'Nitro', 'Solar', 'Lunar', 'Ghost', 'Frost', 'Fire', 'Void', 'Turbo', 'Mystic'];
 const suffixes = ['Fox', 'Cat', 'Pig', 'Orb', 'Runner', 'Breaker', 'Hunter', 'Slime', 'Ghost', 'King', 'Core', 'Eye', 'Star', 'Bot', 'Ring'];
 const baseNames = ['NeonFox', 'RingBreaker', 'LunaBot', 'OrbKing', 'PixelGhost', 'NitroCat', 'CosmicPig', 'DarkSlime', 'StarRunner', 'BossHunter', 'CyberPanda', 'VoidCat', 'PlasmaPig', 'FrostByte', 'FireOrb', 'LuckySlime', 'GhostRunner', 'DiamondEye', 'SolarKid', 'MoonRabbit'];
@@ -134,21 +145,44 @@ const scoreForSlot = (slot: number, rand: () => number, playerScore: number) => 
   return Math.max(600, Math.floor(1200 + (199 - slot) * 72 + rand() * 1800 + playerScore * 0.08));
 };
 
-export const createLeagueRivals = (playerId: string, playerScore: number, seasonKey = getSeasonKey()): LeagueRival[] => {
+const trophiesForSlot = (slot: number, rand: () => number, playerTrophies: number) => {
+  const baseline = Math.max(80, playerTrophies || Math.floor(playerTrophies * 0.7));
+  if (slot < 3) return 9200 + Math.floor(rand() * 1800);
+  if (slot < 10) return 6200 + Math.floor(rand() * 2600);
+  if (slot < 30) return 3600 + Math.floor(rand() * 2500);
+  if (slot < 80) return 1600 + Math.floor(rand() * 2300);
+  if (slot < 150) return 420 + Math.floor(rand() * 1500);
+  return Math.max(20, Math.floor(40 + rand() * 520 + baseline * 0.18));
+};
+
+const skinForSlot = (slot: number, rand: () => number) => {
+  if (slot < 3) return ['league_king_neon', 'divine_core', 'living_singularity'][slot] || 'league_king_neon';
+  if (slot < 10) return ['black_sun', 'void_dragon', 'cosmic_emperor', 'neon_dragon'][Math.floor(rand() * 4)];
+  if (slot < 55) return ['astral_eye', 'living_plasma', 'blue_comet', 'solar_guardian', 'orbital_blade'][Math.floor(rand() * 5)];
+  if (slot < 130) return ['wolf_rare', 'meteor_rare', 'purple_crystal', 'ninja_rare', 'alien_rare'][Math.floor(rand() * 5)];
+  return ['hamster', 'panda', 'fox_common', 'bee_common', 'neon_blue'][Math.floor(rand() * 5)];
+};
+
+export const createLeagueRivals = (playerId: string, playerScore: number, seasonKey = getSeasonKey(), playerTrophies = 120): LeagueRival[] => {
   const rand = random(`${playerId}_${seasonKey}_league_neon`);
   return Array.from({ length: 200 }, (_, index) => {
     const generatedName = index < baseNames.length ? baseNames[index] : `${prefixes[Math.floor(rand() * prefixes.length)]}${suffixes[Math.floor(rand() * suffixes.length)]}${Math.floor(rand() * 90)}`;
     const score = scoreForSlot(index, rand, playerScore);
+    const trophies = trophiesForSlot(index, rand, playerTrophies);
     return {
       id: `rival_${seasonKey}_${index}`,
       name: generatedName,
       avatar: avatars[Math.floor(rand() * avatars.length)],
-      favoriteSkin: skins[Math.floor(rand() * skins.length)],
-      level: Math.max(1, Math.floor(score / 4200) + Math.floor(rand() * 8)),
+      favoriteSkin: skinForSlot(index, rand) || skins[Math.floor(rand() * skins.length)],
+      level: Math.max(1, Math.floor(trophies / 120) + Math.floor(rand() * 8)),
+      trophies,
       score,
-      maxPhase: Math.max(1, Math.min(20, Math.floor(score / 18000) + Math.ceil(rand() * 6))),
-      bossWins: Math.floor(score / 52000 + rand() * 8),
-      division: getDivisionForScore(score),
+      secondaryScore: score,
+      maxPhase: Math.max(1, Math.min(50, Math.floor(trophies / 185) + Math.ceil(rand() * 8))),
+      bossWins: Math.floor(trophies / 750 + rand() * 8),
+      competitionWins: Math.floor(trophies / 18 + rand() * 28),
+      competitionLosses: Math.floor(trophies / 34 + rand() * 18),
+      division: getDivisionForScore(trophies),
       title: titles[Math.floor(rand() * titles.length)],
     };
   });
@@ -160,8 +194,17 @@ export const progressRivals = (rivals: LeagueRival[], days: number, seed: string
   return rivals.map((rival, index) => {
     const eliteFactor = index < 30 ? 1.12 : index > 150 ? 0.58 : 0.86;
     const gain = Math.floor((90 + rand() * 620) * days * eliteFactor);
+    const trophyGain = Math.floor((2 + rand() * 13) * days * eliteFactor);
     const score = rival.score + gain;
-    return { ...rival, score, division: getDivisionForScore(score), level: Math.max(rival.level, Math.floor(score / 4200)) };
+    const trophies = rival.trophies + trophyGain;
+    return {
+      ...rival,
+      trophies,
+      score,
+      secondaryScore: score,
+      division: getDivisionForScore(trophies),
+      level: Math.max(rival.level, Math.floor(trophies / 120)),
+    };
   });
 };
 
@@ -170,20 +213,104 @@ export const defaultLeagueSave = (playerId: string, playerScore = 0): LeagueSave
   seasonKey: getSeasonKey(),
   lastDailyProgressKey: getDayKey(),
   claimedDivisionRewards: [],
+  playerTrophies: Math.max(80, Math.floor(playerScore / 850)),
   history: {
     bestPosition: 201,
     bestDivision: 'Bronze',
     seasonsPlayed: 0,
     firstPlaceFinishes: 0,
+    top3Finishes: 0,
     top10Finishes: 0,
     ultimateFirstPlaceFinishes: 0,
     initialFirstPlaceFinishes: 0,
+    competitionWins: 0,
+    competitionLosses: 0,
+    currentWinStreak: 0,
+    bestWinStreak: 0,
+    totalTrophiesGained: 0,
     rankingSkinsObtained: [],
   },
 });
 
 export const getRankedLeague = (rivals: LeagueRival[], player: LeagueRival) =>
-  [...rivals, player].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  [...rivals, player].sort((a, b) => b.trophies - a.trophies || b.score - a.score || a.name.localeCompare(b.name));
+
+export interface CompetitionMap {
+  id: string;
+  theme: string;
+  color: string;
+  rings: number;
+  hpMultiplier: number;
+  closingMultiplier: number;
+  rotationMultiplier: number;
+  gapMultiplier: number;
+  modifier: string;
+  rewardMultiplier: number;
+}
+
+const themes = [
+  ['Neon Azul', '#00f0ff'],
+  ['Vazio Roxo', '#8b5cf6'],
+  ['Inferno Vermelho', '#ff1744'],
+  ['Gelo Cósmico', '#9be8ff'],
+  ['Dourado', '#ffd700'],
+  ['Glitch', '#39ff14'],
+  ['Plasma', '#ff4fd8'],
+  ['Sombra', '#111827'],
+] as const;
+
+const modifiers = [
+  ['Anéis rápidos', 1, 1.12, 1.16, 1, 1.12],
+  ['Anéis resistentes', 1.18, 1, 1, 1, 1.14],
+  ['Aberturas maiores', 1, 0.96, 1, 1.12, 1.02],
+  ['Mais recompensa', 1, 1, 1, 1, 1.28],
+  ['Perfect favorável', 0.96, 0.95, 0.95, 1.08, 1.08],
+  ['Fechamento lento', 1, 0.86, 1, 1, 1.04],
+  ['Rotação invertida', 1, 1, 1.1, 1, 1.1],
+  ['Combo forte', 1, 1.04, 1.04, 1, 1.18],
+] as const;
+
+export const createCompetitionMap = (seed: string, playerTrophies: number): CompetitionMap => {
+  const rand = random(`${seed}_${playerTrophies}_competition_map`);
+  const theme = themes[Math.floor(rand() * themes.length)];
+  const modifier = modifiers[Math.floor(rand() * modifiers.length)];
+  const tier = Math.min(1, playerTrophies / 9000);
+  return {
+    id: `map_${hash(seed).toString(16)}`,
+    theme: theme[0],
+    color: theme[1],
+    rings: Math.round(14 + tier * 34 + rand() * 12),
+    hpMultiplier: modifier[1] + tier * 0.42,
+    closingMultiplier: modifier[2] + tier * 0.26,
+    rotationMultiplier: modifier[3] + tier * 0.28,
+    gapMultiplier: modifier[4],
+    modifier: modifier[0],
+    rewardMultiplier: modifier[5] + tier * 0.3,
+  };
+};
+
+export const findMatchmakingRival = (rivals: LeagueRival[], player: LeagueRival, seed: string) => {
+  const rand = random(seed);
+  const roll = rand();
+  const targetOffset = roll < 0.7 ? 260 : roll < 0.9 ? 850 : -420;
+  const target = player.trophies + targetOffset + (rand() - 0.5) * 360;
+  const sorted = [...rivals].sort((a, b) => Math.abs(a.trophies - target) - Math.abs(b.trophies - target));
+  return sorted[Math.floor(rand() * Math.min(12, sorted.length))] || rivals[0];
+};
+
+export const calculateTrophyDelta = (player: LeagueRival, rival: LeagueRival, won: boolean, winStreak: number, noRevive = true, secretBonus = 0) => {
+  const diff = rival.trophies - player.trophies;
+  if (!won) {
+    if (diff > 700) return -3;
+    if (diff > 150) return -5;
+    if (diff < -500) return -8;
+    return -6;
+  }
+  const base = diff > 700 ? 18 : diff > 150 ? 14 : diff < -500 ? 8 : 12;
+  const streakBonus = winStreak >= 10 ? 8 : winStreak >= 5 ? 4 : winStreak >= 3 ? 2 : 0;
+  const upsetBonus = diff > 1100 ? 5 : diff > 700 ? 3 : 0;
+  return base + streakBonus + upsetBonus + (noRevive ? 1 : 0) + secretBonus;
+};
 
 export const getDivisionReward = (division: LeagueDivision): RewardGrant[] => {
   switch (division) {
@@ -208,9 +335,17 @@ export const getSeasonRewards = (position: number, division: LeagueDivision): Re
 };
 
 export const getFirstPlaceSkinForDivision = (division: LeagueDivision) => {
-  if (division === 'Ultimate') return 'league_king_neon';
-  if (division === 'Bronze') return 'league_bronze_champion';
-  return undefined;
+  const skinsByDivision: Record<LeagueDivision, string> = {
+    Bronze: 'league_bronze_champion',
+    Prata: 'astral_crown',
+    Ouro: 'star_king',
+    Platina: 'cosmic_emperor',
+    Diamante: 'black_sun',
+    Mestre: 'celestial_core',
+    Lendário: 'ring_devourer',
+    Ultimate: 'league_king_neon',
+  };
+  return skinsByDivision[division];
 };
 
 export const rewardToLabel = (reward: RewardGrant) => {

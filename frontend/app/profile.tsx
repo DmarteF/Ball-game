@@ -109,10 +109,13 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>LIGA NEON</Text>
           <Text style={styles.stat}>Posição atual: #{leaguePosition}/201</Text>
           <Text style={styles.stat}>Divisão atual: {leaguePlayer.division}</Text>
-          <Text style={styles.stat}>Pontuação: {leaguePlayer.score.toLocaleString('pt-BR')}</Text>
+          <Text style={styles.stat}>Troféus: {leaguePlayer.trophies.toLocaleString('pt-BR')}</Text>
+          <Text style={styles.stat}>Pontuação secundária: {leaguePlayer.score.toLocaleString('pt-BR')}</Text>
           <Text style={styles.stat}>Melhor posição: #{game.league.history.bestPosition || leaguePosition}</Text>
           <Text style={styles.stat}>Melhor divisão: {game.league.history.bestDivision}</Text>
           <Text style={styles.stat}>Temporadas vencidas: {game.league.history.firstPlaceFinishes}</Text>
+          <Text style={styles.stat}>Vitórias/derrotas: {game.league.history.competitionWins || 0}/{game.league.history.competitionLosses || 0}</Text>
+          <Text style={styles.stat}>Maior sequência: {game.league.history.bestWinStreak || 0}</Text>
           <Text style={styles.stat}>Skins de ranking: {game.league.history.rankingSkinsObtained.length}</Text>
           <TouchableOpacity style={styles.achievementButton} onPress={() => router.push('/league' as any)}>
             <Text style={styles.achievementButtonText}>🏅 Abrir Liga Neon</Text>

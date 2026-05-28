@@ -3,7 +3,7 @@ import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
-import { DIVISIONS, getDaysRemainingInSeason, getDivisionReward, rewardToLabel } from '@/src/game/league';
+import { DIVISIONS, getDaysRemainingInSeason, getDivisionReward, getDivisionMinScore, rewardToLabel } from '@/src/game/league';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 
@@ -19,6 +19,11 @@ export default function LeagueScreen() {
   const pending = game.league.pendingSeasonReward;
   const claimedDivisions = new Set(game.league.claimedDivisionRewards);
   const nextDivisionReward = DIVISIONS.find(item => item.name !== 'Bronze' && !claimedDivisions.has(item.name) && getDivisionReward(item.name).length > 0);
+  const divisionIndex = DIVISIONS.findIndex(item => item.name === player.division);
+  const nextDivision = DIVISIONS[divisionIndex + 1];
+  const currentMin = getDivisionMinScore(player.division);
+  const nextMin = nextDivision?.minScore || currentMin;
+  const divisionProgress = nextDivision ? Math.min(1, (player.trophies - currentMin) / Math.max(1, nextMin - currentMin)) : 1;
 
   const goToPlayer = () => {
     if (playerIndex >= 0) listRef.current?.scrollToIndex({ index: playerIndex, animated: true, viewPosition: 0.45 });
@@ -45,12 +50,12 @@ export default function LeagueScreen() {
         <Text style={styles.avatar}>{item.avatar}</Text>
         <View style={styles.rowInfo}>
           <Text style={styles.name} numberOfLines={1}>{isPlayer ? `${item.name} (Você)` : item.name}</Text>
-          <Text style={styles.meta}>{skin.icon} {skin.name} • Fase {item.maxPhase} • Boss {item.bossWins}V</Text>
+          <Text style={styles.meta}>{skin.icon} {skin.name} • Fase {item.maxPhase} • Comp {item.competitionWins}V</Text>
         </View>
         <View style={styles.scoreBox}>
-          <Text style={styles.score}>{item.score.toLocaleString('pt-BR')}</Text>
+          <Text style={styles.score}>{item.trophies.toLocaleString('pt-BR')} 🏆</Text>
           <Text style={styles.division}>{item.division}</Text>
-          {previous && <Text style={styles.diff}>+{(previous.score - item.score).toLocaleString('pt-BR')}</Text>}
+          {previous && <Text style={styles.diff}>+{(previous.trophies - item.trophies).toLocaleString('pt-BR')}</Text>}
         </View>
       </View>
     );
@@ -70,8 +75,8 @@ export default function LeagueScreen() {
           <Text style={styles.summaryValue}>#{playerIndex + 1}/{standings.length}</Text>
         </View>
         <View>
-          <Text style={styles.summaryLabel}>Divisão</Text>
-          <Text style={styles.summaryValue}>{player.division}</Text>
+          <Text style={styles.summaryLabel}>Troféus</Text>
+          <Text style={styles.summaryValue}>{player.trophies.toLocaleString('pt-BR')}</Text>
         </View>
         <View>
           <Text style={styles.summaryLabel}>Temporada</Text>
@@ -79,12 +84,24 @@ export default function LeagueScreen() {
         </View>
       </View>
 
+      <View style={styles.trophyPanel}>
+        <View style={styles.trophyHeader}>
+          <Text style={styles.trophyTitle}>{player.division}</Text>
+          <Text style={styles.trophyText}>{nextDivision ? `${Math.max(0, nextMin - player.trophies)} troféus até ${nextDivision.name}` : 'Divisão máxima'}</Text>
+        </View>
+        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${divisionProgress * 100}%` }]} /></View>
+        <TouchableOpacity style={styles.competeButton} onPress={() => { playSound('buttonConfirm'); router.push('/compete' as any); }}>
+          <Text style={styles.competeText}>COMPETIR</Text>
+        </TouchableOpacity>
+        <Text style={styles.streakText}>Sequência: {game.league.history.currentWinStreak || 0} vitórias • Melhor: {game.league.history.bestWinStreak || 0}</Text>
+      </View>
+
       <View style={styles.topThree}>
         {topThree.map((item, index) => (
           <View key={item.id} style={styles.podium}>
             <Text style={styles.medal}>{index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</Text>
             <Text style={styles.podiumName} numberOfLines={1}>{item.id === game.playerId ? 'Você' : item.name}</Text>
-            <Text style={styles.podiumScore}>{item.score.toLocaleString('pt-BR')}</Text>
+            <Text style={styles.podiumScore}>{item.trophies.toLocaleString('pt-BR')} 🏆</Text>
           </View>
         ))}
       </View>
@@ -92,7 +109,7 @@ export default function LeagueScreen() {
       <View style={styles.rewardCard}>
         <Text style={styles.rewardTitle}>Recompensa estimada</Text>
         <Text style={styles.rewardText}>{playerIndex === 0 ? 'Skin especial + gemas + baú da divisão' : playerIndex < 10 ? 'Gemas e baú raro/épico' : playerIndex < 50 ? 'Moedas, fragmentos e chave comum' : 'Participação com moedas/XP'}</Text>
-        {above && <Text style={styles.rewardHint}>Faltam {(above.score - player.score).toLocaleString('pt-BR')} pontos para subir uma posição.</Text>}
+        {above && <Text style={styles.rewardHint}>Faltam {(above.trophies - player.trophies).toLocaleString('pt-BR')} troféus para subir uma posição.</Text>}
         {nextDivisionReward && (
           <TouchableOpacity style={styles.smallButton} onPress={collectDivision}>
             <Text style={styles.smallButtonText}>Coletar prêmio {nextDivisionReward.name}: {getDivisionReward(nextDivisionReward.name).map(rewardToLabel).join(', ')}</Text>
@@ -114,7 +131,7 @@ export default function LeagueScreen() {
       />
 
       <TouchableOpacity style={styles.playerDock} onPress={goToPlayer}>
-        <Text style={styles.dockText}>Minha posição #{playerIndex + 1} • {player.score.toLocaleString('pt-BR')} pts • {player.division}</Text>
+        <Text style={styles.dockText}>Minha posição #{playerIndex + 1} • {player.trophies.toLocaleString('pt-BR')} troféus • {player.division}</Text>
       </TouchableOpacity>
 
       <Modal visible={!!pending} transparent animationType="fade">
@@ -151,6 +168,15 @@ const styles = StyleSheet.create({
   summary: { marginHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#00f0ff44', borderRadius: 12, padding: 12 },
   summaryLabel: { color: '#ffffff88', fontSize: 11, fontWeight: 'bold' },
   summaryValue: { color: '#ffffff', fontSize: 18, fontWeight: 'bold', marginTop: 2 },
+  trophyPanel: { marginHorizontal: 16, marginTop: 10, backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#00ff8866', borderRadius: 12, padding: 12, gap: 9 },
+  trophyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  trophyTitle: { color: '#00ff88', fontSize: 18, fontWeight: 'bold' },
+  trophyText: { color: '#ffffffaa', fontSize: 12, fontWeight: 'bold', flex: 1, textAlign: 'right' },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: '#ffffff18', overflow: 'hidden' },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: '#00ff88' },
+  competeButton: { height: 48, borderRadius: 10, backgroundColor: '#00f0ff', alignItems: 'center', justifyContent: 'center' },
+  competeText: { color: '#001018', fontSize: 17, fontWeight: 'bold', letterSpacing: 1 },
+  streakText: { color: '#ffffff99', fontSize: 12, textAlign: 'center', fontWeight: 'bold' },
   topThree: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 10 },
   podium: { flex: 1, backgroundColor: '#ffffff10', borderWidth: 1, borderColor: '#ffd70066', borderRadius: 10, padding: 10, alignItems: 'center' },
   medal: { fontSize: 24 },

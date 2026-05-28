@@ -22,14 +22,14 @@ export default function HomeScreen() {
 
   const secondaryItems = [
     { label: 'Loja', icon: '🛒', route: '/store', color: '#00aaff' },
-    { label: 'Conquistas', icon: '🏆', route: '/achievements', color: '#ffd700' },
     { label: 'Missões', icon: '📅', route: '/daily', color: '#ff8800' },
     { label: 'Evento', icon: '⚡', route: '/events', color: weeklyEvent.color },
-    { label: 'Liga Neon', icon: '🏅', route: '/league', color: '#00ff88' },
     { label: 'Roleta', icon: '🎡', route: '/wheel', color: '#00ff88' },
+    { label: 'Recompensa diária', icon: '🎁', route: '/wheel', color: '#ffd700' },
     { label: 'Boss', icon: '👑', route: '/boss', color: '#ff0055' },
+    { label: 'Liga Neon', icon: '🏅', route: '/league', color: '#00ff88' },
+    { label: 'Conquistas', icon: '🏆', route: '/achievements', color: '#ffd700' },
     { label: 'Configurações', icon: '⚙️', route: '/profile', color: '#b8f3ff' },
-    { label: 'Perfil', icon: avatar, route: '/profile', color: '#ffffff' },
   ];
 
   const go = (route: string) => {
@@ -93,17 +93,6 @@ export default function HomeScreen() {
             </LinearGradient>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={styles.dailyButton} onPress={() => go('/wheel')}>
-          <LinearGradient colors={['#ffd700', '#ff8800']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.dailyGradient}>
-            <Text style={styles.dailyIcon}>🎁</Text>
-            <View style={styles.dailyTextContainer}>
-              <Text style={styles.dailyTitle}>Recompensa diária</Text>
-              <Text style={styles.dailySubtitle}>Roleta e prêmios locais</Text>
-            </View>
-            <Text style={styles.dailyArrow}>›</Text>
-          </LinearGradient>
-        </TouchableOpacity>
 
         {lastAchievementUnlocked && (
           <TouchableOpacity style={styles.achievementToast} onPress={clearAchievementToast}>
@@ -194,13 +183,6 @@ const styles = StyleSheet.create({
   primaryCardGradient: { flex: 1, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ffffff24' },
   primaryIcon: { fontSize: 30, marginBottom: 6 },
   primaryLabel: { color: '#ffffff', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
-  dailyButton: { height: 62, borderRadius: 14, overflow: 'hidden', marginBottom: 14 },
-  dailyGradient: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12 },
-  dailyIcon: { fontSize: 30 },
-  dailyTextContainer: { flex: 1 },
-  dailyTitle: { color: '#000000', fontSize: 15, fontWeight: 'bold' },
-  dailySubtitle: { color: '#000000aa', fontSize: 12, marginTop: 2 },
-  dailyArrow: { color: '#000000', fontSize: 28, fontWeight: 'bold' },
   achievementToast: { marginTop: 4, backgroundColor: '#00ff8822', borderWidth: 1, borderColor: '#00ff88aa', borderRadius: 12, padding: 12 },
   achievementToastTitle: { color: '#00ff88', fontSize: 13, fontWeight: 'bold' },
   achievementToastText: { color: '#ffffff', fontSize: 15, fontWeight: 'bold', marginTop: 2 },

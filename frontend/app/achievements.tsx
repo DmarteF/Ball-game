@@ -6,7 +6,7 @@ import { ACHIEVEMENTS, AchievementCategory } from '@/src/game/achievements';
 import { useGame } from '@/src/contexts/GameContext';
 import { getSkinRarityColor } from '@/src/game/skins';
 
-const CATEGORIES: ('todas' | AchievementCategory)[] = ['todas', 'progresso', 'combate', 'coleção', 'economia', 'baús', 'skins', 'perfect escape', 'boss', 'especiais'];
+const CATEGORIES: ('todas' | AchievementCategory)[] = ['todas', 'progresso', 'combate', 'coleção', 'economia', 'baús', 'skins', 'perfect escape', 'boss', 'liga', 'especiais'];
 
 const rewardLabel = (reward: typeof ACHIEVEMENTS[number]['reward']) => {
   if (reward.type === 'coins') return `💰 ${reward.amount}`;
@@ -35,10 +35,10 @@ export default function AchievementsScreen() {
         <Text style={styles.title}>CONQUISTAS</Text>
         <Text style={styles.counter}>{completed}/{ACHIEVEMENTS.length} concluídas • {pending} pendentes</Text>
         <View style={styles.specialBox}>
-          <Text style={styles.specialTitle}>Campeão dos 20 Estágios</Text>
+          <Text style={styles.specialTitle}>Campeão dos 50 Estágios</Text>
           <View style={styles.specialBar}>
-            <View style={[styles.specialFill, { width: `${Math.min(100, (champion.progress / 20) * 100)}%` }]} />
-            <Text style={styles.specialText}>{champion.progress}/20</Text>
+            <View style={[styles.specialFill, { width: `${Math.min(100, (champion.progress / 50) * 100)}%` }]} />
+            <Text style={styles.specialText}>{champion.progress}/50</Text>
           </View>
         </View>
       </View>

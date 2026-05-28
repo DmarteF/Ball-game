@@ -1,6 +1,6 @@
 import { SkinRarity } from './skins';
 
-export type AchievementCategory = 'progresso' | 'combate' | 'coleção' | 'economia' | 'baús' | 'skins' | 'perfect escape' | 'boss' | 'especiais';
+export type AchievementCategory = 'progresso' | 'combate' | 'coleção' | 'economia' | 'baús' | 'skins' | 'perfect escape' | 'boss' | 'liga' | 'especiais';
 export type AchievementReward =
   | { type: 'coins'; amount: number }
   | { type: 'gems'; amount: number }
@@ -46,6 +46,13 @@ export type AchievementProgressSource = {
   leagueFirstPlaceFinishes: number;
   leagueUltimateFirstPlaceFinishes: number;
   leagueInitialCrowns: number;
+  leagueCompetitionWins: number;
+  leagueCompetitionLosses: number;
+  leagueBestWinStreak: number;
+  totalTrophiesGained: number;
+  leagueDiamondReached: number;
+  leagueLegendaryReached: number;
+  leagueUltimateReached: number;
 };
 
 export const BOSS_DIFFICULTY_RANK: Record<string, number> = {
@@ -71,7 +78,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   { id: 'chest_opener_2', name: 'Abridor de Baús II', description: 'Abra 25 baús.', category: 'baús', required: 25, reward: { type: 'keys', amount: 2 }, rarity: 'rare' },
   { id: 'survivor', name: 'Sobrevivente', description: 'Vença uma fase sem usar revive.', category: 'progresso', required: 1, reward: { type: 'gems', amount: 12 }, rarity: 'rare' },
   { id: 'fearless', name: 'Sem Medo', description: 'Vença 5 fases sem usar revive.', category: 'progresso', required: 5, reward: { type: 'chest', chestType: 'epic', amount: 1 }, rarity: 'epic' },
-  { id: 'stage_20_champion', name: 'Campeão dos 20 Estágios', description: 'Conclua todas as 20 fases principais.', category: 'especiais', required: 20, reward: { type: 'skin', skinId: 'cosmic_champion' }, rarity: 'special' },
+  { id: 'stage_20_champion', name: 'Campeão dos 50 Estágios', description: 'Conclua todas as 50 fases principais.', category: 'especiais', required: 50, reward: { type: 'skin', skinId: 'cosmic_champion' }, rarity: 'special' },
   { id: 'first_duel', name: 'Primeiro Duelo', description: 'Jogue o Boss Mode pela primeira vez.', category: 'boss', required: 1, reward: { type: 'coins', amount: 300 }, rarity: 'common' },
   { id: 'boss_victory', name: 'Vitória Contra o Boss', description: 'Vença o Boss uma vez.', category: 'boss', required: 1, reward: { type: 'gems', amount: 20 }, rarity: 'rare' },
   { id: 'neon_rival', name: 'Rival Neon', description: 'Vença 5 partidas de Boss Mode.', category: 'boss', required: 5, reward: { type: 'chest', chestType: 'rare', amount: 1 }, rarity: 'epic' },
@@ -82,6 +89,15 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   { id: 'supreme_champion', name: 'Campeão Supremo', description: 'Termine em #1 na divisão Ultimate da Liga Neon.', category: 'especiais', required: 1, reward: { type: 'fragments', skinId: 'league_king_neon', amount: 80 }, rarity: 'ultimate' },
   { id: 'back_to_top', name: 'Retorno ao Topo', description: 'Volte ao #1 depois de uma temporada com rebaixamento.', category: 'especiais', required: 2, reward: { type: 'gems', amount: 70 }, rarity: 'legendary' },
   { id: 'first_crown', name: 'Primeira Coroa', description: 'Primeira vez em #1 no rank inicial da Liga Neon.', category: 'especiais', required: 1, reward: { type: 'skin', skinId: 'initial_neon_champion' }, rarity: 'ultimate' },
+  { id: 'first_compete', name: 'Primeiro Competir', description: 'Jogue uma competição da Liga Neon.', category: 'liga', required: 1, reward: { type: 'coins', amount: 400 }, rarity: 'common' },
+  { id: 'first_compete_win', name: 'Primeira Vitória', description: 'Vença uma competição da Liga Neon.', category: 'liga', required: 1, reward: { type: 'gems', amount: 18 }, rarity: 'rare' },
+  { id: 'ranking_up_silver', name: 'Subindo no Ranking', description: 'Alcance a divisão Prata.', category: 'liga', required: 300, reward: { type: 'chest', chestType: 'common', amount: 1 }, rarity: 'rare' },
+  { id: 'trophy_hunter', name: 'Caçador de Troféus', description: 'Ganhe 500 troféus totais.', category: 'liga', required: 500, reward: { type: 'keys', amount: 1 }, rarity: 'rare' },
+  { id: 'neon_streak', name: 'Sequência Neon', description: 'Vença 5 competições seguidas.', category: 'liga', required: 5, reward: { type: 'chest', chestType: 'rare', amount: 1 }, rarity: 'epic' },
+  { id: 'unstoppable', name: 'Imparável', description: 'Vença 10 competições seguidas.', category: 'liga', required: 10, reward: { type: 'chest', chestType: 'epic', amount: 1 }, rarity: 'legendary' },
+  { id: 'league_elite', name: 'Elite da Liga', description: 'Alcance Diamante na Liga Neon.', category: 'liga', required: 1, reward: { type: 'chest', chestType: 'rare', amount: 1 }, rarity: 'epic' },
+  { id: 'competitive_legend', name: 'Lenda Competitiva', description: 'Alcance Lendário na Liga Neon.', category: 'liga', required: 1, reward: { type: 'legendaryKeys', amount: 1 }, rarity: 'legendary' },
+  { id: 'trophy_king', name: 'Rei dos Troféus', description: 'Alcance Ultimate na Liga Neon.', category: 'liga', required: 1, reward: { type: 'fragments', skinId: 'league_king_neon', amount: 70 }, rarity: 'ultimate' },
 ];
 
 export const getAchievementProgress = (id: string, source: AchievementProgressSource) => {
@@ -112,6 +128,15 @@ export const getAchievementProgress = (id: string, source: AchievementProgressSo
     case 'supreme_champion': return source.leagueUltimateFirstPlaceFinishes;
     case 'back_to_top': return source.leagueFirstPlaceFinishes;
     case 'first_crown': return source.leagueInitialCrowns;
+    case 'first_compete': return source.leagueCompetitionWins + source.leagueCompetitionLosses;
+    case 'first_compete_win': return source.leagueCompetitionWins;
+    case 'ranking_up_silver': return source.totalTrophiesGained;
+    case 'trophy_hunter': return source.totalTrophiesGained;
+    case 'neon_streak':
+    case 'unstoppable': return source.leagueBestWinStreak;
+    case 'league_elite': return source.leagueDiamondReached;
+    case 'competitive_legend': return source.leagueLegendaryReached;
+    case 'trophy_king': return source.leagueUltimateReached;
     default: return 0;
   }
 };
