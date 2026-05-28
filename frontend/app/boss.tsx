@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DualArenaView } from '@/src/components/DualArenaView';
@@ -175,11 +175,30 @@ export default function BossScreen() {
 
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
-      <View style={styles.header}>
-        <NeonButton title="← VOLTAR" variant="secondary" audioSettings={game.settings} onPress={() => router.back()} style={styles.backButton} />
-        <Text style={styles.title}>BOSS MODE</Text>
-        <Text style={styles.subtitle}>Boss do mês: {monthlyBoss.name}</Text>
-      </View>
+      {duelState === 'menu' ? (
+        <View style={styles.header}>
+          <NeonButton title="← VOLTAR" variant="secondary" audioSettings={game.settings} onPress={() => router.back()} style={styles.backButton} />
+          <Text style={styles.title}>BOSS MODE</Text>
+          <Text style={styles.subtitle}>Boss do mês: {monthlyBoss.name}</Text>
+        </View>
+      ) : playerArena && bossArena ? (
+        <View style={styles.topHUD}>
+          <View style={styles.hudRow}>
+            <View style={styles.hudItem}><Text style={styles.hudIcon}>💰</Text><Text style={styles.hudValue}>{playerArena.coins}</Text></View>
+            <View style={styles.hudItem}><Text style={styles.hudIcon}>⭐</Text><Text style={styles.hudValue}>Lv.{playerArena.level}</Text></View>
+            <TouchableOpacity style={styles.pauseMiniButton} onPress={() => setDuelState(duelState === 'paused' ? 'playing' : 'paused')}>
+              <Text style={styles.pauseMiniText}>{duelState === 'paused' ? '▶' : '⏸'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.levelRow}>
+            <Text style={styles.levelText}>XP {playerArena.xp}</Text>
+            <View style={styles.progressBar}>
+              <LinearGradient colors={['#ff0055', '#ff8800', '#ffd700']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.progressFill, { width: `${getArenaProgress(playerArena) * 100}%` }]} />
+            </View>
+          </View>
+          <Text style={styles.progressText}>🌀 Anéis: {playerArena.rings.filter(ring => ring.status === 'active' && ring.hp > 0).length}/{playerArena.rings.length} {playerArena.combo >= 2 ? `• Combo x${playerArena.combo}` : ''}</Text>
+        </View>
+      ) : null}
 
       {duelState === 'menu' && (
         <ScrollView contentContainerStyle={styles.menuContent}>
@@ -211,9 +230,17 @@ export default function BossScreen() {
           <DualArenaView arena={bossArena} meta={`${activeLevel.name} • ${bossArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(bossArena) > getArenaProgress(playerArena)} />
           <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp} • Lv.${playerArena.level}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(bossArena)} />
           <View style={styles.shopRow}>
-            <NeonButton title={`ATK ${getArenaUpgradeCost(playerArena, 'atk')}`} variant="primary" audioSettings={game.settings} onPress={() => buy('atk')} />
-            <NeonButton title={`Gold ${getArenaUpgradeCost(playerArena, 'gold')}`} variant="primary" audioSettings={game.settings} onPress={() => buy('gold')} />
-            <NeonButton title={duelState === 'paused' ? 'RETOMAR' : 'PAUSAR'} variant="secondary" audioSettings={game.settings} onPress={() => setDuelState(duelState === 'paused' ? 'playing' : 'paused')} />
+            {(['atk', 'gold'] as const).map(type => {
+              const cost = getArenaUpgradeCost(playerArena, type);
+              const canBuy = playerArena.coins >= cost;
+              return (
+                <TouchableOpacity key={type} style={[styles.runUpgradeButton, !canBuy && styles.disabled]} onPress={() => buy(type)}>
+                  <Text style={styles.runUpgradeIcon}>{type === 'atk' ? '⚔️' : '💰'}</Text>
+                  <Text style={styles.runUpgradeLabel}>{type === 'atk' ? 'ATK' : 'Gold'} Lv.{playerArena[type]}</Text>
+                  <Text style={styles.runUpgradeCost}>{cost} 💰</Text>
+                </TouchableOpacity>
+              );
+            })}
             <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={confirmExit} />
           </View>
         </View>
@@ -238,6 +265,18 @@ export default function BossScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingTop: 52, paddingHorizontal: 16, paddingBottom: 8 },
+  topHUD: { paddingTop: 45, paddingHorizontal: 12, paddingBottom: 4 },
+  hudRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 6 },
+  hudItem: { flex: 1, flexDirection: 'row', backgroundColor: '#ffffff11', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  hudIcon: { fontSize: 18 },
+  hudValue: { fontSize: 16, fontWeight: 'bold', color: '#00f0ff' },
+  pauseMiniButton: { width: 42, height: 38, borderRadius: 10, backgroundColor: '#ffffff18', borderWidth: 1, borderColor: '#ffffff33', alignItems: 'center', justifyContent: 'center' },
+  pauseMiniText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
+  levelRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff11', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', marginBottom: 4, gap: 10 },
+  levelText: { fontSize: 14, fontWeight: 'bold', color: '#ffd700' },
+  progressText: { fontSize: 12, color: '#ffffff', marginBottom: 2, textAlign: 'center', fontWeight: 'bold' },
+  progressBar: { flex: 1, height: 14, backgroundColor: '#ffffff11', borderRadius: 7, overflow: 'hidden', borderWidth: 1, borderColor: '#ffffff22' },
+  progressFill: { height: '100%' },
   backButton: { alignSelf: 'flex-start', minWidth: 110 },
   title: { color: '#00f0ff', fontSize: 30, fontWeight: 'bold', marginTop: 8 },
   subtitle: { color: '#ffffffaa', marginTop: 4, fontWeight: 'bold' },
@@ -251,6 +290,25 @@ const styles = StyleSheet.create({
   progressLine: { color: '#ffffff', fontWeight: 'bold' },
   duelContent: { flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 14, paddingBottom: 10 },
   shopRow: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  runUpgradeButton: {
+    flexGrow: 1,
+    flexBasis: 118,
+    minHeight: 58,
+    borderRadius: 12,
+    backgroundColor: '#06162a',
+    borderWidth: 1.5,
+    borderColor: '#00f0ffaa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    shadowColor: '#00f0ff',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+  },
+  disabled: { opacity: 0.45 },
+  runUpgradeIcon: { fontSize: 18 },
+  runUpgradeLabel: { color: '#ffffff', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
+  runUpgradeCost: { color: '#ffd700', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
   modalOverlay: { flex: 1, backgroundColor: '#000000cc', justifyContent: 'center', alignItems: 'center', padding: 18 },
   resultModal: { width: '100%', maxWidth: 390, backgroundColor: '#1a0a2e', borderWidth: 1, borderColor: '#00f0ff88', borderRadius: 18, padding: 18, gap: 10, alignItems: 'stretch' },
   resultTitle: { fontSize: 30, fontWeight: 'bold', textAlign: 'center' },

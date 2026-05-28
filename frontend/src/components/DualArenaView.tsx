@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { DualArenaState, getArenaProgress } from '@/src/game/dualArena';
 
@@ -28,7 +29,7 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
             const isSolid = ring.type === 'solid';
             const gapLength = isSolid ? 0 : (ring.gapSize / (Math.PI * 2)) * circumference;
             const arcLength = circumference - gapLength;
-            const opacity = Math.max(isSolid ? 0.72 : 0.36, ring.hp / ring.maxHp);
+            const opacity = Math.max(isSolid ? 0.65 : 0.4, ring.hp / ring.maxHp);
             const rotationDeg = (ring.rotation * 180) / Math.PI;
             const gapOffsetDeg = ((ring.gapStart + ring.gapSize / 2) * 180) / Math.PI;
             return (
@@ -37,8 +38,8 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
                 cx={arena.center}
                 cy={arena.center}
                 r={ring.radius}
-                stroke={isSolid ? '#ff4d00' : ring.color}
-                strokeWidth={isSolid ? ring.thickness + 1 : ring.thickness}
+                stroke={ring.color}
+                strokeWidth={ring.thickness}
                 fill="none"
                 opacity={opacity}
                 strokeDasharray={isSolid ? undefined : `${arcLength} ${gapLength}`}
@@ -58,12 +59,16 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
               width: arena.ballRadius * 2,
               height: arena.ballRadius * 2,
               borderRadius: arena.ballRadius,
-              borderColor: arena.skinColor,
               shadowColor: arena.skinColor,
             },
           ]}
         >
-          <Text style={styles.ballIcon}>{arena.skinIcon}</Text>
+          <View style={[styles.skinTrail, { borderColor: arena.skinColor }]} />
+          <View style={[styles.ballGlow, { shadowColor: arena.skinColor, borderRadius: arena.ballRadius }]}>
+            <LinearGradient colors={['#ffffff', arena.skinColor, accent]} style={styles.ballGradient}>
+              <Text style={styles.ballIcon}>{arena.skinIcon}</Text>
+            </LinearGradient>
+          </View>
         </View>
         {arena.lastSolidBreak > 0 && (
           <View style={styles.solidBadge}>
@@ -86,24 +91,42 @@ const styles = StyleSheet.create({
   panel: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: '#ffffff10',
-    borderWidth: 1.5,
-    borderRadius: 14,
-    padding: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderRadius: 0,
+    padding: 4,
   },
   header: { width: '100%', alignItems: 'center', gap: 3, marginBottom: 8 },
   name: { color: '#ffffff', fontWeight: 'bold', textAlign: 'center', width: '100%' },
   meta: { color: '#ffffffaa', fontWeight: 'bold', fontSize: 11, textAlign: 'center' },
-  stage: { backgroundColor: '#00000055', borderWidth: 2, borderColor: '#ffffff18', overflow: 'hidden' },
+  stage: { backgroundColor: '#00000033', borderWidth: 2, borderColor: '#ffffff11', overflow: 'hidden', position: 'relative' },
   ball: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
     shadowOpacity: 0.9,
-    shadowRadius: 10,
+    shadowRadius: 15,
+    elevation: 10,
   },
+  skinTrail: {
+    position: 'absolute',
+    left: -7,
+    top: -7,
+    right: -7,
+    bottom: -7,
+    borderRadius: 999,
+    borderWidth: 1,
+    opacity: 0.45,
+  },
+  ballGlow: {
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 15,
+  },
+  ballGradient: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   ballIcon: { fontSize: 10, lineHeight: 12 },
   solidBadge: {
     position: 'absolute',
@@ -118,7 +141,7 @@ const styles = StyleSheet.create({
   },
   solidText: { color: '#ffd6b0', fontSize: 10, fontWeight: 'bold' },
   footer: { width: '100%', marginTop: 8 },
-  progressTrack: { height: 16, backgroundColor: '#00000066', borderRadius: 8, overflow: 'hidden', justifyContent: 'center' },
+  progressTrack: { height: 14, backgroundColor: '#ffffff11', borderRadius: 7, overflow: 'hidden', justifyContent: 'center', borderWidth: 1, borderColor: '#ffffff22' },
   progressFill: { position: 'absolute', left: 0, top: 0, bottom: 0 },
   progressText: { color: '#ffffff', fontSize: 11, fontWeight: 'bold', textAlign: 'center' },
   stats: { color: '#ffffff99', fontSize: 11, fontWeight: 'bold', textAlign: 'center', marginTop: 4 },

@@ -22,6 +22,7 @@ export interface DualArenaState {
   crushed: boolean;
   finished: boolean;
   lastSolidBreak: number;
+  lastCollisionAt: number;
   lastAiChoice?: 'ATK' | 'Gold';
 }
 
@@ -67,6 +68,7 @@ export const createArenaState = (params: {
     crushed: false,
     finished: false,
     lastSolidBreak: 0,
+    lastCollisionAt: 0,
   } satisfies DualArenaState;
 };
 
@@ -101,6 +103,25 @@ export const getArenaProgress = (state: DualArenaState) => {
   return Math.max(0, Math.min(1, (total - remaining) / total));
 };
 
+const separateBallFromRing = (state: DualArenaState, ring: Ring) => {
+  const dx = state.ball.x - state.center;
+  const dy = state.ball.y - state.center;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const nx = dx / dist;
+  const ny = dy / dist;
+  const halfThickness = ring.thickness / 2;
+  const safeOffset = 1.8;
+  const outsideTarget = ring.radius + halfThickness + state.ballRadius + safeOffset;
+  const insideTarget = Math.max(0, ring.radius - halfThickness - state.ballRadius - safeOffset);
+  const movingOut = state.velocity.x * nx + state.velocity.y * ny >= 0;
+  const targetDist = dist >= ring.radius || movingOut ? outsideTarget : insideTarget;
+
+  return {
+    x: state.center + nx * targetDist,
+    y: state.center + ny * targetDist,
+  };
+};
+
 export const tickArenaPhysics = (
   state: DualArenaState,
   options: { isAi?: boolean; opponentProgress?: number; shrinkMultiplier?: number; damageMultiplier?: number } = {}
@@ -133,26 +154,31 @@ export const tickArenaPhysics = (
   let brokeSolid = false;
   const collision = findClosestCollidingRing(next.ball.x, next.ball.y, next.ballRadius, next.rings, next.center, next.center);
   if (collision.ring && collision.index >= 0 && collision.isInSolidPart) {
+    const canDamage = now - next.lastCollisionAt > 70;
     const damage = (3.8 + next.atk * 1.45) * (options.damageMultiplier ?? 1);
     const ring = collision.ring;
-    const hp = Math.max(0, ring.hp - damage);
+    const hp = canDamage ? Math.max(0, ring.hp - damage) : ring.hp;
     brokeRing = hp <= 0;
     brokeSolid = brokeRing && ring.type === 'solid';
     const xpGain = brokeRing ? (ring.type === 'solid' ? 18 : 9) : 1;
     const coinGain = brokeRing ? (ring.type === 'solid' ? 8 : 4) : 1;
     next.rings[collision.index] = { ...ring, hp, status: hp <= 0 ? 'broken' : 'active' };
-    next.coins += Math.max(1, Math.floor(coinGain * (1 + next.gold * 0.18)));
-    next.xp += xpGain;
-    next.combo = brokeRing ? next.combo + 1 : next.combo;
-    next.lastSolidBreak = brokeSolid ? 24 : next.lastSolidBreak;
-    if (next.xp >= xpNeeded(next.level)) {
+    if (canDamage) {
+      next.coins += Math.max(1, Math.floor(coinGain * (1 + next.gold * 0.18)));
+      next.xp += xpGain;
+      next.combo = brokeRing ? next.combo + 1 : next.combo;
+      next.lastSolidBreak = brokeSolid ? 24 : next.lastSolidBreak;
+      next.lastCollisionAt = now;
+    }
+    if (canDamage && next.xp >= xpNeeded(next.level)) {
       next.xp -= xpNeeded(next.level);
       next.level += 1;
       next.atk += Math.random() < 0.65 ? 1 : 0;
       next.gold += Math.random() < 0.35 ? 1 : 0;
     }
+    next.ball = separateBallFromRing(next, ring);
     const reflected = reflectBallOffRing(next.ball.x, next.ball.y, next.velocity.x, next.velocity.y, next.center, next.center, 0.18);
-    next.velocity = clampBallSpeed({ x: reflected.newVelX * 1.015, y: reflected.newVelY * 1.015 }, 1.75, 4.8);
+    next.velocity = clampBallSpeed({ x: reflected.newVelX * 1.035, y: reflected.newVelY * 1.035 }, 1.9, 4.8);
   }
 
   const activeRings = next.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
