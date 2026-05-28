@@ -5,17 +5,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
 
 const UPGRADES = [
-  { id: 'baseDamage', name: 'Dano Base', description: '+10% dano por nível', icon: '⚔️', baseCost: 100 },
-  { id: 'baseSpeed', name: 'Velocidade', description: '+8% velocidade por nível', icon: '⚡', baseCost: 120 },
-  { id: 'critChance', name: 'Chance Crítica', description: '+2% crítico por nível', icon: '💥', baseCost: 150 },
-  { id: 'coinMultiplier', name: 'Multiplicador de Moedas', description: '+15% moedas por nível', icon: '💰', baseCost: 200 },
-  { id: 'xpBoost', name: 'XP Boost', description: '+20% XP por nível', icon: '⭐', baseCost: 180 },
-  { id: 'startingCoins', name: 'Moedas Iniciais', description: '+50 moedas iniciais', icon: '🪙', baseCost: 250 },
+  { id: 'baseDamage', name: 'Damage', description: '+10% dano por nível', icon: '⚔️', baseCost: 100, unlockText: 'Disponível desde o início' },
+  { id: 'baseSpeed', name: 'Speed', description: '+8% velocidade por nível', icon: '⚡', baseCost: 120, unlockText: 'Disponível desde o início' },
+  { id: 'coinMultiplier', name: 'Cash Gain', description: '+15% moedas por nível', icon: '💰', baseCost: 200, unlockText: 'Disponível desde o início' },
+  { id: 'critChance', name: 'Crit Chance', description: '+2% crítico por nível', icon: '💥', baseCost: 150, unlockText: 'Disponível desde o início' },
+  { id: 'xpBoost', name: 'XP Boost', description: '+20% XP por nível', icon: '⭐', baseCost: 180, unlockText: 'Desbloqueia ao alcançar a fase 3' },
+  { id: 'perfectChance', name: 'Perfect Chance', description: '+1% chance de diamante no perfect', icon: '💎', baseCost: 450, unlockText: 'Desbloqueia por baús raros ou fase 5' },
+  { id: 'slowRings', name: 'Slow Rings', description: 'Anéis fecham mais devagar', icon: '🌀', baseCost: 600, unlockText: 'Desbloqueia por rank ou recompensas especiais' },
 ];
 
 export default function UpgradeShopScreen() {
   const router = useRouter();
-  const { coins, permanentUpgrades, purchaseUpgrade } = useGame();
+  const { coins, permanentUpgrades, unlockedUpgrades, purchaseUpgrade } = useGame();
 
   const getUpgradeCost = (upgrade: any) => {
     const level = permanentUpgrades[upgrade.id] || 0;
@@ -24,6 +25,10 @@ export default function UpgradeShopScreen() {
 
   const handlePurchase = async (upgrade: any) => {
     const cost = getUpgradeCost(upgrade);
+    if (!unlockedUpgrades.includes(upgrade.id)) {
+      Alert.alert('Upgrade bloqueado', upgrade.unlockText, [{ text: 'OK' }]);
+      return;
+    }
     const success = await purchaseUpgrade(upgrade.id, cost);
     
     if (!success) {
@@ -51,7 +56,8 @@ export default function UpgradeShopScreen() {
         {UPGRADES.map((upgrade) => {
           const level = permanentUpgrades[upgrade.id] || 0;
           const cost = getUpgradeCost(upgrade);
-          const canAfford = coins >= cost;
+          const isUnlocked = unlockedUpgrades.includes(upgrade.id);
+          const canAfford = coins >= cost && isUnlocked;
 
           return (
             <View key={upgrade.id} style={styles.upgradeCard}>
@@ -65,7 +71,7 @@ export default function UpgradeShopScreen() {
                 
                 <View style={styles.upgradeInfo}>
                   <Text style={styles.upgradeName}>{upgrade.name}</Text>
-                  <Text style={styles.upgradeDescription}>{upgrade.description}</Text>
+                  <Text style={styles.upgradeDescription}>{isUnlocked ? upgrade.description : `🔒 ${upgrade.unlockText}`}</Text>
                   <Text style={styles.upgradeLevel}>Nível: {level}</Text>
                 </View>
                 
@@ -78,8 +84,8 @@ export default function UpgradeShopScreen() {
                     colors={canAfford ? ['#00f0ff', '#0088ff'] : ['#666666', '#444444']}
                     style={styles.buyButtonGradient}
                   >
-                    <Text style={styles.buyButtonText}>{cost}</Text>
-                    <Text style={styles.buyButtonIcon}>💰</Text>
+                    <Text style={styles.buyButtonText}>{isUnlocked ? cost : '🔒'}</Text>
+                    {isUnlocked && <Text style={styles.buyButtonIcon}>💰</Text>}
                   </LinearGradient>
                 </TouchableOpacity>
               </LinearGradient>

@@ -8,6 +8,7 @@ export interface Upgrade {
   rarity: UpgradeRarity;
   maxLevel: number;
   unlockLevel: number;
+  unlockRequirement?: string;
   effects: {
     type: string;
     value: number;
@@ -24,6 +25,7 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'common',
     maxLevel: 10,
     unlockLevel: 1,
+    unlockRequirement: 'Perfil nível 1',
     effects: [{ type: 'damage', value: 0.15 }],
   },
   {
@@ -34,6 +36,7 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'common',
     maxLevel: 10,
     unlockLevel: 1,
+    unlockRequirement: 'Perfil nível 1',
     effects: [{ type: 'speed', value: 0.20 }],
   },
   {
@@ -44,6 +47,7 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'common',
     maxLevel: 10,
     unlockLevel: 1,
+    unlockRequirement: 'Perfil nível 1',
     effects: [{ type: 'coinMultiplier', value: 0.5 }],
   },
   {
@@ -54,6 +58,7 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'common',
     maxLevel: 8,
     unlockLevel: 1,
+    unlockRequirement: 'Perfil nível 1',
     effects: [{ type: 'critChance', value: 5 }],
   },
   
@@ -66,6 +71,7 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'common',
     maxLevel: 10,
     unlockLevel: 3,
+    unlockRequirement: 'Perfil nível 3',
     effects: [{ type: 'xpMultiplier', value: 0.5 }],
   },
   {
@@ -75,8 +81,20 @@ export const UPGRADES: Upgrade[] = [
     icon: '🎯',
     rarity: 'rare',
     maxLevel: 5,
-    unlockLevel: 3,
+    unlockLevel: 7,
+    unlockRequirement: 'Perfil nível 7',
     effects: [{ type: 'bounce', value: 1 }],
+  },
+  {
+    id: 'perfectChance',
+    name: 'Perfect Chance',
+    description: '+1% chance de diamante no Perfect',
+    icon: '💎',
+    rarity: 'rare',
+    maxLevel: 7,
+    unlockLevel: 5,
+    unlockRequirement: 'Perfil nível 5',
+    effects: [{ type: 'perfectChance', value: 0.01 }],
   },
   
   // === LEVEL 5+ UPGRADES (Rare) ===
@@ -88,27 +106,30 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'rare',
     maxLevel: 5,
     unlockLevel: 5,
+    unlockRequirement: 'Perfil nível 3',
     effects: [{ type: 'burn', value: 10 }],
   },
   {
     id: 'penetration',
-    name: 'Penetração',
-    description: 'Atravessa múltiplos anéis',
+    name: 'Veneno',
+    description: 'Aplica dano progressivo',
     icon: '🗡️',
     rarity: 'rare',
     maxLevel: 5,
     unlockLevel: 5,
-    effects: [{ type: 'penetration', value: 1 }],
+    unlockRequirement: 'Perfil nível 5',
+    effects: [{ type: 'poison', value: 1 }],
   },
   {
-    id: 'shuriken',
-    name: 'Shuriken',
-    description: 'Lança shurikens rotatórias',
-    icon: '🌟',
+    id: 'ricochet',
+    name: 'Ricochete Vivo',
+    description: 'Mais variação e velocidade após impacto',
+    icon: '🔁',
     rarity: 'rare',
     maxLevel: 5,
     unlockLevel: 5,
-    effects: [{ type: 'shuriken', value: 3 }],
+    unlockRequirement: 'Perfil nível 7',
+    effects: [{ type: 'ricochet', value: 1 }],
   },
   
   // === LEVEL 8+ UPGRADES (Epic) ===
@@ -120,6 +141,7 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'epic',
     maxLevel: 5,
     unlockLevel: 8,
+    unlockRequirement: 'Perfil nível 12',
     effects: [{ type: 'shockwave', value: 0.5 }],
   },
   {
@@ -129,7 +151,8 @@ export const UPGRADES: Upgrade[] = [
     icon: '⚡',
     rarity: 'epic',
     maxLevel: 5,
-    unlockLevel: 8,
+    unlockLevel: 10,
+    unlockRequirement: 'Perfil nível 10',
     effects: [{ type: 'chain', value: 2 }],
   },
   {
@@ -139,7 +162,8 @@ export const UPGRADES: Upgrade[] = [
     icon: '❄️',
     rarity: 'epic',
     maxLevel: 5,
-    unlockLevel: 8,
+    unlockLevel: 5,
+    unlockRequirement: 'Perfil nível 5',
     effects: [{ type: 'frost', value: 0.3 }],
   },
   
@@ -151,7 +175,8 @@ export const UPGRADES: Upgrade[] = [
     icon: '💣',
     rarity: 'epic',
     maxLevel: 5,
-    unlockLevel: 12,
+    unlockLevel: 15,
+    unlockRequirement: 'Perfil nível 15',
     effects: [{ type: 'bomb', value: 3 }],
   },
   {
@@ -162,6 +187,7 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'epic',
     maxLevel: 5,
     unlockLevel: 12,
+    unlockRequirement: 'Perfil nível 12',
     effects: [{ type: 'laser', value: 50 }],
   },
   
@@ -174,7 +200,96 @@ export const UPGRADES: Upgrade[] = [
     rarity: 'legendary',
     maxLevel: 3,
     unlockLevel: 15,
+    unlockRequirement: 'Perfil nível 25',
     effects: [{ type: 'multihit', value: 1 }],
+  },
+  {
+    id: 'slowField',
+    name: 'Slow Field',
+    description: 'Chance de desacelerar todos os anéis',
+    icon: '🌀',
+    rarity: 'epic',
+    maxLevel: 5,
+    unlockLevel: 9,
+    unlockRequirement: 'Perfil nível 9',
+    effects: [{ type: 'slowField', value: 0.35 }],
+  },
+  {
+    id: 'ringRepulse',
+    name: 'Ring Repulse',
+    description: 'Empurra o anel atingido para fora',
+    icon: '↗️',
+    rarity: 'rare',
+    maxLevel: 5,
+    unlockLevel: 7,
+    unlockRequirement: 'Perfil nível 7',
+    effects: [{ type: 'repulse', value: 18 }],
+  },
+  {
+    id: 'laserCut',
+    name: 'Laser Cut',
+    description: 'Chance de dano alto no anel',
+    icon: '🔦',
+    rarity: 'epic',
+    maxLevel: 5,
+    unlockLevel: 12,
+    unlockRequirement: 'Perfil nível 12',
+    effects: [{ type: 'laserCut', value: 2.5 }],
+  },
+  {
+    id: 'chainBreak',
+    name: 'Chain Break',
+    description: 'Quebrar um anel fere o próximo',
+    icon: '⛓️',
+    rarity: 'legendary',
+    maxLevel: 4,
+    unlockLevel: 18,
+    unlockRequirement: 'Perfil nível 18',
+    effects: [{ type: 'chainBreak', value: 0.35 }],
+  },
+  {
+    id: 'shieldPulse',
+    name: 'Shield Pulse',
+    description: 'Escudo curto contra esmagamento',
+    icon: '🛡️',
+    rarity: 'epic',
+    maxLevel: 4,
+    unlockLevel: 14,
+    unlockRequirement: 'Perfil nível 14',
+    effects: [{ type: 'shield', value: 2 }],
+  },
+  {
+    id: 'timeFreeze',
+    name: 'Time Freeze',
+    description: 'Congela todos os anéis por pouco tempo',
+    icon: '⏱️',
+    rarity: 'legendary',
+    maxLevel: 3,
+    unlockLevel: 20,
+    unlockRequirement: 'Perfil nível 20',
+    effects: [{ type: 'timeFreeze', value: 1 }],
+  },
+  {
+    id: 'magnetCoins',
+    name: 'Magnet Coins',
+    description: 'Aumenta moedas da rodada',
+    icon: '🧲',
+    rarity: 'rare',
+    maxLevel: 8,
+    unlockLevel: 6,
+    unlockRequirement: 'Perfil nível 6',
+    effects: [{ type: 'coinMultiplier', value: 0.25 }],
+  },
+  {
+    id: 'criticalOverload',
+    name: 'Critical Overload',
+    description: 'Críticos acumulam dano temporário',
+    icon: '💢',
+    rarity: 'legendary',
+    maxLevel: 4,
+    unlockLevel: 16,
+    unlockRequirement: 'Perfil nível 16',
+    effects: [{ type: 'critOverload', value: 0.3 }],
   },
 ];
 
@@ -201,14 +316,18 @@ export const getRarityName = (rarity: UpgradeRarity): string => {
 export const getRandomUpgrades = (
   count: number = 3,
   currentUpgrades: Record<string, number> = {},
-  playerLevel: number = 1
+  playerLevel: number = 1,
+  unlockedUpgradeIds?: string[]
 ): Upgrade[] => {
-  // Filter by: max level not reached AND player has unlocked it
-  const available = UPGRADES.filter(
-    upgrade =>
-      (currentUpgrades[upgrade.id] || 0) < upgrade.maxLevel &&
-      playerLevel >= upgrade.unlockLevel
-  );
+  const fallbackIds = ['damage', 'speed', 'coinBoost', 'critical', 'xpBoost'];
+  const unlocked = new Set([...(unlockedUpgradeIds || []), ...fallbackIds]);
+  const isValid = (upgrade: Upgrade) =>
+    Boolean(upgrade?.id && upgrade.name && upgrade.description && upgrade.icon) &&
+    (currentUpgrades[upgrade.id] || 0) < upgrade.maxLevel &&
+    unlocked.has(upgrade.id) &&
+    (playerLevel >= upgrade.unlockLevel || fallbackIds.includes(upgrade.id));
+
+  const available = UPGRADES.filter(isValid);
   
   // Apply rarity weighting (common more likely than legendary)
   const weighted: Upgrade[] = [];
@@ -225,7 +344,6 @@ export const getRandomUpgrades = (
     }
   });
   
-  // Shuffle and pick unique ones
   const shuffled = weighted.sort(() => Math.random() - 0.5);
   const unique: Upgrade[] = [];
   const seen = new Set<string>();
@@ -237,6 +355,28 @@ export const getRandomUpgrades = (
       if (unique.length >= count) break;
     }
   }
-  
+  const fallback = UPGRADES.filter(upgrade => fallbackIds.includes(upgrade.id) && isValid(upgrade));
+  for (const upgrade of fallback) {
+    if (!seen.has(upgrade.id)) {
+      seen.add(upgrade.id);
+      unique.push(upgrade);
+      if (unique.length >= count) break;
+    }
+  }
+
+  if (unique.length < count) {
+    const safePool = UPGRADES.filter(upgrade =>
+      fallbackIds.includes(upgrade.id) &&
+      Boolean(upgrade?.id && upgrade.name && upgrade.description && upgrade.icon)
+    );
+    for (const upgrade of safePool) {
+      if (!seen.has(upgrade.id)) {
+        seen.add(upgrade.id);
+        unique.push(upgrade);
+        if (unique.length >= count) break;
+      }
+    }
+  }
+
   return unique;
 };

@@ -1,17 +1,24 @@
+export type RingStatus = 'active' | 'broken' | 'cleared';
+
 export interface Ring {
   id: string;
   radius: number;
+  initialRadius: number;
+  closingSpeed: number;
   rotation: number;
   rotationSpeed: number;
-  gapStart: number;
-  gapSize: number;
+  rotationDirection: 1 | -1;
   hp: number;
   maxHp: number;
+  gapStart: number;
+  gapSize: number;
+  status: RingStatus;
   thickness: number;
   color: string;
-  closingSpeed: number;
   minRadius: number;
-  initialRadius: number;
+  slowUntil?: number;
+  burnUntil?: number;
+  burnDps?: number;
 }
 
 export interface RingConfig {
@@ -26,49 +33,92 @@ export interface RingConfig {
   colors: string[];
 }
 
+const TWO_PI = Math.PI * 2;
+
+export const normalizeAngle = (angle: number) => ((angle % TWO_PI) + TWO_PI) % TWO_PI;
+
+export const angleDistance = (a: number, b: number) => {
+  const diff = Math.abs(normalizeAngle(a) - normalizeAngle(b));
+  return Math.min(diff, TWO_PI - diff);
+};
+
+export const getRingGapCenter = (ring: Ring) => normalizeAngle(ring.gapStart + ring.rotation);
+
+export const isAngleInsideRingGap = (angle: number, ring: Ring, padding = 0) => {
+  const halfGap = Math.max(0, ring.gapSize / 2 - padding);
+  return angleDistance(angle, getRingGapCenter(ring)) <= halfGap;
+};
+
 export const createRings = (config: RingConfig, phase: number): Ring[] => {
   const rings: Ring[] = [];
-  const difficultyMultiplier = 1 + (phase - 1) * 0.4;
-  const spacing = (config.outerRadius - config.innerRadius) / config.count;
-  
-  for (let i = 0; i < config.count; i++) {
-    const radius = config.innerRadius + (i * spacing);
-    const rotationDirection = i % 2 === 0 ? 1 : -1;
-    const speedVariation = 0.7 + Math.random() * 0.6;
-    const gapVariation = 0.9 + Math.random() * 0.2;
-    
+  const difficulty = 1 + (phase - 1) * 0.22;
+  const count = Math.max(20, config.count + Math.floor((phase - 1) * 2));
+  const spacing = (config.outerRadius - config.innerRadius) / Math.max(1, count - 1);
+  const minGap = Math.PI / 7.5;
+  const phaseGap = Math.max(minGap, config.baseGapSize - (phase - 1) * 0.045);
+
+  for (let i = 0; i < count; i++) {
+    const progress = count === 1 ? 0 : i / (count - 1);
+    const radius = config.innerRadius + i * spacing;
+    const direction: 1 | -1 = i % 2 === 0 ? 1 : -1;
+    const patternShift = phase % 3 === 0 ? Math.sin(i * 0.9) * 0.18 : 0;
+    const innerSpeedBias = 1.35 - progress * 0.55;
+    const speedVariation = 0.86 + ((i * 17 + phase * 11) % 23) / 100;
+    const hp = Math.floor(config.baseHp * difficulty * (0.9 + progress * 1.55));
+    const gapSize = Math.max(minGap, phaseGap * (1.08 - progress * 0.16));
+
     rings.push({
-      id: `ring_${i}`,
+      id: `ring_${phase}_${i}`,
       radius,
       initialRadius: radius,
-      rotation: Math.random() * Math.PI * 2,
-      rotationSpeed: config.baseRotationSpeed * speedVariation * rotationDirection * difficultyMultiplier,
-      gapStart: Math.random() * Math.PI * 2,
-      gapSize: config.baseGapSize * gapVariation,
-      hp: Math.floor(config.baseHp * (1 + i * 0.3) * difficultyMultiplier),
-      maxHp: Math.floor(config.baseHp * (1 + i * 0.3) * difficultyMultiplier),
+      closingSpeed: config.closingSpeed * difficulty * (0.75 + progress * 0.42),
+      rotation: normalizeAngle(i * 0.61 + phase * 0.37 + patternShift),
+      rotationSpeed: config.baseRotationSpeed * difficulty * innerSpeedBias * speedVariation * direction,
+      rotationDirection: direction,
+      gapStart: normalizeAngle(i * 0.83 + phase * 0.49 + patternShift),
+      gapSize,
+      hp,
+      maxHp: hp,
+      status: 'active',
       thickness: config.baseThickness,
       color: config.colors[i % config.colors.length],
-      closingSpeed: config.closingSpeed * (0.5 + Math.random() * 0.5),
-      minRadius: 25,
+      minRadius: 4,
     });
   }
-  
+
   return rings;
 };
 
-export const updateRing = (ring: Ring, deltaTime: number = 1): Ring => {
-  const newRotation = ring.rotation + ring.rotationSpeed * deltaTime;
-  const newRadius = Math.max(ring.minRadius, ring.radius - ring.closingSpeed * deltaTime);
-  
+export const updateRing = (ring: Ring, deltaTime = 1, now = Date.now()): Ring => {
+  if (
+    !ring ||
+    ring.status !== 'active' ||
+    !Number.isFinite(ring.radius) ||
+    !Number.isFinite(ring.rotation) ||
+    !Number.isFinite(ring.closingSpeed) ||
+    !Number.isFinite(ring.rotationSpeed)
+  ) {
+    return ring;
+  }
+
+  const slowMultiplier = ring.slowUntil && ring.slowUntil > now ? 0.45 : 1;
+  const newRotation = normalizeAngle(ring.rotation + ring.rotationSpeed * slowMultiplier * deltaTime);
+  const newRadius = Math.max(ring.minRadius, ring.radius - ring.closingSpeed * slowMultiplier * deltaTime);
+  let hp = ring.hp;
+
+  if (ring.burnUntil && ring.burnUntil > now && ring.burnDps) {
+    hp = Math.max(0, hp - (ring.burnDps * deltaTime) / 60);
+  }
+
   return {
     ...ring,
-    rotation: newRotation % (Math.PI * 2),
+    rotation: newRotation,
     radius: newRadius,
+    hp,
+    status: hp <= 0 ? 'broken' : ring.status,
   };
 };
 
-// Check if ball is touching ring's solid part (not in gap)
 export const checkRingCollision = (
   ballX: number,
   ballY: number,
@@ -76,43 +126,37 @@ export const checkRingCollision = (
   ring: Ring,
   centerX: number,
   centerY: number
-): { isOverlapping: boolean; isInSolidPart: boolean; distFromRing: number } => {
+): { isOverlapping: boolean; isInSolidPart: boolean; isInGap: boolean; distFromRing: number; angle: number } => {
+  if (
+    !ring ||
+    ring.status !== 'active' ||
+    !Number.isFinite(ballX) ||
+    !Number.isFinite(ballY) ||
+    !Number.isFinite(ballRadius) ||
+    !Number.isFinite(ring.radius) ||
+    !Number.isFinite(ring.thickness)
+  ) {
+    return { isOverlapping: false, isInSolidPart: false, isInGap: false, distFromRing: Infinity, angle: 0 };
+  }
+
   const dx = ballX - centerX;
   const dy = ballY - centerY;
   const distFromCenter = Math.sqrt(dx * dx + dy * dy);
   const distFromRing = Math.abs(distFromCenter - ring.radius);
-  
-  // Is ball overlapping this ring?
-  const isOverlapping = distFromRing < ring.thickness / 2 + ballRadius;
-  
-  if (!isOverlapping) {
-    return { isOverlapping: false, isInSolidPart: false, distFromRing };
-  }
-  
-  // Calculate ball angle
-  const ballAngle = Math.atan2(dy, dx);
-  const normalizedBallAngle = (ballAngle + Math.PI * 2) % (Math.PI * 2);
-  
-  // Calculate current gap position (with rotation)
-  const gapStartAngle = (ring.gapStart + ring.rotation + Math.PI * 4) % (Math.PI * 2);
-  const gapEndAngle = (gapStartAngle + ring.gapSize) % (Math.PI * 2);
-  
-  let isInGap = false;
-  if (gapStartAngle < gapEndAngle) {
-    isInGap = normalizedBallAngle >= gapStartAngle && normalizedBallAngle <= gapEndAngle;
-  } else {
-    // Gap wraps around 0
-    isInGap = normalizedBallAngle >= gapStartAngle || normalizedBallAngle <= gapEndAngle;
-  }
-  
+  const isOverlapping = distFromRing <= ring.thickness / 2 + ballRadius;
+  const angle = normalizeAngle(Math.atan2(dy, dx));
+  const gapPadding = Math.min(0.08, ballRadius / Math.max(1, ring.radius));
+  const isInGap = isAngleInsideRingGap(angle, ring, gapPadding);
+
   return {
-    isOverlapping: true,
-    isInSolidPart: !isInGap,
+    isOverlapping,
+    isInSolidPart: isOverlapping && !isInGap,
+    isInGap,
     distFromRing,
+    angle,
   };
 };
 
-// Find the ring the ball is most touching (closest one)
 export const findClosestCollidingRing = (
   ballX: number,
   ballY: number,
@@ -120,30 +164,64 @@ export const findClosestCollidingRing = (
   rings: Ring[],
   centerX: number,
   centerY: number
-): { ring: Ring | null; index: number; isInSolidPart: boolean } => {
+): { ring: Ring | null; index: number; isInSolidPart: boolean; isInGap: boolean } => {
   let closestRing: Ring | null = null;
   let closestIndex = -1;
   let closestDist = Infinity;
   let isInSolid = false;
-  
+  let isInGap = false;
+
   for (let i = 0; i < rings.length; i++) {
     const ring = rings[i];
-    if (ring.hp <= 0) continue;
-    
+    if (!ring || ring.status !== 'active' || !Number.isFinite(ring.radius)) continue;
     const result = checkRingCollision(ballX, ballY, ballRadius, ring, centerX, centerY);
-    
+
     if (result.isOverlapping && result.distFromRing < closestDist) {
       closestDist = result.distFromRing;
       closestRing = ring;
       closestIndex = i;
       isInSolid = result.isInSolidPart;
+      isInGap = result.isInGap;
     }
   }
-  
-  return { ring: closestRing, index: closestIndex, isInSolidPart: isInSolid };
+
+  return { ring: closestRing, index: closestIndex, isInSolidPart: isInSolid, isInGap };
 };
 
-// Reflect ball velocity off ring (radial reflection)
+export const findPerfectEscapeRing = (
+  prevDist: number,
+  nextDist: number,
+  ballX: number,
+  ballY: number,
+  ballRadius: number,
+  rings: Ring[],
+  centerX: number,
+  centerY: number
+): { ring: Ring | null; index: number } => {
+  const dx = ballX - centerX;
+  const dy = ballY - centerY;
+  const angle = normalizeAngle(Math.atan2(dy, dx));
+  let bestIndex = -1;
+  let bestDist = Infinity;
+
+  for (let i = 0; i < rings.length; i++) {
+    const ring = rings[i];
+    if (!ring || ring.status !== 'active' || !Number.isFinite(ring.radius)) continue;
+    const crossed = (prevDist - ring.radius) * (nextDist - ring.radius) <= 0;
+    if (!crossed) continue;
+    const near = Math.abs(nextDist - ring.radius) <= ballRadius + Math.abs(nextDist - prevDist) + ring.thickness;
+    if (!near || !isAngleInsideRingGap(angle, ring, Math.min(0.06, ballRadius / Math.max(1, ring.radius)))) continue;
+
+    const dist = Math.abs(nextDist - ring.radius);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIndex = i;
+    }
+  }
+
+  return { ring: bestIndex >= 0 ? rings[bestIndex] : null, index: bestIndex };
+};
+
 export const reflectBallOffRing = (
   ballX: number,
   ballY: number,
@@ -151,30 +229,44 @@ export const reflectBallOffRing = (
   velY: number,
   centerX: number,
   centerY: number,
-  angleVariation: number = 0.15
-): { newVelX: number; newVelY: number; newBallX: number; newBallY: number } => {
+  angleVariation = 0.08
+): { newVelX: number; newVelY: number } => {
+  if (![ballX, ballY, velX, velY, centerX, centerY].every(Number.isFinite)) {
+    return { newVelX: Number.isFinite(velX) ? velX : 2.5, newVelY: Number.isFinite(velY) ? velY : 1.5 };
+  }
+
   const dx = ballX - centerX;
   const dy = ballY - centerY;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  
-  if (dist === 0) {
-    return { newVelX: velX, newVelY: velY, newBallX: ballX, newBallY: ballY };
-  }
-  
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
   const nx = dx / dist;
   const ny = dy / dist;
-  
-  // Reflect velocity across radial normal
   const dot = velX * nx + velY * ny;
   let newVelX = velX - 2 * dot * nx;
   let newVelY = velY - 2 * dot * ny;
-  
-  // Add small random angle variation to prevent linear patterns
-  const speed = Math.sqrt(newVelX * newVelX + newVelY * newVelY);
+  const speed = Math.sqrt(newVelX * newVelX + newVelY * newVelY) || 1;
+  const tangentKick = (Math.random() - 0.5) * 0.12;
+
+  newVelX += -ny * speed * tangentKick;
+  newVelY += nx * speed * tangentKick;
+
+  const newSpeed = Math.sqrt(newVelX * newVelX + newVelY * newVelY) || speed;
   const currentAngle = Math.atan2(newVelY, newVelX);
-  const newAngle = currentAngle + (Math.random() - 0.5) * angleVariation;
-  newVelX = Math.cos(newAngle) * speed;
-  newVelY = Math.sin(newAngle) * speed;
-  
-  return { newVelX, newVelY, newBallX: ballX, newBallY: ballY };
+  const variedAngle = currentAngle + (Math.random() - 0.5) * angleVariation;
+
+  return {
+    newVelX: Math.cos(variedAngle) * newSpeed,
+    newVelY: Math.sin(variedAngle) * newSpeed,
+  };
+};
+
+export const clampBallSpeed = (velocity: { x: number; y: number }, minSpeed: number, maxSpeed: number) => {
+  if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y)) {
+    return { x: minSpeed, y: 0 };
+  }
+  const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y) || minSpeed;
+  const clamped = Math.max(minSpeed, Math.min(maxSpeed, speed));
+  return {
+    x: (velocity.x / speed) * clamped,
+    y: (velocity.y / speed) * clamped,
+  };
 };

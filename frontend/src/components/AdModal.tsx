@@ -6,7 +6,7 @@ interface AdModalProps {
   visible: boolean;
   onClose: () => void;
   onRewardClaimed: () => void;
-  rewardType: 'coins' | 'gems' | 'revive' | 'double';
+  rewardType: 'coins' | 'gems' | 'key' | 'chest' | 'revive' | 'double';
   rewardAmount?: number;
 }
 
@@ -55,6 +55,10 @@ export const AdModal: React.FC<AdModalProps> = ({
         return `+${rewardAmount} Gemas`;
       case 'revive':
         return 'Reviver';
+      case 'key':
+        return `+${rewardAmount} Chave`;
+      case 'chest':
+        return 'Baú grátis';
       case 'double':
         return 'Dobrar Recompensa';
       default:
@@ -70,6 +74,10 @@ export const AdModal: React.FC<AdModalProps> = ({
         return '💎';
       case 'revive':
         return '❤️';
+      case 'key':
+        return '🔑';
+      case 'chest':
+        return '🎁';
       case 'double':
         return '✨';
       default:

@@ -1,226 +1,161 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
+import { HIDDEN_RARITIES, SKINS, SkinRarity, getSkinEvolutionCost, getSkinRarityColor } from '@/src/game/skins';
 
-const TRANSFORMATIONS = [
-  { id: 'neon_blue', name: 'Neon Azul', colors: ['#00f0ff', '#0088ff'], unlocked: true, cost: 0 },
-  { id: 'plasma_purple', name: 'Plasma Roxo', colors: ['#b000ff', '#6600cc'], unlocked: false, cost: 500 },
-  { id: 'infernal_red', name: 'Infernal Vermelho', colors: ['#ff0055', '#cc0000'], unlocked: false, cost: 1000 },
-  { id: 'electric', name: 'Elétrica', colors: ['#ffff00', '#00ffff'], unlocked: false, cost: 1500 },
-  { id: 'glitch', name: 'Glitch', colors: ['#ff00ff', '#00ff00'], unlocked: false, cost: 2000 },
-  { id: 'golden', name: 'Dourada', colors: ['#ffd700', '#ffaa00'], unlocked: false, cost: 3000 },
-  { id: 'crystal', name: 'Cristalina', colors: ['#ffffff', '#aaffff'], unlocked: false, cost: 3500 },
-  { id: 'shadow', name: 'Sombria', colors: ['#666666', '#000000'], unlocked: false, cost: 4000 },
-  { id: 'radioactive', name: 'Radioativa', colors: ['#00ff00', '#88ff00'], unlocked: false, cost: 5000 },
-  { id: 'cosmic', name: 'Cósmica', colors: ['#ff00ff', '#0088ff'], unlocked: false, cost: 10000 },
+type Filter = 'all' | SkinRarity | 'owned' | 'locked';
+
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'Todas' },
+  { id: 'common', label: 'Comuns' },
+  { id: 'rare', label: 'Raras' },
+  { id: 'epic', label: 'Épicas' },
+  { id: 'legendary', label: 'Lendárias' },
+  { id: 'ultimate', label: 'Ultimate' },
+  { id: 'owned', label: 'Obtidas' },
+  { id: 'locked', label: 'Bloqueadas' },
 ];
+
+const RARITIES: SkinRarity[] = ['common', 'rare', 'epic', 'legendary', 'ultimate'];
 
 export default function TransformationsScreen() {
   const router = useRouter();
-  const { gems, updateGems, ballTransformation, setBallTransformation: setTransformation } = useGame();
-  const [unlockedTransformations, setUnlockedTransformations] = React.useState(['neon_blue']);
+  const game = useGame();
+  const [filter, setFilter] = useState<Filter>('all');
 
-  const unlockTransformation = async (transformation: any) => {
-    if (gems < transformation.cost) {
-      Alert.alert(
-        'Gemas Insuficientes',
-        `Você precisa de ${transformation.cost} gemas para desbloquear esta transformação.`,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    
-    if (!unlockedTransformations.includes(transformation.id)) {
-      await updateGems(-transformation.cost);
-      setUnlockedTransformations(prev => [...prev, transformation.id]);
-      await setTransformation(transformation.id);
-    }
-  };
-
-  const selectTransformation = async (transformationId: string) => {
-    if (unlockedTransformations.includes(transformationId)) {
-      await setTransformation(transformationId);
-    }
-  };
+  const visibleSkins = SKINS.filter(skin => {
+    const owned = game.unlockedSkins.includes(skin.id);
+    if (filter === 'owned') return owned;
+    if (filter === 'locked') return !owned;
+    if (filter === 'all') return true;
+    return skin.rarity === filter;
+  });
 
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← VOLTAR</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>TRANSFORMAÇÕES</Text>
-        <View style={styles.gemsDisplay}>
-          <Text style={styles.gemsText}>💎 {gems}</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
+        <View style={styles.headerLine}>
+          <Text style={styles.title}>SKINS</Text>
+          <Text style={styles.wallet}>💰 {game.coins}  💎 {game.gems}  🔑 {game.keys}</Text>
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.transformationList}>
-        {TRANSFORMATIONS.map((transformation) => {
-          const isUnlocked = unlockedTransformations.includes(transformation.id);
-          const isSelected = ballTransformation === transformation.id;
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <View style={styles.progressGrid}>
+          {RARITIES.map(rarity => {
+            const owned = SKINS.filter(skin => skin.rarity === rarity && game.unlockedSkins.includes(skin.id)).length;
+            const total = SKINS.filter(skin => skin.rarity === rarity).length;
+            const hidden = HIDDEN_RARITIES.includes(rarity);
+            return (
+              <View key={rarity} style={[styles.progressCard, { borderColor: getSkinRarityColor(rarity) + '77' }]}>
+                <Text style={[styles.progressRarity, { color: getSkinRarityColor(rarity) }]}>{rarity.toUpperCase()}</Text>
+                <Text style={styles.progressCount}>{owned}/{hidden ? '???' : total}</Text>
+              </View>
+            );
+          })}
+        </View>
 
-          return (
-            <TouchableOpacity
-              key={transformation.id}
-              style={styles.transformationCard}
-              onPress={() => isUnlocked ? selectTransformation(transformation.id) : unlockTransformation(transformation)}
-            >
-              <LinearGradient
-                colors={isUnlocked ? [...transformation.colors, transformation.colors[0] + '44'] : ['#333333', '#222222']}
-                style={[styles.cardGradient, isSelected && styles.selectedCard]}
-              >
-                <View style={styles.previewBall}>
-                  <LinearGradient
-                    colors={transformation.colors}
-                    style={styles.ballGradient}
-                  />
-                </View>
-                
-                <View style={styles.transformationInfo}>
-                  <Text style={[styles.transformationName, !isUnlocked && styles.lockedText]}>
-                    {transformation.name}
-                  </Text>
-                  {isSelected && (
-                    <Text style={styles.selectedBadge}>✓ EQUIPADO</Text>
-                  )}
-                </View>
-                
-                {!isUnlocked && (
-                  <View style={styles.unlockButton}>
-                    <Text style={styles.unlockText}>💎 {transformation.cost}</Text>
-                  </View>
-                )}
-                
-                {!isUnlocked && (
-                  <View style={styles.lockOverlay}>
-                    <Text style={styles.lockIcon}>🔒</Text>
-                  </View>
-                )}
-              </LinearGradient>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+          {FILTERS.map(item => (
+            <TouchableOpacity key={item.id} style={[styles.filter, filter === item.id && styles.filterActive]} onPress={() => setFilter(item.id)}>
+              <Text style={[styles.filterText, filter === item.id && styles.filterTextActive]}>{item.label}</Text>
             </TouchableOpacity>
-          );
-        })}
+          ))}
+        </ScrollView>
+
+        <View style={styles.skinGrid}>
+          {visibleSkins.map(skin => {
+            const owned = game.unlockedSkins.includes(skin.id);
+            const selected = game.ballTransformation === skin.id;
+            const hidden = !owned && HIDDEN_RARITIES.includes(skin.rarity);
+            const rarityColor = getSkinRarityColor(skin.rarity);
+            const skinLevel = game.skinLevels[skin.id] || 1;
+            const fragments = game.skinFragments[skin.id] || 0;
+            const evolveCost = getSkinEvolutionCost(skin.rarity, skinLevel);
+            const canEvolve = owned && skinLevel < 5 && fragments >= evolveCost;
+
+            return (
+              <View key={skin.id} style={[styles.skinCard, selected && styles.skinSelected, { borderColor: selected ? '#00ff88' : rarityColor + '88' }]}>
+                <LinearGradient
+                  colors={hidden ? ['#252536', '#111827'] : [skin.primaryColor + (owned ? '66' : '28'), skin.secondaryColor + '22']}
+                  style={styles.skinGradient}
+                >
+                  <View style={styles.cardTop}>
+                    <View style={[styles.previewBall, { backgroundColor: hidden ? '#111827' : skin.primaryColor }]}>
+                      <Text style={styles.skinIcon}>{hidden ? '🔒' : skin.icon}</Text>
+                    </View>
+                    <Text style={[styles.rarityBadge, { backgroundColor: rarityColor }]}>{skin.rarity.toUpperCase()}</Text>
+                  </View>
+
+                  <Text style={styles.skinName} numberOfLines={1}>{hidden ? '???' : skin.name}</Text>
+                  <Text style={styles.skinDescription} numberOfLines={2}>{hidden ? 'Skin oculta' : skin.description}</Text>
+
+                  <View style={styles.metaRow}>
+                    <Text style={styles.fragmentText}>{owned ? `Lv.${skinLevel} • ${fragments}/${evolveCost}` : hidden ? 'Oculta' : `${fragments}/${skin.fragmentsRequired}`}</Text>
+                    {selected && <Text style={styles.equippedBadge}>Equipada</Text>}
+                  </View>
+
+                  {owned ? (
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity style={[styles.cardButton, selected && styles.cardButtonDisabled]} disabled={selected} onPress={() => game.setBallTransformation(skin.id)}>
+                        <Text style={styles.cardButtonText}>{selected ? 'USANDO' : 'EQUIPAR'}</Text>
+                      </TouchableOpacity>
+                      {skinLevel < 5 && (
+                        <TouchableOpacity style={[styles.cardButtonAlt, !canEvolve && styles.cardButtonDisabled]} disabled={!canEvolve} onPress={() => game.upgradeSkinLevel(skin.id)}>
+                          <Text style={styles.cardButtonText}>EVOLUIR</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={styles.lockedText}>{hidden ? 'Revele em baús' : 'Disponível em baús'}</Text>
+                  )}
+                </LinearGradient>
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  backButton: {
-    marginBottom: 10,
-  },
-  backText: {
-    color: '#00f0ff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#00f0ff',
-    textShadowColor: '#00f0ff',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-    marginBottom: 16,
-  },
-  gemsDisplay: {
-    backgroundColor: '#ffffff22',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    borderWidth: 2,
-    borderColor: '#ff00ff44',
-  },
-  gemsText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ff00ff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  transformationList: {
-    padding: 20,
-    gap: 16,
-  },
-  transformationCard: {
-    height: 120,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  cardGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ffffff22',
-  },
-  selectedCard: {
-    borderColor: '#00ff00',
-    borderWidth: 3,
-  },
-  previewBall: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    overflow: 'hidden',
-    marginRight: 20,
-  },
-  ballGradient: {
-    flex: 1,
-  },
-  transformationInfo: {
-    flex: 1,
-  },
-  transformationName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  selectedBadge: {
-    fontSize: 12,
-    color: '#00ff00',
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  lockedText: {
-    opacity: 0.3,
-  },
-  unlockButton: {
-    backgroundColor: '#ffffff22',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  unlockText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  lockOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#00000066',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lockIcon: {
-    fontSize: 32,
-  },
+  container: { flex: 1 },
+  header: { paddingTop: 54, paddingHorizontal: 18, paddingBottom: 10 },
+  backText: { color: '#00f0ff', fontSize: 16, fontWeight: 'bold' },
+  headerLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, marginTop: 8 },
+  title: { fontSize: 30, fontWeight: 'bold', color: '#00f0ff' },
+  wallet: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
+  content: { padding: 14, paddingBottom: 28, gap: 12 },
+  progressGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  progressCard: { flexGrow: 1, flexBasis: 92, backgroundColor: '#ffffff10', borderWidth: 1, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10 },
+  progressRarity: { fontSize: 10, fontWeight: 'bold' },
+  progressCount: { color: '#ffffff', fontSize: 15, fontWeight: 'bold', marginTop: 2 },
+  filters: { gap: 8, paddingVertical: 2 },
+  filter: { height: 34, paddingHorizontal: 13, borderRadius: 17, backgroundColor: '#ffffff12', justifyContent: 'center', borderWidth: 1, borderColor: '#ffffff22' },
+  filterActive: { backgroundColor: '#00f0ff', borderColor: '#00f0ff' },
+  filterText: { color: '#ffffffaa', fontSize: 12, fontWeight: 'bold' },
+  filterTextActive: { color: '#001018' },
+  skinGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  skinCard: { flexGrow: 1, flexBasis: 156, maxWidth: 220, minHeight: 238, borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
+  skinSelected: { borderWidth: 2 },
+  skinGradient: { flex: 1, padding: 12 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 9 },
+  previewBall: { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ffffff44' },
+  skinIcon: { fontSize: 28 },
+  rarityBadge: { color: '#001018', fontSize: 9, fontWeight: 'bold', paddingVertical: 4, paddingHorizontal: 6, borderRadius: 7, overflow: 'hidden' },
+  skinName: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  skinDescription: { color: '#ffffffaa', fontSize: 12, minHeight: 34, marginTop: 5 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 9 },
+  fragmentText: { color: '#ffd700', fontSize: 11, fontWeight: 'bold', flexShrink: 1 },
+  equippedBadge: { color: '#00ff88', fontSize: 10, fontWeight: 'bold' },
+  actionRow: { flexDirection: 'row', gap: 7, marginTop: 12 },
+  cardButton: { flex: 1, backgroundColor: '#00f0ff', borderRadius: 8, alignItems: 'center', paddingVertical: 8 },
+  cardButtonAlt: { flex: 1, backgroundColor: '#00ff88', borderRadius: 8, alignItems: 'center', paddingVertical: 8 },
+  cardButtonDisabled: { opacity: 0.45 },
+  cardButtonText: { color: '#001018', fontSize: 10, fontWeight: 'bold' },
+  lockedText: { color: '#ffffff77', fontSize: 11, fontWeight: 'bold', marginTop: 14 },
 });

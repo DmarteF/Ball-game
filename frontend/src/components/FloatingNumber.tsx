@@ -9,10 +9,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 interface FloatingNumberProps {
-  value: number;
+  value: number | string;
   x: number;
   y: number;
   isCritical?: boolean;
+  color?: string;
   onComplete: () => void;
 }
 
@@ -21,6 +22,7 @@ export const FloatingNumber: React.FC<FloatingNumberProps> = ({
   x,
   y,
   isCritical = false,
+  color,
   onComplete,
 }) => {
   const translateY = useSharedValue(0);
@@ -60,17 +62,17 @@ export const FloatingNumber: React.FC<FloatingNumberProps> = ({
           position: 'absolute',
           left: x,
           top: y,
-          color: isCritical ? '#ff0055' : '#00f0ff',
+          color: color || (isCritical ? '#ff0055' : '#00f0ff'),
           fontSize: isCritical ? 28 : 20,
           fontWeight: 'bold',
-          textShadowColor: isCritical ? '#ff0055' : '#00f0ff',
+          textShadowColor: color || (isCritical ? '#ff0055' : '#00f0ff'),
           textShadowOffset: { width: 0, height: 0 },
           textShadowRadius: 10,
         },
         animatedStyle,
       ]}
     >
-      {isCritical ? '💥 ' : ''}{Math.floor(value)}
+      {isCritical ? '💥 ' : ''}{typeof value === 'number' ? Math.floor(value) : value}
     </Animated.Text>
   );
 };
