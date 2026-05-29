@@ -19,6 +19,7 @@ import { getRandomUpgrades, Upgrade, getRarityColor, getRarityName } from '@/src
 import { getSkinById } from '@/src/game/skins';
 import { getPhaseConfig } from '@/src/game/phases';
 import { GAMEPLAY_TUNING } from '@/src/game/balance';
+import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
 import { FloatingNumber } from '@/src/components/FloatingNumber';
 import { AdModal } from '@/src/components/AdModal';
 import { ECONOMY_BALANCE, getComboMultiplier, getGlobalCoinsFromRun, getRunProfileXp } from '@/src/game/economy';
@@ -160,12 +161,23 @@ export default function GameScreen() {
   // Calculated stats
   const equippedSkin = getSkinById(ballTransformation);
   const skinPassive = equippedSkin.passive;
-  const skinDamageBonus = skinPassive.type === 'damage_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_king_wave' ? skinPassive.value : 0;
-  const baseDamage = stats.baseDamage * (1 + skinDamageBonus + (currentUpgrades['damage'] || 0) * 0.15 + runShopUpgrades.atk * 0.18);
+  const soloAttributes = calculateFinalGameplayAttributes({
+    stats,
+    skin: equippedSkin,
+    temporaryUpgrades: currentUpgrades,
+    arenaAtk: runShopUpgrades.atk,
+    arenaGold: runShopUpgrades.gold,
+    permanentUpgrades,
+    modeBonus: {
+      damageMultiplier: stats.baseDamage,
+      speedMultiplier: 1,
+    },
+  });
+  const baseDamage = soloAttributes.damageMultiplier;
   const critChance = stats.critChance + (currentUpgrades['critical'] || 0) * 5 + (currentUpgrades['criticalOverload'] || 0) * 2 + (skinPassive.type === 'crit_chance' ? skinPassive.value : 0);
-  const coinMultiplier = stats.coinMultiplier * (1 + (currentUpgrades['coinBoost'] || 0) * 0.25 + (currentUpgrades['magnetCoins'] || 0) * 0.25 + runShopUpgrades.gold * 0.22 + (skinPassive.type === 'coin_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_starter_champion' || skinPassive.type === 'league_king_wave' ? skinPassive.value * 0.7 : 0));
-  const xpMultiplier = stats.xpMultiplier * (1 + (currentUpgrades['xpBoost'] || 0) * 0.18 + (skinPassive.type === 'xp_multiplier' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_starter_champion' || skinPassive.type === 'league_king_wave' ? skinPassive.value * 0.45 : 0));
-  const speedMultiplier = 1 + (currentUpgrades['speed'] || 0) * 0.12 + (skinPassive.type === 'speed' ? skinPassive.value : 0);
+  const coinMultiplier = soloAttributes.coinMultiplier * (1 + (currentUpgrades['magnetCoins'] || 0) * 0.25);
+  const xpMultiplier = soloAttributes.xpMultiplier;
+  const speedMultiplier = 1 + (currentUpgrades['speed'] || 0) * 0.08 + (soloAttributes.speedMultiplier - 1);
   const perfectDiamondChance = Math.min(0.18, 0.03 + (currentUpgrades['perfectChance'] || 0) * 0.01 + (skinPassive.type === 'perfect_chance' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_king_wave' ? skinPassive.value : 0));
 
   const getSafeUpgradeOptions = (previous: Upgrade[] = []) => {
