@@ -85,6 +85,7 @@ export default function GameScreen() {
   
   const [isPaused, setIsPaused] = useState(false);
   const [showPauseMenu, setShowPauseMenu] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
   const [showGameOver, setShowGameOver] = useState(false);
@@ -859,6 +860,7 @@ export default function GameScreen() {
   const handleGiveUp = async () => {
     playSound('buttonConfirm', settings.sound);
     if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+    setShowExitConfirm(false);
     setShowPauseMenu(false);
     setIsPaused(false);
     isGameOverRef.current = true;
@@ -868,10 +870,12 @@ export default function GameScreen() {
 
   const confirmGiveUp = () => {
     playSound('buttonClick', settings.sound);
-    Alert.alert('Sair da partida?', 'A rodada será encerrada e as recompensas atuais poderão ser coletadas.', [
-      { text: 'Cancelar', style: 'cancel', onPress: () => playSound('buttonClick', settings.sound) },
-      { text: 'Sair', style: 'destructive', onPress: handleGiveUp },
-    ]);
+    setShowExitConfirm(true);
+  };
+
+  const cancelGiveUp = () => {
+    playSound('buttonClick', settings.sound);
+    setShowExitConfirm(false);
   };
 
   const handleRetry = async () => {
@@ -1105,6 +1109,25 @@ export default function GameScreen() {
                 <Text style={styles.giveUpText}>Sair para o menu</Text>
               </TouchableOpacity>
               <Text style={styles.pauseHint}>Configurações: som e vibração salvos no perfil local.</Text>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showExitConfirm} transparent animationType="fade" onRequestClose={cancelGiveUp}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.pauseModal}>
+            <LinearGradient colors={['#1a0a2e', '#16003b']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>SAIR DA PARTIDA?</Text>
+              <Text style={styles.pauseHint}>A rodada será encerrada e as recompensas atuais poderão ser coletadas.</Text>
+              <TouchableOpacity style={styles.giveUpButton} onPress={handleGiveUp}>
+                <Text style={styles.giveUpText}>Sair</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton} onPress={cancelGiveUp}>
+                <LinearGradient colors={['#00f0ff', '#0088ff']} style={styles.buttonGradient}>
+                  <Text style={styles.buttonText}>CANCELAR</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </LinearGradient>
           </View>
         </View>
