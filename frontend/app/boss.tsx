@@ -307,14 +307,7 @@ export default function BossScreen() {
 
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
-      {duelState === 'menu' ? (
-        <View style={[styles.header, { paddingTop: getSafePaddingTop(insets, 52) }]}>
-          <NeonButton title={`← ${t('common.back').toUpperCase()}`} variant="secondary" audioSettings={game.settings} onPress={() => router.back()} style={styles.backButton} />
-          <Text style={styles.title}>BOSS MODE</Text>
-          <Text style={styles.subtitle}>{language === 'pt-BR' ? 'Boss do mês' : 'Monthly boss'}: {localizedBoss.name}</Text>
-          {!!bossNotice && <Text style={styles.noticeText}>{bossNotice}</Text>}
-        </View>
-      ) : playerArena && bossArena ? (
+      {duelState !== 'menu' && playerArena && bossArena ? (
         <View style={[styles.topHUD, { paddingTop: getSafePaddingTop(insets, 45) }]}>
           <View style={styles.hudRow}>
             <View style={styles.hudItem}><UiIcon iconKey="ui_coin" fallback="💰" size={18} /><Text style={styles.hudValue}>{playerArena.coins}</Text></View>
@@ -337,9 +330,22 @@ export default function BossScreen() {
       {duelState === 'menu' && (
         <ScrollView
           style={styles.menuScroll}
-          contentContainerStyle={[styles.menuContent, { paddingBottom: getSafePaddingBottom(insets) }]}
+          contentContainerStyle={[
+            styles.menuContent,
+            {
+              minHeight: dimensions.height,
+              paddingTop: getSafePaddingTop(insets, 52),
+              paddingBottom: getSafePaddingBottom(insets),
+            },
+          ]}
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.header}>
+            <NeonButton title={`← ${t('common.back').toUpperCase()}`} variant="secondary" audioSettings={game.settings} onPress={() => router.back()} style={styles.backButton} />
+            <Text style={styles.title}>BOSS MODE</Text>
+            <Text style={styles.subtitle}>{language === 'pt-BR' ? 'Boss do mês' : 'Monthly boss'}: {localizedBoss.name}</Text>
+            {!!bossNotice && <Text style={styles.noticeText}>{bossNotice}</Text>}
+          </View>
           {!unlocked && <Text style={styles.lockText}>Complete a fase 5 ou alcance nível de perfil 5 para desbloquear.</Text>}
           <View style={[styles.bossCard, { borderColor: bossSkin.primaryColor }]}>
             <SkinIcon skin={bossSkin} size={84} style={styles.bossSkinIcon} />
@@ -432,7 +438,7 @@ export default function BossScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingTop: 52, paddingHorizontal: 16, paddingBottom: 8 },
+  header: { paddingBottom: 8 },
   topHUD: { paddingTop: 45, paddingHorizontal: 12, paddingBottom: 4, zIndex: 20, elevation: 20 },
   hudRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 6 },
   hudItem: { flex: 1, flexDirection: 'row', backgroundColor: '#ffffff11', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', alignItems: 'center', justifyContent: 'center', gap: 6 },
@@ -450,7 +456,7 @@ const styles = StyleSheet.create({
   subtitle: { color: '#ffffffaa', marginTop: 4, fontWeight: 'bold' },
   noticeText: { color: '#ffd700', marginTop: 6, fontSize: 12, fontWeight: 'bold' },
   menuScroll: { flex: 1 },
-  menuContent: { padding: 16, gap: 12, flexGrow: 1 },
+  menuContent: { paddingHorizontal: 16, gap: 12, flexGrow: 1 },
   lockText: { color: '#ffd700', backgroundColor: '#ffd70018', borderWidth: 1, borderColor: '#ffd70066', padding: 12, borderRadius: 12, fontWeight: 'bold' },
   bossCard: { backgroundColor: '#ffffff10', borderWidth: 1.5, borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },
   bossSkinIcon: { borderWidth: 0 },
