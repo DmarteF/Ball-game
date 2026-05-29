@@ -48,6 +48,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-audio',
+    'expo-asset',
     [
       'react-native-google-mobile-ads',
       {

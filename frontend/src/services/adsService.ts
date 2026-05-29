@@ -33,15 +33,34 @@ type RewardedAdReward = {
   amount: number;
 };
 
-type GoogleMobileAdsModule = typeof import('react-native-google-mobile-ads');
-type RewardedAdInstance = import('react-native-google-mobile-ads').RewardedAd;
+type RewardedAdInstance = {
+  loaded: boolean;
+  load: () => void;
+  show: () => Promise<void>;
+  addAdEventListener: (type: string, listener: (payload?: unknown) => void) => () => void;
+};
+
+type GoogleMobileAdsModule = {
+  default: () => { initialize: () => Promise<void> };
+  RewardedAd: {
+    createForAdRequest: (adUnitId: string, requestOptions?: { requestNonPersonalizedAdsOnly?: boolean }) => RewardedAdInstance;
+  };
+  RewardedAdEventType: {
+    LOADED: string;
+    EARNED_REWARD: string;
+  };
+  AdEventType: {
+    ERROR: string;
+    CLOSED: string;
+  };
+};
 
 type PlacementState = {
   rewardedAd?: RewardedAdInstance;
   loadingPromise?: Promise<boolean>;
 };
 
-declare const require: (id: string) => GoogleMobileAdsModule;
+declare const globalThis: { eval?: (code: string) => unknown };
 
 const rewardedStates: Partial<Record<RewardedAdPlacement, PlacementState>> = {};
 let mobileAdsModule: GoogleMobileAdsModule | null = null;
@@ -55,7 +74,9 @@ const getGoogleMobileAds = () => {
   if (!canUseRealAds()) return null;
   if (mobileAdsModule) return mobileAdsModule;
   try {
-    mobileAdsModule = require('react-native-google-mobile-ads');
+    const nativeRequire = globalThis.eval?.('require') as undefined | ((id: string) => unknown);
+    if (!nativeRequire) return null;
+    mobileAdsModule = nativeRequire('react-native-google-mobile-ads') as GoogleMobileAdsModule;
     return mobileAdsModule;
   } catch (error) {
     console.warn('AdMob SDK unavailable:', error);
