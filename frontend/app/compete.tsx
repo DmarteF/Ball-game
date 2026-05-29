@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DualArenaView } from '@/src/components/DualArenaView';
@@ -33,6 +33,7 @@ export default function CompeteScreen() {
   const [result, setResult] = useState<Result | null>(null);
   const [runUpgrades, setRunUpgrades] = useState<Record<string, number>>({});
   const [levelChoices, setLevelChoices] = useState<Upgrade[]>([]);
+  const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const finishing = useRef(false);
   const playerArenaRef = useRef<DualArenaState | null>(null);
 
@@ -142,6 +143,7 @@ export default function CompeteScreen() {
   const finishMatch = async (won: boolean) => {
     if (finishing.current) return;
     finishing.current = true;
+    setPaused(true);
     const rewardRoll = Math.random();
     const baseCoins = Math.round((won ? 420 : 140) * match.map.rewardMultiplier);
     const baseXp = Math.round((won ? 160 : 55) * match.map.rewardMultiplier * game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2));
@@ -173,10 +175,20 @@ export default function CompeteScreen() {
 
   const confirmExit = () => {
     playSound('buttonClick', game.settings.sound);
-    Alert.alert('Sair da competição?', 'A partida atual será encerrada como derrota.', [
-      { text: 'Cancelar', style: 'cancel', onPress: () => playSound('buttonClick', game.settings.sound) },
-      { text: 'Sair', style: 'destructive', onPress: () => { playSound('buttonConfirm', game.settings.sound); finishMatch(false); } },
-    ]);
+    setPaused(true);
+    setExitConfirmVisible(true);
+  };
+
+  const cancelExit = () => {
+    playSound('buttonClick', game.settings.sound);
+    setExitConfirmVisible(false);
+    if (!finishing.current && !result) setPaused(false);
+  };
+
+  const leaveMatch = () => {
+    playSound('buttonConfirm', game.settings.sound);
+    setExitConfirmVisible(false);
+    finishMatch(false);
   };
 
   const chooseLevelUpgrade = (upgrade: Upgrade) => {
@@ -248,6 +260,16 @@ export default function CompeteScreen() {
             {result?.rewards.some(reward => reward.type === 'keys' || reward.type === 'chest') && <NeonButton title="ABRIR INVENTÁRIO" variant="primary" audioSettings={game.settings} onPress={() => router.replace('/inventory' as any)} />}
             <NeonButton title="VOLTAR PARA LIGA" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} />
             <NeonButton title="VOLTAR PARA HOME" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={exitConfirmVisible} transparent animationType="fade" onRequestClose={cancelExit}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.resultBox}>
+            <Text style={styles.resultTitle}>SAIR DA LIGA?</Text>
+            <Text style={styles.resultText}>A partida atual será encerrada como derrota.</Text>
+            <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={leaveMatch} />
+            <NeonButton title="CANCELAR" variant="secondary" audioSettings={game.settings} onPress={cancelExit} />
           </View>
         </View>
       </Modal>

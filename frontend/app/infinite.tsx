@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DualArenaView } from '@/src/components/DualArenaView';
@@ -31,6 +31,7 @@ export default function InfiniteScreen() {
   const [startedAt, setStartedAt] = useState(Date.now());
   const [seconds, setSeconds] = useState(0);
   const [ringsBroken, setRingsBroken] = useState(0);
+  const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const finishing = useRef(false);
 
   const makeArena = (nextWave: number, carry?: DualArenaState) => {
@@ -141,10 +142,20 @@ export default function InfiniteScreen() {
 
   const exit = () => {
     playSound('buttonClick', game.settings.sound);
-    Alert.alert('Sair do infinito?', 'A rodada será encerrada e as recompensas atuais serão salvas.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: () => finish(false) },
-    ]);
+    setPaused(true);
+    setExitConfirmVisible(true);
+  };
+
+  const cancelExit = () => {
+    playSound('buttonClick', game.settings.sound);
+    setExitConfirmVisible(false);
+    if (!finishing.current && !finished) setPaused(false);
+  };
+
+  const leaveInfinite = () => {
+    playSound('buttonConfirm', game.settings.sound);
+    setExitConfirmVisible(false);
+    finish(false);
   };
 
   const mm = Math.floor(seconds / 60);
@@ -216,6 +227,17 @@ export default function InfiniteScreen() {
             <Text style={styles.resultText}>Anéis: {ringsBroken}</Text>
             <NeonButton title="JOGAR NOVAMENTE" variant="primary" audioSettings={game.settings} onPress={start} />
             <NeonButton title="VOLTAR" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={exitConfirmVisible} transparent animationType="fade" onRequestClose={cancelExit}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>SAIR DO INFINITO?</Text>
+            <Text style={styles.resultText}>A rodada será encerrada e as recompensas atuais serão salvas.</Text>
+            <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={leaveInfinite} />
+            <NeonButton title="CANCELAR" variant="secondary" audioSettings={game.settings} onPress={cancelExit} />
           </View>
         </View>
       </Modal>

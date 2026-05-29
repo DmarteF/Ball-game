@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DualArenaView } from '@/src/components/DualArenaView';
@@ -57,6 +57,7 @@ export default function BossScreen() {
   const [resultRewards, setResultRewards] = useState<string[]>([]);
   const [runUpgrades, setRunUpgrades] = useState<Record<string, number>>({});
   const [levelChoices, setLevelChoices] = useState<Upgrade[]>([]);
+  const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [clock, setClock] = useState(getResetTimes());
   const finishing = useRef(false);
   const playerArenaRef = useRef<DualArenaState | null>(null);
@@ -154,6 +155,7 @@ export default function BossScreen() {
     if (finishing.current) return;
     finishing.current = true;
     setResultWon(won);
+    setDuelState('result');
     const currentProgress = normalizeBossProgress(game.bossProgress);
     const alreadyClaimed = currentProgress.dailyRewardsClaimed.includes(activeLevel.id);
     const reward = activeLevel.reward;
@@ -175,7 +177,6 @@ export default function BossScreen() {
       chest ? chest.label : '',
       won && activeLevel.id === 'impossivel' ? 'Boss diário concluído' : '',
     ].filter(Boolean));
-    setDuelState('result');
   };
 
   const buy = (type: 'atk' | 'gold') => {
@@ -191,10 +192,20 @@ export default function BossScreen() {
 
   const confirmExit = () => {
     playSound('buttonClick', game.settings.sound);
-    Alert.alert('Sair do Boss Mode?', 'A disputa atual será encerrada como derrota.', [
-      { text: 'Cancelar', style: 'cancel', onPress: () => playSound('buttonClick', game.settings.sound) },
-      { text: 'Sair', style: 'destructive', onPress: () => { playSound('buttonConfirm', game.settings.sound); finishDuel(false); } },
-    ]);
+    setDuelState('paused');
+    setExitConfirmVisible(true);
+  };
+
+  const cancelExit = () => {
+    playSound('buttonClick', game.settings.sound);
+    setExitConfirmVisible(false);
+    if (!finishing.current) setDuelState('playing');
+  };
+
+  const leaveDuel = () => {
+    playSound('buttonConfirm', game.settings.sound);
+    setExitConfirmVisible(false);
+    finishDuel(false);
   };
 
   const chooseLevelUpgrade = (upgrade: Upgrade) => {
@@ -291,6 +302,17 @@ export default function BossScreen() {
             {resultRewards.some(item => item.includes('Chaves') || item.includes('Baú')) && <NeonButton title="ABRIR INVENTÁRIO" variant="primary" audioSettings={game.settings} onPress={() => router.replace('/inventory' as any)} />}
             <NeonButton title="VOLTAR PARA BOSS" variant="secondary" audioSettings={game.settings} onPress={() => setDuelState('menu')} />
             <NeonButton title="VOLTAR PARA HOME" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={exitConfirmVisible} transparent animationType="fade" onRequestClose={cancelExit}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.resultModal}>
+            <Text style={styles.resultTitle}>SAIR DO BOSS?</Text>
+            <Text style={styles.resultSubtitle}>A disputa atual será encerrada como derrota.</Text>
+            <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={leaveDuel} />
+            <NeonButton title="CANCELAR" variant="secondary" audioSettings={game.settings} onPress={cancelExit} />
           </View>
         </View>
       </Modal>
