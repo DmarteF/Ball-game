@@ -242,6 +242,9 @@ export const createBossRingConfig = (
   colors,
   solidCount: level.solidCount,
   solidHpMultiplier: level.solidHpMultiplier,
+  maxCount: side === 'boss' ? 18 + level.rank : 16 + level.rank,
+  spawnBatchSize: 4,
+  respawnThreshold: 3,
 });
 
 export const describeBossReward = (reward: BossRewardPlan) => [

@@ -6,6 +6,7 @@ import { useGame } from '@/src/contexts/GameContext';
 import { DIVISIONS, getDaysRemainingInSeason, getDivisionReward, getDivisionMinScore, rewardToLabel } from '@/src/game/league';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
+import { SkinIcon } from '@/src/components/SkinIcon';
 
 export default function LeagueScreen() {
   const router = useRouter();
@@ -50,7 +51,10 @@ export default function LeagueScreen() {
         <Text style={styles.avatar}>{item.avatar}</Text>
         <View style={styles.rowInfo}>
           <Text style={styles.name} numberOfLines={1}>{isPlayer ? `${item.name} (Você)` : item.name}</Text>
-          <Text style={styles.meta}>{skin.icon} {skin.name} • Fase {item.maxPhase} • Comp {item.competitionWins}V</Text>
+          <View style={styles.metaRow}>
+            <SkinIcon skin={skin} size={16} style={styles.metaSkin} />
+            <Text style={styles.meta}>{skin.name} • Fase {item.maxPhase} • Comp {item.competitionWins}V</Text>
+          </View>
         </View>
         <View style={styles.scoreBox}>
           <Text style={styles.score}>{item.trophies.toLocaleString('pt-BR')} 🏆</Text>
@@ -195,6 +199,8 @@ const styles = StyleSheet.create({
   avatar: { fontSize: 24 },
   rowInfo: { flex: 1 },
   name: { color: '#ffffff', fontSize: 14, fontWeight: 'bold' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  metaSkin: { borderWidth: 0, backgroundColor: 'transparent' },
   meta: { color: '#ffffff99', fontSize: 11, marginTop: 2 },
   scoreBox: { alignItems: 'flex-end', minWidth: 82 },
   score: { color: '#ffd700', fontSize: 12, fontWeight: 'bold' },

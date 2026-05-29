@@ -53,6 +53,7 @@ export default function InfiniteScreen() {
       id: 'infinite',
       name: game.nickname || 'Você',
       skinIcon: skin.icon,
+      skinImageAsset: skin.imageAsset,
       skinColor: skin.primaryColor,
       size: ARENA_SIZE,
       phase: Math.min(50, nextWave),

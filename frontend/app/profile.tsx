@@ -7,6 +7,7 @@ import { UPGRADES } from '@/src/game/upgrades';
 import { SKINS, getSkinById, getSkinRarityColor } from '@/src/game/skins';
 import { ACHIEVEMENTS } from '@/src/game/achievements';
 import { playSound } from '@/src/utils/audio';
+import { SkinIcon } from '@/src/components/SkinIcon';
 
 const AVATARS = ['🔵', '🐶', '🐱', '🐷', '🐰', '👻', '🤖', '🐉', '💀', '🌌'];
 
@@ -57,7 +58,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.sectionTitle}>SKIN FAVORITA</Text>
           <View style={styles.favoriteSkinBox}>
-            <Text style={styles.favoriteIcon}>{favoriteSkin.icon}</Text>
+            <SkinIcon skin={favoriteSkin} size={44} style={styles.favoriteIcon} />
             <View style={styles.favoriteInfo}>
               <Text style={styles.favoriteName}>{favoriteSkin.name}</Text>
               <Text style={[styles.favoriteRarity, { color: getSkinRarityColor(favoriteSkin.rarity) }]}>{favoriteSkin.rarity.toUpperCase()}</Text>
@@ -66,7 +67,7 @@ export default function ProfileScreen() {
           <View style={styles.avatarRow}>
             {SKINS.filter(skin => game.unlockedSkins.includes(skin.id)).map(skin => (
               <TouchableOpacity key={skin.id} style={[styles.avatarPick, game.favoriteSkin === skin.id && styles.avatarSelected]} onPress={() => game.updateProfile({ favoriteSkin: skin.id })}>
-                <Text style={styles.avatarPickText}>{skin.icon}</Text>
+                <SkinIcon skin={skin} size={34} style={styles.avatarSkinPick} />
               </TouchableOpacity>
             ))}
           </View>
@@ -177,7 +178,8 @@ const styles = StyleSheet.create({
   stat: { color: '#ffffff', fontSize: 14, marginBottom: 6 },
   locked: { color: '#ffffffaa', fontSize: 13, marginTop: 6 },
   favoriteSkinBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff10', borderRadius: 12, padding: 12, gap: 12, marginTop: 8 },
-  favoriteIcon: { fontSize: 36 },
+  favoriteIcon: { borderWidth: 0 },
+  avatarSkinPick: { borderWidth: 0, backgroundColor: 'transparent' },
   favoriteInfo: { flex: 1 },
   favoriteName: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
   favoriteRarity: { fontSize: 11, fontWeight: 'bold', marginTop: 2 },

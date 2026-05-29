@@ -7,6 +7,7 @@ export interface DualArenaState {
   id: string;
   name: string;
   skinIcon: string;
+  skinImageAsset?: SkinDefinition['imageAsset'];
   skinColor: string;
   center: number;
   size: number;
@@ -29,6 +30,10 @@ export interface DualArenaState {
   lastCollisionRingId?: string;
   lastAiChoice?: string;
   runUpgrades: Record<string, number>;
+  ringConfig: RingConfig;
+  phase: number;
+  spawnedBatches: number;
+  maxSpawnBatches: number;
 }
 
 export interface ArenaTickResult {
@@ -47,6 +52,7 @@ export const createArenaState = (params: {
   id: string;
   name: string;
   skinIcon: string;
+  skinImageAsset?: SkinDefinition['imageAsset'];
   skinColor: string;
   size: number;
   phase: number;
@@ -54,15 +60,18 @@ export const createArenaState = (params: {
   aiQuality?: number;
   speedMultiplier?: number;
   damageMultiplier?: number;
+  maxSpawnBatches?: number;
 }) => {
   const center = params.size / 2;
   const speed = (params.ringConfig.count > 14 ? GAMEPLAY_TUNING.league.arenaBallSpeed : GAMEPLAY_TUNING.boss.arenaBallSpeed) * (params.speedMultiplier ?? 1);
   const ball = { x: center + 10, y: center - 16 };
-  const safeRadius = Math.max(params.ringConfig.safeStartRadius ?? 0, Math.hypot(ball.x - center, ball.y - center) + 28);
+  const desiredSafeRadius = Math.max(params.ringConfig.safeStartRadius ?? 0, Math.hypot(ball.x - center, ball.y - center) + 28);
+  const safeRadius = Math.max(24, Math.min(desiredSafeRadius, params.ringConfig.outerRadius - 18));
   return {
     id: params.id,
     name: params.name,
     skinIcon: params.skinIcon,
+    skinImageAsset: params.skinImageAsset,
     skinColor: params.skinColor,
     center,
     size: params.size,
@@ -83,6 +92,10 @@ export const createArenaState = (params: {
     lastSolidBreak: 0,
     lastCollisionAt: 0,
     runUpgrades: {},
+    ringConfig: params.ringConfig,
+    phase: params.phase,
+    spawnedBatches: 0,
+    maxSpawnBatches: params.maxSpawnBatches ?? (params.id === 'infinite' ? 0 : 3),
   } satisfies DualArenaState;
 };
 
@@ -200,6 +213,24 @@ const reflectAndSeparateBall = (state: DualArenaState, ring: Ring, previousDistF
     ball,
     velocity: clampBallSpeed({ x: reflected.x * 1.04, y: reflected.y * 1.04 }, 2.15, 5.1),
   };
+};
+
+const createArenaRespawnBatch = (state: DualArenaState) => {
+  const batchSize = state.ringConfig.spawnBatchSize ?? 4;
+  const nextPhase = state.phase + state.spawnedBatches + 1;
+  const desiredSafeRadius = Math.max(state.ringConfig.safeStartRadius ?? 0, Math.hypot(state.ball.x - state.center, state.ball.y - state.center) + 30);
+  const safeStartRadius = Math.max(24, Math.min(desiredSafeRadius, state.ringConfig.outerRadius - 18));
+  return createRings({
+    ...state.ringConfig,
+    count: Math.max(batchSize, Math.min(state.ringConfig.maxCount ?? state.ringConfig.count + 6, state.ringConfig.count + state.spawnedBatches + 2)),
+    minCount: batchSize,
+    safeStartRadius,
+  }, nextPhase)
+    .slice(-batchSize)
+    .map((ring, index) => ({
+      ...ring,
+      id: `${state.id}_spawn_${state.spawnedBatches}_${index}_${Date.now()}`,
+    }));
 };
 
 export const tickArenaPhysics = (
@@ -343,8 +374,25 @@ export const tickArenaPhysics = (
   next.rings = clampRingSpacing(next.rings, options.ringMinGap ?? 7);
 
   const activeRings = next.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
-  next.finished = activeRings.length === 0;
-  next.crushed = activeRings.some(ring =>
+  const respawnThreshold = next.ringConfig.respawnThreshold ?? 3;
+  if (
+    !next.crushed &&
+    next.maxSpawnBatches > 0 &&
+    next.spawnedBatches < next.maxSpawnBatches &&
+    activeRings.length <= respawnThreshold
+  ) {
+    next = {
+      ...next,
+      rings: clampRingSpacing([
+        ...activeRings,
+        ...createArenaRespawnBatch(next),
+      ], options.ringMinGap ?? 7),
+      spawnedBatches: next.spawnedBatches + 1,
+    };
+  }
+  const currentActiveRings = next.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
+  next.finished = currentActiveRings.length === 0;
+  next.crushed = currentActiveRings.some(ring =>
     ring.radius <= next.ballRadius + 3 ||
     isBallCrushedByRing(next.ball.x, next.ball.y, next.ballRadius, ring, next.center, next.center)
   );

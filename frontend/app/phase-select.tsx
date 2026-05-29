@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
 import { PHASES } from '@/src/game/phases';
 import { playSound } from '@/src/utils/audio';
+import { UiIcon } from '@/src/components/UiIcon';
 
 export default function PhaseSelectScreen() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function PhaseSelectScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.phaseList}>
         <TouchableOpacity style={styles.phaseCard} onPress={handleInfiniteSelect}>
           <LinearGradient colors={infiniteUnlocked ? ['#00ff8888', '#00f0ff33'] : ['#333333', '#222222']} style={styles.cardGradient}>
-            <View style={styles.phaseNumber}><Text style={styles.phaseNumberText}>∞</Text></View>
+            <View style={styles.phaseNumber}><UiIcon iconKey="ui_infinite" fallback="∞" size={38} /></View>
             <View style={styles.phaseInfo}>
               <Text style={[styles.phaseName, !infiniteUnlocked && styles.lockedText]}>Modo Infinito</Text>
               <Text style={[styles.phaseDescription, !infiniteUnlocked && styles.lockedText]}>{infiniteUnlocked ? 'Ondas sem fim com desafios progressivos.' : 'Complete a Fase 5 para desbloquear.'}</Text>
@@ -48,7 +49,7 @@ export default function PhaseSelectScreen() {
                 <Text style={[styles.phaseHP, !infiniteUnlocked && styles.lockedText]}>Progressão infinita</Text>
               </View>
             </View>
-            {!infiniteUnlocked && <View style={styles.lockOverlay}><Text style={styles.lockText}>🔒 FASE 5</Text></View>}
+            {!infiniteUnlocked && <View style={styles.lockOverlay}><UiIcon iconKey="ui_locked" fallback="🔒" size={22} /><Text style={styles.lockText}>FASE 5</Text></View>}
           </LinearGradient>
         </TouchableOpacity>
         {PHASES.map(phase => {
@@ -65,7 +66,7 @@ export default function PhaseSelectScreen() {
                     <Text style={[styles.phaseHP, !isUnlocked && styles.lockedText]}>{phase.ringMin}-{phase.ringMax} anéis • HP {phase.baseHp}</Text>
                   </View>
                 </View>
-                {!isUnlocked && <View style={styles.lockOverlay}><Text style={styles.lockText}>🔒 BLOQUEADO</Text></View>}
+                {!isUnlocked && <View style={styles.lockOverlay}><UiIcon iconKey="ui_locked" fallback="🔒" size={22} /><Text style={styles.lockText}>BLOQUEADO</Text></View>}
               </LinearGradient>
             </TouchableOpacity>
           );

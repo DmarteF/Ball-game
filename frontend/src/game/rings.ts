@@ -41,6 +41,9 @@ export interface RingConfig {
   minGapSize?: number;
   minSpacing?: number;
   safeStartRadius?: number;
+  maxCount?: number;
+  spawnBatchSize?: number;
+  respawnThreshold?: number;
 }
 
 const TWO_PI = Math.PI * 2;
@@ -65,10 +68,14 @@ export const createRings = (config: RingConfig, phase: number): Ring[] => {
   const growth = config.difficultyGrowth ?? 0.22;
   const difficulty = 1 + Math.max(0, phase - 1) * growth;
   const countGrowth = config.countGrowth ?? 2;
-  const requestedCount = Math.max(config.minCount ?? 20, config.count + Math.floor(Math.max(0, phase - 1) * countGrowth));
+  const requestedCount = Math.min(
+    config.maxCount ?? Infinity,
+    Math.max(config.minCount ?? 20, config.count + Math.floor(Math.max(0, phase - 1) * countGrowth))
+  );
   const innerRadius = Math.max(config.innerRadius, config.safeStartRadius ?? config.innerRadius);
   const availableRadius = Math.max(1, config.outerRadius - innerRadius);
-  const maxCountBySpacing = Math.max(1, Math.floor(availableRadius / Math.max(1, config.minSpacing ?? MIN_RING_GAP)) + 1);
+  const adaptiveMinSpacing = Math.min(config.minSpacing ?? MIN_RING_GAP, Math.max(2.25, availableRadius / Math.max(1, requestedCount - 1)));
+  const maxCountBySpacing = Math.max(1, Math.floor(availableRadius / adaptiveMinSpacing) + 1);
   const count = Math.max(1, Math.min(requestedCount, maxCountBySpacing));
   const spacing = availableRadius / Math.max(1, count - 1);
   const minGap = config.minGapSize ?? Math.PI / 7.5;

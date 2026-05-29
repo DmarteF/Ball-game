@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { DualArenaState, getArenaProgress } from '@/src/game/dualArena';
+import { SkinIcon } from '@/src/components/SkinIcon';
 
 interface DualArenaViewProps {
   arena: DualArenaState;
@@ -18,7 +19,10 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
   return (
     <View style={[styles.panel, { borderColor: leader ? '#ffd700' : accent + '88' }]}>
       <View style={styles.header}>
-        <Text style={styles.name} numberOfLines={1}>{arena.skinIcon} {arena.name}</Text>
+        <View style={styles.nameRow}>
+          <SkinIcon skin={{ icon: arena.skinIcon, imageAsset: arena.skinImageAsset, primaryColor: arena.skinColor }} size={20} style={styles.nameSkin} />
+          <Text style={styles.name} numberOfLines={1}>{arena.name}</Text>
+        </View>
         <Text style={styles.meta}>{meta} • {active.length} anéis</Text>
       </View>
       <View style={[styles.stage, { width: arena.size, height: arena.size, borderRadius: arena.size / 2 }]}>
@@ -66,7 +70,7 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
           <View style={[styles.skinTrail, { backgroundColor: arena.skinColor }]} />
           <View style={[styles.ballGlow, { shadowColor: arena.skinColor, borderRadius: arena.ballRadius }]}>
             <LinearGradient colors={['#ffffff', arena.skinColor, accent]} style={styles.ballGradient}>
-              <Text style={styles.ballIcon}>{arena.skinIcon}</Text>
+              <SkinIcon skin={{ icon: arena.skinIcon, imageAsset: arena.skinImageAsset, primaryColor: arena.skinColor }} size={arena.ballRadius * 1.8} style={styles.ballIconImage} />
             </LinearGradient>
           </View>
         </View>
@@ -97,7 +101,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   header: { width: '100%', alignItems: 'center', gap: 3, marginBottom: 8 },
-  name: { color: '#ffffff', fontWeight: 'bold', textAlign: 'center', width: '100%' },
+  nameRow: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  nameSkin: { borderWidth: 0, backgroundColor: 'transparent' },
+  name: { color: '#ffffff', fontWeight: 'bold', textAlign: 'center', flexShrink: 1 },
   meta: { color: '#ffffffaa', fontWeight: 'bold', fontSize: 11, textAlign: 'center' },
   stage: { backgroundColor: '#00000033', borderWidth: 2, borderColor: '#ffffff11', overflow: 'hidden', position: 'relative' },
   ball: {
@@ -126,7 +132,7 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
   },
   ballGradient: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-  ballIcon: { fontSize: 10, lineHeight: 12 },
+  ballIconImage: { borderWidth: 0, backgroundColor: 'transparent' },
   solidBadge: {
     position: 'absolute',
     alignSelf: 'center',

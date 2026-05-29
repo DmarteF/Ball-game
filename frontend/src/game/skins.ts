@@ -1,3 +1,6 @@
+import { ImageSourcePropType } from 'react-native';
+import { SKIN_IMAGE_ASSETS } from './skinImages';
+
 export type SkinRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'ultimate';
 export type SkinPassiveType =
   | 'coin_on_hit'
@@ -55,6 +58,7 @@ export interface SkinDefinition {
   rarity: SkinRarity;
   description: string;
   icon: string;
+  imageAsset?: ImageSourcePropType;
   primaryColor: string;
   secondaryColor: string;
   trail: string;
@@ -94,6 +98,7 @@ const skin = (
   name,
   rarity,
   icon,
+  imageAsset: SKIN_IMAGE_ASSETS[id],
   primaryColor,
   secondaryColor,
   description,

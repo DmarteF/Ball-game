@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacit
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AdModal } from '@/src/components/AdModal';
+import { UiIcon } from '@/src/components/UiIcon';
 import { useGame } from '@/src/contexts/GameContext';
 import { getWeeklyEvent } from '@/src/game/retention';
 import { playSound } from '@/src/utils/audio';
@@ -27,16 +28,16 @@ export default function HomeScreen() {
   }, [lastAchievementUnlocked, clearAchievementToast]);
 
   const secondaryItems = [
-    { label: 'Loja', icon: '🛒', route: '/store', color: '#00aaff' },
-    { label: 'Inventário', icon: '🎒', route: '/inventory', color: '#ffd700' },
-    { label: 'Missões', icon: '📅', route: '/daily', color: '#ff8800' },
-    { label: 'Evento', icon: '⚡', route: '/events', color: weeklyEvent.color },
-    { label: 'Roleta', icon: '🎡', route: '/wheel', color: '#00ff88' },
-    { label: 'Recompensa diária', icon: '🎁', route: '/wheel', color: '#ffd700' },
-    { label: 'Boss', icon: '👑', route: '/boss', color: '#ff0055' },
-    { label: 'Liga Neon', icon: '🏅', route: '/league', color: '#00ff88' },
-    { label: 'Conquistas', icon: '🏆', route: '/achievements', color: '#ffd700' },
-    { label: 'Configurações', icon: '⚙️', route: '/profile', color: '#b8f3ff' },
+    { label: 'Loja', icon: '🛒', iconKey: 'ui_store' as const, route: '/store', color: '#00aaff' },
+    { label: 'Inventário', icon: '🎒', iconKey: 'ui_inventory' as const, route: '/inventory', color: '#ffd700' },
+    { label: 'Missões', icon: '📅', iconKey: 'ui_missions' as const, route: '/daily', color: '#ff8800' },
+    { label: 'Evento', icon: '⚡', iconKey: 'ui_event' as const, route: '/events', color: weeklyEvent.color },
+    { label: 'Roleta', icon: '🎡', iconKey: 'ui_wheel' as const, route: '/wheel', color: '#00ff88' },
+    { label: 'Recompensa diária', icon: '🎁', iconKey: 'ui_daily_reward' as const, route: '/wheel', color: '#ffd700' },
+    { label: 'Boss', icon: '👑', iconKey: 'ui_boss' as const, route: '/boss', color: '#ff0055' },
+    { label: 'Liga Neon', icon: '🏅', iconKey: 'ui_league_neon' as const, route: '/league', color: '#00ff88' },
+    { label: 'Conquistas', icon: '🏆', iconKey: 'ui_achievements' as const, route: '/achievements', color: '#ffd700' },
+    { label: 'Configurações', icon: '⚙️', iconKey: 'ui_settings' as const, route: '/profile', color: '#b8f3ff' },
   ];
 
   const go = (route: string) => {
@@ -67,9 +68,9 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
         <View style={styles.resources}>
-          <Text style={styles.resource}>💰 {coins}</Text>
-          <Text style={styles.resource}>💎 {gems}</Text>
-          <Text style={styles.resource}>🔑 {keys}</Text>
+          <View style={styles.resource}><UiIcon iconKey="ui_coin" fallback="💰" size={18} /><Text style={styles.resourceText}>{coins}</Text></View>
+          <View style={styles.resource}><UiIcon iconKey="ui_gem" fallback="💎" size={18} /><Text style={styles.resourceText}>{gems}</Text></View>
+          <View style={styles.resource}><UiIcon iconKey="ui_key" fallback="🔑" size={18} /><Text style={styles.resourceText}>{keys}</Text></View>
         </View>
       </View>
 
@@ -89,13 +90,13 @@ export default function HomeScreen() {
         <View style={styles.primaryRow}>
           <TouchableOpacity style={styles.primaryCard} onPress={() => go('/upgrade-shop')}>
             <LinearGradient colors={['#b000ff66', '#6600cc33']} style={styles.primaryCardGradient}>
-              <Text style={styles.primaryIcon}>⚔️</Text>
+              <UiIcon iconKey="ui_upgrades" fallback="⚔️" size={42} style={styles.primaryIcon} />
               <Text style={styles.primaryLabel}>UPGRADES</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.primaryCard} onPress={() => go('/transformations')}>
             <LinearGradient colors={['#ff008866', '#cc006633']} style={styles.primaryCardGradient}>
-              <Text style={styles.primaryIcon}>✨</Text>
+              <UiIcon iconKey="ui_skins" fallback="✨" size={42} style={styles.primaryIcon} />
               <Text style={styles.primaryLabel}>SKINS</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -116,7 +117,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       <TouchableOpacity style={styles.moreButton} onPress={() => setMoreOpen(true)}>
-        <Text style={styles.moreIcon}>☰</Text>
+        <UiIcon iconKey="ui_menu" fallback="☰" size={26} style={styles.moreIcon} />
         <Text style={styles.moreText}>Mais</Text>
       </TouchableOpacity>
 
@@ -132,7 +133,7 @@ export default function HomeScreen() {
             <View style={styles.moreGrid}>
               {secondaryItems.map(item => (
                 <TouchableOpacity key={item.label} style={[styles.moreItem, { borderColor: item.color + '88' }]} onPress={() => go(item.route)}>
-                  <Text style={styles.moreItemIcon}>{item.icon}</Text>
+                  <UiIcon iconKey={item.iconKey} fallback={item.icon} size={34} style={styles.moreItemIcon} />
                   <Text style={styles.moreItemLabel}>{item.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -146,7 +147,7 @@ export default function HomeScreen() {
           <View style={styles.offlineBox}>
             <Text style={styles.offlineTitle}>RECOMPENSA OFFLINE</Text>
             <Text style={styles.offlineText}>Você ficou fora por {pendingOfflineReward?.hours}h.</Text>
-            <Text style={styles.offlineReward}>💰 {pendingOfflineReward?.coins}</Text>
+            <View style={styles.offlineRewardRow}><UiIcon iconKey="ui_coin" fallback="💰" size={34} /><Text style={styles.offlineReward}>{pendingOfflineReward?.coins}</Text></View>
             {pendingOfflineReward?.eventBonus && <Text style={styles.offlineText}>Bônus ativo: {pendingOfflineReward.eventBonus}</Text>}
             <TouchableOpacity style={styles.offlineButton} onPress={async () => { await game.claimOfflineReward(false); setOfflineVisible(false); }}>
               <Text style={styles.offlineButtonText}>COLETAR</Text>
@@ -182,7 +183,8 @@ const styles = StyleSheet.create({
   nickname: { color: '#ffffff', fontWeight: 'bold', fontSize: 14 },
   levelText: { color: '#00f0ff', fontSize: 12, fontWeight: 'bold' },
   resources: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  resource: { color: '#ffffff', fontWeight: 'bold', backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff22', paddingVertical: 7, paddingHorizontal: 10, borderRadius: 10, overflow: 'hidden' },
+  resource: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff22', paddingVertical: 7, paddingHorizontal: 10, borderRadius: 10, overflow: 'hidden' },
+  resourceText: { color: '#ffffff', fontWeight: 'bold' },
   content: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 96 },
   titleContainer: { alignItems: 'center', marginTop: 22, marginBottom: 26 },
   title: { fontSize: 60, fontWeight: 'bold', color: '#00f0ff', textShadowColor: '#00f0ff', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 18, letterSpacing: 6 },
@@ -194,13 +196,13 @@ const styles = StyleSheet.create({
   primaryRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   primaryCard: { flex: 1, height: 92, borderRadius: 14, overflow: 'hidden' },
   primaryCardGradient: { flex: 1, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ffffff24' },
-  primaryIcon: { fontSize: 30, marginBottom: 6 },
+  primaryIcon: { marginBottom: 6 },
   primaryLabel: { color: '#ffffff', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
   achievementToast: { marginTop: 4, backgroundColor: '#00ff8822', borderWidth: 1, borderColor: '#00ff88aa', borderRadius: 12, padding: 12 },
   achievementToastTitle: { color: '#00ff88', fontSize: 13, fontWeight: 'bold' },
   achievementToastText: { color: '#ffffff', fontSize: 15, fontWeight: 'bold', marginTop: 2 },
   moreButton: { position: 'absolute', right: 18, bottom: 24, width: 64, height: 64, borderRadius: 18, backgroundColor: '#00f0ff', alignItems: 'center', justifyContent: 'center', shadowColor: '#00f0ff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 14 },
-  moreIcon: { color: '#001018', fontSize: 22, fontWeight: 'bold' },
+  moreIcon: { tintColor: '#001018' },
   moreText: { color: '#001018', fontSize: 11, fontWeight: 'bold' },
   modalOverlay: { flex: 1, backgroundColor: '#000000cc', justifyContent: 'center', alignItems: 'center', padding: 18 },
   morePanel: { width: '100%', maxWidth: 430, backgroundColor: '#1a0a2e', borderWidth: 1, borderColor: '#00f0ff66', borderRadius: 18, padding: 16 },
@@ -209,12 +211,13 @@ const styles = StyleSheet.create({
   closeText: { color: '#ffffffaa', fontWeight: 'bold' },
   moreGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   moreItem: { width: '47%', minHeight: 76, backgroundColor: '#ffffff12', borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', padding: 10 },
-  moreItemIcon: { fontSize: 26, marginBottom: 5 },
+  moreItemIcon: { marginBottom: 5 },
   moreItemLabel: { color: '#ffffff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
   offlineBox: { width: '100%', maxWidth: 380, backgroundColor: '#1a0a2e', borderWidth: 1, borderColor: '#00f0ff66', borderRadius: 16, padding: 22, alignItems: 'center' },
   offlineTitle: { color: '#00f0ff', fontSize: 24, fontWeight: 'bold' },
   offlineText: { color: '#ffffffaa', textAlign: 'center', marginTop: 8 },
-  offlineReward: { color: '#ffd700', fontSize: 30, fontWeight: 'bold', marginVertical: 12 },
+  offlineRewardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginVertical: 12 },
+  offlineReward: { color: '#ffd700', fontSize: 30, fontWeight: 'bold' },
   offlineButton: { width: '100%', backgroundColor: '#00f0ff', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 8 },
   offlineAdButton: { width: '100%', backgroundColor: '#ffd700', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 8 },
   offlineButtonText: { color: '#001018', fontWeight: 'bold' },

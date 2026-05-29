@@ -66,6 +66,9 @@ export default function CompeteScreen() {
     colors: [side === 'rival' ? rivalSkin.primaryColor : playerSkin.primaryColor, match.map.color, '#ffffff88'],
     solidCount,
     solidHpMultiplier: rivalRank === 'top3' ? 1.9 : rivalRank === 'top10' ? 1.7 : rivalRank === 'strong' ? 1.5 : 1.35,
+    maxCount: rivalRank === 'top3' ? 18 : rivalRank === 'top10' ? 16 : 14,
+    spawnBatchSize: 4,
+    respawnThreshold: 3,
   });
 
   const startMatch = () => {
@@ -78,6 +81,7 @@ export default function CompeteScreen() {
       id: 'player',
       name: game.nickname || 'Você',
       skinIcon: playerSkin.icon,
+      skinImageAsset: playerSkin.imageAsset,
       skinColor: playerSkin.primaryColor,
       size: ARENA_SIZE,
       phase: basePhase,
@@ -89,6 +93,7 @@ export default function CompeteScreen() {
       id: 'rival',
       name: match.rival.name,
       skinIcon: rivalSkin.icon,
+      skinImageAsset: rivalSkin.imageAsset,
       skinColor: rivalSkin.primaryColor,
       size: ARENA_SIZE,
       phase: basePhase,

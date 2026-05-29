@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
+import { SkinIcon } from '@/src/components/SkinIcon';
 import { HIDDEN_RARITIES, SKINS, SkinRarity, getSkinEvolutionCost, getSkinRarityColor } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 
@@ -99,9 +100,7 @@ export default function TransformationsScreen() {
                   style={styles.skinGradient}
                 >
                   <View style={styles.cardTop}>
-                    <View style={[styles.previewBall, { backgroundColor: hidden ? '#111827' : skin.primaryColor }]}>
-                      <Text style={styles.skinIcon}>{hidden ? '🔒' : skin.icon}</Text>
-                    </View>
+                    <SkinIcon skin={skin} hidden={hidden} icon="🔒" size={54} style={styles.previewBall} />
                     <Text style={[styles.rarityBadge, { backgroundColor: rarityColor }]}>{skin.rarity.toUpperCase()}</Text>
                   </View>
 
@@ -168,8 +167,7 @@ const styles = StyleSheet.create({
   skinSelected: { borderWidth: 2 },
   skinGradient: { flex: 1, padding: 12 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 9 },
-  previewBall: { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ffffff44' },
-  skinIcon: { fontSize: 28 },
+  previewBall: { borderWidth: 1, borderColor: '#ffffff44' },
   rarityBadge: { color: '#001018', fontSize: 9, fontWeight: 'bold', paddingVertical: 4, paddingHorizontal: 6, borderRadius: 7, overflow: 'hidden' },
   skinName: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
   skinDescription: { color: '#ffffffaa', fontSize: 12, minHeight: 34, marginTop: 5 },

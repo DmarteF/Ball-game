@@ -21,6 +21,7 @@ import { getPhaseConfig } from '@/src/game/phases';
 import { GAMEPLAY_TUNING } from '@/src/game/balance';
 import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
 import { FloatingNumber } from '@/src/components/FloatingNumber';
+import { SkinIcon } from '@/src/components/SkinIcon';
 import { AdModal } from '@/src/components/AdModal';
 import { ECONOMY_BALANCE, getComboMultiplier, getGlobalCoinsFromRun, getRunProfileXp } from '@/src/game/economy';
 import { playSound } from '@/src/utils/audio';
@@ -1045,7 +1046,7 @@ export default function GameScreen() {
                 colors={['#ffffff', equippedSkin.primaryColor, equippedSkin.secondaryColor]}
                 style={styles.ballGradient}
               >
-                <Text style={styles.skinIconInBall}>{equippedSkin.icon}</Text>
+                <SkinIcon skin={equippedSkin} size={BALL_RADIUS * 1.75} style={styles.skinIconInBall} />
               </LinearGradient>
             </View>
           </Animated.View>
@@ -1468,7 +1469,7 @@ const styles = StyleSheet.create({
     borderColor: '#00ff88',
   },
   ballGradient: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-  skinIconInBall: { fontSize: 12, lineHeight: 14 },
+  skinIconInBall: { borderWidth: 0, backgroundColor: 'transparent' },
   protectionBadge: {
     position: 'absolute',
     top: 12,
