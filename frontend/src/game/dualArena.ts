@@ -1,4 +1,4 @@
-import { Ring, RingConfig, clampBallSpeed, createRings, findClosestCollidingRing, reflectBallOffRing, updateRing } from './rings';
+import { Ring, RingConfig, clampBallSpeed, createRings, findClosestCollidingRing, findPerfectEscapeRing, reflectBallOffRing, updateRing } from './rings';
 
 export interface DualArenaState {
   id: string;
@@ -103,22 +103,24 @@ export const getArenaProgress = (state: DualArenaState) => {
   return Math.max(0, Math.min(1, (total - remaining) / total));
 };
 
-const separateBallFromRing = (state: DualArenaState, ring: Ring) => {
+const separateBallFromRing = (state: DualArenaState, ring: Ring, previousDistFromCenter: number) => {
   const dx = state.ball.x - state.center;
   const dy = state.ball.y - state.center;
   const dist = Math.sqrt(dx * dx + dy * dy) || 1;
   const nx = dx / dist;
   const ny = dy / dist;
   const halfThickness = ring.thickness / 2;
-  const safeOffset = 1.8;
+  const safeOffset = 2.2;
   const outsideTarget = ring.radius + halfThickness + state.ballRadius + safeOffset;
   const insideTarget = Math.max(0, ring.radius - halfThickness - state.ballRadius - safeOffset);
-  const movingOut = state.velocity.x * nx + state.velocity.y * ny >= 0;
-  const targetDist = dist >= ring.radius || movingOut ? outsideTarget : insideTarget;
+  const startedOutside = Number.isFinite(previousDistFromCenter) ? previousDistFromCenter > ring.radius : dist > ring.radius;
+  const targetDist = startedOutside ? outsideTarget : insideTarget;
+  const maxDist = state.size / 2 - state.ballRadius - 4;
+  const clampedTargetDist = Math.max(0, Math.min(maxDist, targetDist));
 
   return {
-    x: state.center + nx * targetDist,
-    y: state.center + ny * targetDist,
+    x: state.center + nx * clampedTargetDist,
+    y: state.center + ny * clampedTargetDist,
   };
 };
 
@@ -129,6 +131,7 @@ export const tickArenaPhysics = (
   if (state.finished || state.crushed) return { state, brokeRing: false, brokeSolid: false };
   const now = Date.now();
   const shrink = options.shrinkMultiplier ?? 1;
+  const previousDist = Math.hypot(state.ball.x - state.center, state.ball.y - state.center);
   let next: DualArenaState = {
     ...state,
     ball: { x: state.ball.x + state.velocity.x, y: state.ball.y + state.velocity.y },
@@ -152,6 +155,26 @@ export const tickArenaPhysics = (
 
   let brokeRing = false;
   let brokeSolid = false;
+  const nextDist = Math.hypot(next.ball.x - next.center, next.ball.y - next.center);
+  const perfectEscape = findPerfectEscapeRing(
+    previousDist,
+    nextDist,
+    next.ball.x,
+    next.ball.y,
+    next.ballRadius,
+    next.rings,
+    next.center,
+    next.center
+  );
+
+  if (perfectEscape.ring && perfectEscape.index >= 0) {
+    next.rings[perfectEscape.index] = { ...perfectEscape.ring, status: 'cleared', hp: 0 };
+    next.coins += Math.max(2, Math.floor(5 * (1 + next.gold * 0.18)));
+    next.xp += 12;
+    next.combo += 1;
+    brokeRing = true;
+  }
+
   const collision = findClosestCollidingRing(next.ball.x, next.ball.y, next.ballRadius, next.rings, next.center, next.center);
   if (collision.ring && collision.index >= 0 && collision.isInSolidPart) {
     const canDamage = now - next.lastCollisionAt > 70;
@@ -176,7 +199,7 @@ export const tickArenaPhysics = (
       next.atk += Math.random() < 0.65 ? 1 : 0;
       next.gold += Math.random() < 0.35 ? 1 : 0;
     }
-    next.ball = separateBallFromRing(next, ring);
+    next.ball = separateBallFromRing(next, ring, previousDist);
     const reflected = reflectBallOffRing(next.ball.x, next.ball.y, next.velocity.x, next.velocity.y, next.center, next.center, 0.18);
     next.velocity = clampBallSpeed({ x: reflected.newVelX * 1.035, y: reflected.newVelY * 1.035 }, 1.9, 4.8);
   }
