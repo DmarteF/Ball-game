@@ -1,5 +1,6 @@
 import React, { memo, useState } from 'react';
 import { Image, ImageStyle, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { UiIcon } from '@/src/components/UiIcon';
 
 interface ProfileAvatarProps {
   avatar?: string;
@@ -23,6 +24,8 @@ function ProfileAvatarBase({ avatar = '🔵', imageUri, size = 52, style, imageS
           onError={() => setImageFailed(true)}
           style={[styles.image, { width: size, height: size, borderRadius: size / 2 }, imageStyle]}
         />
+      ) : avatar === '👤' ? (
+        <UiIcon iconKey="ui_profile" fallback={avatar} size={size * 0.72} />
       ) : (
         <Text style={[styles.text, { fontSize: size * 0.52, lineHeight: size * 0.62 }, textStyle]}>{avatar}</Text>
       )}

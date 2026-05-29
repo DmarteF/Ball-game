@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DualArenaView } from '@/src/components/DualArenaView';
 import { NeonButton } from '@/src/components/NeonButton';
 import { useGame } from '@/src/contexts/GameContext';
@@ -15,12 +16,12 @@ import { clampRingSpacing, Ring } from '@/src/game/rings';
 import { UiIcon } from '@/src/components/UiIcon';
 import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { MuteButton } from '@/src/components/MuteButton';
-
-const { width, height } = Dimensions.get('window');
-const ARENA_SIZE = Math.max(220, Math.min(width - 24, height - GAMEPLAY_TUNING.infinite.safeHudReserve));
+import { getSafePaddingBottom, getSafePaddingTop, getSingleArenaSize } from '@/src/utils/gameplayLayout';
 
 export default function InfiniteScreen() {
   const router = useRouter();
+  const dimensions = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const game = useGame();
   const skin = getSkinById(game.ballTransformation);
   const infiniteUnlocked = game.unlockedPhases.includes(6) || game.lifetimeStats.highestPhase >= 5;
@@ -40,6 +41,16 @@ export default function InfiniteScreen() {
   const finishing = useRef(false);
   const ringsBrokenRef = useRef(0);
   const challengeCountRef = useRef(0);
+  const arenaSize = useMemo(
+    () => getSingleArenaSize({
+      width: dimensions.width,
+      height: dimensions.height,
+      insets,
+      hudHeight: GAMEPLAY_TUNING.infinite.safeHudReserve,
+      controlsHeight: 62,
+    }),
+    [dimensions.width, dimensions.height, insets]
+  );
 
   const makeArena = (nextWave: number, carry?: DualArenaState) => {
     const ramp = 1 + (nextWave - 1) * 0.08;
@@ -58,7 +69,7 @@ export default function InfiniteScreen() {
       skinIcon: skin.icon,
       skinImageAsset: skin.imageAsset,
       skinColor: skin.primaryColor,
-      size: ARENA_SIZE,
+      size: arenaSize,
       phase: Math.min(50, nextWave),
       speedMultiplier: attrs.speedMultiplier,
       damageMultiplier: attrs.damageMultiplier,
@@ -71,7 +82,7 @@ export default function InfiniteScreen() {
         minSpacing: 6,
         safeStartRadius: 52,
         innerRadius: 34,
-        outerRadius: ARENA_SIZE / 2 - 12,
+        outerRadius: arenaSize / 2 - 12,
         baseRotationSpeed: 0.0085 * ramp,
         baseHp: 20 * ramp,
         baseGapSize: Math.max(Math.PI / 7.4, 1.85 * GAMEPLAY_TUNING.infinite.gapScale - nextWave * 0.018),
@@ -275,7 +286,7 @@ export default function InfiniteScreen() {
         </View>
       ) : (
       <>
-      <View style={styles.hud}>
+      <View style={[styles.hud, { paddingTop: getSafePaddingTop(insets, 46) }]}>
         <View style={styles.hudRow}>
           <View style={styles.badgeRow}><UiIcon iconKey="ui_infinite" fallback="∞" size={18} /><Text style={styles.badgeText}>{mm}:{ss}</Text></View>
           <Text style={styles.badge}>Onda {wave}</Text>
@@ -289,7 +300,7 @@ export default function InfiniteScreen() {
         </View>
       </View>
 
-      <View style={styles.playArea}>
+      <View style={[styles.playArea, { paddingBottom: getSafePaddingBottom(insets) }]}>
         {arena && <DualArenaView arena={arena} meta={`XP ${arena.xp} • ATK ${arena.atk} • Gold ${arena.gold} • Desafios ${challengeCount}`} accent="#00f0ff" leader />}
         {arena && (
           <View style={styles.shopRow}>

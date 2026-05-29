@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/src/contexts/GameContext';
 import { DIVISIONS, getDaysRemainingInSeason, getDivisionReward, getDivisionMinScore, rewardToLabel } from '@/src/game/league';
 import { getSkinById } from '@/src/game/skins';
@@ -9,9 +10,11 @@ import { playSound } from '@/src/utils/audio';
 import { SkinIcon } from '@/src/components/SkinIcon';
 import { UiIcon } from '@/src/components/UiIcon';
 import { ProfileAvatar } from '@/src/components/ProfileAvatar';
+import { getSafePaddingBottom, getSafePaddingTop } from '@/src/utils/gameplayLayout';
 
 export default function LeagueScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const game = useGame();
   const listRef = useRef<FlatList>(null);
   const standings = useMemo(() => game.getLeagueStandings(), [game.league, game.nickname, game.avatar, game.avatarImageUri, game.level, game.lifetimeStats, game.unlockedSkins]);
@@ -69,7 +72,7 @@ export default function LeagueScreen() {
 
   return (
     <LinearGradient colors={['#08121d', '#1a0a2e', '#16003b']} style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: getSafePaddingTop(insets, 56) }]}>
         <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
         <Text style={styles.title}>LIGA NEON</Text>
         <Text style={styles.subtitle}>Liga local contra rivais fictícios • {standings.length} participantes</Text>
@@ -128,7 +131,7 @@ export default function LeagueScreen() {
         data={standings}
         keyExtractor={item => item.id}
         renderItem={Row}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: getSafePaddingBottom(insets, 92) + 72 }]}
         initialNumToRender={16}
         maxToRenderPerBatch={18}
         windowSize={8}
@@ -136,7 +139,7 @@ export default function LeagueScreen() {
         onScrollToIndexFailed={info => setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true }), 250)}
       />
 
-      <TouchableOpacity style={styles.playerDock} onPress={goToPlayer}>
+      <TouchableOpacity style={[styles.playerDock, { bottom: getSafePaddingBottom(insets, 18) }]} onPress={goToPlayer}>
         <Text style={styles.dockText}>Minha posição #{playerIndex + 1} • {player.trophies.toLocaleString('pt-BR')} troféus • {player.division}</Text>
       </TouchableOpacity>
 

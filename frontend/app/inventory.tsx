@@ -71,6 +71,11 @@ export default function InventoryScreen() {
   };
 
   const handleFreeChestReward = async () => {
+    const allowed = await game.recordAdUse('inventory_free_chest');
+    if (!allowed) {
+      setShowAd(false);
+      return;
+    }
     await openChest(CHESTS[0], true);
   };
 
@@ -191,7 +196,7 @@ export default function InventoryScreen() {
         </View>
       </Modal>
 
-      <AdModal visible={showAd} onClose={() => setShowAd(false)} onRewardClaimed={handleFreeChestReward} rewardType="coins" rewardAmount={1} />
+      <AdModal visible={showAd} onClose={() => setShowAd(false)} onRewardClaimed={handleFreeChestReward} placement="inventory_free_chest" rewardType="chest" rewardAmount={1} />
     </LinearGradient>
   );
 }

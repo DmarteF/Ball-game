@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { UiIcon } from '@/src/components/UiIcon';
 import { UiIconKey } from '@/src/game/uiIcons';
+import { RewardedAdPlacement, showRewardedAd } from '@/src/services/adsService';
 
 interface AdModalProps {
   visible: boolean;
@@ -10,6 +11,7 @@ interface AdModalProps {
   onRewardClaimed: () => void;
   rewardType: 'coins' | 'gems' | 'key' | 'chest' | 'revive' | 'double';
   rewardAmount?: number;
+  placement?: RewardedAdPlacement;
 }
 
 export const AdModal: React.FC<AdModalProps> = ({
@@ -18,34 +20,40 @@ export const AdModal: React.FC<AdModalProps> = ({
   onRewardClaimed,
   rewardType,
   rewardAmount = 100,
+  placement = 'double_run_reward',
 }) => {
   const [adWatching, setAdWatching] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [feedback, setFeedback] = useState('');
+  const rewardedRef = useRef(false);
 
   useEffect(() => {
-    if (adWatching && countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (adWatching && countdown === 0) {
-      handleAdComplete();
+    if (!visible) {
+      setAdWatching(false);
+      setFeedback('');
+      rewardedRef.current = false;
     }
-  }, [adWatching, countdown]);
+  }, [visible]);
 
-  const handleWatchAd = () => {
+  const handleWatchAd = async () => {
+    if (adWatching) return;
     setAdWatching(true);
-    setCountdown(5);
-  };
-
-  const handleAdComplete = () => {
+    setFeedback('Carregando anúncio...');
+    const result = await showRewardedAd(placement);
     setAdWatching(false);
-    setCountdown(5);
-    onRewardClaimed();
-    onClose();
+    if (!result.rewarded) {
+      setFeedback('Anúncio indisponível. Tente novamente em instantes.');
+      return;
+    }
+    if (!rewardedRef.current) {
+      rewardedRef.current = true;
+      onRewardClaimed();
+      onClose();
+    }
   };
 
   const handleSkip = () => {
     setAdWatching(false);
-    setCountdown(5);
+    setFeedback('');
     onClose();
   };
 
@@ -127,10 +135,12 @@ export const AdModal: React.FC<AdModalProps> = ({
                   Assista um anúncio de 5 segundos para ganhar:
                 </Text>
                 <Text style={styles.reward}>{getRewardText()}</Text>
+                {!!feedback && <Text style={styles.feedback}>{feedback}</Text>}
 
                 <TouchableOpacity
-                  style={styles.watchButton}
+                  style={[styles.watchButton, adWatching && styles.disabled]}
                   onPress={handleWatchAd}
+                  disabled={adWatching}
                 >
                   <LinearGradient
                     colors={['#00f0ff', '#0088ff']}
@@ -158,7 +168,7 @@ export const AdModal: React.FC<AdModalProps> = ({
               >
                 <Text style={styles.adTitle}>ANÚNCIO SIMULADO</Text>
                 <Text style={styles.adSubtitle}>
-                  (Na versão final, aqui aparecerá um anúncio real)
+                  Preparando recompensa...
                 </Text>
                 
                 <View style={styles.adContent}>
@@ -170,16 +180,9 @@ export const AdModal: React.FC<AdModalProps> = ({
                 </View>
 
                 <View style={styles.countdownContainer}>
-                  <Text style={styles.countdownText}>
-                    Você pode fechar em {countdown}s
-                  </Text>
+                  <Text style={styles.countdownText}>{feedback || 'Aguardando conclusão do anúncio'}</Text>
                   <View style={styles.progressBar}>
-                    <View 
-                      style={[
-                        styles.progressFill, 
-                        { width: `${((5 - countdown) / 5) * 100}%` }
-                      ]} 
-                    />
+                    <View style={[styles.progressFill, { width: '72%' }]} />
                   </View>
                 </View>
               </LinearGradient>
@@ -255,6 +258,16 @@ const styles = StyleSheet.create({
   skipText: {
     fontSize: 16,
     color: '#ffffff66',
+  },
+  feedback: {
+    color: '#ffd700',
+    fontSize: 13,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  disabled: {
+    opacity: 0.55,
   },
   adScreen: {
     padding: 40,

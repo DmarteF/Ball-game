@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
+import { UiIcon } from '@/src/components/UiIcon';
+import { UiIconKey } from '@/src/game/uiIcons';
 
 export default function StatsScreen() {
   const router = useRouter();
@@ -11,12 +13,12 @@ export default function StatsScreen() {
   const totalUpgrades = Object.values(permanentUpgrades).reduce((sum, level) => sum + level, 0);
 
   const statItems = [
-    { label: 'Dano Base', value: stats.baseDamage.toFixed(1), icon: '⚔️', color: '#ff0055' },
-    { label: 'Velocidade', value: stats.baseSpeed.toFixed(1), icon: '⚡', color: '#ffd700' },
-    { label: 'Chance Crítica', value: `${stats.critChance.toFixed(1)}%`, icon: '💥', color: '#ff8800' },
-    { label: 'Multiplicador Crítico', value: `${stats.critMultiplier}x`, icon: '✨', color: '#b000ff' },
-    { label: 'Multiplicador de Moedas', value: `${stats.coinMultiplier.toFixed(2)}x`, icon: '💰', color: '#ffd700' },
-    { label: 'Multiplicador de XP', value: `${stats.xpMultiplier.toFixed(2)}x`, icon: '⭐', color: '#00f0ff' },
+    { label: 'Dano Base', value: stats.baseDamage.toFixed(1), icon: 'ui_damage', fallback: '⚔️', color: '#ff0055' },
+    { label: 'Velocidade', value: stats.baseSpeed.toFixed(1), icon: 'ui_speed', fallback: '⚡', color: '#ffd700' },
+    { label: 'Chance Crítica', value: `${stats.critChance.toFixed(1)}%`, icon: 'ui_crit', fallback: '💥', color: '#ff8800' },
+    { label: 'Multiplicador Crítico', value: `${stats.critMultiplier}x`, icon: 'ui_crit', fallback: '✨', color: '#b000ff' },
+    { label: 'Multiplicador de Moedas', value: `${stats.coinMultiplier.toFixed(2)}x`, icon: 'ui_coin', fallback: '💰', color: '#ffd700' },
+    { label: 'Multiplicador de XP', value: `${stats.xpMultiplier.toFixed(2)}x`, icon: 'ui_xp', fallback: '⭐', color: '#00f0ff' },
   ];
 
   return (
@@ -33,12 +35,12 @@ export default function StatsScreen() {
           <Text style={styles.sectionTitle}>RECURSOS</Text>
           <View style={styles.row}>
             <View style={styles.currencyCard}>
-              <Text style={styles.currencyIcon}>💰</Text>
+              <UiIcon iconKey="ui_coin" fallback="💰" size={40} style={styles.currencyIcon} />
               <Text style={styles.currencyLabel}>Moedas</Text>
               <Text style={styles.currencyValue}>{coins}</Text>
             </View>
             <View style={styles.currencyCard}>
-              <Text style={styles.currencyIcon}>💎</Text>
+              <UiIcon iconKey="ui_gem" fallback="💎" size={40} style={styles.currencyIcon} />
               <Text style={styles.currencyLabel}>Gemas</Text>
               <Text style={styles.currencyValue}>{gems}</Text>
             </View>
@@ -50,7 +52,7 @@ export default function StatsScreen() {
           {statItems.map((item, index) => (
             <View key={index} style={styles.statCard}>
               <LinearGradient colors={[item.color + '33', item.color + '11']} style={styles.statGradient}>
-                <Text style={styles.statIcon}>{item.icon}</Text>
+                <UiIcon iconKey={item.icon as UiIconKey} fallback={item.fallback} size={32} />
                 <View style={styles.statInfo}>
                   <Text style={styles.statLabel}>{item.label}</Text>
                   <Text style={[styles.statValue, { color: item.color }]}>{item.value}</Text>
@@ -122,7 +124,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffffff22',
   },
-  currencyIcon: { fontSize: 40, marginBottom: 8 },
+  currencyIcon: { marginBottom: 8 },
   currencyLabel: { fontSize: 12, color: '#ffffffaa', marginBottom: 4 },
   currencyValue: { fontSize: 24, fontWeight: 'bold', color: '#00f0ff' },
   statCard: { borderRadius: 12, overflow: 'hidden' },

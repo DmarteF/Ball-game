@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DualArenaView } from '@/src/components/DualArenaView';
 import { NeonButton } from '@/src/components/NeonButton';
 import { useGame } from '@/src/contexts/GameContext';
@@ -15,14 +16,14 @@ import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
 import { UiIcon } from '@/src/components/UiIcon';
 import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { MuteButton } from '@/src/components/MuteButton';
-
-const { width, height } = Dimensions.get('window');
-const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
+import { getDualArenaSize, getSafePaddingBottom, getSafePaddingTop } from '@/src/utils/gameplayLayout';
 
 type Result = { won: boolean; trophiesDelta: number; newPosition: number; rewards: RewardGrant[] };
 
 export default function CompeteScreen() {
   const router = useRouter();
+  const dimensions = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const game = useGame();
   const match = useMemo(() => game.createLeagueMatch(), []);
   const playerSkin = getSkinById(game.ballTransformation);
@@ -49,6 +50,10 @@ export default function CompeteScreen() {
 
   const solidCount = rivalRank === 'top3' ? 6 : rivalRank === 'top10' ? 5 : rivalRank === 'strong' ? 3 : rivalRank === 'medium' ? 2 : 1;
   const basePhase = rivalRank === 'top3' ? 22 : rivalRank === 'top10' ? 18 : rivalRank === 'strong' ? 14 : rivalRank === 'medium' ? 9 : 6;
+  const arenaSize = useMemo(
+    () => getDualArenaSize({ width: dimensions.width, height: dimensions.height, insets }),
+    [dimensions.width, dimensions.height, insets]
+  );
 
   const makeRingConfig = (side: 'player' | 'rival') => ({
     count: Math.max(8, Math.floor(match.map.rings * 0.42)),
@@ -60,7 +65,7 @@ export default function CompeteScreen() {
     minSpacing: 8,
     safeStartRadius: 48,
     innerRadius: 34,
-    outerRadius: ARENA_SIZE / 2 - 14,
+    outerRadius: arenaSize / 2 - 14,
     baseRotationSpeed: 0.0082 * match.map.rotationMultiplier,
     baseHp: 24 * match.map.hpMultiplier * (side === 'rival' ? 1 + match.rival.level / 120 : 1),
     baseGapSize: Math.min(1.18, Math.max(Math.PI / 6.6, 1.9 * match.map.gapMultiplier * GAMEPLAY_TUNING.league.gapScale)),
@@ -86,7 +91,7 @@ export default function CompeteScreen() {
       skinIcon: playerSkin.icon,
       skinImageAsset: playerSkin.imageAsset,
       skinColor: playerSkin.primaryColor,
-      size: ARENA_SIZE,
+      size: arenaSize,
       phase: basePhase,
       ringConfig: makeRingConfig('player'),
       speedMultiplier: startAttrs.speedMultiplier,
@@ -98,7 +103,7 @@ export default function CompeteScreen() {
       skinIcon: rivalSkin.icon,
       skinImageAsset: rivalSkin.imageAsset,
       skinColor: rivalSkin.primaryColor,
-      size: ARENA_SIZE,
+      size: arenaSize,
       phase: basePhase,
       ringConfig: makeRingConfig('rival'),
       aiQuality: rivalRank === 'top3' ? 0.95 : rivalRank === 'top10' ? 0.88 : rivalRank === 'strong' ? 0.76 : rivalRank === 'medium' ? 0.62 : 0.46,
@@ -278,13 +283,13 @@ export default function CompeteScreen() {
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       {!playerArena || !rivalArena ? (
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: getSafePaddingTop(insets, 52) }]}>
           <NeonButton title="← LIGA" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} style={styles.backButton} />
           <Text style={styles.title}>COMPETIR</Text>
           <Text style={styles.subtitle}>{match.map.theme} • {match.map.modifier} • {match.rival.trophies.toLocaleString('pt-BR')} troféus</Text>
         </View>
       ) : (
-        <View style={styles.topHUD}>
+        <View style={[styles.topHUD, { paddingTop: getSafePaddingTop(insets, 45) }]}>
           <View style={styles.hudRow}>
             <View style={styles.hudItem}><UiIcon iconKey="ui_coin" fallback="💰" size={18} /><Text style={styles.hudValue}>{playerArena.coins}</Text></View>
             <View style={styles.hudItem}><UiIcon iconKey="ui_achievements" fallback="⭐" size={18} /><Text style={styles.hudValue}>Lv.{playerArena.level}</Text></View>
@@ -304,7 +309,7 @@ export default function CompeteScreen() {
       )}
 
       {playerArena && rivalArena && (
-        <View style={styles.arenas}>
+        <View style={[styles.arenas, { paddingBottom: getSafePaddingBottom(insets) }]}>
           <DualArenaView arena={rivalArena} meta={rivalNotice || `${match.rival.division} • ${rivalArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(rivalArena) > getArenaProgress(playerArena)} />
           <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp} • Lv.${playerArena.level}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(rivalArena)} />
           <View style={styles.shopRow}>

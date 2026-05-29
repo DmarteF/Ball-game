@@ -26,7 +26,7 @@ function MuteButtonBase({ size = 38, style }: MuteButtonProps) {
       onPress={toggleMute}
       activeOpacity={0.8}
     >
-      <UiIcon fallback={muted ? '🔇' : '🔊'} size={Math.round(size * 0.52)} />
+      <UiIcon iconKey={muted ? 'ui_mute_off' : 'ui_mute_on'} fallback={muted ? '🔇' : '🔊'} size={Math.round(size * 0.62)} />
     </TouchableOpacity>
   );
 }

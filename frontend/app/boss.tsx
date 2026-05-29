@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DualArenaView } from '@/src/components/DualArenaView';
 import { NeonButton } from '@/src/components/NeonButton';
 import { useGame } from '@/src/contexts/GameContext';
@@ -25,9 +26,7 @@ import { UiIcon } from '@/src/components/UiIcon';
 import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { MuteButton } from '@/src/components/MuteButton';
 import { SkinIcon } from '@/src/components/SkinIcon';
-
-const { width, height } = Dimensions.get('window');
-const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
+import { getDualArenaSize, getSafePaddingBottom, getSafePaddingTop } from '@/src/utils/gameplayLayout';
 
 type DuelState = 'menu' | 'playing' | 'paused' | 'result';
 
@@ -48,6 +47,8 @@ const getResetTimes = () => {
 
 export default function BossScreen() {
   const router = useRouter();
+  const dimensions = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const game = useGame();
   const unlocked = game.lifetimeStats.highestPhase >= 5 || game.level >= 5;
   const progress = normalizeBossProgress(game.bossProgress);
@@ -69,6 +70,10 @@ export default function BossScreen() {
   const playerArenaRef = useRef<DualArenaState | null>(null);
   const playerSkin = getSkinById(game.ballTransformation);
   const bossSkin = getSkinById(monthlyBoss.skinId);
+  const arenaSize = useMemo(
+    () => getDualArenaSize({ width: dimensions.width, height: dimensions.height, insets }),
+    [dimensions.width, dimensions.height, insets]
+  );
 
   useEffect(() => {
     const interval = setInterval(() => setClock(getResetTimes()), 30000);
@@ -84,44 +89,51 @@ export default function BossScreen() {
       playSound('buttonError', game.settings.sound);
       return;
     }
-    const level = completed ? monthlyBoss.levels[monthlyBoss.levels.length - 1] : getNextBossLevel(normalizeBossProgress(game.bossProgress));
-    const startAttrs = calculateFinalGameplayAttributes({
-      stats: game.stats,
-      skin: playerSkin,
-      permanentUpgrades: game.permanentUpgrades,
-    });
-    setActiveLevel(level);
-    setPlayerArena(createArenaState({
-      id: 'player',
-      name: game.nickname || 'Você',
-      skinIcon: playerSkin.icon,
-      skinImageAsset: playerSkin.imageAsset,
-      skinColor: playerSkin.primaryColor,
-      size: ARENA_SIZE,
-      phase: level.phase,
-      ringConfig: createBossRingConfig(level, ARENA_SIZE, [playerSkin.primaryColor, '#ffffff88', '#ffd700aa'], 'player'),
-      speedMultiplier: startAttrs.speedMultiplier,
-      damageMultiplier: startAttrs.damageMultiplier,
-    }));
-    setBossArena(createArenaState({
-      id: 'boss',
-      name: monthlyBoss.name,
-      skinIcon: bossSkin.icon,
-      skinImageAsset: bossSkin.imageAsset,
-      skinColor: bossSkin.primaryColor,
-      size: ARENA_SIZE,
-      phase: level.phase,
-      ringConfig: createBossRingConfig(level, ARENA_SIZE, monthlyBoss.colors, 'boss'),
-      aiQuality: level.aiQuality,
-      speedMultiplier: level.bossSpeedMultiplier,
-      damageMultiplier: level.bossDamageMultiplier,
-    }));
-    finishing.current = false;
-    setResultRewards([]);
-    setRunUpgrades({});
-    setLevelChoices([]);
-    setBossNotice('');
-    setDuelState('playing');
+    try {
+      const level = completed ? monthlyBoss.levels[monthlyBoss.levels.length - 1] : getNextBossLevel(normalizeBossProgress(game.bossProgress));
+      const safeArenaSize = Math.max(118, arenaSize);
+      const startAttrs = calculateFinalGameplayAttributes({
+        stats: game.stats,
+        skin: playerSkin,
+        permanentUpgrades: game.permanentUpgrades,
+      });
+      setActiveLevel(level);
+      setPlayerArena(createArenaState({
+        id: 'player',
+        name: game.nickname || 'Você',
+        skinIcon: playerSkin.icon,
+        skinImageAsset: playerSkin.imageAsset,
+        skinColor: playerSkin.primaryColor,
+        size: safeArenaSize,
+        phase: level.phase,
+        ringConfig: createBossRingConfig(level, safeArenaSize, [playerSkin.primaryColor, '#ffffff88', '#ffd700aa'], 'player'),
+        speedMultiplier: startAttrs.speedMultiplier,
+        damageMultiplier: startAttrs.damageMultiplier,
+      }));
+      setBossArena(createArenaState({
+        id: 'boss',
+        name: monthlyBoss.name,
+        skinIcon: bossSkin.icon,
+        skinImageAsset: bossSkin.imageAsset,
+        skinColor: bossSkin.primaryColor,
+        size: safeArenaSize,
+        phase: level.phase,
+        ringConfig: createBossRingConfig(level, safeArenaSize, monthlyBoss.colors, 'boss'),
+        aiQuality: level.aiQuality,
+        speedMultiplier: level.bossSpeedMultiplier,
+        damageMultiplier: level.bossDamageMultiplier,
+      }));
+      finishing.current = false;
+      setResultRewards([]);
+      setRunUpgrades({});
+      setLevelChoices([]);
+      setBossNotice('');
+      setDuelState('playing');
+    } catch (error) {
+      setBossNotice(error instanceof Error ? error.message : 'Boss indisponível');
+      setDuelState('menu');
+      playSound('buttonError', game.settings.sound);
+    }
   };
 
   useEffect(() => {
@@ -290,13 +302,14 @@ export default function BossScreen() {
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       {duelState === 'menu' ? (
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: getSafePaddingTop(insets, 52) }]}>
           <NeonButton title="← VOLTAR" variant="secondary" audioSettings={game.settings} onPress={() => router.back()} style={styles.backButton} />
           <Text style={styles.title}>BOSS MODE</Text>
           <Text style={styles.subtitle}>Boss do mês: {monthlyBoss.name}</Text>
+          {!!bossNotice && <Text style={styles.noticeText}>{bossNotice}</Text>}
         </View>
       ) : playerArena && bossArena ? (
-        <View style={styles.topHUD}>
+        <View style={[styles.topHUD, { paddingTop: getSafePaddingTop(insets, 45) }]}>
           <View style={styles.hudRow}>
             <View style={styles.hudItem}><UiIcon iconKey="ui_coin" fallback="💰" size={18} /><Text style={styles.hudValue}>{playerArena.coins}</Text></View>
             <View style={styles.hudItem}><UiIcon iconKey="ui_achievements" fallback="⭐" size={18} /><Text style={styles.hudValue}>Lv.{playerArena.level}</Text></View>
@@ -316,7 +329,7 @@ export default function BossScreen() {
       ) : null}
 
       {duelState === 'menu' && (
-        <ScrollView contentContainerStyle={styles.menuContent}>
+        <ScrollView contentContainerStyle={[styles.menuContent, { paddingBottom: getSafePaddingBottom(insets) }]}>
           {!unlocked && <Text style={styles.lockText}>Complete a fase 5 ou alcance nível de perfil 5 para desbloquear.</Text>}
           <View style={[styles.bossCard, { borderColor: bossSkin.primaryColor }]}>
             <SkinIcon skin={bossSkin} size={84} style={styles.bossSkinIcon} />
@@ -341,7 +354,7 @@ export default function BossScreen() {
       )}
 
       {(duelState === 'playing' || duelState === 'paused') && playerArena && bossArena && (
-        <View style={styles.duelContent}>
+        <View style={[styles.duelContent, { paddingBottom: getSafePaddingBottom(insets) }]}>
           <DualArenaView arena={bossArena} meta={bossNotice || `${activeLevel.name} • ${bossArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(bossArena) > getArenaProgress(playerArena)} />
           <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp} • Lv.${playerArena.level}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(bossArena)} />
           <View style={styles.shopRow}>
@@ -425,6 +438,7 @@ const styles = StyleSheet.create({
   backButton: { alignSelf: 'flex-start', minWidth: 110 },
   title: { color: '#00f0ff', fontSize: 30, fontWeight: 'bold', marginTop: 8 },
   subtitle: { color: '#ffffffaa', marginTop: 4, fontWeight: 'bold' },
+  noticeText: { color: '#ffd700', marginTop: 6, fontSize: 12, fontWeight: 'bold' },
   menuContent: { padding: 16, gap: 12 },
   lockText: { color: '#ffd700', backgroundColor: '#ffd70018', borderWidth: 1, borderColor: '#ffd70066', padding: 12, borderRadius: 12, fontWeight: 'bold' },
   bossCard: { backgroundColor: '#ffffff10', borderWidth: 1.5, borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },

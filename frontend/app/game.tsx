@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Alert, useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '@/src/contexts/GameContext';
 import {
   createRings,
@@ -28,20 +29,15 @@ import { UiIcon } from '@/src/components/UiIcon';
 import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { MuteButton } from '@/src/components/MuteButton';
 import { AdModal } from '@/src/components/AdModal';
+import { UiIconKey } from '@/src/game/uiIcons';
 import { ECONOMY_BALANCE, getComboMultiplier, getGlobalCoinsFromRun, getRunProfileXp } from '@/src/game/economy';
 import { playSound } from '@/src/utils/audio';
 import { triggerHaptic } from '@/src/utils/feedback';
+import { getSafePaddingBottom, getSafePaddingTop, getSingleArenaSize } from '@/src/utils/gameplayLayout';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const GAME_SIZE = Math.min(SCREEN_WIDTH - 16, SCREEN_HEIGHT - GAMEPLAY_TUNING.solo.safeHudReserve) * 0.98;
-const CENTER_X = GAME_SIZE / 2;
-const CENTER_Y = GAME_SIZE / 2;
 const BALL_RADIUS = 10;
-const OUTER_RADIUS = GAME_SIZE / 2 - 8;
 const INNER_RADIUS = 35;
 const INITIAL_BALL_SPEED = GAMEPLAY_TUNING.solo.ballSpeed;
-const INITIAL_RING_ROTATION_SPEED = 0.006;
-const INITIAL_RING_SHRINK_SPEED = 0.026;
 const XP_BASE_REQUIREMENT = 150;
 const DIFFICULTY_SCALE = 0.13;
 
@@ -88,6 +84,20 @@ const createProceduralPhaseConfig = (phaseNumber: number, playerLevel: number, s
 export default function GameScreen() {
   const router = useRouter();
   const { phase } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
+  const dimensions = useWindowDimensions();
+  const GAME_SIZE = getSingleArenaSize({
+    width: dimensions.width,
+    height: dimensions.height,
+    insets,
+    hudHeight: 148,
+    controlsHeight: 84,
+    min: 214,
+    max: 520,
+  });
+  const CENTER_X = GAME_SIZE / 2;
+  const CENTER_Y = GAME_SIZE / 2;
+  const OUTER_RADIUS = GAME_SIZE / 2 - 8;
   const { stats, updateGems, unlockPhase, gems, coins: accountCoins, ballTransformation, level: savedLevel, profileXp, settings, unlockedUpgrades, permanentUpgrades, recordRunRewards, recordAdUse } = useGame();
   
   const [isPaused, setIsPaused] = useState(false);
@@ -833,10 +843,12 @@ export default function GameScreen() {
   };
 
   const handleAdRerollCompleted = () => {
-    recordAdUse('upgrade_reroll');
-    const upgrades = getSafeUpgradeOptions(availableUpgrades);
-    if (upgrades.length >= 3) setAvailableUpgrades(upgrades);
-    setRerollsUsed(prev => prev + 1);
+    recordAdUse('upgrade_reroll').then(ok => {
+      if (!ok) return;
+      const upgrades = getSafeUpgradeOptions(availableUpgrades);
+      if (upgrades.length >= 3) setAvailableUpgrades(upgrades);
+      setRerollsUsed(prev => prev + 1);
+    });
     setShowAdReroll(false);
   };
 
@@ -879,8 +891,13 @@ export default function GameScreen() {
     playSound('defeat', settings.sound);
   };
 
-  const handleRevive = () => {
-    recordAdUse('revive');
+  const handleRevive = async () => {
+    const ok = await recordAdUse('revive');
+    if (!ok) {
+      setShowAdRevive(false);
+      setShowGameOver(true);
+      return;
+    }
     playSound('revive', settings.sound);
     const now = Date.now();
     isGameOverRef.current = false;
@@ -1007,11 +1024,17 @@ export default function GameScreen() {
   const globalCoinsReward = getGlobalCoinsFromRun(coins * rewardMultiplier, runRewards.bestCombo, showVictory);
   const nextProfileXpNeeded = Math.floor(220 * Math.pow(savedLevel, 1.45));
   const nextProfileProgress = Math.min(100, ((profileXp + profileXpReward) / nextProfileXpNeeded) * 100);
+  const ResultLine = ({ iconKey, fallback, children }: { iconKey?: UiIconKey; fallback: string; children: React.ReactNode }) => (
+    <View style={styles.statLine}>
+      <UiIcon iconKey={iconKey} fallback={fallback} size={16} />
+      <Text style={styles.statText}>{children}</Text>
+    </View>
+  );
 
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       {/* Top HUD */}
-      <View style={styles.topHUD}>
+      <View style={[styles.topHUD, { paddingTop: getSafePaddingTop(insets, 45) }]}>
         <View style={styles.hudRow}>
           <View style={styles.hudItem}>
             <UiIcon iconKey="ui_coin" fallback="💰" size={18} />
@@ -1134,7 +1157,7 @@ export default function GameScreen() {
         </Animated.View>
       </View>
 
-      <View style={styles.runUpgradeBar}>
+      <View style={[styles.runUpgradeBar, { paddingBottom: getSafePaddingBottom(insets) }]}>
         {([
           ['atk', 'ATK', '⚔️'],
           ['gold', 'Gold', '💰'],
@@ -1143,7 +1166,7 @@ export default function GameScreen() {
           const canBuy = coins >= cost;
           return (
             <TouchableOpacity key={type} style={[styles.runUpgradeButton, !canBuy && styles.disabled]} onPress={() => buyRunUpgrade(type)}>
-              <UiIcon iconKey={type === 'atk' ? 'ui_upgrades' : 'ui_coin'} fallback={icon} size={18} />
+              <UiIcon iconKey={type === 'atk' ? 'ui_damage' : 'ui_coin'} fallback={icon} size={18} />
               <Text style={styles.runUpgradeLabel}>{label} Lv.{runShopUpgrades[type]}</Text>
               <View style={styles.runUpgradeCostRow}><Text style={styles.runUpgradeCost}>{cost}</Text><UiIcon iconKey="ui_coin" fallback="💰" size={12} /></View>
             </TouchableOpacity>
@@ -1269,20 +1292,20 @@ export default function GameScreen() {
               <LinearGradient colors={['#1a0a2e', '#16003b']} style={styles.modalContent}>
                 <Text style={styles.victoryTitle}>🎉 VITÓRIA! 🎉</Text>
                 <ScrollView style={styles.resultScroll} contentContainerStyle={styles.statsContainer}>
-                  <Text style={styles.statText}>🏁 Fase: {Number(phase) || 1}</Text>
-                  <Text style={styles.statText}>✅ Resultado: vitória</Text>
-                  <Text style={styles.statText}>💰 Moedas da rodada: {runRewards.coins}</Text>
-                  <Text style={styles.statText}>🏦 Moedas gerais: +{globalCoinsReward}</Text>
-                  <Text style={styles.statText}>💎 Diamantes: {runRewards.gems * rewardMultiplier}</Text>
-                  <Text style={styles.statText}>👤 XP de perfil: +{profileXpReward}</Text>
-                  <Text style={styles.statText}>⭐ XP ganho: {runRewards.xp}</Text>
-                  <Text style={styles.statText}>🌀 Quebrados: {runRewards.ringsBroken}</Text>
-                  <Text style={styles.statText}>✨ Perfects: {runRewards.perfectEscapes}</Text>
-                  <Text style={styles.statText}>🔥 Maior combo: x{runRewards.bestCombo}</Text>
-                  <Text style={styles.statText}>🔑 Chaves/Baús: {runRewards.keys * rewardMultiplier}/{runRewards.chests}</Text>
+                  <ResultLine fallback="🏁">Fase: {Number(phase) || 1}</ResultLine>
+                  <ResultLine fallback="✅">Resultado: vitória</ResultLine>
+                  <ResultLine iconKey="ui_coin" fallback="💰">Moedas da rodada: {runRewards.coins}</ResultLine>
+                  <ResultLine iconKey="ui_coin" fallback="🏦">Moedas gerais: +{globalCoinsReward}</ResultLine>
+                  <ResultLine iconKey="ui_gem" fallback="💎">Diamantes: {runRewards.gems * rewardMultiplier}</ResultLine>
+                  <ResultLine iconKey="ui_profile" fallback="👤">XP de perfil: +{profileXpReward}</ResultLine>
+                  <ResultLine iconKey="ui_xp" fallback="⭐">XP ganho: {runRewards.xp}</ResultLine>
+                  <ResultLine iconKey="ui_combo" fallback="🌀">Quebrados: {runRewards.ringsBroken}</ResultLine>
+                  <ResultLine iconKey="ui_perfect" fallback="✨">Perfects: {runRewards.perfectEscapes}</ResultLine>
+                  <ResultLine iconKey="ui_combo" fallback="🔥">Maior combo: x{runRewards.bestCombo}</ResultLine>
+                  <ResultLine iconKey="ui_key" fallback="🔑">Chaves/Baús: {runRewards.keys * rewardMultiplier}/{runRewards.chests}</ResultLine>
                   <Text style={styles.statText}>🏆 Conquistas e missões sincronizadas ao coletar</Text>
                   <Text style={styles.statText}>📅 Missões diárias/evento recebem progresso desta rodada</Text>
-                  <Text style={styles.statText}>⭐ Level: {level}</Text>
+                  <ResultLine iconKey="ui_xp" fallback="⭐">Level: {level}</ResultLine>
                   <Text style={styles.statText}>🎯 Score: {Math.floor(score)}</Text>
                   <View style={styles.profileProgress}>
                     <View style={[styles.profileProgressFill, { width: `${nextProfileProgress}%` }]} />
@@ -1326,18 +1349,18 @@ export default function GameScreen() {
                 <Text style={styles.gameOverSubtitle}>{resultStatus === 'quit' ? 'Rodada encerrada pelo jogador.' : 'A bolinha foi esmagada!'}</Text>
                 
                 <ScrollView style={styles.resultScroll} contentContainerStyle={styles.statsContainer}>
-                  <Text style={styles.statText}>🏁 Fase alcançada: {Number(phase) || 1}</Text>
-                  <Text style={styles.statText}>❌ Resultado: {resultStatus === 'quit' ? 'desistência' : 'derrota'}</Text>
-                  <Text style={styles.statText}>🌀 Anéis quebrados: {runRewards.ringsBroken}</Text>
-                  <Text style={styles.statText}>✨ Escapes perfeitos: {runRewards.perfectEscapes}</Text>
-                  <Text style={styles.statText}>🔥 Maior combo: x{runRewards.bestCombo}</Text>
-                  <Text style={styles.statText}>💰 Moedas da rodada: {runRewards.coins}</Text>
-                  <Text style={styles.statText}>🏦 Moedas gerais recebidas: +{globalCoinsReward}</Text>
-                  <Text style={styles.statText}>💎 Diamantes ganhos: {runRewards.gems * rewardMultiplier}</Text>
-                  <Text style={styles.statText}>👤 XP de perfil: +{profileXpReward}</Text>
-                  <Text style={styles.statText}>⭐ XP ganho: {runRewards.xp}</Text>
-                  <Text style={styles.statText}>🔑 Chaves: {runRewards.keys * rewardMultiplier}</Text>
-                  <Text style={styles.statText}>🎁 Baús: {runRewards.chests}</Text>
+                  <ResultLine fallback="🏁">Fase alcançada: {Number(phase) || 1}</ResultLine>
+                  <ResultLine iconKey="ui_remove_image" fallback="❌">Resultado: {resultStatus === 'quit' ? 'desistência' : 'derrota'}</ResultLine>
+                  <ResultLine iconKey="ui_combo" fallback="🌀">Anéis quebrados: {runRewards.ringsBroken}</ResultLine>
+                  <ResultLine iconKey="ui_perfect" fallback="✨">Escapes perfeitos: {runRewards.perfectEscapes}</ResultLine>
+                  <ResultLine iconKey="ui_combo" fallback="🔥">Maior combo: x{runRewards.bestCombo}</ResultLine>
+                  <ResultLine iconKey="ui_coin" fallback="💰">Moedas da rodada: {runRewards.coins}</ResultLine>
+                  <ResultLine iconKey="ui_coin" fallback="🏦">Moedas gerais recebidas: +{globalCoinsReward}</ResultLine>
+                  <ResultLine iconKey="ui_gem" fallback="💎">Diamantes ganhos: {runRewards.gems * rewardMultiplier}</ResultLine>
+                  <ResultLine iconKey="ui_profile" fallback="👤">XP de perfil: +{profileXpReward}</ResultLine>
+                  <ResultLine iconKey="ui_xp" fallback="⭐">XP ganho: {runRewards.xp}</ResultLine>
+                  <ResultLine iconKey="ui_key" fallback="🔑">Chaves: {runRewards.keys * rewardMultiplier}</ResultLine>
+                  <ResultLine iconKey="ui_daily_reward" fallback="🎁">Baús: {runRewards.chests}</ResultLine>
                   <Text style={styles.statText}>🏆 Conquistas pendentes aparecem na tela de conquistas</Text>
                   <Text style={styles.statText}>📅 Missões diárias/evento recebem progresso ao coletar</Text>
                   <Text style={styles.statText}>🎯 Score: {Math.floor(score)}</Text>
@@ -1387,6 +1410,7 @@ export default function GameScreen() {
         visible={showAdRevive}
         onClose={() => setShowAdRevive(false)}
         onRewardClaimed={handleRevive}
+        placement="revive"
         rewardType="revive"
       />
       
@@ -1394,6 +1418,7 @@ export default function GameScreen() {
         visible={showAdReroll}
         onClose={() => setShowAdReroll(false)}
         onRewardClaimed={handleAdRerollCompleted}
+        placement="upgrade_reroll"
         rewardType="double"
       />
 
@@ -1401,6 +1426,7 @@ export default function GameScreen() {
         visible={showAdDouble}
         onClose={() => setShowAdDouble(false)}
         onRewardClaimed={handleDoubleRewards}
+        placement="double_run_reward"
         rewardType="double"
       />
     </LinearGradient>
@@ -1634,6 +1660,7 @@ const styles = StyleSheet.create({
   gameOverTitle: { fontSize: 32, fontWeight: 'bold', color: '#ff0055', textAlign: 'center', marginBottom: 8 },
   gameOverSubtitle: { fontSize: 14, color: '#ffffff', textAlign: 'center', marginBottom: 16 },
   statsContainer: { backgroundColor: '#ffffff11', padding: 14, borderRadius: 12, marginBottom: 16 },
+  statLine: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 4 },
   statText: { fontSize: 16, color: '#ffffff', marginBottom: 4 },
   resultScroll: { maxHeight: 330, marginBottom: 10 },
   profileProgress: { height: 12, backgroundColor: '#00000055', borderRadius: 8, overflow: 'hidden', marginTop: 8 },

@@ -4,6 +4,7 @@
     "slug": "neon-idle-escape",
     "version": "1.0.0",
     "orientation": "portrait",
+    "jsEngine": "hermes",
     "icon": "./neon_idle_escape_app_icon_1024.png",
     "scheme": "neonidleescape",
     "userInterfaceStyle": "automatic",

@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SkinDefinition } from '@/src/game/skins';
 
@@ -14,6 +14,11 @@ interface SkinIconProps {
 function SkinIconBase({ skin, icon, size = 48, style, imageScale = 0.92, hidden }: SkinIconProps) {
   const fallback = hidden ? icon || '?' : skin?.icon || icon || '?';
   const imageSize = Math.max(1, size * imageScale);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [skin?.imageAsset]);
 
   return (
     <View
@@ -28,11 +33,12 @@ function SkinIconBase({ skin, icon, size = 48, style, imageScale = 0.92, hidden 
         style,
       ]}
     >
-      {!hidden && skin?.imageAsset ? (
+      {!hidden && skin?.imageAsset && !imageFailed ? (
         <Image
           source={skin.imageAsset}
           resizeMode="contain"
           style={{ width: imageSize, height: imageSize }}
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <Text style={[styles.fallback, { fontSize: Math.max(12, size * 0.5), lineHeight: Math.max(14, size * 0.58) }]}>{fallback}</Text>

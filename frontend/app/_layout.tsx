@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { GameProvider } from "@/src/contexts/GameContext";
@@ -28,10 +29,12 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <GameProvider>
-        <AudioController />
-        <Stack screenOptions={{ headerShown: false }} />
-      </GameProvider>
+      <SafeAreaProvider>
+        <GameProvider>
+          <AudioController />
+          <Stack screenOptions={{ headerShown: false }} />
+        </GameProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

@@ -24,8 +24,28 @@ export type UiIconKey =
   | 'ui_locked'
   | 'ui_menu'
   | 'ui_missions'
+  | 'ui_mute_on'
+  | 'ui_mute_off'
   | 'ui_no_ads'
   | 'ui_play'
+  | 'ui_profile'
+  | 'ui_camera'
+  | 'ui_remove_image'
+  | 'ui_profile_frame'
+  | 'ui_damage'
+  | 'ui_speed'
+  | 'ui_crit'
+  | 'ui_xp'
+  | 'ui_perfect'
+  | 'ui_freeze'
+  | 'ui_poison'
+  | 'ui_burn'
+  | 'ui_shock'
+  | 'ui_repulse'
+  | 'ui_pierce'
+  | 'ui_area'
+  | 'ui_gravity'
+  | 'ui_combo'
   | 'ui_settings'
   | 'ui_skins'
   | 'ui_store'
@@ -57,8 +77,28 @@ export const UI_ICON_ASSETS: Partial<Record<UiIconKey, ImageSourcePropType>> = {
   ui_locked: require('../../assets/ui/ui_locked.png'),
   ui_menu: require('../../assets/ui/ui_menu.png'),
   ui_missions: require('../../assets/ui/ui_missions.png'),
+  ui_mute_on: require('../../assets/ui/ui_mute_on.png'),
+  ui_mute_off: require('../../assets/ui/ui_mute_off.png'),
   ui_no_ads: require('../../assets/ui/ui_no_ads.png'),
   ui_play: require('../../assets/ui/ui_play.png'),
+  ui_profile: require('../../assets/ui/ui_profile.png'),
+  ui_camera: require('../../assets/ui/ui_camera.png'),
+  ui_remove_image: require('../../assets/ui/ui_remove_image.png'),
+  ui_profile_frame: require('../../assets/ui/ui_profile_frame.png'),
+  ui_damage: require('../../assets/ui/ui_damage.png'),
+  ui_speed: require('../../assets/ui/ui_speed.png'),
+  ui_crit: require('../../assets/ui/ui_crit.png'),
+  ui_xp: require('../../assets/ui/ui_xp.png'),
+  ui_perfect: require('../../assets/ui/ui_perfect.png'),
+  ui_freeze: require('../../assets/ui/ui_freeze.png'),
+  ui_poison: require('../../assets/ui/ui_poison.png'),
+  ui_burn: require('../../assets/ui/ui_burn.png'),
+  ui_shock: require('../../assets/ui/ui_shock.png'),
+  ui_repulse: require('../../assets/ui/ui_repulse.png'),
+  ui_pierce: require('../../assets/ui/ui_pierce.png'),
+  ui_area: require('../../assets/ui/ui_area.png'),
+  ui_gravity: require('../../assets/ui/ui_gravity.png'),
+  ui_combo: require('../../assets/ui/ui_combo.png'),
   ui_settings: require('../../assets/ui/ui_settings.png'),
   ui_skins: require('../../assets/ui/ui_skins.png'),
   ui_store: require('../../assets/ui/ui_store.png'),

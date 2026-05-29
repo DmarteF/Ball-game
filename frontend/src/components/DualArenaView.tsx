@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
@@ -13,9 +13,9 @@ interface DualArenaViewProps {
   leader?: boolean;
 }
 
-export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProps) {
+function DualArenaViewBase({ arena, meta, accent, leader }: DualArenaViewProps) {
   const progress = getArenaProgress(arena);
-  const active = arena.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
+  const active = useMemo(() => arena.rings.filter(ring => ring.status === 'active' && ring.hp > 0), [arena.rings]);
   const now = Date.now();
 
   return (
@@ -29,8 +29,7 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
       </View>
       <View style={[styles.stage, { width: arena.size, height: arena.size, borderRadius: arena.size / 2 }]}>
         <Svg width={arena.size} height={arena.size} style={StyleSheet.absoluteFill}>
-          {arena.rings.map((ring) => {
-            if (ring.status !== 'active' || ring.hp <= 0) return null;
+          {active.map((ring) => {
             const circumference = 2 * Math.PI * ring.radius;
             const isSolid = ring.type === 'solid';
             const gapLength = isSolid ? 0 : (ring.gapSize / (Math.PI * 2)) * circumference;
@@ -92,6 +91,8 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
     </View>
   );
 }
+
+export const DualArenaView = memo(DualArenaViewBase);
 
 const styles = StyleSheet.create({
   panel: {

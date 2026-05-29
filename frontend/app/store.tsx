@@ -10,6 +10,7 @@ import { playSound } from '@/src/utils/audio';
 import { UiIcon } from '@/src/components/UiIcon';
 import { SkinIcon } from '@/src/components/SkinIcon';
 import { UiIconKey } from '@/src/game/uiIcons';
+import { RewardedAdPlacement } from '@/src/services/adsService';
 
 type Tab = 'chests' | 'gems' | 'keys' | 'specials' | 'free';
 
@@ -86,6 +87,14 @@ export default function StoreScreen() {
     if (ad === 'offline') await game.claimOfflineReward(true);
     playSound('buttonConfirm', game.settings.sound);
     setAd(null);
+  };
+
+  const adPlacement = (): RewardedAdPlacement => {
+    if (ad === 'gems') return 'store_gems';
+    if (ad === 'chest') return 'store_chest';
+    if (ad === 'key') return 'store_key';
+    if (ad === 'offline') return 'store_offline';
+    return 'store_coins';
   };
 
   const currencyIcon = (currency: string): UiIconKey =>
@@ -264,7 +273,14 @@ export default function StoreScreen() {
         </View>
       </Modal>
 
-      <AdModal visible={!!ad} onClose={() => setAd(null)} onRewardClaimed={handleAdReward} rewardType={ad === 'gems' ? 'gems' : ad === 'chest' ? 'chest' : ad === 'key' ? 'key' : 'coins'} rewardAmount={ad === 'gems' ? 12 : ad === 'key' ? 1 : 300} />
+      <AdModal
+        visible={!!ad}
+        onClose={() => setAd(null)}
+        onRewardClaimed={handleAdReward}
+        placement={adPlacement()}
+        rewardType={ad === 'gems' ? 'gems' : ad === 'chest' ? 'chest' : ad === 'key' ? 'key' : ad === 'offline' ? 'double' : 'coins'}
+        rewardAmount={ad === 'gems' ? 12 : ad === 'key' ? 1 : 300}
+      />
     </LinearGradient>
   );
 }

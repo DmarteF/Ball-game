@@ -79,10 +79,12 @@ export default function ProfileScreen() {
           <TextInput value={nickname} onChangeText={setNickname} onBlur={saveNickname} style={styles.input} maxLength={18} />
           <View style={styles.photoActions}>
             <TouchableOpacity style={styles.photoButton} onPress={chooseProfilePhoto}>
+              <UiIcon iconKey="ui_camera" fallback="📷" size={16} />
               <Text style={styles.photoButtonText}>ALTERAR AVATAR</Text>
             </TouchableOpacity>
             {!!game.avatarImageUri && (
               <TouchableOpacity style={[styles.photoButton, styles.removeButton]} onPress={removeProfilePhoto}>
+                <UiIcon iconKey="ui_remove_image" fallback="❌" size={16} />
                 <Text style={styles.photoButtonText}>REMOVER FOTO</Text>
               </TouchableOpacity>
             )}
@@ -137,12 +139,15 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>ÁUDIO</Text>
           <View style={styles.toggleRow}>
             <TouchableOpacity style={[styles.toggleButton, !game.settings.musicMuted && styles.toggleActive]} onPress={() => game.updateAudioSettings({ musicMuted: !game.settings.musicMuted })}>
+              <UiIcon iconKey={game.settings.musicMuted ? 'ui_mute_off' : 'ui_mute_on'} fallback={game.settings.musicMuted ? '🔇' : '🔊'} size={18} />
               <Text style={styles.toggleText}>Música {game.settings.musicMuted ? 'OFF' : 'ON'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.toggleButton, !game.settings.sfxMuted && styles.toggleActive]} onPress={() => { game.updateAudioSettings({ sfxMuted: !game.settings.sfxMuted }); playSound('buttonClick'); }}>
+              <UiIcon iconKey={game.settings.sfxMuted ? 'ui_mute_off' : 'ui_mute_on'} fallback={game.settings.sfxMuted ? '🔇' : '🔊'} size={18} />
               <Text style={styles.toggleText}>Efeitos {game.settings.sfxMuted ? 'OFF' : 'ON'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.toggleButton, !game.settings.masterMuted && styles.toggleActive]} onPress={() => game.updateAudioSettings({ masterMuted: !game.settings.masterMuted })}>
+              <UiIcon iconKey={game.settings.masterMuted ? 'ui_mute_off' : 'ui_mute_on'} fallback={game.settings.masterMuted ? '🔇' : '🔊'} size={18} />
               <Text style={styles.toggleText}>Tudo {game.settings.masterMuted ? 'OFF' : 'ON'}</Text>
             </TouchableOpacity>
           </View>
@@ -208,7 +213,7 @@ const styles = StyleSheet.create({
   profileAvatar: { alignSelf: 'center', marginBottom: 8 },
   input: { color: '#ffffff', fontSize: 20, fontWeight: 'bold', textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#00f0ff66', paddingVertical: 8 },
   photoActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 10 },
-  photoButton: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#00f0ff22', borderWidth: 1, borderColor: '#00f0ff88' },
+  photoButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#00f0ff22', borderWidth: 1, borderColor: '#00f0ff88' },
   removeButton: { backgroundColor: '#ff005522', borderColor: '#ff005588' },
   photoButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 11 },
   saveButton: { alignSelf: 'center', marginTop: 10, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#00f0ff' },
@@ -237,7 +242,7 @@ const styles = StyleSheet.create({
   achievementButton: { marginTop: 12, borderRadius: 10, backgroundColor: '#ffd70022', borderWidth: 1, borderColor: '#ffd70088', padding: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   achievementButtonText: { color: '#ffd700', fontWeight: 'bold' },
   toggleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  toggleButton: { flexGrow: 1, minWidth: 96, backgroundColor: '#ffffff14', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  toggleButton: { flexGrow: 1, minWidth: 96, backgroundColor: '#ffffff14', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   toggleActive: { backgroundColor: '#00f0ff', borderColor: '#00f0ff' },
   toggleText: { color: '#ffffff', fontWeight: 'bold', fontSize: 12 },
 });
