@@ -10,6 +10,8 @@ import { applyArenaRunUpgrade, createArenaState, DualArenaState, getArenaUpgrade
 import { getRandomUpgrades, getRarityColor, Upgrade } from '@/src/game/upgrades';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
+import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
+import { clampRingSpacing, Ring } from '@/src/game/rings';
 
 const { width, height } = Dimensions.get('window');
 const ARENA_SIZE = Math.max(220, Math.min(width - 24, height - GAMEPLAY_TUNING.infinite.safeHudReserve));
@@ -18,24 +20,34 @@ export default function InfiniteScreen() {
   const router = useRouter();
   const game = useGame();
   const skin = getSkinById(game.ballTransformation);
-  const skinDamageBonus = ['damage_multiplier', 'cosmic_critical', 'league_king_wave'].includes(skin.passive.type) ? skin.passive.value : 0;
-  const skinSpeedBonus = skin.passive.type === 'speed' ? skin.passive.value : 0;
-  const skinCoinBonus = ['coin_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(skin.passive.type) ? skin.passive.value * 0.6 : 0;
-  const skinXpBonus = ['xp_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(skin.passive.type) ? skin.passive.value * 0.5 : 0;
   const [arena, setArena] = useState<DualArenaState | null>(null);
   const [paused, setPaused] = useState(false);
   const [finished, setFinished] = useState(false);
   const [wave, setWave] = useState(1);
   const [runUpgrades, setRunUpgrades] = useState<Record<string, number>>({});
   const [choices, setChoices] = useState<Upgrade[]>([]);
+  const [choiceMode, setChoiceMode] = useState<'level' | 'challenge'>('level');
   const [startedAt, setStartedAt] = useState(Date.now());
   const [seconds, setSeconds] = useState(0);
   const [ringsBroken, setRingsBroken] = useState(0);
+  const [challengeCount, setChallengeCount] = useState(0);
+  const [activeChallengeId, setActiveChallengeId] = useState<string | null>(null);
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const finishing = useRef(false);
+  const ringsBrokenRef = useRef(0);
+  const challengeCountRef = useRef(0);
 
   const makeArena = (nextWave: number, carry?: DualArenaState) => {
     const ramp = 1 + (nextWave - 1) * 0.08;
+    const attrs = calculateFinalGameplayAttributes({
+      stats: game.stats,
+      skin,
+      temporaryUpgrades: carry?.runUpgrades || runUpgrades,
+      arenaAtk: carry?.atk || 0,
+      arenaGold: carry?.gold || 0,
+      permanentUpgrades: game.permanentUpgrades,
+      modeBonus: { speedMultiplier: 1 + (nextWave - 1) * GAMEPLAY_TUNING.infinite.ballRampPerMinute * 0.12 },
+    });
     return createArenaState({
       id: 'infinite',
       name: game.nickname || 'Você',
@@ -43,15 +55,15 @@ export default function InfiniteScreen() {
       skinColor: skin.primaryColor,
       size: ARENA_SIZE,
       phase: Math.min(50, nextWave),
-      speedMultiplier: (1 + game.stats.baseSpeed / 1200 + skinSpeedBonus) * (1 + (nextWave - 1) * GAMEPLAY_TUNING.infinite.ballRampPerMinute * 0.12),
-      damageMultiplier: 1 + game.stats.baseDamage / 220 + skinDamageBonus,
+      speedMultiplier: attrs.speedMultiplier,
+      damageMultiplier: attrs.damageMultiplier,
       ringConfig: {
         count: Math.min(42, 16 + Math.floor(nextWave * 1.15)),
         innerRadius: 34,
         outerRadius: ARENA_SIZE / 2 - 12,
         baseRotationSpeed: 0.0085 * ramp,
         baseHp: 20 * ramp,
-        baseGapSize: Math.max(Math.PI / 8, 2.35 * GAMEPLAY_TUNING.infinite.gapScale - nextWave * 0.025),
+        baseGapSize: Math.max(Math.PI / 7.4, 1.85 * GAMEPLAY_TUNING.infinite.gapScale - nextWave * 0.018),
         baseThickness: 5,
         closingSpeed: 0.026 * GAMEPLAY_TUNING.infinite.ringClosingScale * ramp,
         colors: [skin.primaryColor, '#00f0ff', '#ff0055', '#ffd700', '#00ff88'],
@@ -61,13 +73,46 @@ export default function InfiniteScreen() {
     });
   };
 
+  const createRingBatch = (current: DualArenaState, nextWave: number, challengeId?: string): Ring[] => {
+    const source = makeArena(nextWave, current);
+    const batchSize = challengeId ? 7 : Math.min(6, 3 + Math.floor(nextWave / 5));
+    return source.rings.slice(-batchSize).map((ring, index) => {
+      const radius = current.size / 2 - 12 - index * Math.max(5, ring.thickness + 1);
+      const hp = Math.floor(ring.hp * (challengeId ? 1.22 : 1));
+      return {
+        ...ring,
+        id: `${challengeId || 'inf_wave'}_${nextWave}_${index}_${Date.now()}`,
+        radius,
+        initialRadius: radius,
+        hp,
+        maxHp: hp,
+        closingSpeed: ring.closingSpeed * (challengeId ? 1.18 : 1),
+        rotationSpeed: ring.rotationSpeed * (challengeId ? 1.15 : 1),
+        gapSize: ring.type === 'solid' ? 0 : Math.max(Math.PI / 8, ring.gapSize * (challengeId ? 0.72 : 0.9)),
+      };
+    });
+  };
+
+  const appendRingBatch = (current: DualArenaState, nextWave: number, challengeId?: string) => ({
+    ...current,
+    rings: clampRingSpacing([
+      ...current.rings.filter(ring => ring.status === 'active' && ring.hp > 0),
+      ...createRingBatch(current, nextWave, challengeId),
+    ]),
+  });
+
   const start = () => {
     setStartedAt(Date.now());
     setSeconds(0);
     setWave(1);
     setRunUpgrades({});
     setChoices([]);
+    setChoiceMode('level');
     setRingsBroken(0);
+    ringsBrokenRef.current = 0;
+    setChallengeCount(0);
+    challengeCountRef.current = 0;
+    setActiveChallengeId(null);
     setFinished(false);
     finishing.current = false;
     setArena(makeArena(1));
@@ -86,22 +131,53 @@ export default function InfiniteScreen() {
       setArena(current => {
         if (!current) return current;
         const beforeLevel = current.level;
-        const result = tickArenaPhysics(current, {
-          damageMultiplier: (1 + game.stats.baseDamage / 240 + skinDamageBonus) * (1 + (runUpgrades.damage || 0) * 0.16),
-          coinMultiplier: game.stats.coinMultiplier * (1 + skinCoinBonus + (runUpgrades.coinBoost || 0) * 0.24) * (1 + wave * 0.015),
-          xpMultiplier: game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2),
-          speedMultiplier: 1 + (runUpgrades.speed || 0) * 0.04 + Math.min(0.3, wave * 0.008),
-          shrinkMultiplier: 1 - Math.min(0.24, (game.permanentUpgrades.slowRings || 0) * 0.018),
-        }).state;
+        const attrs = calculateFinalGameplayAttributes({
+          stats: game.stats,
+          skin,
+          temporaryUpgrades: runUpgrades,
+          arenaAtk: current.atk,
+          arenaGold: current.gold,
+          permanentUpgrades: game.permanentUpgrades,
+          modeBonus: {
+            coinMultiplier: 1 + wave * 0.015,
+            speedMultiplier: 1 + Math.min(0.3, wave * 0.008),
+          },
+        });
+        const tick = tickArenaPhysics(current, {
+          damageMultiplier: attrs.damageMultiplier,
+          coinMultiplier: attrs.coinMultiplier,
+          xpMultiplier: attrs.xpMultiplier,
+          speedMultiplier: attrs.speedMultiplier,
+          shrinkMultiplier: attrs.ringShrinkMultiplier,
+        });
+        let result = tick.state;
+        if (tick.brokeRing) {
+          ringsBrokenRef.current += 1;
+          setRingsBroken(ringsBrokenRef.current);
+        }
         if (result.level > beforeLevel && choices.length === 0) {
+          setChoiceMode('level');
           setChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
           setPaused(true);
           playSound('levelUp', game.settings.sound);
         }
-        if (result.finished) {
-          setRingsBroken(prev => prev + result.rings.length);
-          setWave(prev => prev + 1);
-          return { ...makeArena(wave + 1), coins: result.coins, xp: result.xp, level: result.level, atk: result.atk, gold: result.gold, runUpgrades: result.runUpgrades };
+        if (activeChallengeId && !result.rings.some(ring => ring.status === 'active' && ring.id.startsWith(activeChallengeId))) {
+          setActiveChallengeId(null);
+          challengeCountRef.current += 1;
+          setChallengeCount(challengeCountRef.current);
+          setChoiceMode('challenge');
+          setChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
+          setPaused(true);
+          playSound('chestOpen', game.settings.sound);
+        }
+        const activeCount = result.rings.filter(ring => ring.status === 'active' && ring.hp > 0).length;
+        if (result.finished || activeCount < 9) {
+          const nextWave = wave + 1;
+          const shouldChallenge = !activeChallengeId && nextWave > 1 && nextWave % 4 === 0;
+          const nextChallengeId = shouldChallenge ? `challenge_${nextWave}` : undefined;
+          if (nextChallengeId) setActiveChallengeId(nextChallengeId);
+          setWave(nextWave);
+          result = appendRingBatch(result, nextWave, nextChallengeId);
         }
         if (result.crushed) finish(false, result);
         return result;
@@ -111,7 +187,7 @@ export default function InfiniteScreen() {
       clearInterval(timer);
       clearInterval(loop);
     };
-  }, [paused, finished, choices.length, startedAt, runUpgrades, wave]);
+  }, [paused, finished, choices.length, startedAt, runUpgrades, wave, activeChallengeId]);
 
   const finish = async (_won: boolean, finalArena = arena) => {
     if (finishing.current) return;
@@ -127,6 +203,9 @@ export default function InfiniteScreen() {
       runUpgrades: Object.values(runUpgrades).reduce((sum, value) => sum + value, 0),
       bestCombo: finalArena?.combo || 0,
       infiniteBestSeconds: survived,
+      infiniteBestRings: ringsBrokenRef.current,
+      infiniteBestLevel: finalArena?.level || 1,
+      infiniteChallengeCompletions: challengeCountRef.current,
     });
     playSound('defeat', game.settings.sound);
   };
@@ -135,7 +214,7 @@ export default function InfiniteScreen() {
     if (!arena) return;
     playSound('buttonConfirm', game.settings.sound);
     setRunUpgrades(prev => ({ ...prev, [upgrade.id]: (prev[upgrade.id] || 0) + 1 }));
-    setArena(applyArenaRunUpgrade(arena, upgrade.id));
+    setArena(current => current ? applyArenaRunUpgrade(current, upgrade.id) : current);
     setChoices([]);
     setPaused(false);
   };
@@ -177,7 +256,7 @@ export default function InfiniteScreen() {
       </View>
 
       <View style={styles.playArea}>
-        {arena && <DualArenaView arena={arena} meta={`XP ${arena.xp} • ATK ${arena.atk} • Gold ${arena.gold}`} accent="#00f0ff" leader />}
+        {arena && <DualArenaView arena={arena} meta={`XP ${arena.xp} • ATK ${arena.atk} • Gold ${arena.gold} • Desafios ${challengeCount}`} accent="#00f0ff" leader />}
         {arena && (
           <View style={styles.shopRow}>
             {(['atk', 'gold'] as const).map(type => {
@@ -189,9 +268,9 @@ export default function InfiniteScreen() {
                     return;
                   }
                   playSound('buttonConfirm', game.settings.sound);
-                  setArena(buyArenaUpgrade(arena, type));
+                  setArena(current => current ? buyArenaUpgrade(current, type) : current);
                 }}>
-                  <Text style={styles.buyText}>{type === 'atk' ? 'ATK' : 'Gold'} {cost} 💰</Text>
+                  <Text style={styles.buyText}>{type === 'atk' ? `ATK Lv.${arena.atk}` : `Gold Lv.${arena.gold}`} • {cost} 💰</Text>
                 </TouchableOpacity>
               );
             })}
@@ -202,7 +281,7 @@ export default function InfiniteScreen() {
       <Modal visible={choices.length > 0} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>LEVEL UP</Text>
+            <Text style={styles.modalTitle}>{choiceMode === 'challenge' ? 'BAÚ DE UPGRADE' : 'LEVEL UP'}</Text>
             {choices.map(upgrade => (
               <TouchableOpacity key={upgrade.id} style={[styles.choiceCard, { borderColor: getRarityColor(upgrade.rarity) }]} onPress={() => chooseUpgrade(upgrade)}>
                 <Text style={styles.choiceIcon}>{upgrade.icon}</Text>
@@ -225,6 +304,7 @@ export default function InfiniteScreen() {
             <Text style={styles.resultText}>Moedas: {arena?.coins || 0}</Text>
             <Text style={styles.resultText}>XP: {arena?.xp || 0}</Text>
             <Text style={styles.resultText}>Anéis: {ringsBroken}</Text>
+            <Text style={styles.resultText}>Desafios: {challengeCount}</Text>
             <NeonButton title="JOGAR NOVAMENTE" variant="primary" audioSettings={game.settings} onPress={start} />
             <NeonButton title="VOLTAR" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
           </View>

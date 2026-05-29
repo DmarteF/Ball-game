@@ -1,6 +1,6 @@
 import { SkinRarity } from './skins';
 
-export type AchievementCategory = 'progresso' | 'combate' | 'coleção' | 'economia' | 'baús' | 'skins' | 'perfect escape' | 'boss' | 'liga' | 'especiais';
+export type AchievementCategory = 'progresso' | 'combate' | 'coleção' | 'economia' | 'baús' | 'skins' | 'perfect escape' | 'boss' | 'liga' | 'infinito' | 'especiais';
 export type AchievementReward =
   | { type: 'coins'; amount: number }
   | { type: 'gems'; amount: number }
@@ -55,6 +55,10 @@ export type AchievementProgressSource = {
   leagueDiamondReached: number;
   leagueLegendaryReached: number;
   leagueUltimateReached: number;
+  infiniteBestSeconds: number;
+  infiniteBestRings: number;
+  infiniteBestLevel: number;
+  infiniteChallengeCompletions: number;
 };
 
 export const BOSS_DIFFICULTY_RANK: Record<string, number> = {
@@ -108,6 +112,23 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   { id: 'league_elite', name: 'Elite da Liga', description: 'Alcance Diamante na Liga Neon.', category: 'liga', required: 1, reward: { type: 'chest', chestType: 'rare', amount: 1 }, rarity: 'epic' },
   { id: 'competitive_legend', name: 'Lenda Competitiva', description: 'Alcance Lendário na Liga Neon.', category: 'liga', required: 1, reward: { type: 'legendaryKeys', amount: 1 }, rarity: 'legendary' },
   { id: 'trophy_king', name: 'Rei dos Troféus', description: 'Alcance Ultimate na Liga Neon.', category: 'liga', required: 1, reward: { type: 'fragments', skinId: 'league_king_neon', amount: 70 }, rarity: 'ultimate' },
+  { id: 'inf_survive_1', name: 'Pulso Infinito', description: 'Sobreviva 1 minuto no Modo Infinito.', category: 'infinito', required: 60, reward: { type: 'skin', skinId: 'infinite_pulse' }, rarity: 'common' },
+  { id: 'inf_survive_3', name: 'Loop Estável', description: 'Sobreviva 3 minutos no Modo Infinito.', category: 'infinito', required: 180, reward: { type: 'skin', skinId: 'loop_flame' }, rarity: 'rare' },
+  { id: 'inf_survive_5', name: 'Eclipse Neon', description: 'Sobreviva 5 minutos no Modo Infinito.', category: 'infinito', required: 300, reward: { type: 'skin', skinId: 'neon_eclipse' }, rarity: 'epic' },
+  { id: 'inf_survive_10', name: 'Núcleo Eterno', description: 'Sobreviva 10 minutos no Modo Infinito.', category: 'infinito', required: 600, reward: { type: 'skin', skinId: 'cosmic_fragment' }, rarity: 'legendary' },
+  { id: 'inf_survive_15', name: 'Vórtice Mítico', description: 'Sobreviva 15 minutos no Modo Infinito.', category: 'infinito', required: 900, reward: { type: 'skin', skinId: 'infinite_vortex_mythic' }, rarity: 'mythic' },
+  { id: 'inf_survive_20', name: 'Ômega Infinito', description: 'Sobreviva 20 minutos no Modo Infinito.', category: 'infinito', required: 1200, reward: { type: 'skin', skinId: 'omega_infinity' }, rarity: 'ultimate' },
+  { id: 'inf_survive_30', name: 'Meia Hora Sem Fim', description: 'Sobreviva 30 minutos no Modo Infinito.', category: 'infinito', required: 1800, reward: { type: 'legendaryKeys', amount: 1 }, rarity: 'ultimate' },
+  { id: 'inf_rings_25', name: 'Vórtice Azul', description: 'Quebre 25 anéis em uma run infinita.', category: 'infinito', required: 25, reward: { type: 'skin', skinId: 'blue_vortex' }, rarity: 'common' },
+  { id: 'inf_rings_50', name: 'Cometa Rubro', description: 'Quebre 50 anéis em uma run infinita.', category: 'infinito', required: 50, reward: { type: 'skin', skinId: 'red_comet' }, rarity: 'rare' },
+  { id: 'inf_rings_100', name: 'Prisma Sem Fim', description: 'Quebre 100 anéis em uma run infinita.', category: 'infinito', required: 100, reward: { type: 'skin', skinId: 'endless_prism' }, rarity: 'epic' },
+  { id: 'inf_rings_150', name: 'Cortador de Loop', description: 'Quebre 150 anéis em uma run infinita.', category: 'infinito', required: 150, reward: { type: 'gems', amount: 80 }, rarity: 'legendary' },
+  { id: 'inf_rings_300', name: 'Coroa da Singularidade', description: 'Quebre 300 anéis em uma run infinita.', category: 'infinito', required: 300, reward: { type: 'skin', skinId: 'singularity_crown' }, rarity: 'ultimate' },
+  { id: 'inf_challenge_1', name: 'Primeiro Desafio', description: 'Complete 1 seção difícil no Modo Infinito.', category: 'infinito', required: 1, reward: { type: 'keys', amount: 1 }, rarity: 'rare' },
+  { id: 'inf_challenge_5', name: 'Núcleo Eterno', description: 'Complete 5 seções difíceis no Modo Infinito.', category: 'infinito', required: 5, reward: { type: 'skin', skinId: 'eternal_core' }, rarity: 'legendary' },
+  { id: 'inf_challenge_10', name: 'Loop Cronal', description: 'Complete 10 seções difíceis no Modo Infinito.', category: 'infinito', required: 10, reward: { type: 'skin', skinId: 'chrono_loop_mythic' }, rarity: 'mythic' },
+  { id: 'inf_level_5', name: 'Roguelike Neon I', description: 'Alcance nível 5 em uma run infinita.', category: 'infinito', required: 5, reward: { type: 'coins', amount: 1200 }, rarity: 'epic' },
+  { id: 'inf_level_10', name: 'Roguelike Neon II', description: 'Alcance nível 10 em uma run infinita.', category: 'infinito', required: 10, reward: { type: 'gems', amount: 100 }, rarity: 'legendary' },
 ];
 
 export const getAchievementProgress = (id: string, source: AchievementProgressSource) => {
@@ -149,6 +170,23 @@ export const getAchievementProgress = (id: string, source: AchievementProgressSo
     case 'league_elite': return source.leagueDiamondReached;
     case 'competitive_legend': return source.leagueLegendaryReached;
     case 'trophy_king': return source.leagueUltimateReached;
+    case 'inf_survive_1':
+    case 'inf_survive_3':
+    case 'inf_survive_5':
+    case 'inf_survive_10':
+    case 'inf_survive_15':
+    case 'inf_survive_20':
+    case 'inf_survive_30': return source.infiniteBestSeconds;
+    case 'inf_rings_25':
+    case 'inf_rings_50':
+    case 'inf_rings_100':
+    case 'inf_rings_150':
+    case 'inf_rings_300': return source.infiniteBestRings;
+    case 'inf_challenge_1':
+    case 'inf_challenge_5':
+    case 'inf_challenge_10': return source.infiniteChallengeCompletions;
+    case 'inf_level_5':
+    case 'inf_level_10': return source.infiniteBestLevel;
     default: return 0;
   }
 };

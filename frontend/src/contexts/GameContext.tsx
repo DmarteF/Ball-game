@@ -120,6 +120,9 @@ interface SaveData {
     bestCombo: number;
     dailyRewardsCollected: number;
     infiniteBestSeconds: number;
+    infiniteBestRings: number;
+    infiniteBestLevel: number;
+    infiniteChallengeCompletions: number;
   };
   bossProgress: BossProgressSave;
   settings: { sound: boolean; haptics: boolean } & AudioSettings;
@@ -179,6 +182,9 @@ interface GameContextType extends SaveData {
     criticals?: number;
     skinEffects?: number;
     infiniteBestSeconds?: number;
+    infiniteBestRings?: number;
+    infiniteBestLevel?: number;
+    infiniteChallengeCompletions?: number;
   }) => Promise<void>;
   grantReward: (reward: RewardGrant) => Promise<void>;
   collectDailyMission: (missionId: string) => Promise<boolean>;
@@ -275,6 +281,9 @@ const defaultSave = (): SaveData => {
     bestCombo: 0,
     dailyRewardsCollected: 0,
     infiniteBestSeconds: 0,
+    infiniteBestRings: 0,
+    infiniteBestLevel: 1,
+    infiniteChallengeCompletions: 0,
   },
   bossProgress: createBossProgress(),
   settings: { sound: true, haptics: true, ...DEFAULT_AUDIO_SETTINGS },
@@ -352,8 +361,27 @@ const getSourceFromSave = (save: SaveData) => {
     leagueDiamondReached: compareDivision(save.league?.history?.bestDivision || 'Bronze', 'Diamante') >= 0 ? 1 : 0,
     leagueLegendaryReached: compareDivision(save.league?.history?.bestDivision || 'Bronze', 'Lendário') >= 0 ? 1 : 0,
     leagueUltimateReached: compareDivision(save.league?.history?.bestDivision || 'Bronze', 'Ultimate') >= 0 ? 1 : 0,
+    infiniteBestSeconds: save.lifetimeStats.infiniteBestSeconds || 0,
+    infiniteBestRings: save.lifetimeStats.infiniteBestRings || 0,
+    infiniteBestLevel: save.lifetimeStats.infiniteBestLevel || 1,
+    infiniteChallengeCompletions: save.lifetimeStats.infiniteChallengeCompletions || 0,
   };
 };
+
+const getInfiniteMilestoneSkins = (stats: SaveData['lifetimeStats']) => [
+  stats.infiniteBestSeconds >= 60 ? 'infinite_pulse' : '',
+  stats.infiniteBestRings >= 25 ? 'blue_vortex' : '',
+  stats.infiniteBestSeconds >= 180 ? 'loop_flame' : '',
+  stats.infiniteBestRings >= 50 ? 'red_comet' : '',
+  stats.infiniteBestSeconds >= 300 ? 'neon_eclipse' : '',
+  stats.infiniteBestRings >= 100 ? 'endless_prism' : '',
+  stats.infiniteBestSeconds >= 600 ? 'cosmic_fragment' : '',
+  stats.infiniteChallengeCompletions >= 5 ? 'eternal_core' : '',
+  stats.infiniteBestSeconds >= 900 ? 'infinite_vortex_mythic' : '',
+  stats.infiniteChallengeCompletions >= 10 ? 'chrono_loop_mythic' : '',
+  stats.infiniteBestSeconds >= 1200 ? 'omega_infinity' : '',
+  stats.infiniteBestRings >= 300 ? 'singularity_crown' : '',
+].filter(Boolean);
 
 const getCompletedAchievementCount = (save: SaveData) =>
   Object.values(save.achievements || {}).filter(item => item.completed).length;
@@ -911,6 +939,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     criticals?: number;
     skinEffects?: number;
     infiniteBestSeconds?: number;
+    infiniteBestRings?: number;
+    infiniteBestLevel?: number;
+    infiniteChallengeCompletions?: number;
   }) => {
     const current = saveRef.current;
     const withXp = applyProfileXp(current, summary.profileXp);
@@ -939,8 +970,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         skinEffects: withXp.lifetimeStats.skinEffects + Math.max(0, summary.skinEffects || 0),
         bestCombo: Math.max(withXp.lifetimeStats.bestCombo, summary.bestCombo || 0),
         infiniteBestSeconds: Math.max(withXp.lifetimeStats.infiniteBestSeconds || 0, summary.infiniteBestSeconds || 0),
+        infiniteBestRings: Math.max(withXp.lifetimeStats.infiniteBestRings || 0, summary.infiniteBestRings || 0),
+        infiniteBestLevel: Math.max(withXp.lifetimeStats.infiniteBestLevel || 1, summary.infiniteBestLevel || summary.runLevel || 1),
+        infiniteChallengeCompletions: (withXp.lifetimeStats.infiniteChallengeCompletions || 0) + Math.max(0, summary.infiniteChallengeCompletions || 0),
       },
     };
+    const milestoneSkins = getInfiniteMilestoneSkins(next.lifetimeStats);
+    if (milestoneSkins.length) {
+      next.unlockedSkins = Array.from(new Set([...next.unlockedSkins, ...milestoneSkins]));
+      next.skinLevels = milestoneSkins.reduce((levels, skinId) => ({ ...levels, [skinId]: levels[skinId] || 1 }), next.skinLevels);
+      next.lifetimeStats = { ...next.lifetimeStats, skinsUnlocked: next.unlockedSkins.length };
+    }
     const metrics: [MissionMetric, number][] = [
       ['runsPlayed', 1],
       ['ringsDestroyed', Math.max(0, summary.ringsDestroyed || 0)],

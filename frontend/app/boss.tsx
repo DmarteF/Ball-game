@@ -20,6 +20,7 @@ import { applyArenaRunUpgrade, buyArenaUpgrade, createArenaState, DualArenaState
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 import { getRandomUpgrades, getRarityColor, Upgrade } from '@/src/game/upgrades';
+import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
 
 const { width, height } = Dimensions.get('window');
 const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
@@ -63,10 +64,6 @@ export default function BossScreen() {
   const playerArenaRef = useRef<DualArenaState | null>(null);
   const playerSkin = getSkinById(game.ballTransformation);
   const bossSkin = getSkinById(monthlyBoss.skinId);
-  const skinDamageBonus = ['damage_multiplier', 'cosmic_critical', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value : 0;
-  const skinSpeedBonus = playerSkin.passive.type === 'speed' ? playerSkin.passive.value : 0;
-  const skinCoinBonus = ['coin_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value * 0.6 : 0;
-  const skinXpBonus = ['xp_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value * 0.5 : 0;
 
   useEffect(() => {
     const interval = setInterval(() => setClock(getResetTimes()), 30000);
@@ -83,6 +80,11 @@ export default function BossScreen() {
       return;
     }
     const level = completed ? monthlyBoss.levels[monthlyBoss.levels.length - 1] : getNextBossLevel(normalizeBossProgress(game.bossProgress));
+    const startAttrs = calculateFinalGameplayAttributes({
+      stats: game.stats,
+      skin: playerSkin,
+      permanentUpgrades: game.permanentUpgrades,
+    });
     setActiveLevel(level);
     setPlayerArena(createArenaState({
       id: 'player',
@@ -92,8 +94,8 @@ export default function BossScreen() {
       size: ARENA_SIZE,
       phase: level.phase,
       ringConfig: createBossRingConfig(level, ARENA_SIZE, [playerSkin.primaryColor, '#ffffff88', '#ffd700aa'], 'player'),
-      speedMultiplier: 1 + game.stats.baseSpeed / 900 + skinSpeedBonus,
-      damageMultiplier: 1 + game.stats.baseDamage / 180,
+      speedMultiplier: startAttrs.speedMultiplier,
+      damageMultiplier: startAttrs.damageMultiplier,
     }));
     setBossArena(createArenaState({
       id: 'boss',
@@ -120,12 +122,20 @@ export default function BossScreen() {
       setPlayerArena(current => {
         if (!current) return current;
         const beforeLevel = current.level;
+        const attrs = calculateFinalGameplayAttributes({
+          stats: game.stats,
+          skin: playerSkin,
+          temporaryUpgrades: runUpgrades,
+          arenaAtk: current.atk,
+          arenaGold: current.gold,
+          permanentUpgrades: game.permanentUpgrades,
+        });
         const result = tickArenaPhysics(current, {
-          damageMultiplier: (1 + game.stats.baseDamage / 240 + skinDamageBonus) * (1 + (runUpgrades.damage || 0) * 0.16),
-          coinMultiplier: game.stats.coinMultiplier * (1 + skinCoinBonus + (runUpgrades.coinBoost || 0) * 0.24),
-          xpMultiplier: game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2),
-          speedMultiplier: 1 + (runUpgrades.speed || 0) * 0.04,
-          shrinkMultiplier: 1 - Math.min(0.24, (game.permanentUpgrades.slowRings || 0) * 0.018),
+          damageMultiplier: attrs.damageMultiplier,
+          coinMultiplier: attrs.coinMultiplier,
+          xpMultiplier: attrs.xpMultiplier,
+          speedMultiplier: attrs.speedMultiplier,
+          shrinkMultiplier: attrs.ringShrinkMultiplier,
         }).state;
         if (result.level > beforeLevel && levelChoices.length === 0) {
           setLevelChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
@@ -160,7 +170,15 @@ export default function BossScreen() {
     const alreadyClaimed = currentProgress.dailyRewardsClaimed.includes(activeLevel.id);
     const reward = activeLevel.reward;
     const coins = won ? (alreadyClaimed ? 90 : reward.coins) : Math.floor(reward.coins * 0.25);
-    const xp = Math.floor((won ? (alreadyClaimed ? 35 : reward.xp) : Math.floor(reward.xp * 0.3)) * game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2));
+    const attrs = calculateFinalGameplayAttributes({
+      stats: game.stats,
+      skin: playerSkin,
+      temporaryUpgrades: runUpgrades,
+      arenaAtk: playerArenaRef.current?.atk || 0,
+      arenaGold: playerArenaRef.current?.gold || 0,
+      permanentUpgrades: game.permanentUpgrades,
+    });
+    const xp = Math.floor((won ? (alreadyClaimed ? 35 : reward.xp) : Math.floor(reward.xp * 0.3)) * attrs.xpMultiplier);
     const gems = won && !alreadyClaimed ? reward.gems || 0 : 0;
     const keys = won && !alreadyClaimed ? reward.keys || 0 : 0;
     const fragments = won && !alreadyClaimed && reward.fragments ? { skinId: bossSkin.id, amount: reward.fragments } : undefined;
@@ -187,7 +205,7 @@ export default function BossScreen() {
       return;
     }
     playSound('buttonConfirm', game.settings.sound);
-    setPlayerArena(buyArenaUpgrade(playerArena, type));
+    setPlayerArena(current => current ? buyArenaUpgrade(current, type) : current);
   };
 
   const confirmExit = () => {
@@ -212,7 +230,7 @@ export default function BossScreen() {
     if (!playerArena) return;
     playSound('buttonConfirm', game.settings.sound);
     setRunUpgrades(prev => ({ ...prev, [upgrade.id]: (prev[upgrade.id] || 0) + 1 }));
-    setPlayerArena(applyArenaRunUpgrade(playerArena, upgrade.id));
+    setPlayerArena(current => current ? applyArenaRunUpgrade(current, upgrade.id) : current);
     setLevelChoices([]);
     setDuelState('playing');
   };

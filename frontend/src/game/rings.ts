@@ -226,6 +226,28 @@ export const findClosestCollidingRing = (
   return { ring: closestRing, index: closestIndex, isInSolidPart: isInSolid, isInGap };
 };
 
+export const isBallCrushedByRing = (
+  ballX: number,
+  ballY: number,
+  ballRadius: number,
+  ring: Ring,
+  centerX: number,
+  centerY: number
+) => {
+  if (!ring || ring.status !== 'active' || ring.hp <= 0) return false;
+  const collision = checkRingCollision(ballX, ballY, ballRadius, ring, centerX, centerY);
+  if (collision.isInGap || !collision.isInSolidPart) return false;
+
+  const dx = ballX - centerX;
+  const dy = ballY - centerY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const outerEdge = ring.radius + ring.thickness / 2;
+  const ringPassedIntoBall = outerEdge <= Math.max(0, dist - ballRadius * 0.25);
+  const centerTrap = dist <= ballRadius * 1.15 && outerEdge <= ballRadius + 4;
+
+  return ringPassedIntoBall || centerTrap;
+};
+
 export const findPerfectEscapeRing = (
   prevDist: number,
   nextDist: number,

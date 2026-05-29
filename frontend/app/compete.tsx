@@ -11,6 +11,7 @@ import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 import { GAMEPLAY_TUNING } from '@/src/game/balance';
 import { getRandomUpgrades, getRarityColor, Upgrade } from '@/src/game/upgrades';
+import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
 
 const { width, height } = Dimensions.get('window');
 const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
@@ -23,10 +24,6 @@ export default function CompeteScreen() {
   const match = useMemo(() => game.createLeagueMatch(), []);
   const playerSkin = getSkinById(game.ballTransformation);
   const rivalSkin = getSkinById(match.rival.favoriteSkin);
-  const skinDamageBonus = ['damage_multiplier', 'cosmic_critical', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value : 0;
-  const skinSpeedBonus = playerSkin.passive.type === 'speed' ? playerSkin.passive.value : 0;
-  const skinCoinBonus = ['coin_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value * 0.6 : 0;
-  const skinXpBonus = ['xp_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value * 0.5 : 0;
   const [playerArena, setPlayerArena] = useState<DualArenaState | null>(null);
   const [rivalArena, setRivalArena] = useState<DualArenaState | null>(null);
   const [paused, setPaused] = useState(false);
@@ -55,7 +52,7 @@ export default function CompeteScreen() {
     outerRadius: ARENA_SIZE / 2 - 14,
     baseRotationSpeed: 0.012 * match.map.rotationMultiplier,
     baseHp: 24 * match.map.hpMultiplier * (side === 'rival' ? 1 + match.rival.level / 120 : 1),
-    baseGapSize: 3.25 * match.map.gapMultiplier * GAMEPLAY_TUNING.league.gapScale,
+    baseGapSize: Math.min(1.02, Math.max(Math.PI / 7, 1.55 * match.map.gapMultiplier * GAMEPLAY_TUNING.league.gapScale)),
     baseThickness: 4,
     closingSpeed: 0.045 * match.map.closingMultiplier,
     colors: [side === 'rival' ? rivalSkin.primaryColor : playerSkin.primaryColor, match.map.color, '#ffffff88'],
@@ -64,6 +61,11 @@ export default function CompeteScreen() {
   });
 
   const startMatch = () => {
+    const startAttrs = calculateFinalGameplayAttributes({
+      stats: game.stats,
+      skin: playerSkin,
+      permanentUpgrades: game.permanentUpgrades,
+    });
     setPlayerArena(createArenaState({
       id: 'player',
       name: game.nickname || 'Você',
@@ -72,8 +74,8 @@ export default function CompeteScreen() {
       size: ARENA_SIZE,
       phase: basePhase,
       ringConfig: makeRingConfig('player'),
-      speedMultiplier: 1 + game.stats.baseSpeed / 950 + skinSpeedBonus,
-      damageMultiplier: 1 + game.stats.baseDamage / 200,
+      speedMultiplier: startAttrs.speedMultiplier,
+      damageMultiplier: startAttrs.damageMultiplier,
     }));
     setRivalArena(createArenaState({
       id: 'rival',
@@ -109,12 +111,20 @@ export default function CompeteScreen() {
       setPlayerArena(current => {
         if (!current) return current;
         const beforeLevel = current.level;
+        const attrs = calculateFinalGameplayAttributes({
+          stats: game.stats,
+          skin: playerSkin,
+          temporaryUpgrades: runUpgrades,
+          arenaAtk: current.atk,
+          arenaGold: current.gold,
+          permanentUpgrades: game.permanentUpgrades,
+        });
         const next = tickArenaPhysics(current, {
-          damageMultiplier: (1 + game.stats.baseDamage / 240 + skinDamageBonus) * (1 + (runUpgrades.damage || 0) * 0.16),
-          coinMultiplier: game.stats.coinMultiplier * (1 + skinCoinBonus + (runUpgrades.coinBoost || 0) * 0.24),
-          xpMultiplier: game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2),
-          speedMultiplier: 1 + (runUpgrades.speed || 0) * 0.04,
-          shrinkMultiplier: 1 - Math.min(0.24, (game.permanentUpgrades.slowRings || 0) * 0.018),
+          damageMultiplier: attrs.damageMultiplier,
+          coinMultiplier: attrs.coinMultiplier,
+          xpMultiplier: attrs.xpMultiplier,
+          speedMultiplier: attrs.speedMultiplier,
+          shrinkMultiplier: attrs.ringShrinkMultiplier,
         }).state;
         if (next.level > beforeLevel && levelChoices.length === 0) {
           setLevelChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
@@ -146,7 +156,15 @@ export default function CompeteScreen() {
     setPaused(true);
     const rewardRoll = Math.random();
     const baseCoins = Math.round((won ? 420 : 140) * match.map.rewardMultiplier);
-    const baseXp = Math.round((won ? 160 : 55) * match.map.rewardMultiplier * game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2));
+    const attrs = calculateFinalGameplayAttributes({
+      stats: game.stats,
+      skin: playerSkin,
+      temporaryUpgrades: runUpgrades,
+      arenaAtk: playerArenaRef.current?.atk || 0,
+      arenaGold: playerArenaRef.current?.gold || 0,
+      permanentUpgrades: game.permanentUpgrades,
+    });
+    const baseXp = Math.round((won ? 160 : 55) * match.map.rewardMultiplier * attrs.xpMultiplier);
     const saved = await game.recordLeagueCompetitionResult({
       rivalId: match.rival.id,
       won,
@@ -170,7 +188,7 @@ export default function CompeteScreen() {
       return;
     }
     playSound('buttonConfirm', game.settings.sound);
-    setPlayerArena(buyArenaUpgrade(playerArena, type));
+    setPlayerArena(current => current ? buyArenaUpgrade(current, type) : current);
   };
 
   const confirmExit = () => {
@@ -195,7 +213,7 @@ export default function CompeteScreen() {
     if (!playerArena) return;
     playSound('buttonConfirm', game.settings.sound);
     setRunUpgrades(prev => ({ ...prev, [upgrade.id]: (prev[upgrade.id] || 0) + 1 }));
-    setPlayerArena(applyArenaRunUpgrade(playerArena, upgrade.id));
+    setPlayerArena(current => current ? applyArenaRunUpgrade(current, upgrade.id) : current);
     setLevelChoices([]);
     setPaused(false);
   };

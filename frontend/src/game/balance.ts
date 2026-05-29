@@ -9,12 +9,12 @@ export const GAMEPLAY_TUNING = {
   },
   boss: {
     arenaBallSpeed: 2.45,
-    gapScale: 0.78,
+    gapScale: 0.68,
     safeHudReserve: 288,
   },
   league: {
     arenaBallSpeed: 2.45,
-    gapScale: 0.72,
+    gapScale: 0.58,
     safeHudReserve: 288,
   },
   infinite: {
@@ -22,7 +22,7 @@ export const GAMEPLAY_TUNING = {
     ballRampPerMinute: 0.12,
     ringClosingScale: 0.78,
     ringRampPerMinute: 0.1,
-    gapScale: 0.86,
+    gapScale: 0.5,
     safeHudReserve: 310,
   },
 };

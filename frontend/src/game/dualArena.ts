@@ -1,4 +1,4 @@
-import { Ring, RingConfig, clampBallSpeed, clampRingSpacing, createRings, findClosestCollidingRing, findPerfectEscapeRing, reflectBallOffRing, updateRings } from './rings';
+import { Ring, RingConfig, clampBallSpeed, clampRingSpacing, createRings, findClosestCollidingRing, findPerfectEscapeRing, isBallCrushedByRing, reflectBallOffRing, updateRings } from './rings';
 import { GAMEPLAY_TUNING } from './balance';
 
 export interface DualArenaState {
@@ -242,7 +242,10 @@ export const tickArenaPhysics = (
 
   const activeRings = next.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
   next.finished = activeRings.length === 0;
-  next.crushed = activeRings.some(ring => ring.radius <= next.ballRadius + 3 && ring.status === 'active');
+  next.crushed = activeRings.some(ring =>
+    ring.radius <= next.ballRadius + 3 ||
+    isBallCrushedByRing(next.ball.x, next.ball.y, next.ballRadius, ring, next.center, next.center)
+  );
 
   if (options.isAi && next.aiTimer >= Math.max(12, Math.floor(36 - next.aiQuality * 18))) {
     const choice = chooseAiArenaUpgrade(next, options.opponentProgress ?? 0);

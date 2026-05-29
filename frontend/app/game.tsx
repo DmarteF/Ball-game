@@ -11,7 +11,7 @@ import {
   findClosestCollidingRing,
   findPerfectEscapeRing,
   clampBallSpeed,
-  checkRingCollision,
+  isBallCrushedByRing,
   Ring,
   updateRings,
 } from '@/src/game/rings';
@@ -339,31 +339,13 @@ export default function GameScreen() {
     rings: Ring[],
     gameState: { now: number; invincibleUntil: number }
   ) => {
-    const safetyMargin = 12;
-
     if (gameState.now < gameState.invincibleUntil) return false;
     if (!rings.length) return false;
     if (!Number.isFinite(ball.x) || !Number.isFinite(ball.y) || !Number.isFinite(ball.radius)) return false;
 
-    const dx = ball.x - CENTER_X;
-    const dy = ball.y - CENTER_Y;
-    const ballDistance = Math.sqrt(dx * dx + dy * dy);
-
     return rings.some(ring => {
       if (!ring || ring.status !== 'active' || ring.hp <= 0 || !Number.isFinite(ring.radius)) return false;
-
-      const collision = checkRingCollision(ball.x, ball.y, ball.radius, ring, CENTER_X, CENTER_Y);
-      if (collision.isInGap) return false;
-
-      if (ballDistance <= ball.radius + safetyMargin) {
-        return ring.radius <= Math.max(2, ball.radius * 0.35);
-      }
-
-      const crushRadius = Math.max(0, ballDistance - ball.radius - safetyMargin);
-      const ringHasPassedThroughBall = ring.radius <= crushRadius;
-      const ringStillNearBall = Math.abs(ballDistance - ring.radius) <= ball.radius + safetyMargin + ring.thickness;
-
-      return ringHasPassedThroughBall && ringStillNearBall;
+      return isBallCrushedByRing(ball.x, ball.y, ball.radius, ring, CENTER_X, CENTER_Y);
     });
   };
 

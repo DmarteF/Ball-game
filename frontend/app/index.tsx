@@ -20,6 +20,12 @@ export default function HomeScreen() {
     if (pendingOfflineReward) setOfflineVisible(true);
   }, [pendingOfflineReward]);
 
+  useEffect(() => {
+    if (!lastAchievementUnlocked) return;
+    const timeout = setTimeout(() => clearAchievementToast(), 6500);
+    return () => clearTimeout(timeout);
+  }, [lastAchievementUnlocked, clearAchievementToast]);
+
   const secondaryItems = [
     { label: 'Loja', icon: '🛒', route: '/store', color: '#00aaff' },
     { label: 'Inventário', icon: '🎒', route: '/inventory', color: '#ffd700' },
@@ -102,7 +108,13 @@ export default function HomeScreen() {
         </View>
 
         {lastAchievementUnlocked && (
-          <TouchableOpacity style={styles.achievementToast} onPress={clearAchievementToast}>
+          <TouchableOpacity
+            style={styles.achievementToast}
+            onPress={async () => {
+              await clearAchievementToast();
+              router.push('/achievements' as any);
+            }}
+          >
             <Text style={styles.achievementToastTitle}>Conquista desbloqueada</Text>
             <Text style={styles.achievementToastText}>{lastAchievementUnlocked}</Text>
           </TouchableOpacity>
