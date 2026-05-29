@@ -1,5 +1,7 @@
 import { Ring, RingConfig, clampBallSpeed, clampRingSpacing, createRings, findClosestCollidingRing, findPerfectEscapeRing, isBallCrushedByRing, reflectBallOffRing, updateRings } from './rings';
 import { GAMEPLAY_TUNING } from './balance';
+import { SkinDefinition } from './skins';
+import { UPGRADES } from './upgrades';
 
 export interface DualArenaState {
   id: string;
@@ -25,7 +27,7 @@ export interface DualArenaState {
   lastSolidBreak: number;
   lastCollisionAt: number;
   lastCollisionRingId?: string;
-  lastAiChoice?: 'ATK' | 'Gold';
+  lastAiChoice?: string;
   runUpgrades: Record<string, number>;
 }
 
@@ -33,6 +35,12 @@ export interface ArenaTickResult {
   state: DualArenaState;
   brokeRing: boolean;
   brokeSolid: boolean;
+  skinEffectLabel?: string;
+}
+
+export interface AiArenaUpgradeContext {
+  opponentProgress: number;
+  bossPhase?: number;
 }
 
 export const createArenaState = (params: {
@@ -49,6 +57,8 @@ export const createArenaState = (params: {
 }) => {
   const center = params.size / 2;
   const speed = (params.ringConfig.count > 14 ? GAMEPLAY_TUNING.league.arenaBallSpeed : GAMEPLAY_TUNING.boss.arenaBallSpeed) * (params.speedMultiplier ?? 1);
+  const ball = { x: center + 10, y: center - 16 };
+  const safeRadius = Math.max(params.ringConfig.safeStartRadius ?? 0, Math.hypot(ball.x - center, ball.y - center) + 28);
   return {
     id: params.id,
     name: params.name,
@@ -57,9 +67,9 @@ export const createArenaState = (params: {
     center,
     size: params.size,
     ballRadius: 8,
-    ball: { x: center + 10, y: center - 16 },
+    ball,
     velocity: { x: speed, y: -speed * 0.72 },
-    rings: createRings(params.ringConfig, params.phase),
+    rings: clampRingSpacing(createRings({ ...params.ringConfig, safeStartRadius: safeRadius }, params.phase), params.ringConfig.minSpacing ?? 8),
     coins: 0,
     xp: 0,
     level: 1,
@@ -99,6 +109,48 @@ export const chooseAiArenaUpgrade = (state: DualArenaState, opponentProgress: nu
   if (solidRemaining >= 2 || ownProgress + 0.08 < opponentProgress) return 'atk';
   if (ownProgress < 0.45 && state.gold < 4 && Math.random() < 0.45 + state.aiQuality * 0.25) return 'gold';
   return Math.random() < 0.72 ? 'atk' : 'gold';
+};
+
+const AI_RUN_UPGRADE_IDS = [
+  'damage',
+  'speed',
+  'coinBoost',
+  'critical',
+  'burn',
+  'frost',
+  'shockwave',
+  'chainLightning',
+  'laserCut',
+  'shieldPulse',
+  'chainBreak',
+  'criticalOverload',
+  'bossHunter',
+  'rivalCrusher',
+];
+
+export const chooseAiArenaRunUpgrade = (state: DualArenaState, context: AiArenaUpgradeContext) => {
+  const ownProgress = getArenaProgress(state);
+  const activeRings = state.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
+  const solidRemaining = activeRings.filter(ring => ring.type === 'solid').length;
+  const behind = ownProgress + 0.08 < context.opponentProgress;
+  const danger = activeRings.some(ring => ring.radius <= state.ballRadius + 26);
+  const choices = AI_RUN_UPGRADE_IDS
+    .map(id => UPGRADES.find(upgrade => upgrade.id === id))
+    .filter((upgrade): upgrade is NonNullable<typeof upgrade> => Boolean(upgrade))
+    .filter(upgrade => (state.runUpgrades[upgrade.id] || 0) < upgrade.maxLevel);
+
+  const score = (upgradeId: string) => {
+    let value = Math.random() * 0.25;
+    if (['damage', 'critical', 'criticalOverload', 'laserCut'].includes(upgradeId)) value += solidRemaining >= 2 ? 5 : 2.2;
+    if (['speed', 'coinBoost'].includes(upgradeId)) value += behind ? 4 : 1.2;
+    if (['shieldPulse', 'frost'].includes(upgradeId)) value += danger ? 4.5 : 0.8;
+    if (['shockwave', 'chainLightning', 'chainBreak', 'burn'].includes(upgradeId)) value += activeRings.length >= 6 ? 3.5 : 1.4;
+    if (['bossHunter', 'rivalCrusher'].includes(upgradeId)) value += context.bossPhase ? 3 + context.bossPhase * 0.08 : 1.6;
+    value -= (state.runUpgrades[upgradeId] || 0) * 0.18;
+    return value;
+  };
+
+  return choices.sort((a, b) => score(b.id) - score(a.id))[0];
 };
 
 export const getArenaProgress = (state: DualArenaState) => {
@@ -160,6 +212,9 @@ export const tickArenaPhysics = (
     coinMultiplier?: number;
     xpMultiplier?: number;
     speedMultiplier?: number;
+    ringMinGap?: number;
+    skinPassive?: SkinDefinition['passive'];
+    skinLevel?: number;
     onLevelUp?: boolean;
   } = {}
 ): ArenaTickResult => {
@@ -171,7 +226,7 @@ export const tickArenaPhysics = (
     ...state,
     ball: { x: state.ball.x + state.velocity.x * (options.speedMultiplier ?? 1), y: state.ball.y + state.velocity.y * (options.speedMultiplier ?? 1) },
     velocity: clampBallSpeed({ ...state.velocity }, 2.05 * (options.speedMultiplier ?? 1), 5.2),
-    rings: updateRings(state.rings, shrink, now),
+    rings: updateRings(state.rings, shrink, now, options.ringMinGap ?? 7),
     aiTimer: state.aiTimer + 1,
     lastSolidBreak: Math.max(0, state.lastSolidBreak - 1),
   };
@@ -190,6 +245,7 @@ export const tickArenaPhysics = (
 
   let brokeRing = false;
   let brokeSolid = false;
+  let skinEffectLabel: string | undefined;
   const nextDist = Math.hypot(next.ball.x - next.center, next.ball.y - next.center);
   const perfectEscape = findPerfectEscapeRing(
     previousDist,
@@ -213,7 +269,11 @@ export const tickArenaPhysics = (
   const collision = findClosestCollidingRing(next.ball.x, next.ball.y, next.ballRadius, next.rings, next.center, next.center);
   if (collision.ring && collision.index >= 0 && collision.isInSolidPart) {
     const canDamage = collision.ring.id !== next.lastCollisionRingId || now - next.lastCollisionAt > 90;
-    const damage = (3.8 + next.atk * 1.45) * (options.damageMultiplier ?? 1);
+    const passive = options.skinPassive;
+    const passiveChance = Math.min(0.42, (passive?.chance ?? 0) + Math.max(0, (options.skinLevel ?? 1) - 1) * 0.015);
+    const passiveTriggered = Boolean(passive && passiveChance > 0 && Math.random() < passiveChance);
+    const critTriggered = passiveTriggered && Boolean(passive?.type && ['crit_chance', 'mega_crit', 'cosmic_critical'].includes(passive.type));
+    const damage = (3.8 + next.atk * 1.45) * (options.damageMultiplier ?? 1) * (critTriggered ? Math.max(1.6, passive?.value || 2) : 1);
     const ring = collision.ring;
     const hp = canDamage ? Math.max(0, ring.hp - damage) : ring.hp;
     brokeRing = hp <= 0;
@@ -221,6 +281,48 @@ export const tickArenaPhysics = (
     const xpGain = Math.floor((brokeRing ? (ring.type === 'solid' ? 18 : 9) : 1) * (options.xpMultiplier ?? 1));
     const coinGain = Math.floor((brokeRing ? (ring.type === 'solid' ? 8 : 4) : 1) * (options.coinMultiplier ?? 1));
     next.rings[collision.index] = { ...ring, hp, status: hp <= 0 ? 'broken' : 'active' };
+    if (canDamage && passiveTriggered && passive) {
+      const targetWindow = next.rings
+        .map((target, index) => ({ target, index, distance: Math.abs(target.radius - ring.radius) }))
+        .filter(item => item.index !== collision.index && item.target.status === 'active' && item.target.hp > 0)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, passive.type === 'chain_damage' ? 2 : 3);
+      if (passive.type === 'burn') {
+        next.rings[collision.index] = { ...next.rings[collision.index], burnUntil: now + (passive.durationMs ?? 2400), burnDps: passive.value };
+        skinEffectLabel = 'Queimadura da skin';
+      } else if (passive.type === 'freeze_ring' || passive.type === 'slow_ring') {
+        next.rings[collision.index] = { ...next.rings[collision.index], slowUntil: now + (passive.durationMs ?? 1800) };
+        skinEffectLabel = passive.type === 'freeze_ring' ? 'Congelamento da skin' : 'Lentidão da skin';
+      } else if (passive.type === 'repel_ring') {
+        next.rings[collision.index] = { ...next.rings[collision.index], radius: Math.min(next.size / 2 - 8, ring.radius + passive.value) };
+        skinEffectLabel = 'Repulsão da skin';
+      } else if (passive.type === 'area_damage' || passive.type === 'cosmic_critical' || passive.type === 'league_king_wave') {
+        targetWindow.forEach(({ target, index }) => {
+          const areaDamage = damage * Math.min(0.85, passive.value || 0.35);
+          const nextHp = Math.max(0, target.hp - areaDamage);
+          next.rings[index] = { ...target, hp: nextHp, status: nextHp <= 0 ? 'broken' : 'active' };
+        });
+        skinEffectLabel = passive.type === 'league_king_wave' ? 'Onda real da skin' : 'Explosão da skin';
+      } else if (passive.type === 'chain_damage') {
+        targetWindow.slice(0, 2).forEach(({ target, index }) => {
+          const chainDamage = damage * Math.min(0.75, passive.value || 0.35);
+          const nextHp = Math.max(0, target.hp - chainDamage);
+          next.rings[index] = { ...target, hp: nextHp, status: nextHp <= 0 ? 'broken' : 'active' };
+        });
+        skinEffectLabel = 'Corrente da skin';
+      } else if (passive.type === 'phase_solid') {
+        next.rings[collision.index] = { ...next.rings[collision.index], status: 'cleared', hp: 0 };
+        skinEffectLabel = 'Fase da skin';
+      } else if (passive.type === 'coin_on_hit') {
+        next.coins += Math.max(1, Math.floor(passive.value));
+        skinEffectLabel = 'Moedas da skin';
+      } else if (passive.type === 'slime_bounce' || passive.type === 'speed') {
+        next.velocity = clampBallSpeed({ x: next.velocity.x * 1.06, y: next.velocity.y * 1.06 }, 2.1, 5.4);
+        skinEffectLabel = 'Impulso da skin';
+      } else if (critTriggered) {
+        skinEffectLabel = 'Crítico da skin';
+      }
+    }
     if (canDamage) {
       next.coins += Math.max(1, Math.floor(coinGain * (1 + next.gold * 0.18)));
       next.xp += xpGain;
@@ -238,7 +340,7 @@ export const tickArenaPhysics = (
     next.velocity = bounced.velocity;
   }
 
-  next.rings = clampRingSpacing(next.rings);
+  next.rings = clampRingSpacing(next.rings, options.ringMinGap ?? 7);
 
   const activeRings = next.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
   next.finished = activeRings.length === 0;
@@ -253,7 +355,7 @@ export const tickArenaPhysics = (
     next = { ...upgraded, aiTimer: 0, lastAiChoice: choice === 'atk' ? 'ATK' : 'Gold' };
   }
 
-  return { state: next, brokeRing, brokeSolid };
+  return { state: next, brokeRing, brokeSolid, skinEffectLabel };
 };
 
 export const applyArenaRunUpgrade = (state: DualArenaState, upgradeId: string): DualArenaState => {

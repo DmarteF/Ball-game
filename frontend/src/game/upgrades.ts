@@ -451,14 +451,14 @@ export const getRandomUpgrades = (
   playerLevel: number = 1,
   unlockedUpgradeIds?: string[]
 ): Upgrade[] => {
-  const fallbackIds = ['damage', 'speed', 'coinBoost', 'critical', 'xpBoost'];
-  const unlocked = new Set([...(unlockedUpgradeIds || []), ...fallbackIds]);
+  const starterIds = ['damage', 'speed', 'coinBoost', 'critical'];
+  const unlocked = new Set(unlockedUpgradeIds?.length ? unlockedUpgradeIds : starterIds);
   const isValid = (upgrade: Upgrade) =>
     Boolean(upgrade?.id && upgrade.name && upgrade.description && upgrade.icon) &&
     (currentUpgrades[upgrade.id] || 0) < upgrade.maxLevel &&
     unlocked.has(upgrade.id) &&
     (!upgrade.secret || unlocked.has(upgrade.id)) &&
-    (playerLevel >= upgrade.unlockLevel || fallbackIds.includes(upgrade.id));
+    (playerLevel >= upgrade.unlockLevel || starterIds.includes(upgrade.id));
 
   const available = UPGRADES.filter(isValid);
   
@@ -488,7 +488,7 @@ export const getRandomUpgrades = (
       if (unique.length >= count) break;
     }
   }
-  const fallback = UPGRADES.filter(upgrade => fallbackIds.includes(upgrade.id) && isValid(upgrade));
+  const fallback = UPGRADES.filter(upgrade => starterIds.includes(upgrade.id) && isValid(upgrade));
   for (const upgrade of fallback) {
     if (!seen.has(upgrade.id)) {
       seen.add(upgrade.id);
@@ -498,10 +498,7 @@ export const getRandomUpgrades = (
   }
 
   if (unique.length < count) {
-    const safePool = UPGRADES.filter(upgrade =>
-      fallbackIds.includes(upgrade.id) &&
-      Boolean(upgrade?.id && upgrade.name && upgrade.description && upgrade.icon)
-    );
+    const safePool = UPGRADES.filter(upgrade => isValid(upgrade));
     for (const upgrade of safePool) {
       if (!seen.has(upgrade.id)) {
         seen.add(upgrade.id);

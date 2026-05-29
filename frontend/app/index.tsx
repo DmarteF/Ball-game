@@ -87,12 +87,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         <View style={styles.primaryRow}>
-          <TouchableOpacity style={styles.primaryCard} onPress={() => go('/infinite')}>
-            <LinearGradient colors={['#00ff8866', '#00885533']} style={styles.primaryCardGradient}>
-              <Text style={styles.primaryIcon}>∞</Text>
-              <Text style={styles.primaryLabel}>INFINITO</Text>
-            </LinearGradient>
-          </TouchableOpacity>
           <TouchableOpacity style={styles.primaryCard} onPress={() => go('/upgrade-shop')}>
             <LinearGradient colors={['#b000ff66', '#6600cc33']} style={styles.primaryCardGradient}>
               <Text style={styles.primaryIcon}>⚔️</Text>

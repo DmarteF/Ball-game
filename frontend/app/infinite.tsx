@@ -20,6 +20,7 @@ export default function InfiniteScreen() {
   const router = useRouter();
   const game = useGame();
   const skin = getSkinById(game.ballTransformation);
+  const infiniteUnlocked = game.unlockedPhases.includes(6) || game.lifetimeStats.highestPhase >= 5;
   const [arena, setArena] = useState<DualArenaState | null>(null);
   const [paused, setPaused] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -59,6 +60,12 @@ export default function InfiniteScreen() {
       damageMultiplier: attrs.damageMultiplier,
       ringConfig: {
         count: Math.min(42, 16 + Math.floor(nextWave * 1.15)),
+        minCount: 14,
+        countGrowth: 0.55,
+        difficultyGrowth: 0.055,
+        gapShrinkPerPhase: 0.012,
+        minSpacing: 6,
+        safeStartRadius: 52,
         innerRadius: 34,
         outerRadius: ARENA_SIZE / 2 - 12,
         baseRotationSpeed: 0.0085 * ramp,
@@ -102,6 +109,10 @@ export default function InfiniteScreen() {
   });
 
   const start = () => {
+    if (!infiniteUnlocked) {
+      playSound('buttonError', game.settings.sound);
+      return;
+    }
     setStartedAt(Date.now());
     setSeconds(0);
     setWave(1);
@@ -121,10 +132,12 @@ export default function InfiniteScreen() {
   };
 
   useEffect(() => {
-    start();
-  }, []);
+    if (infiniteUnlocked) start();
+    else playSound('buttonError', game.settings.sound);
+  }, [infiniteUnlocked]);
 
   useEffect(() => {
+    if (!infiniteUnlocked) return;
     if (paused || finished || choices.length > 0) return;
     const timer = setInterval(() => setSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
     const loop = setInterval(() => {
@@ -149,6 +162,9 @@ export default function InfiniteScreen() {
           xpMultiplier: attrs.xpMultiplier,
           speedMultiplier: attrs.speedMultiplier,
           shrinkMultiplier: attrs.ringShrinkMultiplier,
+          ringMinGap: 6,
+          skinPassive: skin.passive,
+          skinLevel: game.skinLevels[skin.id] || 1,
         });
         let result = tick.state;
         if (tick.brokeRing) {
@@ -187,7 +203,7 @@ export default function InfiniteScreen() {
       clearInterval(timer);
       clearInterval(loop);
     };
-  }, [paused, finished, choices.length, startedAt, runUpgrades, wave, activeChallengeId]);
+  }, [infiniteUnlocked, paused, finished, choices.length, startedAt, runUpgrades, wave, activeChallengeId]);
 
   const finish = async (_won: boolean, finalArena = arena) => {
     if (finishing.current) return;
@@ -242,6 +258,15 @@ export default function InfiniteScreen() {
 
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
+      {!infiniteUnlocked ? (
+        <View style={styles.lockedScreen}>
+          <Text style={styles.lockedIcon}>∞</Text>
+          <Text style={styles.modalTitle}>MODO INFINITO BLOQUEADO</Text>
+          <Text style={styles.resultText}>Complete a Fase 5 para desbloquear.</Text>
+          <NeonButton title="VOLTAR PARA JOGAR" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/phase-select' as any)} />
+        </View>
+      ) : (
+      <>
       <View style={styles.hud}>
         <View style={styles.hudRow}>
           <Text style={styles.badge}>∞ {mm}:{ss}</Text>
@@ -321,12 +346,16 @@ export default function InfiniteScreen() {
           </View>
         </View>
       </Modal>
+      </>
+      )}
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  lockedScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 },
+  lockedIcon: { color: '#00f0ff', fontSize: 62, fontWeight: 'bold' },
   hud: { paddingTop: 46, paddingHorizontal: 12, gap: 8, zIndex: 20, elevation: 20 },
   hudRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   badge: { flex: 1, color: '#ffffff', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 8, overflow: 'hidden' },

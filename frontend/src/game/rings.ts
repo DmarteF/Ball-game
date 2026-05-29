@@ -34,6 +34,13 @@ export interface RingConfig {
   colors: string[];
   solidCount?: number;
   solidHpMultiplier?: number;
+  minCount?: number;
+  countGrowth?: number;
+  difficultyGrowth?: number;
+  gapShrinkPerPhase?: number;
+  minGapSize?: number;
+  minSpacing?: number;
+  safeStartRadius?: number;
 }
 
 const TWO_PI = Math.PI * 2;
@@ -55,11 +62,17 @@ export const isAngleInsideRingGap = (angle: number, ring: Ring, padding = 0) => 
 
 export const createRings = (config: RingConfig, phase: number): Ring[] => {
   const rings: Ring[] = [];
-  const difficulty = 1 + (phase - 1) * 0.22;
-  const count = Math.max(20, config.count + Math.floor((phase - 1) * 2));
-  const spacing = (config.outerRadius - config.innerRadius) / Math.max(1, count - 1);
-  const minGap = Math.PI / 7.5;
-  const phaseGap = Math.max(minGap, config.baseGapSize - (phase - 1) * 0.045);
+  const growth = config.difficultyGrowth ?? 0.22;
+  const difficulty = 1 + Math.max(0, phase - 1) * growth;
+  const countGrowth = config.countGrowth ?? 2;
+  const requestedCount = Math.max(config.minCount ?? 20, config.count + Math.floor(Math.max(0, phase - 1) * countGrowth));
+  const innerRadius = Math.max(config.innerRadius, config.safeStartRadius ?? config.innerRadius);
+  const availableRadius = Math.max(1, config.outerRadius - innerRadius);
+  const maxCountBySpacing = Math.max(1, Math.floor(availableRadius / Math.max(1, config.minSpacing ?? MIN_RING_GAP)) + 1);
+  const count = Math.max(1, Math.min(requestedCount, maxCountBySpacing));
+  const spacing = availableRadius / Math.max(1, count - 1);
+  const minGap = config.minGapSize ?? Math.PI / 7.5;
+  const phaseGap = Math.max(minGap, config.baseGapSize - (phase - 1) * (config.gapShrinkPerPhase ?? 0.045));
   const suggestedSolidCount =
     phase <= 5 ? 1 :
     phase <= 10 ? 1 + (phase >= 8 ? 1 : 0) :
@@ -76,7 +89,7 @@ export const createRings = (config: RingConfig, phase: number): Ring[] => {
 
   for (let i = 0; i < count; i++) {
     const progress = count === 1 ? 0 : i / (count - 1);
-    const radius = config.innerRadius + i * spacing;
+    const radius = innerRadius + i * spacing;
     const direction: 1 | -1 = i % 2 === 0 ? 1 : -1;
     const patternShift = phase % 3 === 0 ? Math.sin(i * 0.9) * 0.18 : 0;
     const innerSpeedBias = 1.35 - progress * 0.55;

@@ -14,12 +14,13 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'rare', label: 'Raras' },
   { id: 'epic', label: 'Épicas' },
   { id: 'legendary', label: 'Lendárias' },
+  { id: 'mythic', label: 'Míticas' },
   { id: 'ultimate', label: 'Ultimate' },
   { id: 'owned', label: 'Obtidas' },
   { id: 'locked', label: 'Bloqueadas' },
 ];
 
-const RARITIES: SkinRarity[] = ['common', 'rare', 'epic', 'legendary', 'ultimate'];
+const RARITIES: SkinRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic', 'ultimate'];
 const RARITY_ORDER: Record<SkinRarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4, ultimate: 5 };
 
 export default function TransformationsScreen() {
@@ -106,6 +107,15 @@ export default function TransformationsScreen() {
 
                   <Text style={styles.skinName} numberOfLines={1}>{hidden ? '???' : skin.name}</Text>
                   <Text style={styles.skinDescription} numberOfLines={2}>{hidden ? 'Skin oculta' : skin.description}</Text>
+                  {owned && !hidden && (
+                    <View style={styles.effectRow}>
+                      {skin.specialEffects.slice(0, 4).map(effect => (
+                        <Text key={effect.id} style={[styles.effectBadge, { borderColor: rarityColor + '88' }]} numberOfLines={1}>
+                          {effect.label}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
 
                   <View style={styles.metaRow}>
                     <Text style={styles.fragmentText}>{owned ? `Lv.${skinLevel} • ${fragments}/${evolveCost}` : hidden ? 'Oculta' : `${fragments}/${skin.fragmentsRequired}`}</Text>
@@ -154,7 +164,7 @@ const styles = StyleSheet.create({
   filterText: { color: '#ffffffaa', fontSize: 12, fontWeight: 'bold' },
   filterTextActive: { color: '#001018' },
   skinGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  skinCard: { flexGrow: 1, flexBasis: 156, maxWidth: 220, minHeight: 238, borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
+  skinCard: { flexGrow: 1, flexBasis: 156, maxWidth: 220, minHeight: 268, borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
   skinSelected: { borderWidth: 2 },
   skinGradient: { flex: 1, padding: 12 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 9 },
@@ -163,6 +173,8 @@ const styles = StyleSheet.create({
   rarityBadge: { color: '#001018', fontSize: 9, fontWeight: 'bold', paddingVertical: 4, paddingHorizontal: 6, borderRadius: 7, overflow: 'hidden' },
   skinName: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
   skinDescription: { color: '#ffffffaa', fontSize: 12, minHeight: 34, marginTop: 5 },
+  effectRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 8, minHeight: 24 },
+  effectBadge: { color: '#ffffff', fontSize: 9, fontWeight: 'bold', backgroundColor: '#00000033', borderWidth: 1, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, maxWidth: '48%', overflow: 'hidden' },
   metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 9 },
   fragmentText: { color: '#ffd700', fontSize: 11, fontWeight: 'bold', flexShrink: 1 },
   equippedBadge: { color: '#00ff88', fontSize: 10, fontWeight: 'bold' },

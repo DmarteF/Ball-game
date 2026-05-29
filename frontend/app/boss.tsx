@@ -16,7 +16,7 @@ import {
   isBossDailyComplete,
   normalizeBossProgress,
 } from '@/src/game/boss';
-import { applyArenaRunUpgrade, buyArenaUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
+import { applyArenaRunUpgrade, buyArenaUpgrade, chooseAiArenaRunUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 import { getRandomUpgrades, getRarityColor, Upgrade } from '@/src/game/upgrades';
@@ -58,6 +58,7 @@ export default function BossScreen() {
   const [resultRewards, setResultRewards] = useState<string[]>([]);
   const [runUpgrades, setRunUpgrades] = useState<Record<string, number>>({});
   const [levelChoices, setLevelChoices] = useState<Upgrade[]>([]);
+  const [bossNotice, setBossNotice] = useState('');
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [clock, setClock] = useState(getResetTimes());
   const finishing = useRef(false);
@@ -113,6 +114,7 @@ export default function BossScreen() {
     setResultRewards([]);
     setRunUpgrades({});
     setLevelChoices([]);
+    setBossNotice('');
     setDuelState('playing');
   };
 
@@ -136,6 +138,9 @@ export default function BossScreen() {
           xpMultiplier: attrs.xpMultiplier,
           speedMultiplier: attrs.speedMultiplier,
           shrinkMultiplier: attrs.ringShrinkMultiplier,
+          ringMinGap: 8,
+          skinPassive: playerSkin.passive,
+          skinLevel: game.skinLevels[playerSkin.id] || 1,
         }).state;
         if (result.level > beforeLevel && levelChoices.length === 0) {
           setLevelChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
@@ -144,13 +149,47 @@ export default function BossScreen() {
         }
         return result;
       });
-      setBossArena(current => current ? tickArenaPhysics(current, {
-        isAi: true,
-        opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
-        shrinkMultiplier: activeLevel.bossShrinkMultiplier,
-        damageMultiplier: activeLevel.bossDamageMultiplier,
-        xpMultiplier: 1,
-      }).state : current);
+      setBossArena(current => {
+        if (!current) return current;
+        const beforeLevel = current.level;
+        const bossAttrs = calculateFinalGameplayAttributes({
+          stats: game.stats,
+          skin: bossSkin,
+          temporaryUpgrades: current.runUpgrades,
+          arenaAtk: current.atk,
+          arenaGold: current.gold,
+          modeBonus: {
+            damageMultiplier: activeLevel.bossDamageMultiplier,
+            speedMultiplier: activeLevel.bossSpeedMultiplier,
+          },
+        });
+        const tick = tickArenaPhysics(current, {
+          isAi: true,
+          opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
+          shrinkMultiplier: activeLevel.bossShrinkMultiplier,
+          damageMultiplier: bossAttrs.damageMultiplier,
+          coinMultiplier: bossAttrs.coinMultiplier,
+          xpMultiplier: bossAttrs.xpMultiplier,
+          speedMultiplier: bossAttrs.speedMultiplier,
+          ringMinGap: 8,
+          skinPassive: bossSkin.passive,
+          skinLevel: game.skinLevels[bossSkin.id] || 1,
+        });
+        let next = tick.state;
+        if (next.level > beforeLevel) {
+          const aiUpgrade = chooseAiArenaRunUpgrade(next, {
+            opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
+            bossPhase: activeLevel.phase,
+          });
+          if (aiUpgrade) {
+            next = applyArenaRunUpgrade(next, aiUpgrade.id);
+            setBossNotice(`Boss fortaleceu: ${aiUpgrade.name}`);
+          }
+        } else if (tick.skinEffectLabel && Math.random() < 0.14) {
+          setBossNotice(tick.skinEffectLabel);
+        }
+        return next;
+      });
     }, 34);
     return () => clearInterval(interval);
   }, [duelState, activeLevel.id, activeLevel.bossDamageMultiplier, activeLevel.bossShrinkMultiplier, game.stats.baseDamage, game.stats.coinMultiplier, game.stats.xpMultiplier, runUpgrades, levelChoices.length]);
@@ -291,7 +330,7 @@ export default function BossScreen() {
 
       {(duelState === 'playing' || duelState === 'paused') && playerArena && bossArena && (
         <View style={styles.duelContent}>
-          <DualArenaView arena={bossArena} meta={`${activeLevel.name} • ${bossArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(bossArena) > getArenaProgress(playerArena)} />
+          <DualArenaView arena={bossArena} meta={bossNotice || `${activeLevel.name} • ${bossArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(bossArena) > getArenaProgress(playerArena)} />
           <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp} • Lv.${playerArena.level}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(bossArena)} />
           <View style={styles.shopRow}>
             {(['atk', 'gold'] as const).map(type => {

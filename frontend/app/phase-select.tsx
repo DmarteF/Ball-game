@@ -4,15 +4,27 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
 import { PHASES } from '@/src/game/phases';
+import { playSound } from '@/src/utils/audio';
 
 export default function PhaseSelectScreen() {
   const router = useRouter();
-  const { unlockedPhases } = useGame();
+  const game = useGame();
+  const { unlockedPhases } = game;
+  const infiniteUnlocked = unlockedPhases.includes(6) || game.lifetimeStats.highestPhase >= 5;
 
   const handlePhaseSelect = (phaseId: number) => {
     if (unlockedPhases.includes(phaseId)) {
       router.push(`/game?phase=${phaseId}`);
     }
+  };
+
+  const handleInfiniteSelect = () => {
+    if (!infiniteUnlocked) {
+      playSound('buttonError', game.settings.sound);
+      return;
+    }
+    playSound('buttonConfirm', game.settings.sound);
+    router.push('/infinite' as any);
   };
 
   return (
@@ -25,6 +37,20 @@ export default function PhaseSelectScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.phaseList}>
+        <TouchableOpacity style={styles.phaseCard} onPress={handleInfiniteSelect}>
+          <LinearGradient colors={infiniteUnlocked ? ['#00ff8888', '#00f0ff33'] : ['#333333', '#222222']} style={styles.cardGradient}>
+            <View style={styles.phaseNumber}><Text style={styles.phaseNumberText}>∞</Text></View>
+            <View style={styles.phaseInfo}>
+              <Text style={[styles.phaseName, !infiniteUnlocked && styles.lockedText]}>Modo Infinito</Text>
+              <Text style={[styles.phaseDescription, !infiniteUnlocked && styles.lockedText]}>{infiniteUnlocked ? 'Ondas sem fim com desafios progressivos.' : 'Complete a Fase 5 para desbloquear.'}</Text>
+              <View style={styles.phaseStats}>
+                <Text style={[styles.phaseDifficulty, !infiniteUnlocked && styles.lockedText]}>Especial</Text>
+                <Text style={[styles.phaseHP, !infiniteUnlocked && styles.lockedText]}>Progressão infinita</Text>
+              </View>
+            </View>
+            {!infiniteUnlocked && <View style={styles.lockOverlay}><Text style={styles.lockText}>🔒 FASE 5</Text></View>}
+          </LinearGradient>
+        </TouchableOpacity>
         {PHASES.map(phase => {
           const isUnlocked = unlockedPhases.includes(phase.id);
           return (

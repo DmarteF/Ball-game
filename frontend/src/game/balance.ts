@@ -8,12 +8,12 @@ export const GAMEPLAY_TUNING = {
     safeHudReserve: 310,
   },
   boss: {
-    arenaBallSpeed: 2.45,
+    arenaBallSpeed: 2.18,
     gapScale: 0.68,
     safeHudReserve: 288,
   },
   league: {
-    arenaBallSpeed: 2.45,
+    arenaBallSpeed: 2.16,
     gapScale: 0.58,
     safeHudReserve: 288,
   },

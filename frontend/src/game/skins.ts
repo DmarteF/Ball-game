@@ -20,6 +20,35 @@ export type SkinPassiveType =
   | 'league_starter_champion'
   | 'league_king_wave';
 
+export type SkinSpecialEffectType =
+  | 'basic'
+  | 'coin'
+  | 'critical'
+  | 'burn'
+  | 'freeze'
+  | 'chain'
+  | 'area'
+  | 'phase'
+  | 'repulse'
+  | 'speed'
+  | 'gravity'
+  | 'ultimate';
+
+export interface SkinSpecialEffect {
+  id: string;
+  type: SkinSpecialEffectType;
+  label: string;
+  description: string;
+  chance?: number;
+  value?: number;
+  durationMs?: number;
+  cooldownMs: number;
+  maxTargets: number;
+  visual: string;
+  sound: string;
+  minSkinLevel?: number;
+}
+
 export interface SkinDefinition {
   id: string;
   name: string;
@@ -31,6 +60,7 @@ export interface SkinDefinition {
   trail: string;
   impactEffect: string;
   passive: { type: SkinPassiveType; chance?: number; value: number; durationMs?: number };
+  specialEffects: SkinSpecialEffect[];
   fragmentsRequired: number;
   exclusive?: boolean;
   origin?: string;
@@ -68,10 +98,89 @@ const skin = (
   secondaryColor,
   description,
   passive,
+  specialEffects: createSkinSpecialEffects({ id, name, rarity, passive, trail, impactEffect }),
   trail,
   impactEffect,
   fragmentsRequired: getSkinEvolutionCost(rarity, 1),
 });
+
+const passiveEffectMap: Record<SkinPassiveType, Pick<SkinSpecialEffect, 'type' | 'label' | 'description' | 'maxTargets'>> = {
+  coin_on_hit: { type: 'coin', label: 'Moedas', description: 'Pode soltar moedas extras no impacto.', maxTargets: 1 },
+  crit_chance: { type: 'critical', label: 'Crítico', description: 'Aumenta chance de impacto crítico.', maxTargets: 1 },
+  coin_multiplier: { type: 'coin', label: 'Tesouro', description: 'Amplifica moedas recebidas na rodada.', maxTargets: 1 },
+  xp_multiplier: { type: 'basic', label: 'XP', description: 'Gera brilho de aprendizado e mais XP.', maxTargets: 1 },
+  damage_multiplier: { type: 'critical', label: 'Impacto', description: 'Reforça o dano real da bolinha.', maxTargets: 1 },
+  speed: { type: 'speed', label: 'Velocidade', description: 'Deixa a trilha mais rápida e agressiva.', maxTargets: 1 },
+  slime_bounce: { type: 'basic', label: 'Ricochete', description: 'Pode recuperar impulso após bater.', maxTargets: 1 },
+  phase_solid: { type: 'phase', label: 'Fase', description: 'Chance de atravessar parte sólida.', maxTargets: 1 },
+  slow_ring: { type: 'freeze', label: 'Lentidão', description: 'Desacelera o anel atingido por pouco tempo.', maxTargets: 1 },
+  repel_ring: { type: 'repulse', label: 'Repulsão', description: 'Empurra o anel perigoso para fora.', maxTargets: 1 },
+  mega_crit: { type: 'critical', label: 'Mega Crítico', description: 'Pode causar impacto crítico pesado.', maxTargets: 1 },
+  area_damage: { type: 'area', label: 'Área', description: 'Espalha dano controlado em anéis próximos.', maxTargets: 3 },
+  chain_damage: { type: 'chain', label: 'Corrente', description: 'Encadeia dano para outro anel.', maxTargets: 2 },
+  freeze_ring: { type: 'freeze', label: 'Congela', description: 'Congela ou desacelera anéis por curto tempo.', maxTargets: 1 },
+  burn: { type: 'burn', label: 'Queima', description: 'Aplica dano contínuo temporário.', maxTargets: 1 },
+  perfect_chance: { type: 'basic', label: 'Perfect', description: 'Melhora escapes perfeitos.', maxTargets: 1 },
+  cosmic_critical: { type: 'gravity', label: 'Cósmico', description: 'Mistura crítico, bônus e pulso gravitacional.', maxTargets: 3 },
+  league_starter_champion: { type: 'repulse', label: 'Campeão', description: 'Aura de ranking com proteção e bônus.', maxTargets: 2 },
+  league_king_wave: { type: 'ultimate', label: 'Onda Real', description: 'Onda de campeão em combos altos.', maxTargets: 4 },
+};
+
+const rarityEffectPlan: Record<SkinRarity, { count: number; cooldown: number; labels: string[] }> = {
+  common: { count: 1, cooldown: 3600, labels: ['Trilha'] },
+  rare: { count: 1, cooldown: 3000, labels: ['Efeito Top'] },
+  epic: { count: 2, cooldown: 2600, labels: ['Efeito Legal', 'Trilha'] },
+  legendary: { count: 3, cooldown: 2200, labels: ['Efeito Legal', 'Trilha', 'Efeito Top'] },
+  mythic: { count: 3, cooldown: 1900, labels: ['Efeito Legal', 'Efeito Top', 'Trilha'] },
+  ultimate: { count: 4, cooldown: 1600, labels: ['Ultimate', 'Efeito Legal', 'Efeito Top', 'Efeito Muito Legal'] },
+};
+
+const createSkinSpecialEffects = (params: {
+  id: string;
+  name: string;
+  rarity: SkinRarity;
+  passive: SkinDefinition['passive'];
+  trail: string;
+  impactEffect: string;
+}): SkinSpecialEffect[] => {
+  const base = passiveEffectMap[params.passive.type];
+  const plan = rarityEffectPlan[params.rarity];
+  const chance = params.passive.chance ?? (params.rarity === 'common' ? 0.1 : params.rarity === 'rare' ? 0.14 : params.rarity === 'ultimate' ? 0.28 : 0.18);
+  const effects: SkinSpecialEffect[] = [{
+    id: `${params.id}_${base.type}`,
+    type: base.type,
+    label: base.label,
+    description: base.description,
+    chance,
+    value: params.passive.value,
+    durationMs: params.passive.durationMs,
+    cooldownMs: plan.cooldown,
+    maxTargets: base.maxTargets,
+    visual: params.impactEffect,
+    sound: base.type,
+  }];
+
+  while (effects.length < plan.count) {
+    const index = effects.length;
+    const label = plan.labels[index] || params.trail;
+    effects.push({
+      id: `${params.id}_extra_${index}`,
+      type: index === 1 && params.rarity !== 'common' ? 'basic' : params.rarity === 'ultimate' ? 'ultimate' : base.type,
+      label,
+      description: `${label} próprio da skin ${params.name}.`,
+      chance: Math.max(0.06, chance - index * 0.035),
+      value: Math.max(0.04, (params.passive.value || 0.1) * (0.45 + index * 0.12)),
+      durationMs: params.passive.durationMs,
+      cooldownMs: plan.cooldown + index * 450,
+      maxTargets: Math.min(4, Math.max(1, base.maxTargets + (params.rarity === 'ultimate' ? 1 : 0))),
+      visual: index === 1 ? params.trail : params.impactEffect,
+      sound: `${base.type}_${index}`,
+      minSkinLevel: index >= 2 ? 2 : undefined,
+    });
+  }
+
+  return effects;
+};
 
 export const SKINS: SkinDefinition[] = [
   skin('neon_blue', 'Neon Azul', 'common', '🔵', '#00f0ff', '#0088ff', 'Esfera inicial equilibrada.', { type: 'perfect_chance', value: 0.005 }),

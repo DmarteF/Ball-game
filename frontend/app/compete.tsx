@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { DualArenaView } from '@/src/components/DualArenaView';
 import { NeonButton } from '@/src/components/NeonButton';
 import { useGame } from '@/src/contexts/GameContext';
-import { applyArenaRunUpgrade, buyArenaUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
+import { applyArenaRunUpgrade, buyArenaUpgrade, chooseAiArenaRunUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
 import { RewardGrant, describeReward } from '@/src/game/retention';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
@@ -30,6 +30,7 @@ export default function CompeteScreen() {
   const [result, setResult] = useState<Result | null>(null);
   const [runUpgrades, setRunUpgrades] = useState<Record<string, number>>({});
   const [levelChoices, setLevelChoices] = useState<Upgrade[]>([]);
+  const [rivalNotice, setRivalNotice] = useState('');
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const finishing = useRef(false);
   const playerArenaRef = useRef<DualArenaState | null>(null);
@@ -47,14 +48,21 @@ export default function CompeteScreen() {
   const basePhase = rivalRank === 'top3' ? 22 : rivalRank === 'top10' ? 18 : rivalRank === 'strong' ? 14 : rivalRank === 'medium' ? 9 : 6;
 
   const makeRingConfig = (side: 'player' | 'rival') => ({
-    count: Math.max(10, Math.floor(match.map.rings * 0.62)),
-    innerRadius: 24,
+    count: Math.max(8, Math.floor(match.map.rings * 0.42)),
+    minCount: 8,
+    countGrowth: 0.12,
+    difficultyGrowth: 0.035,
+    gapShrinkPerPhase: 0.005,
+    minGapSize: Math.PI / 6.8,
+    minSpacing: 8,
+    safeStartRadius: 48,
+    innerRadius: 34,
     outerRadius: ARENA_SIZE / 2 - 14,
-    baseRotationSpeed: 0.012 * match.map.rotationMultiplier,
+    baseRotationSpeed: 0.0082 * match.map.rotationMultiplier,
     baseHp: 24 * match.map.hpMultiplier * (side === 'rival' ? 1 + match.rival.level / 120 : 1),
-    baseGapSize: Math.min(1.02, Math.max(Math.PI / 7, 1.55 * match.map.gapMultiplier * GAMEPLAY_TUNING.league.gapScale)),
+    baseGapSize: Math.min(1.18, Math.max(Math.PI / 6.6, 1.9 * match.map.gapMultiplier * GAMEPLAY_TUNING.league.gapScale)),
     baseThickness: 4,
-    closingSpeed: 0.045 * match.map.closingMultiplier,
+    closingSpeed: 0.024 * match.map.closingMultiplier,
     colors: [side === 'rival' ? rivalSkin.primaryColor : playerSkin.primaryColor, match.map.color, '#ffffff88'],
     solidCount,
     solidHpMultiplier: rivalRank === 'top3' ? 1.9 : rivalRank === 'top10' ? 1.7 : rivalRank === 'strong' ? 1.5 : 1.35,
@@ -93,6 +101,7 @@ export default function CompeteScreen() {
     setResult(null);
     setRunUpgrades({});
     setLevelChoices([]);
+    setRivalNotice('');
     setPaused(false);
     playSound('buttonConfirm', game.settings.sound);
   };
@@ -125,6 +134,9 @@ export default function CompeteScreen() {
           xpMultiplier: attrs.xpMultiplier,
           speedMultiplier: attrs.speedMultiplier,
           shrinkMultiplier: attrs.ringShrinkMultiplier,
+          ringMinGap: 8,
+          skinPassive: playerSkin.passive,
+          skinLevel: game.skinLevels[playerSkin.id] || 1,
         }).state;
         if (next.level > beforeLevel && levelChoices.length === 0) {
           setLevelChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
@@ -133,12 +145,44 @@ export default function CompeteScreen() {
         }
         return next;
       });
-      setRivalArena(current => current ? tickArenaPhysics(current, {
-        isAi: true,
-        opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
-        shrinkMultiplier: 1 + Math.min(0.18, match.rival.trophies / 50000),
-        damageMultiplier: 1 + Math.min(0.9, match.rival.trophies / 11000),
-      }).state : current);
+      setRivalArena(current => {
+        if (!current) return current;
+        const beforeLevel = current.level;
+        const rivalAttrs = calculateFinalGameplayAttributes({
+          stats: game.stats,
+          skin: rivalSkin,
+          temporaryUpgrades: current.runUpgrades,
+          arenaAtk: current.atk,
+          arenaGold: current.gold,
+          modeBonus: {
+            damageMultiplier: 1 + Math.min(0.9, match.rival.trophies / 11000),
+            speedMultiplier: 1 + match.rival.level / 180,
+          },
+        });
+        const tick = tickArenaPhysics(current, {
+          isAi: true,
+          opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
+          shrinkMultiplier: 1 + Math.min(0.18, match.rival.trophies / 50000),
+          damageMultiplier: rivalAttrs.damageMultiplier,
+          coinMultiplier: rivalAttrs.coinMultiplier,
+          xpMultiplier: rivalAttrs.xpMultiplier,
+          speedMultiplier: rivalAttrs.speedMultiplier,
+          ringMinGap: 8,
+          skinPassive: rivalSkin.passive,
+          skinLevel: game.skinLevels[rivalSkin.id] || 1,
+        });
+        let next = tick.state;
+        if (next.level > beforeLevel) {
+          const aiUpgrade = chooseAiArenaRunUpgrade(next, { opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0 });
+          if (aiUpgrade) {
+            next = applyArenaRunUpgrade(next, aiUpgrade.id);
+            setRivalNotice(`Rival evoluiu: ${aiUpgrade.name}`);
+          }
+        } else if (tick.skinEffectLabel && Math.random() < 0.12) {
+          setRivalNotice(tick.skinEffectLabel);
+        }
+        return next;
+      });
     }, 34);
     return () => clearInterval(interval);
   }, [paused, !!result, playerArena?.id, levelChoices.length, game.stats.baseDamage, game.stats.coinMultiplier, game.stats.xpMultiplier, runUpgrades, match.rival.trophies]);
@@ -247,7 +291,7 @@ export default function CompeteScreen() {
 
       {playerArena && rivalArena && (
         <View style={styles.arenas}>
-          <DualArenaView arena={rivalArena} meta={`${match.rival.division} • ${rivalArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(rivalArena) > getArenaProgress(playerArena)} />
+          <DualArenaView arena={rivalArena} meta={rivalNotice || `${match.rival.division} • ${rivalArena.coins} moedas`} accent="#ff4fd8" leader={getArenaProgress(rivalArena) > getArenaProgress(playerArena)} />
           <DualArenaView arena={playerArena} meta={`Moedas ${playerArena.coins} • XP ${playerArena.xp} • Lv.${playerArena.level}`} accent="#00f0ff" leader={getArenaProgress(playerArena) >= getArenaProgress(rivalArena)} />
           <View style={styles.shopRow}>
             {(['atk', 'gold'] as const).map(type => {
