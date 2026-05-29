@@ -5,6 +5,7 @@ import { SKINS } from '@/src/game/skins';
 import { UPGRADES } from '@/src/game/upgrades';
 import { ACHIEVEMENTS, AchievementReward, AchievementState, BOSS_DIFFICULTY_RANK, getAchievementProgress } from '@/src/game/achievements';
 import { ECONOMY_BALANCE, getGlobalCoinsFromRun } from '@/src/game/economy';
+import { PERMANENT_UPGRADE_LIMITS } from '@/src/game/balance';
 import {
   AdLimitSave,
   DailyMissionSave,
@@ -118,6 +119,7 @@ interface SaveData {
     skinEffects: number;
     bestCombo: number;
     dailyRewardsCollected: number;
+    infiniteBestSeconds: number;
   };
   bossProgress: BossProgressSave;
   settings: { sound: boolean; haptics: boolean } & AudioSettings;
@@ -176,6 +178,7 @@ interface GameContextType extends SaveData {
     runUpgrades?: number;
     criticals?: number;
     skinEffects?: number;
+    infiniteBestSeconds?: number;
   }) => Promise<void>;
   grantReward: (reward: RewardGrant) => Promise<void>;
   collectDailyMission: (missionId: string) => Promise<boolean>;
@@ -271,6 +274,7 @@ const defaultSave = (): SaveData => {
     skinEffects: 0,
     bestCombo: 0,
     dailyRewardsCollected: 0,
+    infiniteBestSeconds: 0,
   },
   bossProgress: createBossProgress(),
   settings: { sound: true, haptics: true, ...DEFAULT_AUDIO_SETTINGS },
@@ -757,6 +761,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const current = saveRef.current;
     if (!current.unlockedUpgrades.includes(upgradeName) || current.coins < cost) return false;
     const nextLevel = (current.permanentUpgrades[upgradeName] || 0) + 1;
+    const maxLevel = PERMANENT_UPGRADE_LIMITS[upgradeName] ?? 10;
+    if (nextLevel > maxLevel) return false;
     const nextStats = { ...current.stats };
 
     switch (upgradeName) {
@@ -774,6 +780,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         break;
       case 'xpBoost':
         nextStats.xpMultiplier = 1 + nextLevel * 0.2;
+        break;
+      case 'slowRings':
+        nextStats.baseSpeed = Math.max(70, nextStats.baseSpeed * (1 - Math.min(0.35, nextLevel * 0.015)));
         break;
     }
 
@@ -901,6 +910,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     runUpgrades?: number;
     criticals?: number;
     skinEffects?: number;
+    infiniteBestSeconds?: number;
   }) => {
     const current = saveRef.current;
     const withXp = applyProfileXp(current, summary.profileXp);
@@ -928,6 +938,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         criticals: withXp.lifetimeStats.criticals + Math.max(0, summary.criticals || 0),
         skinEffects: withXp.lifetimeStats.skinEffects + Math.max(0, summary.skinEffects || 0),
         bestCombo: Math.max(withXp.lifetimeStats.bestCombo, summary.bestCombo || 0),
+        infiniteBestSeconds: Math.max(withXp.lifetimeStats.infiniteBestSeconds || 0, summary.infiniteBestSeconds || 0),
       },
     };
     const metrics: [MissionMetric, number][] = [

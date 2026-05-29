@@ -22,6 +22,7 @@ export default function HomeScreen() {
 
   const secondaryItems = [
     { label: 'Loja', icon: '🛒', route: '/store', color: '#00aaff' },
+    { label: 'Inventário', icon: '🎒', route: '/inventory', color: '#ffd700' },
     { label: 'Missões', icon: '📅', route: '/daily', color: '#ff8800' },
     { label: 'Evento', icon: '⚡', route: '/events', color: weeklyEvent.color },
     { label: 'Roleta', icon: '🎡', route: '/wheel', color: '#00ff88' },
@@ -80,6 +81,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         <View style={styles.primaryRow}>
+          <TouchableOpacity style={styles.primaryCard} onPress={() => go('/infinite')}>
+            <LinearGradient colors={['#00ff8866', '#00885533']} style={styles.primaryCardGradient}>
+              <Text style={styles.primaryIcon}>∞</Text>
+              <Text style={styles.primaryLabel}>INFINITO</Text>
+            </LinearGradient>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.primaryCard} onPress={() => go('/upgrade-shop')}>
             <LinearGradient colors={['#b000ff66', '#6600cc33']} style={styles.primaryCardGradient}>
               <Text style={styles.primaryIcon}>⚔️</Text>

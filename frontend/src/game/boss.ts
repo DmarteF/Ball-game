@@ -1,4 +1,5 @@
 import { RingConfig } from './rings';
+import { GAMEPLAY_TUNING } from './balance';
 
 export type BossLevelId = 'normal' | 'forte' | 'elite' | 'lendario' | 'impossivel';
 
@@ -228,7 +229,7 @@ export const createBossRingConfig = (
   outerRadius: size / 2 - 14,
   baseRotationSpeed: level.rotationSpeed * (side === 'boss' ? level.bossSpeedMultiplier : 1),
   baseHp: level.baseHp * (side === 'boss' ? level.bossDamageMultiplier : 1),
-  baseGapSize: Math.PI / (side === 'boss' ? 3.35 : 3.15),
+  baseGapSize: (Math.PI / (side === 'boss' ? 3.35 : 3.15)) * GAMEPLAY_TUNING.boss.gapScale,
   baseThickness: 4,
   closingSpeed: level.closingSpeed * (side === 'boss' ? level.bossShrinkMultiplier : 1),
   colors,

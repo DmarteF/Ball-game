@@ -18,6 +18,7 @@ import {
 import { getRandomUpgrades, Upgrade, getRarityColor, getRarityName } from '@/src/game/upgrades';
 import { getSkinById } from '@/src/game/skins';
 import { getPhaseConfig } from '@/src/game/phases';
+import { GAMEPLAY_TUNING } from '@/src/game/balance';
 import { FloatingNumber } from '@/src/components/FloatingNumber';
 import { AdModal } from '@/src/components/AdModal';
 import { ECONOMY_BALANCE, getComboMultiplier, getGlobalCoinsFromRun, getRunProfileXp } from '@/src/game/economy';
@@ -25,13 +26,13 @@ import { playSound } from '@/src/utils/audio';
 import { triggerHaptic } from '@/src/utils/feedback';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const GAME_SIZE = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT - 240) * 0.98;
+const GAME_SIZE = Math.min(SCREEN_WIDTH - 16, SCREEN_HEIGHT - GAMEPLAY_TUNING.solo.safeHudReserve) * 0.98;
 const CENTER_X = GAME_SIZE / 2;
 const CENTER_Y = GAME_SIZE / 2;
 const BALL_RADIUS = 10;
 const OUTER_RADIUS = GAME_SIZE / 2 - 8;
 const INNER_RADIUS = 35;
-const INITIAL_BALL_SPEED = 2.35;
+const INITIAL_BALL_SPEED = GAMEPLAY_TUNING.solo.ballSpeed;
 const INITIAL_RING_ROTATION_SPEED = 0.006;
 const INITIAL_RING_SHRINK_SPEED = 0.026;
 const XP_BASE_REQUIREMENT = 150;
@@ -62,7 +63,7 @@ interface RunRewards {
   bonuses: string[];
 }
 
-const createProceduralPhaseConfig = (phaseNumber: number, playerLevel: number) => {
+const createProceduralPhaseConfig = (phaseNumber: number, playerLevel: number, slowRingLevel = 0) => {
   const phase = getPhaseConfig(phaseNumber);
   const difficulty = 1 + (phaseNumber - 1) * DIFFICULTY_SCALE + Math.max(0, playerLevel - 1) * 0.012;
   const pattern = phaseNumber % 4;
@@ -70,8 +71,8 @@ const createProceduralPhaseConfig = (phaseNumber: number, playerLevel: number) =
   return {
     ringCount: Math.min(45, Math.floor((phase.ringMin + phase.ringMax) / 2) + Math.floor(playerLevel / 10)),
     baseHp: Math.round(phase.baseHp * difficulty),
-    closingSpeed: Math.min(0.145, phase.closingSpeed + playerLevel * 0.00035),
-    rotationSpeed: Math.min(0.034, phase.rotationSpeed + playerLevel * 0.0002),
+    closingSpeed: Math.min(0.118, (phase.closingSpeed + playerLevel * 0.00022) * GAMEPLAY_TUNING.solo.ringClosingScale * (1 - Math.min(0.28, slowRingLevel * 0.018))),
+    rotationSpeed: Math.min(0.029, (phase.rotationSpeed + playerLevel * 0.00014) * GAMEPLAY_TUNING.solo.ringRotationScale),
     gapSize: Math.max(Math.PI / 7.2, phase.gapSize - playerLevel * 0.001),
     pattern,
   };
@@ -80,7 +81,7 @@ const createProceduralPhaseConfig = (phaseNumber: number, playerLevel: number) =
 export default function GameScreen() {
   const router = useRouter();
   const { phase } = useLocalSearchParams();
-  const { stats, updateGems, unlockPhase, gems, coins: accountCoins, ballTransformation, level: savedLevel, profileXp, settings, unlockedUpgrades, recordRunRewards, recordAdUse } = useGame();
+  const { stats, updateGems, unlockPhase, gems, coins: accountCoins, ballTransformation, level: savedLevel, profileXp, settings, unlockedUpgrades, permanentUpgrades, recordRunRewards, recordAdUse } = useGame();
   
   const [isPaused, setIsPaused] = useState(false);
   const [showPauseMenu, setShowPauseMenu] = useState(false);
@@ -186,7 +187,7 @@ export default function GameScreen() {
 
   const initializeGame = () => {
     const phaseNumber = Number(phase) || 1;
-    const config = createProceduralPhaseConfig(phaseNumber, savedLevel);
+    const config = createProceduralPhaseConfig(phaseNumber, savedLevel, permanentUpgrades?.slowRings || 0);
     setShowVictory(false);
     setShowGameOver(false);
     setShowLevelUp(false);
@@ -232,7 +233,7 @@ export default function GameScreen() {
     
     // Initialize ball with random angle
     const startAngle = Math.random() * Math.PI * 2;
-    const speed = INITIAL_BALL_SPEED + Math.min(0.9, (phaseNumber - 1) * 0.13 + savedLevel * 0.01);
+    const speed = INITIAL_BALL_SPEED + Math.min(GAMEPLAY_TUNING.solo.ballMaxBonus, (phaseNumber - 1) * GAMEPLAY_TUNING.solo.ballPhaseGain + savedLevel * 0.006);
     velocityRef.current = {
       x: Math.cos(startAngle) * speed,
       y: Math.sin(startAngle) * speed,
@@ -389,7 +390,7 @@ export default function GameScreen() {
   };
 
   const updateGame = (deltaTime = 1) => {
-    const targetSpeed = (INITIAL_BALL_SPEED + Math.min(0.9, (Number(phase) - 1 || 0) * 0.12)) * speedMultiplier;
+    const targetSpeed = (INITIAL_BALL_SPEED + Math.min(GAMEPLAY_TUNING.solo.ballMaxBonus, (Number(phase) - 1 || 0) * GAMEPLAY_TUNING.solo.ballPhaseGain)) * speedMultiplier;
     velocityRef.current = clampBallSpeed(velocityRef.current, targetSpeed * 0.78, targetSpeed * 1.42);
 
     if (
@@ -1325,7 +1326,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   serverFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   serverFallbackText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
-  topHUD: { paddingTop: 45, paddingHorizontal: 12 },
+  topHUD: { paddingTop: 45, paddingHorizontal: 12, zIndex: 20, elevation: 20 },
   hudRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 6 },
   hudItem: {
     flex: 1,
@@ -1399,7 +1400,7 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff22',
   },
   progressFill: { height: '100%' },
-  gameContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  gameContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', zIndex: 1, elevation: 1, paddingBottom: 6 },
   gameArea: {
     backgroundColor: '#00000033',
     borderRadius: 999,

@@ -1,0 +1,38 @@
+export const GAMEPLAY_TUNING = {
+  solo: {
+    ballSpeed: 2.2,
+    ballPhaseGain: 0.08,
+    ballMaxBonus: 0.62,
+    ringClosingScale: 0.82,
+    ringRotationScale: 0.9,
+    safeHudReserve: 310,
+  },
+  boss: {
+    arenaBallSpeed: 2.45,
+    gapScale: 0.78,
+    safeHudReserve: 288,
+  },
+  league: {
+    arenaBallSpeed: 2.45,
+    gapScale: 0.72,
+    safeHudReserve: 288,
+  },
+  infinite: {
+    ballSpeed: 2.14,
+    ballRampPerMinute: 0.12,
+    ringClosingScale: 0.78,
+    ringRampPerMinute: 0.1,
+    gapScale: 0.86,
+    safeHudReserve: 310,
+  },
+};
+
+export const PERMANENT_UPGRADE_LIMITS: Record<string, number> = {
+  baseDamage: 30,
+  baseSpeed: 18,
+  coinMultiplier: 25,
+  critChance: 20,
+  xpBoost: 25,
+  perfectChance: 12,
+  slowRings: 10,
+};

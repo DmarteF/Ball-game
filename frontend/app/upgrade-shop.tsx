@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
 import { UPGRADES as RUN_UPGRADES } from '@/src/game/upgrades';
+import { PERMANENT_UPGRADE_LIMITS } from '@/src/game/balance';
+import { playSound } from '@/src/utils/audio';
 
 type ShopUpgrade = { id: string; name: string; description: string; icon: string; baseCost: number; unlockText: string; secret?: boolean };
 
@@ -19,7 +21,7 @@ const UPGRADES: ShopUpgrade[] = [
 
 export default function UpgradeShopScreen() {
   const router = useRouter();
-  const { coins, permanentUpgrades, unlockedUpgrades, purchaseUpgrade } = useGame();
+  const { coins, permanentUpgrades, unlockedUpgrades, purchaseUpgrade, settings } = useGame();
 
   const secretUpgrades = RUN_UPGRADES
     .filter(item => item.secret)
@@ -42,7 +44,10 @@ export default function UpgradeShopScreen() {
 
   const handlePurchase = async (upgrade: ShopUpgrade) => {
     const cost = getUpgradeCost(upgrade);
+    const level = permanentUpgrades[upgrade.id] || 0;
+    const maxLevel = PERMANENT_UPGRADE_LIMITS[upgrade.id] ?? 10;
     if (!unlockedUpgrades.includes(upgrade.id)) {
+      playSound('buttonError', settings.sound);
       Alert.alert(upgrade.secret ? '???' : 'Upgrade bloqueado', upgrade.unlockText, [{ text: 'OK' }]);
       return;
     }
@@ -50,15 +55,20 @@ export default function UpgradeShopScreen() {
       Alert.alert(upgrade.name, 'Upgrade secreto liberado. Ele pode aparecer nas escolhas de level up durante a partida.', [{ text: 'OK' }]);
       return;
     }
+    if (level >= maxLevel) {
+      Alert.alert('Máximo', `${upgrade.name} já está no nível máximo.`);
+      return;
+    }
     const success = await purchaseUpgrade(upgrade.id, cost);
     
     if (!success) {
+      playSound('buttonError', settings.sound);
       Alert.alert(
         'Moedas Insuficientes',
         `Você precisa de ${cost} moedas para comprar este upgrade.`,
         [{ text: 'OK' }]
       );
-    }
+    } else playSound('buttonConfirm', settings.sound);
   };
 
   return (
@@ -76,9 +86,11 @@ export default function UpgradeShopScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.upgradeList}>
         {allUpgrades.map((upgrade) => {
           const level = permanentUpgrades[upgrade.id] || 0;
+          const maxLevel = PERMANENT_UPGRADE_LIMITS[upgrade.id] ?? 10;
           const cost = getUpgradeCost(upgrade);
           const isUnlocked = unlockedUpgrades.includes(upgrade.id);
-          const canAfford = coins >= cost && isUnlocked && !upgrade.secret;
+          const isMaxed = !upgrade.secret && level >= maxLevel;
+          const canAfford = coins >= cost && isUnlocked && !upgrade.secret && !isMaxed;
 
           return (
             <View key={upgrade.id} style={styles.upgradeCard}>
@@ -93,20 +105,21 @@ export default function UpgradeShopScreen() {
                 <View style={styles.upgradeInfo}>
                   <Text style={styles.upgradeName}>{upgrade.secret && !isUnlocked ? '???' : upgrade.name}</Text>
                   <Text style={styles.upgradeDescription}>{isUnlocked ? upgrade.description : `🔒 ${upgrade.unlockText}`}</Text>
-                  <Text style={styles.upgradeLevel}>{upgrade.secret ? (isUnlocked ? 'Secreto liberado' : 'Upgrade secreto') : `Nível: ${level}`}</Text>
+                  <Text style={styles.upgradeLevel}>{upgrade.secret ? (isUnlocked ? 'Secreto liberado' : 'Upgrade secreto') : `Nível: ${level}/${maxLevel}`}</Text>
+                  {!upgrade.secret && isUnlocked && <Text style={styles.nextEffect}>{isMaxed ? 'Máximo' : `Próximo nível melhora o efeito descrito`}</Text>}
                 </View>
                 
                 <TouchableOpacity
                   style={[styles.buyButton, !canAfford && styles.buyButtonDisabled]}
                   onPress={() => handlePurchase(upgrade)}
-                  disabled={!canAfford && !upgrade.secret}
+                  disabled={!isUnlocked && !upgrade.secret}
                 >
                   <LinearGradient
-                    colors={canAfford ? ['#00f0ff', '#0088ff'] : upgrade.secret && isUnlocked ? ['#ffd700', '#ff8800'] : ['#666666', '#444444']}
+                    colors={canAfford ? ['#00f0ff', '#0088ff'] : upgrade.secret && isUnlocked ? ['#ffd700', '#ff8800'] : isMaxed ? ['#00ff88', '#008855'] : ['#666666', '#444444']}
                     style={styles.buyButtonGradient}
                   >
-                    <Text style={styles.buyButtonText}>{upgrade.secret ? (isUnlocked ? 'OK' : '🔒') : isUnlocked ? cost : '🔒'}</Text>
-                    {isUnlocked && !upgrade.secret && <Text style={styles.buyButtonIcon}>💰</Text>}
+                    <Text style={styles.buyButtonText}>{upgrade.secret ? (isUnlocked ? 'OK' : '🔒') : isMaxed ? 'MAX' : isUnlocked ? cost : '🔒'}</Text>
+                    {isUnlocked && !upgrade.secret && !isMaxed && <Text style={styles.buyButtonIcon}>💰</Text>}
                   </LinearGradient>
                 </TouchableOpacity>
               </LinearGradient>
@@ -206,6 +219,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#00f0ff',
     fontWeight: 'bold',
+  },
+  nextEffect: {
+    fontSize: 11,
+    color: '#ffffff88',
+    marginTop: 2,
   },
   buyButton: {
     borderRadius: 12,

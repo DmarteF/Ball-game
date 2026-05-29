@@ -5,10 +5,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { DualArenaView } from '@/src/components/DualArenaView';
 import { NeonButton } from '@/src/components/NeonButton';
 import { useGame } from '@/src/contexts/GameContext';
-import { buyArenaUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
+import { applyArenaRunUpgrade, buyArenaUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
 import { RewardGrant, describeReward } from '@/src/game/retention';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
+import { GAMEPLAY_TUNING } from '@/src/game/balance';
+import { getRandomUpgrades, getRarityColor, Upgrade } from '@/src/game/upgrades';
 
 const { width, height } = Dimensions.get('window');
 const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
@@ -21,10 +23,16 @@ export default function CompeteScreen() {
   const match = useMemo(() => game.createLeagueMatch(), []);
   const playerSkin = getSkinById(game.ballTransformation);
   const rivalSkin = getSkinById(match.rival.favoriteSkin);
+  const skinDamageBonus = ['damage_multiplier', 'cosmic_critical', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value : 0;
+  const skinSpeedBonus = playerSkin.passive.type === 'speed' ? playerSkin.passive.value : 0;
+  const skinCoinBonus = ['coin_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value * 0.6 : 0;
+  const skinXpBonus = ['xp_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value * 0.5 : 0;
   const [playerArena, setPlayerArena] = useState<DualArenaState | null>(null);
   const [rivalArena, setRivalArena] = useState<DualArenaState | null>(null);
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [runUpgrades, setRunUpgrades] = useState<Record<string, number>>({});
+  const [levelChoices, setLevelChoices] = useState<Upgrade[]>([]);
   const finishing = useRef(false);
   const playerArenaRef = useRef<DualArenaState | null>(null);
 
@@ -46,7 +54,7 @@ export default function CompeteScreen() {
     outerRadius: ARENA_SIZE / 2 - 14,
     baseRotationSpeed: 0.012 * match.map.rotationMultiplier,
     baseHp: 24 * match.map.hpMultiplier * (side === 'rival' ? 1 + match.rival.level / 120 : 1),
-    baseGapSize: 3.25 * match.map.gapMultiplier,
+    baseGapSize: 3.25 * match.map.gapMultiplier * GAMEPLAY_TUNING.league.gapScale,
     baseThickness: 4,
     closingSpeed: 0.045 * match.map.closingMultiplier,
     colors: [side === 'rival' ? rivalSkin.primaryColor : playerSkin.primaryColor, match.map.color, '#ffffff88'],
@@ -63,7 +71,7 @@ export default function CompeteScreen() {
       size: ARENA_SIZE,
       phase: basePhase,
       ringConfig: makeRingConfig('player'),
-      speedMultiplier: 1 + game.stats.baseSpeed / 950,
+      speedMultiplier: 1 + game.stats.baseSpeed / 950 + skinSpeedBonus,
       damageMultiplier: 1 + game.stats.baseDamage / 200,
     }));
     setRivalArena(createArenaState({
@@ -80,6 +88,8 @@ export default function CompeteScreen() {
     }));
     finishing.current = false;
     setResult(null);
+    setRunUpgrades({});
+    setLevelChoices([]);
     setPaused(false);
     playSound('buttonConfirm', game.settings.sound);
   };
@@ -93,9 +103,25 @@ export default function CompeteScreen() {
   }, [playerArena]);
 
   useEffect(() => {
-    if (paused || result) return;
+    if (paused || result || levelChoices.length > 0) return;
     const interval = setInterval(() => {
-      setPlayerArena(current => current ? tickArenaPhysics(current, { damageMultiplier: 1 + game.stats.baseDamage / 240 }).state : current);
+      setPlayerArena(current => {
+        if (!current) return current;
+        const beforeLevel = current.level;
+        const next = tickArenaPhysics(current, {
+          damageMultiplier: (1 + game.stats.baseDamage / 240 + skinDamageBonus) * (1 + (runUpgrades.damage || 0) * 0.16),
+          coinMultiplier: game.stats.coinMultiplier * (1 + skinCoinBonus + (runUpgrades.coinBoost || 0) * 0.24),
+          xpMultiplier: game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2),
+          speedMultiplier: 1 + (runUpgrades.speed || 0) * 0.04,
+          shrinkMultiplier: 1 - Math.min(0.24, (game.permanentUpgrades.slowRings || 0) * 0.018),
+        }).state;
+        if (next.level > beforeLevel && levelChoices.length === 0) {
+          setLevelChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
+          playSound('levelUp', game.settings.sound);
+          setPaused(true);
+        }
+        return next;
+      });
       setRivalArena(current => current ? tickArenaPhysics(current, {
         isAi: true,
         opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
@@ -104,7 +130,7 @@ export default function CompeteScreen() {
       }).state : current);
     }, 34);
     return () => clearInterval(interval);
-  }, [paused, !!result, playerArena?.id]);
+  }, [paused, !!result, playerArena?.id, levelChoices.length, game.stats.baseDamage, game.stats.coinMultiplier, game.stats.xpMultiplier, runUpgrades, match.rival.trophies]);
 
   useEffect(() => {
     if (!playerArena || !rivalArena || finishing.current) return;
@@ -118,7 +144,7 @@ export default function CompeteScreen() {
     finishing.current = true;
     const rewardRoll = Math.random();
     const baseCoins = Math.round((won ? 420 : 140) * match.map.rewardMultiplier);
-    const baseXp = Math.round((won ? 160 : 55) * match.map.rewardMultiplier);
+    const baseXp = Math.round((won ? 160 : 55) * match.map.rewardMultiplier * game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2));
     const saved = await game.recordLeagueCompetitionResult({
       rivalId: match.rival.id,
       won,
@@ -149,8 +175,17 @@ export default function CompeteScreen() {
     playSound('buttonClick', game.settings.sound);
     Alert.alert('Sair da competição?', 'A partida atual será encerrada como derrota.', [
       { text: 'Cancelar', style: 'cancel', onPress: () => playSound('buttonClick', game.settings.sound) },
-      { text: 'Sair', style: 'destructive', onPress: () => finishMatch(false) },
+      { text: 'Sair', style: 'destructive', onPress: () => { playSound('buttonConfirm', game.settings.sound); finishMatch(false); } },
     ]);
+  };
+
+  const chooseLevelUpgrade = (upgrade: Upgrade) => {
+    if (!playerArena) return;
+    playSound('buttonConfirm', game.settings.sound);
+    setRunUpgrades(prev => ({ ...prev, [upgrade.id]: (prev[upgrade.id] || 0) + 1 }));
+    setPlayerArena(applyArenaRunUpgrade(playerArena, upgrade.id));
+    setLevelChoices([]);
+    setPaused(false);
   };
 
   return (
@@ -210,8 +245,26 @@ export default function CompeteScreen() {
             <Text style={styles.resultText}>Nova posição: #{result?.newPosition}</Text>
             {result?.rewards.map(reward => <Text key={describeReward(reward)} style={styles.rewardLine}>{describeReward(reward)}</Text>)}
             <NeonButton title="COMPETIR NOVAMENTE" variant="primary" audioSettings={game.settings} onPress={startMatch} />
+            {result?.rewards.some(reward => reward.type === 'keys' || reward.type === 'chest') && <NeonButton title="ABRIR INVENTÁRIO" variant="primary" audioSettings={game.settings} onPress={() => router.replace('/inventory' as any)} />}
             <NeonButton title="VOLTAR PARA LIGA" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} />
             <NeonButton title="VOLTAR PARA HOME" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={levelChoices.length > 0} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.resultBox}>
+            <Text style={styles.resultTitle}>LEVEL UP</Text>
+            <Text style={styles.resultText}>Escolha uma melhoria temporária.</Text>
+            {levelChoices.map(upgrade => (
+              <TouchableOpacity key={upgrade.id} style={[styles.choiceCard, { borderColor: getRarityColor(upgrade.rarity) }]} onPress={() => chooseLevelUpgrade(upgrade)}>
+                <Text style={styles.choiceIcon}>{upgrade.icon}</Text>
+                <View style={styles.choiceTextBox}>
+                  <Text style={styles.choiceTitle}>{upgrade.name} Lv.{(runUpgrades[upgrade.id] || 0) + 1}</Text>
+                  <Text style={styles.choiceText}>{upgrade.description}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </Modal>
@@ -222,7 +275,7 @@ export default function CompeteScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingTop: 52, paddingHorizontal: 16, paddingBottom: 6 },
-  topHUD: { paddingTop: 45, paddingHorizontal: 12, paddingBottom: 4 },
+  topHUD: { paddingTop: 45, paddingHorizontal: 12, paddingBottom: 4, zIndex: 20, elevation: 20 },
   hudRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 6 },
   hudItem: { flex: 1, flexDirection: 'row', backgroundColor: '#ffffff11', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', alignItems: 'center', justifyContent: 'center', gap: 6 },
   hudIcon: { fontSize: 18 },
@@ -237,7 +290,7 @@ const styles = StyleSheet.create({
   backButton: { alignSelf: 'flex-start', minWidth: 100 },
   title: { color: '#ffffff', fontSize: 28, fontWeight: 'bold', marginTop: 8 },
   subtitle: { color: '#ffffff99', fontWeight: 'bold', marginTop: 3 },
-  arenas: { flex: 1, paddingHorizontal: 14, paddingBottom: 10, gap: 8, justifyContent: 'space-evenly', width: '100%' },
+  arenas: { flex: 1, paddingHorizontal: 14, paddingBottom: 10, gap: 8, justifyContent: 'space-evenly', width: '100%', zIndex: 1, elevation: 1 },
   shopRow: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   runUpgradeButton: {
     flexGrow: 1,
@@ -264,4 +317,9 @@ const styles = StyleSheet.create({
   resultText: { color: '#ffffff', fontWeight: 'bold', textAlign: 'center' },
   trophyDelta: { color: '#ffd700', fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
   rewardLine: { color: '#00ff88', fontWeight: 'bold', textAlign: 'center' },
+  choiceCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#ffffff12', borderWidth: 1.5, borderRadius: 12, padding: 12 },
+  choiceIcon: { fontSize: 28 },
+  choiceTextBox: { flex: 1 },
+  choiceTitle: { color: '#ffffff', fontWeight: 'bold' },
+  choiceText: { color: '#ffffffaa', fontSize: 12, marginTop: 2 },
 });

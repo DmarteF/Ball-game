@@ -31,10 +31,12 @@ export default function InventoryScreen() {
 
   const openChest = async (chest: ChestDefinition, free = false) => {
     if (!free && !canAfford(chest)) {
+      playSound('buttonError', game.settings.sound);
       Alert.alert('Recursos insuficientes', `Você não tem o suficiente para abrir ${chest.name}.`);
       return;
     }
 
+    playSound('buttonConfirm', game.settings.sound);
     if (!free) await payChest(chest);
     setOpening(true);
     setTimeout(async () => {
@@ -153,7 +155,7 @@ export default function InventoryScreen() {
                   </LinearGradient>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.claimButton} onPress={() => setShowReward(false)}>
+              <TouchableOpacity style={styles.claimButton} onPress={() => { playSound('buttonClick', game.settings.sound); setShowReward(false); }}>
                 <LinearGradient colors={['#00f0ff', '#0088ff']} style={styles.claimGradient}>
                   <Text style={styles.claimText}>COLETAR</Text>
                 </LinearGradient>

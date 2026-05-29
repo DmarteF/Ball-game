@@ -16,9 +16,10 @@ import {
   isBossDailyComplete,
   normalizeBossProgress,
 } from '@/src/game/boss';
-import { buyArenaUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
+import { applyArenaRunUpgrade, buyArenaUpgrade, createArenaState, DualArenaState, getArenaProgress, getArenaUpgradeCost, tickArenaPhysics } from '@/src/game/dualArena';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
+import { getRandomUpgrades, getRarityColor, Upgrade } from '@/src/game/upgrades';
 
 const { width, height } = Dimensions.get('window');
 const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
@@ -54,11 +55,17 @@ export default function BossScreen() {
   const [activeLevel, setActiveLevel] = useState<BossLevelDefinition>(currentLevel);
   const [resultWon, setResultWon] = useState(false);
   const [resultRewards, setResultRewards] = useState<string[]>([]);
+  const [runUpgrades, setRunUpgrades] = useState<Record<string, number>>({});
+  const [levelChoices, setLevelChoices] = useState<Upgrade[]>([]);
   const [clock, setClock] = useState(getResetTimes());
   const finishing = useRef(false);
   const playerArenaRef = useRef<DualArenaState | null>(null);
   const playerSkin = getSkinById(game.ballTransformation);
   const bossSkin = getSkinById(monthlyBoss.skinId);
+  const skinDamageBonus = ['damage_multiplier', 'cosmic_critical', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value : 0;
+  const skinSpeedBonus = playerSkin.passive.type === 'speed' ? playerSkin.passive.value : 0;
+  const skinCoinBonus = ['coin_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value * 0.6 : 0;
+  const skinXpBonus = ['xp_multiplier', 'cosmic_critical', 'league_starter_champion', 'league_king_wave'].includes(playerSkin.passive.type) ? playerSkin.passive.value * 0.5 : 0;
 
   useEffect(() => {
     const interval = setInterval(() => setClock(getResetTimes()), 30000);
@@ -84,7 +91,7 @@ export default function BossScreen() {
       size: ARENA_SIZE,
       phase: level.phase,
       ringConfig: createBossRingConfig(level, ARENA_SIZE, [playerSkin.primaryColor, '#ffffff88', '#ffd700aa'], 'player'),
-      speedMultiplier: 1 + game.stats.baseSpeed / 900,
+      speedMultiplier: 1 + game.stats.baseSpeed / 900 + skinSpeedBonus,
       damageMultiplier: 1 + game.stats.baseDamage / 180,
     }));
     setBossArena(createArenaState({
@@ -101,22 +108,41 @@ export default function BossScreen() {
     }));
     finishing.current = false;
     setResultRewards([]);
+    setRunUpgrades({});
+    setLevelChoices([]);
     setDuelState('playing');
   };
 
   useEffect(() => {
     if (duelState !== 'playing') return;
     const interval = setInterval(() => {
-      setPlayerArena(current => current ? tickArenaPhysics(current, { damageMultiplier: 1 + game.stats.baseDamage / 240 }).state : current);
+      setPlayerArena(current => {
+        if (!current) return current;
+        const beforeLevel = current.level;
+        const result = tickArenaPhysics(current, {
+          damageMultiplier: (1 + game.stats.baseDamage / 240 + skinDamageBonus) * (1 + (runUpgrades.damage || 0) * 0.16),
+          coinMultiplier: game.stats.coinMultiplier * (1 + skinCoinBonus + (runUpgrades.coinBoost || 0) * 0.24),
+          xpMultiplier: game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2),
+          speedMultiplier: 1 + (runUpgrades.speed || 0) * 0.04,
+          shrinkMultiplier: 1 - Math.min(0.24, (game.permanentUpgrades.slowRings || 0) * 0.018),
+        }).state;
+        if (result.level > beforeLevel && levelChoices.length === 0) {
+          setLevelChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
+          playSound('levelUp', game.settings.sound);
+          setDuelState('paused');
+        }
+        return result;
+      });
       setBossArena(current => current ? tickArenaPhysics(current, {
         isAi: true,
         opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0,
         shrinkMultiplier: activeLevel.bossShrinkMultiplier,
         damageMultiplier: activeLevel.bossDamageMultiplier,
+        xpMultiplier: 1,
       }).state : current);
     }, 34);
     return () => clearInterval(interval);
-  }, [duelState, activeLevel.id, activeLevel.bossDamageMultiplier, activeLevel.bossShrinkMultiplier, game.stats.baseDamage]);
+  }, [duelState, activeLevel.id, activeLevel.bossDamageMultiplier, activeLevel.bossShrinkMultiplier, game.stats.baseDamage, game.stats.coinMultiplier, game.stats.xpMultiplier, runUpgrades, levelChoices.length]);
 
   useEffect(() => {
     if (duelState !== 'playing' || !playerArena || !bossArena || finishing.current) return;
@@ -132,7 +158,7 @@ export default function BossScreen() {
     const alreadyClaimed = currentProgress.dailyRewardsClaimed.includes(activeLevel.id);
     const reward = activeLevel.reward;
     const coins = won ? (alreadyClaimed ? 90 : reward.coins) : Math.floor(reward.coins * 0.25);
-    const xp = won ? (alreadyClaimed ? 35 : reward.xp) : Math.floor(reward.xp * 0.3);
+    const xp = Math.floor((won ? (alreadyClaimed ? 35 : reward.xp) : Math.floor(reward.xp * 0.3)) * game.stats.xpMultiplier * (1 + skinXpBonus + (runUpgrades.xpBoost || 0) * 0.2));
     const gems = won && !alreadyClaimed ? reward.gems || 0 : 0;
     const keys = won && !alreadyClaimed ? reward.keys || 0 : 0;
     const fragments = won && !alreadyClaimed && reward.fragments ? { skinId: bossSkin.id, amount: reward.fragments } : undefined;
@@ -167,8 +193,17 @@ export default function BossScreen() {
     playSound('buttonClick', game.settings.sound);
     Alert.alert('Sair do Boss Mode?', 'A disputa atual será encerrada como derrota.', [
       { text: 'Cancelar', style: 'cancel', onPress: () => playSound('buttonClick', game.settings.sound) },
-      { text: 'Sair', style: 'destructive', onPress: () => finishDuel(false) },
+      { text: 'Sair', style: 'destructive', onPress: () => { playSound('buttonConfirm', game.settings.sound); finishDuel(false); } },
     ]);
+  };
+
+  const chooseLevelUpgrade = (upgrade: Upgrade) => {
+    if (!playerArena) return;
+    playSound('buttonConfirm', game.settings.sound);
+    setRunUpgrades(prev => ({ ...prev, [upgrade.id]: (prev[upgrade.id] || 0) + 1 }));
+    setPlayerArena(applyArenaRunUpgrade(playerArena, upgrade.id));
+    setLevelChoices([]);
+    setDuelState('playing');
   };
 
   const monthlyBest = progress.monthlyBestLevelWon === 'none' ? 'Nenhum' : monthlyBoss.levels.find(level => level.id === progress.monthlyBestLevelWon)?.name || 'Nenhum';
@@ -253,8 +288,27 @@ export default function BossScreen() {
             <Text style={styles.resultSubtitle}>{resultWon ? 'Resultado decidido pela arena real.' : 'O Boss venceu na arena real.'}</Text>
             {resultRewards.map(item => <Text key={item} style={styles.rewardLine}>{item}</Text>)}
             <NeonButton title="ENFRENTAR NOVAMENTE" variant="primary" audioSettings={game.settings} onPress={startDuel} />
+            {resultRewards.some(item => item.includes('Chaves') || item.includes('Baú')) && <NeonButton title="ABRIR INVENTÁRIO" variant="primary" audioSettings={game.settings} onPress={() => router.replace('/inventory' as any)} />}
             <NeonButton title="VOLTAR PARA BOSS" variant="secondary" audioSettings={game.settings} onPress={() => setDuelState('menu')} />
             <NeonButton title="VOLTAR PARA HOME" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={levelChoices.length > 0} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.resultModal}>
+            <Text style={styles.resultTitle}>LEVEL UP</Text>
+            <Text style={styles.resultSubtitle}>Escolha uma melhoria temporária.</Text>
+            {levelChoices.map(upgrade => (
+              <TouchableOpacity key={upgrade.id} style={[styles.choiceCard, { borderColor: getRarityColor(upgrade.rarity) }]} onPress={() => chooseLevelUpgrade(upgrade)}>
+                <Text style={styles.choiceIcon}>{upgrade.icon}</Text>
+                <View style={styles.choiceTextBox}>
+                  <Text style={styles.choiceTitle}>{upgrade.name} Lv.{(runUpgrades[upgrade.id] || 0) + 1}</Text>
+                  <Text style={styles.choiceText}>{upgrade.description}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </Modal>
@@ -265,7 +319,7 @@ export default function BossScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingTop: 52, paddingHorizontal: 16, paddingBottom: 8 },
-  topHUD: { paddingTop: 45, paddingHorizontal: 12, paddingBottom: 4 },
+  topHUD: { paddingTop: 45, paddingHorizontal: 12, paddingBottom: 4, zIndex: 20, elevation: 20 },
   hudRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 6 },
   hudItem: { flex: 1, flexDirection: 'row', backgroundColor: '#ffffff11', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', alignItems: 'center', justifyContent: 'center', gap: 6 },
   hudIcon: { fontSize: 18 },
@@ -288,7 +342,7 @@ const styles = StyleSheet.create({
   bossText: { color: '#ffffffbb', fontWeight: 'bold', textAlign: 'center' },
   progressBox: { backgroundColor: '#00000044', borderWidth: 1, borderColor: '#00f0ff55', borderRadius: 12, padding: 12, gap: 5 },
   progressLine: { color: '#ffffff', fontWeight: 'bold' },
-  duelContent: { flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 14, paddingBottom: 10, width: '100%' },
+  duelContent: { flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 14, paddingBottom: 10, width: '100%', zIndex: 1, elevation: 1 },
   shopRow: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   runUpgradeButton: {
     flexGrow: 1,
@@ -314,4 +368,9 @@ const styles = StyleSheet.create({
   resultTitle: { fontSize: 30, fontWeight: 'bold', textAlign: 'center' },
   resultSubtitle: { color: '#ffffffcc', textAlign: 'center', fontWeight: 'bold' },
   rewardLine: { color: '#ffd700', fontWeight: 'bold', textAlign: 'center' },
+  choiceCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#ffffff12', borderWidth: 1.5, borderRadius: 12, padding: 12 },
+  choiceIcon: { fontSize: 28 },
+  choiceTextBox: { flex: 1 },
+  choiceTitle: { color: '#ffffff', fontWeight: 'bold' },
+  choiceText: { color: '#ffffffaa', fontSize: 12, marginTop: 2 },
 });

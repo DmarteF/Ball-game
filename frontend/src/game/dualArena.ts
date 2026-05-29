@@ -1,4 +1,5 @@
 import { Ring, RingConfig, clampBallSpeed, clampRingSpacing, createRings, findClosestCollidingRing, findPerfectEscapeRing, reflectBallOffRing, updateRings } from './rings';
+import { GAMEPLAY_TUNING } from './balance';
 
 export interface DualArenaState {
   id: string;
@@ -25,6 +26,7 @@ export interface DualArenaState {
   lastCollisionAt: number;
   lastCollisionRingId?: string;
   lastAiChoice?: 'ATK' | 'Gold';
+  runUpgrades: Record<string, number>;
 }
 
 export interface ArenaTickResult {
@@ -46,7 +48,7 @@ export const createArenaState = (params: {
   damageMultiplier?: number;
 }) => {
   const center = params.size / 2;
-  const speed = 2.55 * (params.speedMultiplier ?? 1);
+  const speed = (params.ringConfig.count > 14 ? GAMEPLAY_TUNING.league.arenaBallSpeed : GAMEPLAY_TUNING.boss.arenaBallSpeed) * (params.speedMultiplier ?? 1);
   return {
     id: params.id,
     name: params.name,
@@ -70,6 +72,7 @@ export const createArenaState = (params: {
     finished: false,
     lastSolidBreak: 0,
     lastCollisionAt: 0,
+    runUpgrades: {},
   } satisfies DualArenaState;
 };
 
@@ -149,7 +152,16 @@ const reflectAndSeparateBall = (state: DualArenaState, ring: Ring, previousDistF
 
 export const tickArenaPhysics = (
   state: DualArenaState,
-  options: { isAi?: boolean; opponentProgress?: number; shrinkMultiplier?: number; damageMultiplier?: number } = {}
+  options: {
+    isAi?: boolean;
+    opponentProgress?: number;
+    shrinkMultiplier?: number;
+    damageMultiplier?: number;
+    coinMultiplier?: number;
+    xpMultiplier?: number;
+    speedMultiplier?: number;
+    onLevelUp?: boolean;
+  } = {}
 ): ArenaTickResult => {
   if (state.finished || state.crushed) return { state, brokeRing: false, brokeSolid: false };
   const now = Date.now();
@@ -157,8 +169,8 @@ export const tickArenaPhysics = (
   const previousDist = Math.hypot(state.ball.x - state.center, state.ball.y - state.center);
   let next: DualArenaState = {
     ...state,
-    ball: { x: state.ball.x + state.velocity.x, y: state.ball.y + state.velocity.y },
-    velocity: { ...state.velocity },
+    ball: { x: state.ball.x + state.velocity.x * (options.speedMultiplier ?? 1), y: state.ball.y + state.velocity.y * (options.speedMultiplier ?? 1) },
+    velocity: clampBallSpeed({ ...state.velocity }, 2.05 * (options.speedMultiplier ?? 1), 5.2),
     rings: updateRings(state.rings, shrink, now),
     aiTimer: state.aiTimer + 1,
     lastSolidBreak: Math.max(0, state.lastSolidBreak - 1),
@@ -192,8 +204,8 @@ export const tickArenaPhysics = (
 
   if (perfectEscape.ring && perfectEscape.index >= 0) {
     next.rings[perfectEscape.index] = { ...perfectEscape.ring, status: 'cleared', hp: 0 };
-    next.coins += Math.max(2, Math.floor(5 * (1 + next.gold * 0.18)));
-    next.xp += 12;
+    next.coins += Math.max(2, Math.floor(5 * (1 + next.gold * 0.18) * (options.coinMultiplier ?? 1)));
+    next.xp += Math.floor(12 * (options.xpMultiplier ?? 1));
     next.combo += 1;
     brokeRing = true;
   }
@@ -206,8 +218,8 @@ export const tickArenaPhysics = (
     const hp = canDamage ? Math.max(0, ring.hp - damage) : ring.hp;
     brokeRing = hp <= 0;
     brokeSolid = brokeRing && ring.type === 'solid';
-    const xpGain = brokeRing ? (ring.type === 'solid' ? 18 : 9) : 1;
-    const coinGain = brokeRing ? (ring.type === 'solid' ? 8 : 4) : 1;
+    const xpGain = Math.floor((brokeRing ? (ring.type === 'solid' ? 18 : 9) : 1) * (options.xpMultiplier ?? 1));
+    const coinGain = Math.floor((brokeRing ? (ring.type === 'solid' ? 8 : 4) : 1) * (options.coinMultiplier ?? 1));
     next.rings[collision.index] = { ...ring, hp, status: hp <= 0 ? 'broken' : 'active' };
     if (canDamage) {
       next.coins += Math.max(1, Math.floor(coinGain * (1 + next.gold * 0.18)));
@@ -220,8 +232,6 @@ export const tickArenaPhysics = (
     if (canDamage && next.xp >= xpNeeded(next.level)) {
       next.xp -= xpNeeded(next.level);
       next.level += 1;
-      next.atk += Math.random() < 0.65 ? 1 : 0;
-      next.gold += Math.random() < 0.35 ? 1 : 0;
     }
     const bounced = reflectAndSeparateBall(next, ring, previousDist);
     next.ball = bounced.ball;
@@ -241,4 +251,21 @@ export const tickArenaPhysics = (
   }
 
   return { state: next, brokeRing, brokeSolid };
+};
+
+export const applyArenaRunUpgrade = (state: DualArenaState, upgradeId: string): DualArenaState => {
+  const runUpgrades = { ...state.runUpgrades, [upgradeId]: (state.runUpgrades[upgradeId] || 0) + 1 };
+  const atkBonus = ['damage', 'critical', 'laserCut', 'chainBreak', 'shockwave'].includes(upgradeId) ? 1 : 0;
+  const goldBonus = ['coinBoost', 'xpBoost', 'perfectChance'].includes(upgradeId) ? 1 : 0;
+  const velocity = upgradeId === 'speed' || upgradeId === 'ricochet'
+    ? clampBallSpeed({ x: state.velocity.x * 1.08, y: state.velocity.y * 1.08 }, 2.1, 5.4)
+    : state.velocity;
+
+  return {
+    ...state,
+    atk: state.atk + atkBonus,
+    gold: state.gold + goldBonus,
+    velocity,
+    runUpgrades,
+  };
 };
