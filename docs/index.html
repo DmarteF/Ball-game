@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neon Idle Escape</title>
+  <meta name="description" content="Neon Idle Escape é um jogo arcade neon com anéis, upgrades, skins, boss, liga e modo infinito." />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070719;
+      --bg2: #17032e;
+      --card: rgba(255, 255, 255, 0.08);
+      --line: rgba(0, 240, 255, 0.35);
+      --cyan: #00f0ff;
+      --pink: #ff4fd8;
+      --gold: #ffd86b;
+      --text: #f6fbff;
+      --muted: #b8c7d9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(0, 240, 255, .18), transparent 30%),
+        radial-gradient(circle at 80% 20%, rgba(255, 79, 216, .18), transparent 34%),
+        linear-gradient(135deg, var(--bg), var(--bg2));
+      color: var(--text);
+    }
+    header, main, footer { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 42px 0 24px; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 900; letter-spacing: .4px; }
+    .logo {
+      width: 48px; height: 48px; border-radius: 16px;
+      background: linear-gradient(135deg, var(--cyan), var(--pink));
+      box-shadow: 0 0 26px rgba(0,240,255,.45);
+      display: grid; place-items: center; color: #071123; font-size: 26px;
+    }
+    nav a { color: var(--muted); text-decoration: none; margin-left: 18px; font-weight: 700; }
+    nav a:hover { color: var(--cyan); }
+    .hero {
+      padding: 58px 0 36px;
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 30px;
+      align-items: center;
+    }
+    h1 { font-size: clamp(42px, 7vw, 78px); line-height: .92; margin: 0 0 18px; text-shadow: 0 0 22px rgba(0,240,255,.35); }
+    .lead { font-size: clamp(18px, 2.4vw, 24px); line-height: 1.5; color: var(--muted); margin: 0 0 28px; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 14px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line);
+      color: var(--text); text-decoration: none; font-weight: 900;
+      background: rgba(255,255,255,.08); box-shadow: 0 0 20px rgba(0,240,255,.12);
+    }
+    .btn.primary { background: linear-gradient(135deg, rgba(0,240,255,.95), rgba(139,92,246,.95)); color: #06111c; }
+    .orb {
+      aspect-ratio: 1; border-radius: 999px;
+      border: 2px solid rgba(255,255,255,.18);
+      background:
+        repeating-radial-gradient(circle, transparent 0 26px, rgba(0,240,255,.22) 27px 30px, transparent 31px 55px),
+        radial-gradient(circle, rgba(255,79,216,.22), rgba(0,0,0,.2) 58%, rgba(0,0,0,.42));
+      box-shadow: 0 0 60px rgba(0,240,255,.22), inset 0 0 60px rgba(255,79,216,.16);
+      display: grid; place-items: center;
+      min-height: 300px;
+    }
+    .ball { width: 98px; height: 98px; border-radius: 999px; background: linear-gradient(135deg, var(--gold), var(--cyan)); box-shadow: 0 0 34px rgba(255,216,107,.65); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 26px 0 46px; }
+    .card { padding: 20px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: var(--card); backdrop-filter: blur(8px); }
+    .card h2 { margin: 0 0 8px; font-size: 20px; color: var(--cyan); }
+    .card p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .notice { border-left: 4px solid var(--gold); padding: 16px 18px; background: rgba(255,216,107,.08); border-radius: 14px; color: var(--muted); margin-bottom: 38px; }
+    footer { padding: 28px 0 42px; color: var(--muted); border-top: 1px solid rgba(255,255,255,.1); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    footer a { color: var(--cyan); }
+    @media (max-width: 820px) {
+      header { align-items: flex-start; flex-direction: column; }
+      nav a { margin-left: 0; margin-right: 16px; }
+      .hero { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><div class="logo">●</div><div>Neon Idle Escape</div></div>
+    <nav>
+      <a href="#recursos">Recursos</a>
+      <a href="privacy-policy.html">Privacidade</a>
+      <a href="mailto:filhosamuel679@gmail.com">Suporte</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <h1>Arcade neon, upgrades e skins.</h1>
+        <p class="lead">Controle uma bolinha, atravesse e quebre anéis, evolua sua conta, desbloqueie skins especiais e enfrente desafios em modos Solo, Boss, Liga Neon e Infinito.</p>
+        <div class="buttons">
+          <a class="btn primary" href="mailto:filhosamuel679@gmail.com">Contato e suporte</a>
+          <a class="btn" href="privacy-policy.html">Política de Privacidade</a>
+        </div>
+      </div>
+      <div class="orb" aria-label="Arte neon do jogo"><div class="ball"></div></div>
+    </section>
+
+    <section id="recursos" class="grid">
+      <div class="card"><h2>Gameplay arcade</h2><p>Quebre anéis, faça combos, acerte perfects e avance em fases cada vez mais intensas.</p></div>
+      <div class="card"><h2>Upgrades e progressão</h2><p>Evolua dano, velocidade, ganhos, crítico, XP e outros efeitos para melhorar suas partidas.</p></div>
+      <div class="card"><h2>Skins e recompensas</h2><p>Desbloqueie skins neon, baús, conquistas e recompensas especiais ao jogar.</p></div>
+      <div class="card"><h2>Modo Boss</h2><p>Enfrente batalhas especiais contra chefes com padrões e desafios próprios.</p></div>
+      <div class="card"><h2>Liga Neon</h2><p>Dispute progresso e recompensas em uma experiência competitiva arcade.</p></div>
+      <div class="card"><h2>Modo Infinito</h2><p>Sobreviva pelo maior tempo possível em uma run progressiva com dificuldade crescente.</p></div>
+    </section>
+
+    <div class="notice">
+      Neon Idle Escape é gratuito e pode oferecer anúncios premiados opcionais e compras dentro do aplicativo para itens digitais, como diamantes, moedas, pacotes ou benefícios do jogo.
+    </div>
+  </main>
+
+  <footer>
+    <span>© 2026 Samuel Silva — Neon Idle Escape</span>
+    <span><a href="privacy-policy.html">Política de Privacidade</a> · <a href="mailto:filhosamuel679@gmail.com">filhosamuel679@gmail.com</a></span>
+  </footer>
+</body>
+</html>
