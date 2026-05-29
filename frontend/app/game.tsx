@@ -7,13 +7,13 @@ import Svg, { Circle } from 'react-native-svg';
 import { useGame } from '@/src/contexts/GameContext';
 import {
   createRings,
-  updateRing,
+  clampRingSpacing,
   findClosestCollidingRing,
   findPerfectEscapeRing,
-  reflectBallOffRing,
   clampBallSpeed,
   checkRingCollision,
   Ring,
+  updateRings,
 } from '@/src/game/rings';
 import { getRandomUpgrades, Upgrade, getRarityColor, getRarityName } from '@/src/game/upgrades';
 import { getSkinById } from '@/src/game/skins';
@@ -31,7 +31,7 @@ const CENTER_Y = GAME_SIZE / 2;
 const BALL_RADIUS = 10;
 const OUTER_RADIUS = GAME_SIZE / 2 - 8;
 const INNER_RADIUS = 35;
-const INITIAL_BALL_SPEED = 2.05;
+const INITIAL_BALL_SPEED = 2.35;
 const INITIAL_RING_ROTATION_SPEED = 0.006;
 const INITIAL_RING_SHRINK_SPEED = 0.026;
 const XP_BASE_REQUIREMENT = 150;
@@ -148,6 +148,7 @@ export default function GameScreen() {
   const shakeX = useSharedValue(0);
   const shakeY = useSharedValue(0);
   const [, setRenderTick] = useState(0);
+  const renderFrameRef = useRef(0);
   
   const gameLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const xpToNextLevel = Math.floor(XP_BASE_REQUIREMENT * Math.pow(level, 1.55));
@@ -436,7 +437,7 @@ export default function GameScreen() {
       comboRef.current = 0;
       setCombo(0);
     }
-    let updatedRings = ringsRef.current.map(ring => updateRing(ring, deltaTime, now));
+    let updatedRings = updateRings(ringsRef.current, deltaTime, now);
 
     const perfectEscape = findPerfectEscapeRing(
       prevDist,
@@ -477,12 +478,43 @@ export default function GameScreen() {
       CENTER_Y
     );
 
-    const canHit = now - lastHitTimeRef.current > 80;
+    const canHit = now - lastHitTimeRef.current > 90;
 
-    if (closestRing && index >= 0 && isInSolidPart && canHit) {
+    if (closestRing && index >= 0 && isInSolidPart) {
+      const hitRing = updatedRings[index] || closestRing;
+      const dx = ballPosRef.current.x - CENTER_X;
+      const dy = ballPosRef.current.y - CENTER_Y;
+      const distFromCenter = Math.sqrt(dx * dx + dy * dy) || 1;
+      const radialX = dx / distFromCenter;
+      const radialY = dy / distFromCenter;
+      const startedOutside = prevDist >= hitRing.radius;
+      const normalX = startedOutside ? radialX : -radialX;
+      const normalY = startedOutside ? radialY : -radialY;
+      const safeDistance = startedOutside
+        ? hitRing.radius + hitRing.thickness / 2 + BALL_RADIUS + 2.6
+        : Math.max(0, hitRing.radius - hitRing.thickness / 2 - BALL_RADIUS - 2.6);
+
+      ballPosRef.current.x = CENTER_X + radialX * Math.min(maxBallDistance, safeDistance);
+      ballPosRef.current.y = CENTER_Y + radialY * Math.min(maxBallDistance, safeDistance);
+      ballX.value = ballPosRef.current.x;
+      ballY.value = ballPosRef.current.y;
+
+      const dot = velocityRef.current.x * normalX + velocityRef.current.y * normalY;
+      if (dot < 0) {
+        velocityRef.current.x -= 2 * dot * normalX;
+        velocityRef.current.y -= 2 * dot * normalY;
+        const speedKick = canHit ? 1.04 : 1;
+        velocityRef.current = clampBallSpeed(
+          { x: velocityRef.current.x * speedKick, y: velocityRef.current.y * speedKick },
+          targetSpeed * 0.88,
+          targetSpeed * 1.55
+        );
+      }
+
+      if (canHit) {
       lastHitTimeRef.current = now;
 
-      const ghostPass = closestRing.type !== 'solid' && skinPassive.type === 'phase_solid' && Math.random() < (skinPassive.chance || 0);
+      const ghostPass = hitRing.type !== 'solid' && skinPassive.type === 'phase_solid' && Math.random() < (skinPassive.chance || 0);
       if (ghostPass) {
         updatedRings[index] = { ...updatedRings[index], status: 'cleared', hp: 0 };
         setRunRewards(prev => ({ ...prev, perfectEscapes: prev.perfectEscapes + 1 }));
@@ -496,8 +528,8 @@ export default function GameScreen() {
       const megaCrit = skinPassive.type === 'mega_crit' && Math.random() < (skinPassive.chance || 0);
       const isCrit = megaCrit || Math.random() * 100 < critChance;
       const damage = baseDamage * (1 + (currentUpgrades['laserCut'] && Math.random() < 0.08 ? currentUpgrades['laserCut'] * 0.5 : 0)) * (isCrit ? (megaCrit ? skinPassive.value : stats.critMultiplier + (currentUpgrades['criticalOverload'] || 0) * 0.15) : 1);
-      const wasAlive = closestRing.hp > 0;
-      const newHP = Math.max(0, closestRing.hp - damage);
+      const wasAlive = hitRing.hp > 0;
+      const newHP = Math.max(0, hitRing.hp - damage);
       
       updatedRings[index] = { ...updatedRings[index], hp: newHP, status: newHP <= 0 ? 'broken' as const : 'active' as const };
 
@@ -506,35 +538,12 @@ export default function GameScreen() {
       playSound(isCrit ? 'hitHeavy' : 'hitLight', settings.sound);
       if (isCrit) setRunRewards(prev => ({ ...prev, criticals: prev.criticals + 1 }));
       
-      const reflection = reflectBallOffRing(
-        ballPosRef.current.x,
-        ballPosRef.current.y,
-        velocityRef.current.x,
-        velocityRef.current.y,
-        CENTER_X,
-        CENTER_Y,
-        0.08
-      );
-      velocityRef.current.x = reflection.newVelX;
-      velocityRef.current.y = reflection.newVelY;
-
       if (skinPassive.type === 'slime_bounce' && Math.random() < (skinPassive.chance || 0)) {
         velocityRef.current.x *= 1 + skinPassive.value;
         velocityRef.current.y *= 1 + skinPassive.value;
         addFloatingNumber('Slime!', ballPosRef.current.x, ballPosRef.current.y, false, '#3dff8f');
       }
       
-      const dx = ballPosRef.current.x - CENTER_X;
-      const dy = ballPosRef.current.y - CENTER_Y;
-      const distFromCenter = Math.sqrt(dx * dx + dy * dy) || 1;
-      const nx = dx / distFromCenter;
-      const ny = dy / distFromCenter;
-      const safeDistance = closestRing.radius + (distFromCenter > closestRing.radius ? 1 : -1) * (closestRing.thickness / 2 + BALL_RADIUS + 2);
-      ballPosRef.current.x = CENTER_X + nx * safeDistance;
-      ballPosRef.current.y = CENTER_Y + ny * safeDistance;
-      ballX.value = ballPosRef.current.x;
-      ballY.value = ballPosRef.current.y;
-
       addFloatingNumber(damage, ballPosRef.current.x, ballPosRef.current.y, isCrit);
       if (wasAlive && newHP <= 0) {
         addFloatingNumber('Break!', ballPosRef.current.x + 8, ballPosRef.current.y - 8, false, '#ffd700');
@@ -542,8 +551,8 @@ export default function GameScreen() {
         registerCombo(ballPosRef.current.x, ballPosRef.current.y, 'Break');
         triggerImpact('break');
         playSound('ringBreak', settings.sound);
-        awardCoins(Math.max(6, Math.floor((closestRing.type === 'solid' ? 18 : 12) * coinMultiplier)));
-        awardXp(Math.floor(((closestRing.type === 'solid' ? 16 : 8) + Math.random() * (closestRing.type === 'solid' ? 12 : 7)) * xpMultiplier));
+        awardCoins(Math.max(6, Math.floor((hitRing.type === 'solid' ? 18 : 12) * coinMultiplier)));
+        awardXp(Math.floor(((hitRing.type === 'solid' ? 16 : 8) + Math.random() * (hitRing.type === 'solid' ? 12 : 7)) * xpMultiplier));
         if (currentUpgrades['chainBreak']) {
           updatedRings = updatedRings.map((ring, ringIndex) => {
             if (ringIndex <= index || ring.status !== 'active') return ring;
@@ -575,8 +584,10 @@ export default function GameScreen() {
       const totalDamage = recentHitDpsRef.current.reduce((sum, d) => sum + d, 0);
       setDps(Math.floor(totalDamage));
       }
+      }
     }
 
+    updatedRings = clampRingSpacing(updatedRings);
     ringsRef.current = updatedRings;
 
     const activeRings = updatedRings.filter(r => r.status === 'active' && r.hp > 0);
@@ -596,7 +607,8 @@ export default function GameScreen() {
 
     previousDistanceRef.current = nextDist;
 
-    setRenderTick(t => (t + 1) % 1000);
+    renderFrameRef.current = (renderFrameRef.current + 1) % 2;
+    if (renderFrameRef.current === 0) setRenderTick(t => (t + 1) % 1000);
   };
 
   const applySkinImpact = (rings: Ring[], hitIndex: number, damage: number, now: number) => {
@@ -1012,23 +1024,12 @@ export default function GameScreen() {
                   />
                 );
               })}
-              {protectionSeconds > 0 && (
-                <Circle
-                  cx={ballPosRef.current.x}
-                  cy={ballPosRef.current.y}
-                  r={BALL_RADIUS + 12}
-                  stroke="#00ff88"
-                  strokeWidth={2}
-                  fill="none"
-                  opacity={0.75}
-                />
-              )}
             </Svg>
           )}
 
           {/* Ball */}
           <Animated.View style={[styles.ball, ballAnimatedStyle]}>
-            <View style={[styles.skinTrail, { borderColor: equippedSkin.secondaryColor }]} />
+            <View style={[styles.skinTrail, { backgroundColor: equippedSkin.secondaryColor }]} />
             <View style={[styles.ballGlow, protectionSeconds > 0 && styles.ballShield, { shadowColor: equippedSkin.primaryColor }]}>
               <LinearGradient
                 colors={['#ffffff', equippedSkin.primaryColor, equippedSkin.secondaryColor]}
@@ -1420,8 +1421,7 @@ const styles = StyleSheet.create({
     width: BALL_RADIUS * 2 + 14,
     height: BALL_RADIUS * 2 + 14,
     borderRadius: BALL_RADIUS + 7,
-    borderWidth: 1,
-    opacity: 0.45,
+    opacity: 0.18,
   },
   ballGlow: {
     width: '100%',

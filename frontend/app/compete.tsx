@@ -10,8 +10,8 @@ import { RewardGrant, describeReward } from '@/src/game/retention';
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 
-const { width } = Dimensions.get('window');
-const ARENA_SIZE = Math.min(width - 42, 214);
+const { width, height } = Dimensions.get('window');
+const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
 
 type Result = { won: boolean; trophiesDelta: number; newPosition: number; rewards: RewardGrant[] };
 
@@ -154,7 +154,7 @@ export default function CompeteScreen() {
   };
 
   return (
-    <LinearGradient colors={['#08121d', '#1a0a2e', '#16003b']} style={styles.container}>
+    <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       {!playerArena || !rivalArena ? (
         <View style={styles.header}>
           <NeonButton title="← LIGA" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} style={styles.backButton} />
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   backButton: { alignSelf: 'flex-start', minWidth: 100 },
   title: { color: '#ffffff', fontSize: 28, fontWeight: 'bold', marginTop: 8 },
   subtitle: { color: '#ffffff99', fontWeight: 'bold', marginTop: 3 },
-  arenas: { flex: 1, paddingHorizontal: 14, paddingBottom: 10, gap: 8, justifyContent: 'space-evenly' },
+  arenas: { flex: 1, paddingHorizontal: 14, paddingBottom: 10, gap: 8, justifyContent: 'space-evenly', width: '100%' },
   shopRow: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   runUpgradeButton: {
     flexGrow: 1,

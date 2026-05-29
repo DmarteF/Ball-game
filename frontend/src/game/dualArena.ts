@@ -1,4 +1,4 @@
-import { Ring, RingConfig, clampBallSpeed, createRings, findClosestCollidingRing, findPerfectEscapeRing, reflectBallOffRing, updateRing } from './rings';
+import { Ring, RingConfig, clampBallSpeed, clampRingSpacing, createRings, findClosestCollidingRing, findPerfectEscapeRing, reflectBallOffRing, updateRings } from './rings';
 
 export interface DualArenaState {
   id: string;
@@ -23,6 +23,7 @@ export interface DualArenaState {
   finished: boolean;
   lastSolidBreak: number;
   lastCollisionAt: number;
+  lastCollisionRingId?: string;
   lastAiChoice?: 'ATK' | 'Gold';
 }
 
@@ -45,7 +46,7 @@ export const createArenaState = (params: {
   damageMultiplier?: number;
 }) => {
   const center = params.size / 2;
-  const speed = 2.25 * (params.speedMultiplier ?? 1);
+  const speed = 2.55 * (params.speedMultiplier ?? 1);
   return {
     id: params.id,
     name: params.name,
@@ -124,6 +125,28 @@ const separateBallFromRing = (state: DualArenaState, ring: Ring, previousDistFro
   };
 };
 
+const reflectAndSeparateBall = (state: DualArenaState, ring: Ring, previousDistFromCenter: number) => {
+  const ball = separateBallFromRing(state, ring, previousDistFromCenter);
+  const dx = ball.x - state.center;
+  const dy = ball.y - state.center;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const side = Number.isFinite(previousDistFromCenter) && previousDistFromCenter < ring.radius ? -1 : 1;
+  const nx = (dx / dist) * side;
+  const ny = (dy / dist) * side;
+  const dot = state.velocity.x * nx + state.velocity.y * ny;
+  const reflected = dot < 0
+    ? {
+        x: state.velocity.x - 2 * dot * nx,
+        y: state.velocity.y - 2 * dot * ny,
+      }
+    : state.velocity;
+
+  return {
+    ball,
+    velocity: clampBallSpeed({ x: reflected.x * 1.04, y: reflected.y * 1.04 }, 2.15, 5.1),
+  };
+};
+
 export const tickArenaPhysics = (
   state: DualArenaState,
   options: { isAi?: boolean; opponentProgress?: number; shrinkMultiplier?: number; damageMultiplier?: number } = {}
@@ -136,7 +159,7 @@ export const tickArenaPhysics = (
     ...state,
     ball: { x: state.ball.x + state.velocity.x, y: state.ball.y + state.velocity.y },
     velocity: { ...state.velocity },
-    rings: state.rings.map(ring => updateRing(ring, shrink, now)),
+    rings: updateRings(state.rings, shrink, now),
     aiTimer: state.aiTimer + 1,
     lastSolidBreak: Math.max(0, state.lastSolidBreak - 1),
   };
@@ -177,7 +200,7 @@ export const tickArenaPhysics = (
 
   const collision = findClosestCollidingRing(next.ball.x, next.ball.y, next.ballRadius, next.rings, next.center, next.center);
   if (collision.ring && collision.index >= 0 && collision.isInSolidPart) {
-    const canDamage = now - next.lastCollisionAt > 70;
+    const canDamage = collision.ring.id !== next.lastCollisionRingId || now - next.lastCollisionAt > 90;
     const damage = (3.8 + next.atk * 1.45) * (options.damageMultiplier ?? 1);
     const ring = collision.ring;
     const hp = canDamage ? Math.max(0, ring.hp - damage) : ring.hp;
@@ -192,6 +215,7 @@ export const tickArenaPhysics = (
       next.combo = brokeRing ? next.combo + 1 : next.combo;
       next.lastSolidBreak = brokeSolid ? 24 : next.lastSolidBreak;
       next.lastCollisionAt = now;
+      next.lastCollisionRingId = ring.id;
     }
     if (canDamage && next.xp >= xpNeeded(next.level)) {
       next.xp -= xpNeeded(next.level);
@@ -199,10 +223,12 @@ export const tickArenaPhysics = (
       next.atk += Math.random() < 0.65 ? 1 : 0;
       next.gold += Math.random() < 0.35 ? 1 : 0;
     }
-    next.ball = separateBallFromRing(next, ring, previousDist);
-    const reflected = reflectBallOffRing(next.ball.x, next.ball.y, next.velocity.x, next.velocity.y, next.center, next.center, 0.18);
-    next.velocity = clampBallSpeed({ x: reflected.newVelX * 1.035, y: reflected.newVelY * 1.035 }, 1.9, 4.8);
+    const bounced = reflectAndSeparateBall(next, ring, previousDist);
+    next.ball = bounced.ball;
+    next.velocity = bounced.velocity;
   }
+
+  next.rings = clampRingSpacing(next.rings);
 
   const activeRings = next.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
   next.finished = activeRings.length === 0;

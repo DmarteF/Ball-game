@@ -63,7 +63,7 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
             },
           ]}
         >
-          <View style={[styles.skinTrail, { borderColor: arena.skinColor }]} />
+          <View style={[styles.skinTrail, { backgroundColor: arena.skinColor }]} />
           <View style={[styles.ballGlow, { shadowColor: arena.skinColor, borderRadius: arena.ballRadius }]}>
             <LinearGradient colors={['#ffffff', arena.skinColor, accent]} style={styles.ballGradient}>
               <Text style={styles.ballIcon}>{arena.skinIcon}</Text>
@@ -115,8 +115,7 @@ const styles = StyleSheet.create({
     right: -7,
     bottom: -7,
     borderRadius: 999,
-    borderWidth: 1,
-    opacity: 0.45,
+    opacity: 0.18,
   },
   ballGlow: {
     width: '100%',

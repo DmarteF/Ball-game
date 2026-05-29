@@ -20,8 +20,8 @@ import { buyArenaUpgrade, createArenaState, DualArenaState, getArenaProgress, ge
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 
-const { width } = Dimensions.get('window');
-const ARENA_SIZE = Math.min(width - 42, 214);
+const { width, height } = Dimensions.get('window');
+const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
 
 type DuelState = 'menu' | 'playing' | 'paused' | 'result';
 
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   bossText: { color: '#ffffffbb', fontWeight: 'bold', textAlign: 'center' },
   progressBox: { backgroundColor: '#00000044', borderWidth: 1, borderColor: '#00f0ff55', borderRadius: 12, padding: 12, gap: 5 },
   progressLine: { color: '#ffffff', fontWeight: 'bold' },
-  duelContent: { flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 14, paddingBottom: 10 },
+  duelContent: { flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 14, paddingBottom: 10, width: '100%' },
   shopRow: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   runUpgradeButton: {
     flexGrow: 1,

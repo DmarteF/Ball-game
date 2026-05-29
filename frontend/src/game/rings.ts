@@ -37,6 +37,7 @@ export interface RingConfig {
 }
 
 const TWO_PI = Math.PI * 2;
+export const MIN_RING_GAP = 5;
 
 export const normalizeAngle = (angle: number) => ((angle % TWO_PI) + TWO_PI) % TWO_PI;
 
@@ -136,6 +137,25 @@ export const updateRing = (ring: Ring, deltaTime = 1, now = Date.now()): Ring =>
     status: hp <= 0 ? 'broken' : ring.status,
   };
 };
+
+export const clampRingSpacing = (rings: Ring[], minGap = MIN_RING_GAP): Ring[] => {
+  let innerActive: Ring | null = null;
+
+  return rings.map(ring => {
+    if (!ring || ring.status !== 'active' || ring.hp <= 0 || !Number.isFinite(ring.radius)) return ring;
+
+    const minRadiusFromInner = innerActive
+      ? innerActive.radius + innerActive.thickness / 2 + ring.thickness / 2 + minGap
+      : ring.minRadius;
+    const minRadius = Math.max(ring.minRadius, minRadiusFromInner);
+    const clampedRing = ring.radius < minRadius ? { ...ring, radius: minRadius } : ring;
+    innerActive = clampedRing;
+    return clampedRing;
+  });
+};
+
+export const updateRings = (rings: Ring[], deltaTime = 1, now = Date.now(), minGap = MIN_RING_GAP): Ring[] =>
+  clampRingSpacing(rings.map(ring => updateRing(ring, deltaTime, now)), minGap);
 
 export const checkRingCollision = (
   ballX: number,
