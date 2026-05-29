@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { DualArenaState, getArenaProgress } from '@/src/game/dualArena';
 import { SkinIcon } from '@/src/components/SkinIcon';
+import { getRingVisualColor } from '@/src/game/rings';
 
 interface DualArenaViewProps {
   arena: DualArenaState;
@@ -15,6 +16,7 @@ interface DualArenaViewProps {
 export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProps) {
   const progress = getArenaProgress(arena);
   const active = arena.rings.filter(ring => ring.status === 'active' && ring.hp > 0);
+  const now = Date.now();
 
   return (
     <View style={[styles.panel, { borderColor: leader ? '#ffd700' : accent + '88' }]}>
@@ -42,7 +44,7 @@ export function DualArenaView({ arena, meta, accent, leader }: DualArenaViewProp
                 cx={arena.center}
                 cy={arena.center}
                 r={ring.radius}
-                stroke={ring.color}
+                stroke={getRingVisualColor(ring, now)}
                 strokeWidth={ring.thickness}
                 fill="none"
                 opacity={opacity}

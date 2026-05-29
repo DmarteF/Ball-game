@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { UiIcon } from '@/src/components/UiIcon';
+import { UiIconKey } from '@/src/game/uiIcons';
 
 interface AdModalProps {
   visible: boolean;
@@ -85,6 +87,24 @@ export const AdModal: React.FC<AdModalProps> = ({
     }
   };
 
+  const getRewardIconKey = (): UiIconKey => {
+    switch (rewardType) {
+      case 'coins':
+        return 'ui_coin';
+      case 'gems':
+        return 'ui_gem';
+      case 'key':
+        return 'ui_key';
+      case 'chest':
+        return 'ui_chest_common';
+      case 'double':
+        return 'ui_daily_reward';
+      case 'revive':
+      default:
+        return 'ui_effect';
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -101,7 +121,7 @@ export const AdModal: React.FC<AdModalProps> = ({
                 colors={['#1a0a2e', '#16003b']}
                 style={styles.modalContent}
               >
-                <Text style={styles.icon}>{getRewardIcon()}</Text>
+                <UiIcon iconKey={getRewardIconKey()} fallback={getRewardIcon()} size={58} style={styles.icon} />
                 <Text style={styles.title}>Assistir Anúncio?</Text>
                 <Text style={styles.description}>
                   Assista um anúncio de 5 segundos para ganhar:
@@ -116,7 +136,8 @@ export const AdModal: React.FC<AdModalProps> = ({
                     colors={['#00f0ff', '#0088ff']}
                     style={styles.buttonGradient}
                   >
-                    <Text style={styles.buttonText}>📺 ASSISTIR ANÚNCIO</Text>
+                    <UiIcon iconKey="ui_ad" fallback="📺" size={18} />
+                    <Text style={styles.buttonText}>ASSISTIR ANÚNCIO</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
@@ -188,7 +209,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   icon: {
-    fontSize: 64,
     marginBottom: 20,
   },
   title: {
@@ -219,8 +239,10 @@ const styles = StyleSheet.create({
   },
   buttonGradient: {
     flex: 1,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
   },
   buttonText: {
     fontSize: 18,

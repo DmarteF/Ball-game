@@ -12,6 +12,9 @@ import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
 import { clampRingSpacing, Ring } from '@/src/game/rings';
+import { UiIcon } from '@/src/components/UiIcon';
+import { UpgradeIcon } from '@/src/components/UpgradeIcon';
+import { MuteButton } from '@/src/components/MuteButton';
 
 const { width, height } = Dimensions.get('window');
 const ARENA_SIZE = Math.max(220, Math.min(width - 24, height - GAMEPLAY_TUNING.infinite.safeHudReserve));
@@ -171,6 +174,10 @@ export default function InfiniteScreen() {
         if (tick.brokeRing) {
           ringsBrokenRef.current += 1;
           setRingsBroken(ringsBrokenRef.current);
+          playSound(tick.brokeSolid ? 'hitHeavy' : 'ringBreak', game.settings.sound);
+        }
+        if (tick.skinEffectLabel) {
+          playSound('combo', game.settings.sound);
         }
         if (result.level > beforeLevel && choices.length === 0) {
           setChoiceMode('level');
@@ -261,7 +268,7 @@ export default function InfiniteScreen() {
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       {!infiniteUnlocked ? (
         <View style={styles.lockedScreen}>
-          <Text style={styles.lockedIcon}>∞</Text>
+          <UiIcon iconKey="ui_infinite" fallback="∞" size={72} />
           <Text style={styles.modalTitle}>MODO INFINITO BLOQUEADO</Text>
           <Text style={styles.resultText}>Complete a Fase 5 para desbloquear.</Text>
           <NeonButton title="VOLTAR PARA JOGAR" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/phase-select' as any)} />
@@ -270,13 +277,14 @@ export default function InfiniteScreen() {
       <>
       <View style={styles.hud}>
         <View style={styles.hudRow}>
-          <Text style={styles.badge}>∞ {mm}:{ss}</Text>
+          <View style={styles.badgeRow}><UiIcon iconKey="ui_infinite" fallback="∞" size={18} /><Text style={styles.badgeText}>{mm}:{ss}</Text></View>
           <Text style={styles.badge}>Onda {wave}</Text>
+          <MuteButton size={38} />
           <TouchableOpacity style={styles.pauseButton} onPress={() => setPaused(value => !value)}><Text style={styles.pauseText}>{paused ? '▶' : '⏸'}</Text></TouchableOpacity>
         </View>
         <View style={styles.hudRow}>
-          <Text style={styles.badge}>💰 {arena?.coins || 0}</Text>
-          <Text style={styles.badge}>⭐ Lv.{arena?.level || 1}</Text>
+          <View style={styles.badgeRow}><UiIcon iconKey="ui_coin" fallback="💰" size={18} /><Text style={styles.badgeText}>{arena?.coins || 0}</Text></View>
+          <View style={styles.badgeRow}><UiIcon iconKey="ui_achievements" fallback="⭐" size={18} /><Text style={styles.badgeText}>Lv.{arena?.level || 1}</Text></View>
           <TouchableOpacity style={styles.exitButton} onPress={exit}><Text style={styles.exitText}>SAIR</Text></TouchableOpacity>
         </View>
       </View>
@@ -296,7 +304,11 @@ export default function InfiniteScreen() {
                   playSound('buttonConfirm', game.settings.sound);
                   setArena(current => current ? buyArenaUpgrade(current, type) : current);
                 }}>
-                  <Text style={styles.buyText}>{type === 'atk' ? `ATK Lv.${arena.atk}` : `Gold Lv.${arena.gold}`} • {cost} 💰</Text>
+                  <View style={styles.buyTextRow}>
+                    <UiIcon iconKey={type === 'atk' ? 'ui_upgrades' : 'ui_coin'} fallback={type === 'atk' ? '⚔️' : '💰'} size={15} />
+                    <Text style={styles.buyText}>{type === 'atk' ? `ATK Lv.${arena.atk}` : `Gold Lv.${arena.gold}`} • {cost}</Text>
+                    <UiIcon iconKey="ui_coin" fallback="💰" size={13} />
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -310,7 +322,7 @@ export default function InfiniteScreen() {
             <Text style={styles.modalTitle}>{choiceMode === 'challenge' ? 'BAÚ DE UPGRADE' : 'LEVEL UP'}</Text>
             {choices.map(upgrade => (
               <TouchableOpacity key={upgrade.id} style={[styles.choiceCard, { borderColor: getRarityColor(upgrade.rarity) }]} onPress={() => chooseUpgrade(upgrade)}>
-                <Text style={styles.choiceIcon}>{upgrade.icon}</Text>
+                <UpgradeIcon upgrade={upgrade} size={28} />
                 <View style={styles.choiceTextBox}>
                   <Text style={styles.choiceTitle}>{upgrade.name} Lv.{(runUpgrades[upgrade.id] || 0) + 1}</Text>
                   <Text style={styles.choiceText}>{upgrade.description}</Text>
@@ -360,6 +372,8 @@ const styles = StyleSheet.create({
   hud: { paddingTop: 46, paddingHorizontal: 12, gap: 8, zIndex: 20, elevation: 20 },
   hudRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   badge: { flex: 1, color: '#ffffff', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 8, overflow: 'hidden' },
+  badgeRow: { flex: 1, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 8 },
+  badgeText: { color: '#ffffff', fontWeight: 'bold' },
   pauseButton: { width: 44, height: 38, borderRadius: 10, backgroundColor: '#ffffff18', borderWidth: 1, borderColor: '#ffffff33', alignItems: 'center', justifyContent: 'center' },
   pauseText: { color: '#ffffff', fontWeight: 'bold' },
   exitButton: { minWidth: 72, height: 38, borderRadius: 10, backgroundColor: '#330816', borderWidth: 1, borderColor: '#ff4d6d', alignItems: 'center', justifyContent: 'center' },
@@ -367,6 +381,7 @@ const styles = StyleSheet.create({
   playArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, paddingBottom: 10, zIndex: 1 },
   shopRow: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 8 },
   buyButton: { flex: 1, minHeight: 48, borderRadius: 10, backgroundColor: '#06162a', borderWidth: 1.5, borderColor: '#00f0ffaa', alignItems: 'center', justifyContent: 'center' },
+  buyTextRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   buyText: { color: '#ffffff', fontWeight: 'bold' },
   disabled: { opacity: 0.45 },
   modalOverlay: { flex: 1, backgroundColor: '#000000cc', alignItems: 'center', justifyContent: 'center', padding: 18 },
@@ -374,7 +389,6 @@ const styles = StyleSheet.create({
   modalTitle: { color: '#00f0ff', fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
   resultText: { color: '#ffffff', fontWeight: 'bold', textAlign: 'center' },
   choiceCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#ffffff12', borderWidth: 1.5, borderRadius: 12, padding: 12 },
-  choiceIcon: { fontSize: 28 },
   choiceTextBox: { flex: 1 },
   choiceTitle: { color: '#ffffff', fontWeight: 'bold' },
   choiceText: { color: '#ffffffaa', fontSize: 12, marginTop: 2 },

@@ -6,6 +6,8 @@ import { useGame } from '@/src/contexts/GameContext';
 import { UPGRADES as RUN_UPGRADES } from '@/src/game/upgrades';
 import { PERMANENT_UPGRADE_LIMITS } from '@/src/game/balance';
 import { playSound } from '@/src/utils/audio';
+import { UiIcon } from '@/src/components/UiIcon';
+import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 
 type ShopUpgrade = { id: string; name: string; description: string; icon: string; baseCost: number; unlockText: string; secret?: boolean };
 
@@ -100,7 +102,8 @@ export default function UpgradeShopScreen() {
         </TouchableOpacity>
         <Text style={styles.title}>UPGRADES PERMANENTES</Text>
         <View style={styles.coinsDisplay}>
-          <Text style={styles.coinsText}>💰 {coins}</Text>
+          <UiIcon iconKey="ui_coin" fallback="💰" size={24} />
+          <Text style={styles.coinsText}>{coins}</Text>
         </View>
       </View>
 
@@ -120,12 +123,19 @@ export default function UpgradeShopScreen() {
                 style={styles.cardGradient}
               >
                 <View style={styles.upgradeIcon}>
-                  <Text style={styles.iconText}>{upgrade.icon}</Text>
+                  <UpgradeIcon upgrade={upgrade.id} fallback={upgrade.icon} size={34} />
                 </View>
                 
                 <View style={styles.upgradeInfo}>
                   <Text style={styles.upgradeName}>{upgrade.secret && !isUnlocked ? '???' : upgrade.name}</Text>
-                  <Text style={styles.upgradeDescription}>{isUnlocked ? upgrade.description : `🔒 ${upgrade.unlockText}`}</Text>
+                  {isUnlocked ? (
+                    <Text style={styles.upgradeDescription}>{upgrade.description}</Text>
+                  ) : (
+                    <View style={styles.lockedDescription}>
+                      <UiIcon iconKey="ui_locked" fallback="🔒" size={14} />
+                      <Text style={styles.upgradeDescription}>{upgrade.unlockText}</Text>
+                    </View>
+                  )}
                   <Text style={styles.upgradeLevel}>{upgrade.secret ? (isUnlocked ? 'Secreto liberado' : 'Upgrade secreto') : `Nível: ${level}/${maxLevel}`}</Text>
                   {!upgrade.secret && isUnlocked && (
                     <Text style={styles.nextEffect}>
@@ -143,8 +153,14 @@ export default function UpgradeShopScreen() {
                     colors={canAfford ? ['#00f0ff', '#0088ff'] : upgrade.secret && isUnlocked ? ['#ffd700', '#ff8800'] : isMaxed ? ['#00ff88', '#008855'] : ['#666666', '#444444']}
                     style={styles.buyButtonGradient}
                   >
-                    <Text style={styles.buyButtonText}>{upgrade.secret ? (isUnlocked ? 'OK' : '🔒') : isMaxed ? 'MAX' : isUnlocked ? cost : '🔒'}</Text>
-                    {isUnlocked && !upgrade.secret && !isMaxed && <Text style={styles.buyButtonIcon}>💰</Text>}
+                    {upgrade.secret && !isUnlocked ? (
+                      <UiIcon iconKey="ui_locked" fallback="🔒" size={16} />
+                    ) : !isUnlocked ? (
+                      <UiIcon iconKey="ui_locked" fallback="🔒" size={16} />
+                    ) : (
+                      <Text style={styles.buyButtonText}>{upgrade.secret ? 'OK' : isMaxed ? 'MAX' : cost}</Text>
+                    )}
+                    {isUnlocked && !upgrade.secret && !isMaxed && <UiIcon iconKey="ui_coin" fallback="💰" size={16} />}
                   </LinearGradient>
                 </TouchableOpacity>
               </LinearGradient>
@@ -183,6 +199,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   coinsDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#ffffff22',
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -223,9 +242,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  iconText: {
-    fontSize: 32,
-  },
   upgradeInfo: {
     flex: 1,
   },
@@ -238,6 +254,13 @@ const styles = StyleSheet.create({
   upgradeDescription: {
     fontSize: 14,
     color: '#ffffffaa',
+    marginBottom: 4,
+    flexShrink: 1,
+  },
+  lockedDescription: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     marginBottom: 4,
   },
   upgradeLevel: {
@@ -268,8 +291,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#ffffff',
-  },
-  buyButtonIcon: {
-    fontSize: 16,
   },
 });

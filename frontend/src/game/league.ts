@@ -6,6 +6,7 @@ export interface LeagueRival {
   id: string;
   name: string;
   avatar: string;
+  avatarImageUri?: string;
   favoriteSkin: string;
   level: number;
   trophies: number;

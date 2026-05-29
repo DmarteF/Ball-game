@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { useGame, getProfileXpNeeded } from '@/src/contexts/GameContext';
-import { UPGRADES } from '@/src/game/upgrades';
+import { UPGRADES, getAvailableRunUpgrades } from '@/src/game/upgrades';
 import { SKINS, getSkinById, getSkinRarityColor } from '@/src/game/skins';
 import { ACHIEVEMENTS } from '@/src/game/achievements';
 import { playSound } from '@/src/utils/audio';
 import { SkinIcon } from '@/src/components/SkinIcon';
+import { UiIcon } from '@/src/components/UiIcon';
+import { ProfileAvatar } from '@/src/components/ProfileAvatar';
+import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 
 const AVATARS = ['🔵', '🐶', '🐱', '🐷', '🐰', '👻', '🤖', '🐉', '💀', '🌌'];
 
@@ -28,8 +32,35 @@ export default function ProfileScreen() {
     await game.updateProfile({ nickname: clean });
   };
 
+  const chooseProfilePhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      playSound('buttonError', game.settings.sound);
+      Alert.alert('Permissão necessária', 'Autorize o acesso à galeria para escolher uma foto de perfil.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.65,
+      base64: false,
+    });
+
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    await game.updateProfile({ avatarImageUri: result.assets[0].uri });
+    playSound('buttonConfirm', game.settings.sound);
+  };
+
+  const removeProfilePhoto = async () => {
+    await game.updateProfile({ avatarImageUri: '' });
+    playSound('buttonClick', game.settings.sound);
+  };
+
+  const availableRunUpgradeIds = new Set(getAvailableRunUpgrades({}, game.level, game.unlockedUpgrades).map(upgrade => upgrade.id));
   const nextUnlocks = UPGRADES
-    .filter(upgrade => !game.unlockedUpgrades.includes(upgrade.id))
+    .filter(upgrade => !availableRunUpgradeIds.has(upgrade.id))
     .sort((a, b) => a.unlockLevel - b.unlockLevel)
     .slice(0, 5);
 
@@ -44,14 +75,24 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.avatar}>{game.avatar}</Text>
+          <ProfileAvatar avatar={game.avatar} imageUri={game.avatarImageUri} size={86} style={styles.profileAvatar} />
           <TextInput value={nickname} onChangeText={setNickname} onBlur={saveNickname} style={styles.input} maxLength={18} />
+          <View style={styles.photoActions}>
+            <TouchableOpacity style={styles.photoButton} onPress={chooseProfilePhoto}>
+              <Text style={styles.photoButtonText}>ALTERAR AVATAR</Text>
+            </TouchableOpacity>
+            {!!game.avatarImageUri && (
+              <TouchableOpacity style={[styles.photoButton, styles.removeButton]} onPress={removeProfilePhoto}>
+                <Text style={styles.photoButtonText}>REMOVER FOTO</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <TouchableOpacity style={styles.saveButton} onPress={saveNickname}>
             <Text style={styles.saveText}>SALVAR NICK</Text>
           </TouchableOpacity>
           <View style={styles.avatarRow}>
             {AVATARS.map(avatar => (
-              <TouchableOpacity key={avatar} style={[styles.avatarPick, game.avatar === avatar && styles.avatarSelected]} onPress={() => game.updateProfile({ avatar })}>
+              <TouchableOpacity key={avatar} style={[styles.avatarPick, game.avatar === avatar && !game.avatarImageUri && styles.avatarSelected]} onPress={() => game.updateProfile({ avatar, avatarImageUri: '' })}>
                 <Text style={styles.avatarPickText}>{avatar}</Text>
               </TouchableOpacity>
             ))}
@@ -81,13 +122,14 @@ export default function ProfileScreen() {
             <Text style={styles.xpText}>{game.profileXp}/{xpNeeded} XP</Text>
           </View>
           <View style={styles.resourceRow}>
-            <Text style={styles.resource}>💰 {game.coins}</Text>
-            <Text style={styles.resource}>💎 {game.gems}</Text>
-            <Text style={styles.resource}>🔑 {game.keys}</Text>
-            <Text style={styles.resource}>🗝️ {game.legendaryKeys}</Text>
+            <View style={styles.resource}><UiIcon iconKey="ui_coin" fallback="💰" size={18} /><Text style={styles.resourceText}>{game.coins}</Text></View>
+            <View style={styles.resource}><UiIcon iconKey="ui_gem" fallback="💎" size={18} /><Text style={styles.resourceText}>{game.gems}</Text></View>
+            <View style={styles.resource}><UiIcon iconKey="ui_key" fallback="🔑" size={18} /><Text style={styles.resourceText}>{game.keys}</Text></View>
+            <View style={styles.resource}><UiIcon iconKey="ui_legendary_key" fallback="🗝️" size={18} /><Text style={styles.resourceText}>{game.legendaryKeys}</Text></View>
           </View>
           <TouchableOpacity style={styles.achievementButton} onPress={() => router.push('/achievements' as any)}>
-            <Text style={styles.achievementButtonText}>🏆 Conquistas {completedAchievements}/{ACHIEVEMENTS.length}</Text>
+            <UiIcon iconKey="ui_achievements" fallback="🏆" size={18} />
+            <Text style={styles.achievementButtonText}>Conquistas {completedAchievements}/{ACHIEVEMENTS.length}</Text>
           </TouchableOpacity>
         </View>
 
@@ -119,7 +161,8 @@ export default function ProfileScreen() {
           <Text style={styles.stat}>Maior sequência: {game.league.history.bestWinStreak || 0}</Text>
           <Text style={styles.stat}>Skins de ranking: {game.league.history.rankingSkinsObtained.length}</Text>
           <TouchableOpacity style={styles.achievementButton} onPress={() => router.push('/league' as any)}>
-            <Text style={styles.achievementButtonText}>🏅 Abrir Liga Neon</Text>
+            <UiIcon iconKey="ui_league_neon" fallback="🏅" size={18} />
+            <Text style={styles.achievementButtonText}>Abrir Liga Neon</Text>
           </TouchableOpacity>
         </View>
 
@@ -141,11 +184,13 @@ export default function ProfileScreen() {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>HABILIDADES</Text>
-          <Text style={styles.stat}>Desbloqueadas: {game.unlockedUpgrades.filter(id => UPGRADES.some(up => up.id === id)).length}</Text>
+          <Text style={styles.stat}>Desbloqueadas: {availableRunUpgradeIds.size}</Text>
           {nextUnlocks.map(upgrade => (
-            <Text key={upgrade.id} style={styles.locked}>
-              🔒 {upgrade.name} - {upgrade.unlockRequirement || `Perfil nível ${upgrade.unlockLevel}`}
-            </Text>
+            <View key={upgrade.id} style={styles.lockedRow}>
+              <UiIcon iconKey="ui_locked" fallback="🔒" size={16} />
+              <UpgradeIcon upgrade={upgrade} size={16} />
+              <Text style={styles.locked}>{upgrade.name} - {upgrade.unlockRequirement || `Perfil nível ${upgrade.unlockLevel}`}</Text>
+            </View>
           ))}
         </View>
       </ScrollView>
@@ -160,8 +205,12 @@ const styles = StyleSheet.create({
   title: { color: '#00f0ff', fontSize: 30, fontWeight: 'bold', marginTop: 8 },
   content: { padding: 16, gap: 14 },
   card: { backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 12, padding: 16 },
-  avatar: { fontSize: 58, textAlign: 'center', marginBottom: 8 },
+  profileAvatar: { alignSelf: 'center', marginBottom: 8 },
   input: { color: '#ffffff', fontSize: 20, fontWeight: 'bold', textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#00f0ff66', paddingVertical: 8 },
+  photoActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 10 },
+  photoButton: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#00f0ff22', borderWidth: 1, borderColor: '#00f0ff88' },
+  removeButton: { backgroundColor: '#ff005522', borderColor: '#ff005588' },
+  photoButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 11 },
   saveButton: { alignSelf: 'center', marginTop: 10, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#00f0ff' },
   saveText: { color: '#001018', fontWeight: 'bold' },
   avatarRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 14 },
@@ -174,16 +223,18 @@ const styles = StyleSheet.create({
   xpFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#00f0ff' },
   xpText: { color: '#ffffff', fontSize: 12, textAlign: 'center', fontWeight: 'bold' },
   resourceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  resource: { color: '#ffffff', fontWeight: 'bold', backgroundColor: '#ffffff14', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, overflow: 'hidden' },
+  resource: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ffffff14', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, overflow: 'hidden' },
+  resourceText: { color: '#ffffff', fontWeight: 'bold' },
   stat: { color: '#ffffff', fontSize: 14, marginBottom: 6 },
-  locked: { color: '#ffffffaa', fontSize: 13, marginTop: 6 },
+  lockedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  locked: { color: '#ffffffaa', fontSize: 13, flex: 1 },
   favoriteSkinBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff10', borderRadius: 12, padding: 12, gap: 12, marginTop: 8 },
   favoriteIcon: { borderWidth: 0 },
   avatarSkinPick: { borderWidth: 0, backgroundColor: 'transparent' },
   favoriteInfo: { flex: 1 },
   favoriteName: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
   favoriteRarity: { fontSize: 11, fontWeight: 'bold', marginTop: 2 },
-  achievementButton: { marginTop: 12, borderRadius: 10, backgroundColor: '#ffd70022', borderWidth: 1, borderColor: '#ffd70088', padding: 12, alignItems: 'center' },
+  achievementButton: { marginTop: 12, borderRadius: 10, backgroundColor: '#ffd70022', borderWidth: 1, borderColor: '#ffd70088', padding: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   achievementButtonText: { color: '#ffd700', fontWeight: 'bold' },
   toggleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   toggleButton: { flexGrow: 1, minWidth: 96, backgroundColor: '#ffffff14', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },

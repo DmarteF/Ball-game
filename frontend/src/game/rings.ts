@@ -1,4 +1,15 @@
 export type RingStatus = 'active' | 'broken' | 'cleared';
+export type RingVisualEffect =
+  | 'slowed'
+  | 'frozen'
+  | 'burning'
+  | 'poisoned'
+  | 'shocked'
+  | 'repulsed'
+  | 'pierced'
+  | 'exploded'
+  | 'gravity'
+  | 'critical';
 
 export interface Ring {
   id: string;
@@ -20,6 +31,8 @@ export interface Ring {
   slowUntil?: number;
   burnUntil?: number;
   burnDps?: number;
+  effectType?: RingVisualEffect;
+  effectUntil?: number;
 }
 
 export interface RingConfig {
@@ -140,7 +153,7 @@ export const updateRing = (ring: Ring, deltaTime = 1, now = Date.now()): Ring =>
     return ring;
   }
 
-  const slowMultiplier = ring.slowUntil && ring.slowUntil > now ? 0.45 : 1;
+  const slowMultiplier = ring.slowUntil && ring.slowUntil > now ? 0.25 : 1;
   const newRotation = normalizeAngle(ring.rotation + ring.rotationSpeed * slowMultiplier * deltaTime);
   const newRadius = Math.max(ring.minRadius, ring.radius - ring.closingSpeed * slowMultiplier * deltaTime);
   let hp = ring.hp;
@@ -155,7 +168,53 @@ export const updateRing = (ring: Ring, deltaTime = 1, now = Date.now()): Ring =>
     radius: newRadius,
     hp,
     status: hp <= 0 ? 'broken' : ring.status,
+    effectType: ring.effectUntil && ring.effectUntil > now ? ring.effectType : undefined,
+    effectUntil: ring.effectUntil && ring.effectUntil > now ? ring.effectUntil : undefined,
   };
+};
+
+export const withRingEffect = <T extends Ring>(
+  ring: T,
+  effectType: RingVisualEffect,
+  durationMs = 900,
+  now = Date.now()
+): T => ({
+  ...ring,
+  effectType,
+  effectUntil: Math.max(ring.effectUntil || 0, now + durationMs),
+} as T);
+
+export const getRingVisualColor = (ring: Ring, now = Date.now()) => {
+  const activeEffect = ring.effectUntil && ring.effectUntil > now ? ring.effectType : undefined;
+  const burned = ring.burnUntil && ring.burnUntil > now;
+  const slowed = ring.slowUntil && ring.slowUntil > now;
+
+  switch (activeEffect) {
+    case 'frozen':
+      return '#9be8ff';
+    case 'slowed':
+      return '#6ddcff';
+    case 'burning':
+      return '#ff6a00';
+    case 'poisoned':
+      return '#39ff88';
+    case 'shocked':
+      return now % 260 < 130 ? '#fff56a' : '#00e5ff';
+    case 'repulsed':
+      return '#c084fc';
+    case 'pierced':
+      return '#ffffff';
+    case 'exploded':
+      return '#ff3d8b';
+    case 'gravity':
+      return '#7c3aed';
+    case 'critical':
+      return '#ffd700';
+    default:
+      if (burned) return '#ff7a1a';
+      if (slowed) return '#9be8ff';
+      return ring.color;
+  }
 };
 
 export const clampRingSpacing = (rings: Ring[], minGap = MIN_RING_GAP): Ring[] => {

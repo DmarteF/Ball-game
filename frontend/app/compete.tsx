@@ -12,6 +12,9 @@ import { playSound } from '@/src/utils/audio';
 import { GAMEPLAY_TUNING } from '@/src/game/balance';
 import { getRandomUpgrades, getRarityColor, Upgrade } from '@/src/game/upgrades';
 import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
+import { UiIcon } from '@/src/components/UiIcon';
+import { UpgradeIcon } from '@/src/components/UpgradeIcon';
+import { MuteButton } from '@/src/components/MuteButton';
 
 const { width, height } = Dimensions.get('window');
 const ARENA_SIZE = Math.max(132, Math.min(width - 72, (height - 288) / 2, 188));
@@ -133,7 +136,7 @@ export default function CompeteScreen() {
           arenaGold: current.gold,
           permanentUpgrades: game.permanentUpgrades,
         });
-        const next = tickArenaPhysics(current, {
+        const tick = tickArenaPhysics(current, {
           damageMultiplier: attrs.damageMultiplier,
           coinMultiplier: attrs.coinMultiplier,
           xpMultiplier: attrs.xpMultiplier,
@@ -142,7 +145,10 @@ export default function CompeteScreen() {
           ringMinGap: 8,
           skinPassive: playerSkin.passive,
           skinLevel: game.skinLevels[playerSkin.id] || 1,
-        }).state;
+        });
+        const next = tick.state;
+        if (tick.brokeRing) playSound(tick.brokeSolid ? 'hitHeavy' : 'ringBreak', game.settings.sound);
+        if (tick.skinEffectLabel) playSound('combo', game.settings.sound);
         if (next.level > beforeLevel && levelChoices.length === 0) {
           setLevelChoices(getRandomUpgrades(3, runUpgrades, game.level, game.unlockedUpgrades));
           playSound('levelUp', game.settings.sound);
@@ -177,6 +183,8 @@ export default function CompeteScreen() {
           skinLevel: game.skinLevels[rivalSkin.id] || 1,
         });
         let next = tick.state;
+        if (tick.brokeRing) playSound(tick.brokeSolid ? 'hitHeavy' : 'ringBreak', game.settings.sound);
+        if (tick.skinEffectLabel) playSound('combo', game.settings.sound);
         if (next.level > beforeLevel) {
           const aiUpgrade = chooseAiArenaRunUpgrade(next, { opponentProgress: playerArenaRef.current ? getArenaProgress(playerArenaRef.current) : 0 });
           if (aiUpgrade) {
@@ -278,8 +286,9 @@ export default function CompeteScreen() {
       ) : (
         <View style={styles.topHUD}>
           <View style={styles.hudRow}>
-            <View style={styles.hudItem}><Text style={styles.hudIcon}>💰</Text><Text style={styles.hudValue}>{playerArena.coins}</Text></View>
-            <View style={styles.hudItem}><Text style={styles.hudIcon}>⭐</Text><Text style={styles.hudValue}>Lv.{playerArena.level}</Text></View>
+            <View style={styles.hudItem}><UiIcon iconKey="ui_coin" fallback="💰" size={18} /><Text style={styles.hudValue}>{playerArena.coins}</Text></View>
+            <View style={styles.hudItem}><UiIcon iconKey="ui_achievements" fallback="⭐" size={18} /><Text style={styles.hudValue}>Lv.{playerArena.level}</Text></View>
+            <MuteButton size={38} />
             <TouchableOpacity style={styles.pauseMiniButton} onPress={() => setPaused(value => !value)}>
               <Text style={styles.pauseMiniText}>{paused ? '▶' : '⏸'}</Text>
             </TouchableOpacity>
@@ -290,7 +299,7 @@ export default function CompeteScreen() {
               <LinearGradient colors={['#ff0055', '#ff8800', '#ffd700']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.progressFill, { width: `${getArenaProgress(playerArena) * 100}%` }]} />
             </View>
           </View>
-          <Text style={styles.progressText}>🌀 Anéis: {playerArena.rings.filter(ring => ring.status === 'active' && ring.hp > 0).length}/{playerArena.rings.length} {playerArena.combo >= 2 ? `• Combo x${playerArena.combo}` : ''}</Text>
+          <View style={styles.progressTextRow}><UiIcon iconKey="ui_aura" fallback="🌀" size={14} /><Text style={styles.progressText}>Anéis: {playerArena.rings.filter(ring => ring.status === 'active' && ring.hp > 0).length}/{playerArena.rings.length} {playerArena.combo >= 2 ? `• Combo x${playerArena.combo}` : ''}</Text></View>
         </View>
       )}
 
@@ -304,9 +313,9 @@ export default function CompeteScreen() {
               const canBuy = playerArena.coins >= cost;
               return (
                 <TouchableOpacity key={type} style={[styles.runUpgradeButton, !canBuy && styles.disabled]} onPress={() => buy(type)}>
-                  <Text style={styles.runUpgradeIcon}>{type === 'atk' ? '⚔️' : '💰'}</Text>
+                  <UiIcon iconKey={type === 'atk' ? 'ui_upgrades' : 'ui_coin'} fallback={type === 'atk' ? '⚔️' : '💰'} size={18} />
                   <Text style={styles.runUpgradeLabel}>{type === 'atk' ? 'ATK' : 'Gold'} Lv.{playerArena[type]}</Text>
-                  <Text style={styles.runUpgradeCost}>{cost} 💰</Text>
+                  <View style={styles.runUpgradeCostRow}><Text style={styles.runUpgradeCost}>{cost}</Text><UiIcon iconKey="ui_coin" fallback="💰" size={12} /></View>
                 </TouchableOpacity>
               );
             })}
@@ -347,7 +356,7 @@ export default function CompeteScreen() {
             <Text style={styles.resultText}>Escolha uma melhoria temporária.</Text>
             {levelChoices.map(upgrade => (
               <TouchableOpacity key={upgrade.id} style={[styles.choiceCard, { borderColor: getRarityColor(upgrade.rarity) }]} onPress={() => chooseLevelUpgrade(upgrade)}>
-                <Text style={styles.choiceIcon}>{upgrade.icon}</Text>
+                <UpgradeIcon upgrade={upgrade} size={28} />
                 <View style={styles.choiceTextBox}>
                   <Text style={styles.choiceTitle}>{upgrade.name} Lv.{(runUpgrades[upgrade.id] || 0) + 1}</Text>
                   <Text style={styles.choiceText}>{upgrade.description}</Text>
@@ -367,13 +376,13 @@ const styles = StyleSheet.create({
   topHUD: { paddingTop: 45, paddingHorizontal: 12, paddingBottom: 4, zIndex: 20, elevation: 20 },
   hudRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 6 },
   hudItem: { flex: 1, flexDirection: 'row', backgroundColor: '#ffffff11', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  hudIcon: { fontSize: 18 },
   hudValue: { fontSize: 16, fontWeight: 'bold', color: '#00f0ff' },
   pauseMiniButton: { width: 42, height: 38, borderRadius: 10, backgroundColor: '#ffffff18', borderWidth: 1, borderColor: '#ffffff33', alignItems: 'center', justifyContent: 'center' },
   pauseMiniText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
   levelRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff11', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', marginBottom: 4, gap: 10 },
   levelText: { fontSize: 14, fontWeight: 'bold', color: '#ffd700' },
-  progressText: { fontSize: 12, color: '#ffffff', marginBottom: 2, textAlign: 'center', fontWeight: 'bold' },
+  progressTextRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 2 },
+  progressText: { fontSize: 12, color: '#ffffff', textAlign: 'center', fontWeight: 'bold' },
   progressBar: { flex: 1, height: 14, backgroundColor: '#ffffff11', borderRadius: 7, overflow: 'hidden', borderWidth: 1, borderColor: '#ffffff22' },
   progressFill: { height: '100%' },
   backButton: { alignSelf: 'flex-start', minWidth: 100 },
@@ -397,8 +406,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   disabled: { opacity: 0.45 },
-  runUpgradeIcon: { fontSize: 18 },
   runUpgradeLabel: { color: '#ffffff', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
+  runUpgradeCostRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 2 },
   runUpgradeCost: { color: '#ffd700', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
   modalOverlay: { flex: 1, backgroundColor: '#000000cc', justifyContent: 'center', alignItems: 'center', padding: 18 },
   resultBox: { width: '100%', maxWidth: 390, backgroundColor: '#1a0a2e', borderWidth: 1, borderColor: '#00f0ff88', borderRadius: 18, padding: 18, gap: 10, alignItems: 'stretch' },
@@ -407,7 +416,6 @@ const styles = StyleSheet.create({
   trophyDelta: { color: '#ffd700', fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
   rewardLine: { color: '#00ff88', fontWeight: 'bold', textAlign: 'center' },
   choiceCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#ffffff12', borderWidth: 1.5, borderRadius: 12, padding: 12 },
-  choiceIcon: { fontSize: 28 },
   choiceTextBox: { flex: 1 },
   choiceTitle: { color: '#ffffff', fontWeight: 'bold' },
   choiceText: { color: '#ffffffaa', fontSize: 12, marginTop: 2 },

@@ -1,4 +1,4 @@
-import { Ring, RingConfig, clampBallSpeed, clampRingSpacing, createRings, findClosestCollidingRing, findPerfectEscapeRing, isBallCrushedByRing, reflectBallOffRing, updateRings } from './rings';
+import { Ring, RingConfig, clampBallSpeed, clampRingSpacing, createRings, findClosestCollidingRing, findPerfectEscapeRing, isBallCrushedByRing, reflectBallOffRing, updateRings, withRingEffect } from './rings';
 import { GAMEPLAY_TUNING } from './balance';
 import { SkinDefinition } from './skins';
 import { UPGRADES } from './upgrades';
@@ -27,6 +27,7 @@ export interface DualArenaState {
   finished: boolean;
   lastSolidBreak: number;
   lastCollisionAt: number;
+  lastRepulseAt: number;
   lastCollisionRingId?: string;
   lastAiChoice?: string;
   runUpgrades: Record<string, number>;
@@ -91,6 +92,7 @@ export const createArenaState = (params: {
     finished: false,
     lastSolidBreak: 0,
     lastCollisionAt: 0,
+    lastRepulseAt: 0,
     runUpgrades: {},
     ringConfig: params.ringConfig,
     phase: params.phase,
@@ -312,37 +314,43 @@ export const tickArenaPhysics = (
     const xpGain = Math.floor((brokeRing ? (ring.type === 'solid' ? 18 : 9) : 1) * (options.xpMultiplier ?? 1));
     const coinGain = Math.floor((brokeRing ? (ring.type === 'solid' ? 8 : 4) : 1) * (options.coinMultiplier ?? 1));
     next.rings[collision.index] = { ...ring, hp, status: hp <= 0 ? 'broken' : 'active' };
+    const targetWindow = next.rings
+      .map((target, index) => ({ target, index, distance: Math.abs(target.radius - ring.radius) }))
+      .filter(item => item.index !== collision.index && item.target.status === 'active' && item.target.hp > 0)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 3);
     if (canDamage && passiveTriggered && passive) {
-      const targetWindow = next.rings
-        .map((target, index) => ({ target, index, distance: Math.abs(target.radius - ring.radius) }))
-        .filter(item => item.index !== collision.index && item.target.status === 'active' && item.target.hp > 0)
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, passive.type === 'chain_damage' ? 2 : 3);
       if (passive.type === 'burn') {
-        next.rings[collision.index] = { ...next.rings[collision.index], burnUntil: now + (passive.durationMs ?? 2400), burnDps: passive.value };
+        next.rings[collision.index] = withRingEffect({ ...next.rings[collision.index], burnUntil: now + (passive.durationMs ?? 2400), burnDps: passive.value }, 'burning', passive.durationMs ?? 2400, now);
         skinEffectLabel = 'Queimadura da skin';
       } else if (passive.type === 'freeze_ring' || passive.type === 'slow_ring') {
-        next.rings[collision.index] = { ...next.rings[collision.index], slowUntil: now + (passive.durationMs ?? 1800) };
+        const duration = passive.durationMs ?? (passive.type === 'freeze_ring' ? 2400 : 2000);
+        next.rings[collision.index] = withRingEffect({ ...next.rings[collision.index], slowUntil: now + duration }, passive.type === 'freeze_ring' ? 'frozen' : 'slowed', duration, now);
         skinEffectLabel = passive.type === 'freeze_ring' ? 'Congelamento da skin' : 'Lentidão da skin';
       } else if (passive.type === 'repel_ring') {
-        next.rings[collision.index] = { ...next.rings[collision.index], radius: Math.min(next.size / 2 - 8, ring.radius + passive.value) };
-        skinEffectLabel = 'Repulsão da skin';
+        if (now - next.lastRepulseAt > 1500) {
+          const force = Math.min(14, Math.max(4, passive.value * 0.45));
+          const radius = Math.min(next.size / 2 - 10, ring.initialRadius + 12, ring.radius + force);
+          next.rings[collision.index] = withRingEffect({ ...next.rings[collision.index], radius }, 'repulsed', 700, now);
+          next.lastRepulseAt = now;
+          skinEffectLabel = 'Repulsão da skin';
+        }
       } else if (passive.type === 'area_damage' || passive.type === 'cosmic_critical' || passive.type === 'league_king_wave') {
         targetWindow.forEach(({ target, index }) => {
           const areaDamage = damage * Math.min(0.85, passive.value || 0.35);
           const nextHp = Math.max(0, target.hp - areaDamage);
-          next.rings[index] = { ...target, hp: nextHp, status: nextHp <= 0 ? 'broken' : 'active' };
+          next.rings[index] = withRingEffect({ ...target, hp: nextHp, status: nextHp <= 0 ? 'broken' : 'active' }, passive.type === 'cosmic_critical' ? 'gravity' : 'exploded', 800, now);
         });
         skinEffectLabel = passive.type === 'league_king_wave' ? 'Onda real da skin' : 'Explosão da skin';
       } else if (passive.type === 'chain_damage') {
         targetWindow.slice(0, 2).forEach(({ target, index }) => {
           const chainDamage = damage * Math.min(0.75, passive.value || 0.35);
           const nextHp = Math.max(0, target.hp - chainDamage);
-          next.rings[index] = { ...target, hp: nextHp, status: nextHp <= 0 ? 'broken' : 'active' };
+          next.rings[index] = withRingEffect({ ...target, hp: nextHp, status: nextHp <= 0 ? 'broken' : 'active' }, 'shocked', 720, now);
         });
         skinEffectLabel = 'Corrente da skin';
       } else if (passive.type === 'phase_solid') {
-        next.rings[collision.index] = { ...next.rings[collision.index], status: 'cleared', hp: 0 };
+        next.rings[collision.index] = withRingEffect({ ...next.rings[collision.index], status: 'cleared', hp: 0 }, 'pierced', 620, now);
         skinEffectLabel = 'Fase da skin';
       } else if (passive.type === 'coin_on_hit') {
         next.coins += Math.max(1, Math.floor(passive.value));
@@ -351,7 +359,48 @@ export const tickArenaPhysics = (
         next.velocity = clampBallSpeed({ x: next.velocity.x * 1.06, y: next.velocity.y * 1.06 }, 2.1, 5.4);
         skinEffectLabel = 'Impulso da skin';
       } else if (critTriggered) {
+        next.rings[collision.index] = withRingEffect(next.rings[collision.index], 'critical', 520, now);
         skinEffectLabel = 'Crítico da skin';
+      }
+    }
+    if (canDamage) {
+      const frostLevel = next.runUpgrades.frost || next.runUpgrades.slowField || 0;
+      if (frostLevel && Math.random() < Math.min(0.34, 0.14 + frostLevel * 0.035)) {
+        const duration = 1700 + frostLevel * 260;
+        next.rings[collision.index] = withRingEffect({ ...next.rings[collision.index], slowUntil: now + duration }, 'frozen', duration, now);
+        skinEffectLabel = skinEffectLabel || 'Congelamento';
+      }
+
+      const burnLevel = next.runUpgrades.burn || 0;
+      if (burnLevel && Math.random() < Math.min(0.28, 0.1 + burnLevel * 0.03)) {
+        const duration = 2100 + burnLevel * 220;
+        next.rings[collision.index] = withRingEffect({ ...next.rings[collision.index], burnUntil: now + duration, burnDps: 4 + burnLevel * 2 }, 'burning', duration, now);
+        skinEffectLabel = skinEffectLabel || 'Queimadura';
+      }
+
+      const poisonLevel = next.runUpgrades.penetration || 0;
+      if (poisonLevel && Math.random() < Math.min(0.26, 0.08 + poisonLevel * 0.035)) {
+        const duration = 2300 + poisonLevel * 260;
+        next.rings[collision.index] = withRingEffect({ ...next.rings[collision.index], burnUntil: now + duration, burnDps: 3 + poisonLevel * 1.8 }, 'poisoned', duration, now);
+        skinEffectLabel = skinEffectLabel || 'Veneno';
+      }
+
+      const repulseLevel = next.runUpgrades.ringRepulse || 0;
+      if (repulseLevel && now - next.lastRepulseAt > 1650 && Math.random() < Math.min(0.18, 0.045 + repulseLevel * 0.018)) {
+        const radius = Math.min(next.size / 2 - 10, ring.initialRadius + 10, ring.radius + 5 + repulseLevel * 2);
+        next.rings[collision.index] = withRingEffect({ ...next.rings[collision.index], radius }, 'repulsed', 700, now);
+        next.lastRepulseAt = now;
+        skinEffectLabel = skinEffectLabel || 'Repulsão';
+      }
+
+      const shockLevel = next.runUpgrades.chainLightning || next.runUpgrades.shockwave || 0;
+      if (shockLevel && Math.random() < Math.min(0.28, 0.08 + shockLevel * 0.035)) {
+        targetWindow.slice(0, next.runUpgrades.chainLightning ? 2 : 3).forEach(({ target, index }) => {
+          const shockDamage = damage * Math.min(0.45, 0.16 + shockLevel * 0.035);
+          const nextHp = Math.max(0, target.hp - shockDamage);
+          next.rings[index] = withRingEffect({ ...target, hp: nextHp, status: nextHp <= 0 ? 'broken' : 'active' }, next.runUpgrades.chainLightning ? 'shocked' : 'exploded', 720, now);
+        });
+        skinEffectLabel = skinEffectLabel || (next.runUpgrades.chainLightning ? 'Corrente' : 'Explosão');
       }
     }
     if (canDamage) {

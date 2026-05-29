@@ -14,6 +14,8 @@ import {
   isBallCrushedByRing,
   Ring,
   updateRings,
+  getRingVisualColor,
+  withRingEffect,
 } from '@/src/game/rings';
 import { getRandomUpgrades, Upgrade, getRarityColor, getRarityName } from '@/src/game/upgrades';
 import { getSkinById } from '@/src/game/skins';
@@ -22,6 +24,9 @@ import { GAMEPLAY_TUNING } from '@/src/game/balance';
 import { calculateFinalGameplayAttributes } from '@/src/game/playerAttributes';
 import { FloatingNumber } from '@/src/components/FloatingNumber';
 import { SkinIcon } from '@/src/components/SkinIcon';
+import { UiIcon } from '@/src/components/UiIcon';
+import { UpgradeIcon } from '@/src/components/UpgradeIcon';
+import { MuteButton } from '@/src/components/MuteButton';
 import { AdModal } from '@/src/components/AdModal';
 import { ECONOMY_BALANCE, getComboMultiplier, getGlobalCoinsFromRun, getRunProfileXp } from '@/src/game/economy';
 import { playSound } from '@/src/utils/audio';
@@ -146,6 +151,7 @@ export default function GameScreen() {
   const comboRef = useRef(0);
   const lastComboAtRef = useRef(0);
   const bestComboRef = useRef(0);
+  const lastRepulseAtRef = useRef(0);
   
   const ballX = useSharedValue(CENTER_X);
   const ballY = useSharedValue(CENTER_Y);
@@ -630,25 +636,40 @@ export default function GameScreen() {
     };
 
     if ((skinPassive.type === 'slow_ring' || skinPassive.type === 'freeze_ring') && Math.random() < (skinPassive.chance || 0)) {
-      next[hitIndex] = { ...ring, slowUntil: now + (skinPassive.durationMs || 2200) };
+      const duration = skinPassive.durationMs || (skinPassive.type === 'freeze_ring' ? 2600 : 2200);
+      next[hitIndex] = withRingEffect({ ...ring, slowUntil: now + duration }, skinPassive.type === 'freeze_ring' ? 'frozen' : 'slowed', duration, now);
       addBonus(skinPassive.type === 'freeze_ring' ? 'Frost!' : 'Slow!');
       addFloatingNumber(skinPassive.type === 'freeze_ring' ? 'Frost' : 'Slow', ballPosRef.current.x, ballPosRef.current.y, false, '#9be8ff');
       markSkinEffect();
     }
 
-    if (liveUpgrades['slowField'] && Math.random() < 0.08 + liveUpgrades['slowField'] * 0.015) {
+    if (liveUpgrades['frost'] && Math.random() < Math.min(0.36, 0.16 + liveUpgrades['frost'] * 0.04)) {
+      const duration = 1800 + liveUpgrades['frost'] * 320;
+      next[hitIndex] = withRingEffect({ ...next[hitIndex], slowUntil: now + duration }, 'frozen', duration, now);
+      addBonus('Freeze!');
+      addFloatingNumber('Freeze', ballPosRef.current.x, ballPosRef.current.y, false, '#9be8ff');
+      playSound('xpGain', settings.sound);
+    }
+
+    if (liveUpgrades['slowField'] && Math.random() < 0.1 + liveUpgrades['slowField'] * 0.02) {
       addBonus('Slow Field!');
-      return next.map(other => other.status === 'active' ? { ...other, slowUntil: now + 1800 + liveUpgrades['slowField'] * 250 } : other);
+      playSound('xpGain', settings.sound);
+      const duration = 2200 + liveUpgrades['slowField'] * 320;
+      return next.map(other => other.status === 'active' ? withRingEffect({ ...other, slowUntil: now + duration }, 'slowed', duration, now) : other);
     }
 
     if (liveUpgrades['timeFreeze'] && Math.random() < 0.035 + liveUpgrades['timeFreeze'] * 0.01) {
       addBonus('Time Freeze!');
-      return next.map(other => other.status === 'active' ? { ...other, slowUntil: now + 2400 } : other);
+      playSound('levelUp', settings.sound);
+      return next.map(other => other.status === 'active' ? withRingEffect({ ...other, slowUntil: now + 2600 }, 'frozen', 2600, now) : other);
     }
 
-    if ((skinPassive.type === 'repel_ring' && Math.random() < (skinPassive.chance || 0)) || (liveUpgrades['ringRepulse'] && Math.random() < 0.1)) {
-      const repulse = skinPassive.type === 'repel_ring' ? skinPassive.value : 14 + liveUpgrades['ringRepulse'] * 3;
-      next[hitIndex] = { ...next[hitIndex], radius: Math.min(ring.initialRadius + 24, ring.radius + repulse) };
+    const repulseFromSkin = skinPassive.type === 'repel_ring' && Math.random() < Math.min(0.22, skinPassive.chance || 0);
+    const repulseFromUpgrade = Boolean(liveUpgrades['ringRepulse']) && Math.random() < 0.045 + liveUpgrades['ringRepulse'] * 0.012;
+    if ((repulseFromSkin || repulseFromUpgrade) && now - lastRepulseAtRef.current > 1500) {
+      const repulse = repulseFromSkin ? Math.min(14, Math.max(5, skinPassive.value * 0.45)) : Math.min(14, 5 + liveUpgrades['ringRepulse'] * 2);
+      next[hitIndex] = withRingEffect({ ...next[hitIndex], radius: Math.min(ring.initialRadius + 12, ring.radius + repulse, OUTER_RADIUS) }, 'repulsed', 720, now);
+      lastRepulseAtRef.current = now;
       addBonus('Repel!');
       addFloatingNumber('Repel', ballPosRef.current.x, ballPosRef.current.y, false, '#c084fc');
       markSkinEffect();
@@ -663,10 +684,25 @@ export default function GameScreen() {
     }
 
     if (skinPassive.type === 'burn' && Math.random() < (skinPassive.chance || 0)) {
-      next[hitIndex] = { ...next[hitIndex], burnUntil: now + (skinPassive.durationMs || 3000), burnDps: skinPassive.value };
+      const duration = skinPassive.durationMs || 3000;
+      next[hitIndex] = withRingEffect({ ...next[hitIndex], burnUntil: now + duration, burnDps: skinPassive.value }, 'burning', duration, now);
       addBonus('Burn!');
       addFloatingNumber('Burn', ballPosRef.current.x, ballPosRef.current.y, false, '#ff8a00');
       markSkinEffect();
+    }
+
+    if (liveUpgrades['burn'] && Math.random() < Math.min(0.3, 0.1 + liveUpgrades['burn'] * 0.035)) {
+      const duration = 2200 + liveUpgrades['burn'] * 250;
+      next[hitIndex] = withRingEffect({ ...next[hitIndex], burnUntil: now + duration, burnDps: 5 + liveUpgrades['burn'] * 2 }, 'burning', duration, now);
+      addBonus('Burn!');
+      addFloatingNumber('Burn', ballPosRef.current.x, ballPosRef.current.y, false, '#ff8a00');
+    }
+
+    if (liveUpgrades['penetration'] && Math.random() < Math.min(0.28, 0.08 + liveUpgrades['penetration'] * 0.04)) {
+      const duration = 2400 + liveUpgrades['penetration'] * 280;
+      next[hitIndex] = withRingEffect({ ...next[hitIndex], burnUntil: now + duration, burnDps: 4 + liveUpgrades['penetration'] * 1.7 }, 'poisoned', duration, now);
+      addBonus('Poison!');
+      addFloatingNumber('Poison', ballPosRef.current.x, ballPosRef.current.y, false, '#39ff88');
     }
 
     if (skinPassive.type === 'area_damage' && Math.random() < (skinPassive.chance || 0)) {
@@ -675,7 +711,7 @@ export default function GameScreen() {
       return next.map((other, index) => {
         if (index === hitIndex || other.status !== 'active' || Math.abs(other.radius - ring.radius) > 34) return other;
         const hp = Math.max(0, other.hp - damage * skinPassive.value);
-        return { ...other, hp, status: hp <= 0 ? 'broken' as const : other.status };
+        return withRingEffect({ ...other, hp, status: hp <= 0 ? 'broken' as const : other.status }, 'exploded', 780, now);
       });
     }
 
@@ -684,11 +720,26 @@ export default function GameScreen() {
       if (targetIndex >= 0) {
         const target = next[targetIndex];
         const hp = Math.max(0, target.hp - damage * skinPassive.value);
-        next[targetIndex] = { ...target, hp, status: hp <= 0 ? 'broken' as const : target.status };
+        next[targetIndex] = withRingEffect({ ...target, hp, status: hp <= 0 ? 'broken' as const : target.status }, 'shocked', 760, now);
         addBonus('Chain!');
         addFloatingNumber('Chain', ballPosRef.current.x, ballPosRef.current.y, false, '#faff00');
         markSkinEffect();
       }
+    }
+
+    if ((liveUpgrades['chainLightning'] || liveUpgrades['shockwave']) && Math.random() < Math.min(0.3, 0.08 + ((liveUpgrades['chainLightning'] || liveUpgrades['shockwave']) * 0.04))) {
+      const effectLevel = liveUpgrades['chainLightning'] || liveUpgrades['shockwave'];
+      next
+        .map((other, index) => ({ other, index, distance: Math.abs(other.radius - ring.radius) }))
+        .filter(item => item.index !== hitIndex && item.other.status === 'active' && item.other.hp > 0)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, liveUpgrades['chainLightning'] ? 2 : 3)
+        .forEach(({ other, index }) => {
+          const hp = Math.max(0, other.hp - damage * Math.min(0.48, 0.16 + effectLevel * 0.04));
+          next[index] = withRingEffect({ ...other, hp, status: hp <= 0 ? 'broken' as const : other.status }, liveUpgrades['chainLightning'] ? 'shocked' : 'exploded', 760, now);
+        });
+      addBonus(liveUpgrades['chainLightning'] ? 'Chain!' : 'Shockwave!');
+      addFloatingNumber(liveUpgrades['chainLightning'] ? 'Chain' : 'Area', ballPosRef.current.x, ballPosRef.current.y, false, liveUpgrades['chainLightning'] ? '#faff00' : '#ff3d8b');
     }
 
     if (skinPassive.type === 'cosmic_critical' && Math.random() < (skinPassive.chance || 0)) {
@@ -696,7 +747,7 @@ export default function GameScreen() {
       markSkinEffect();
       return next.map(other =>
         other.status === 'active'
-          ? { ...other, radius: Math.min(other.initialRadius + 28, other.radius + 12 + skinPassive.value * 18) }
+          ? withRingEffect({ ...other, radius: Math.min(other.initialRadius + 12, other.radius + 5 + skinPassive.value * 4, OUTER_RADIUS) }, 'gravity', 850, now)
           : other
       );
     }
@@ -963,24 +1014,25 @@ export default function GameScreen() {
       <View style={styles.topHUD}>
         <View style={styles.hudRow}>
           <View style={styles.hudItem}>
-            <Text style={styles.hudIcon}>💰</Text>
+            <UiIcon iconKey="ui_coin" fallback="💰" size={18} />
             <Text style={styles.hudValue}>{coins}</Text>
           </View>
           <View style={styles.hudItem}>
-            <Text style={styles.hudIcon}>💎</Text>
+            <UiIcon iconKey="ui_gem" fallback="💎" size={18} />
             <Text style={styles.hudValue}>{runRewards.gems}</Text>
           </View>
           <View style={styles.hudItem}>
-            <Text style={styles.hudIcon}>🏦</Text>
+            <UiIcon iconKey="ui_coin" fallback="🏦" size={18} />
             <Text style={styles.hudValue}>{accountCoins}</Text>
           </View>
+          <MuteButton size={36} />
           <TouchableOpacity style={styles.pauseMiniButton} onPress={openPauseMenu}>
             <Text style={styles.pauseMiniText}>⏸</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.levelRow}>
-          <Text style={styles.levelText}>⭐ Lv.{level}</Text>
+          <View style={styles.levelLabel}><UiIcon iconKey="ui_achievements" fallback="⭐" size={16} /><Text style={styles.levelText}>Lv.{level}</Text></View>
           <View style={styles.xpBarLarge}>
             <View style={[styles.xpFillLarge, { width: `${xpProgress}%` }]} />
             <Text style={styles.xpText}>{xp}/{xpToNextLevel}</Text>
@@ -988,9 +1040,12 @@ export default function GameScreen() {
         </View>
 
         <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>
-            🌀 Anéis: {activeRings.length}/{totalRings} • ATK {baseDamage} • DPS {Math.floor(dps)} {combo >= 2 ? `• Combo x${combo}` : ''}
-          </Text>
+          <View style={styles.progressTextRow}>
+            <UiIcon iconKey="ui_aura" fallback="🌀" size={14} />
+            <Text style={styles.progressText}>
+              Anéis: {activeRings.length}/{totalRings} • ATK {baseDamage} • DPS {Math.floor(dps)} {combo >= 2 ? `• Combo x${combo}` : ''}
+            </Text>
+          </View>
           <View style={styles.progressBar}>
             <LinearGradient
               colors={['#ff0055', '#ff8800', '#ffd700']}
@@ -1024,7 +1079,7 @@ export default function GameScreen() {
                     cx={CENTER_X}
                     cy={CENTER_Y}
                     r={ring.radius}
-                    stroke={ring.color}
+                    stroke={getRingVisualColor(ring)}
                     strokeWidth={ring.thickness}
                     fill="none"
                     opacity={isSolidRing ? Math.max(0.65, opacity) : opacity}
@@ -1088,9 +1143,9 @@ export default function GameScreen() {
           const canBuy = coins >= cost;
           return (
             <TouchableOpacity key={type} style={[styles.runUpgradeButton, !canBuy && styles.disabled]} onPress={() => buyRunUpgrade(type)}>
-              <Text style={styles.runUpgradeIcon}>{icon}</Text>
+              <UiIcon iconKey={type === 'atk' ? 'ui_upgrades' : 'ui_coin'} fallback={icon} size={18} />
               <Text style={styles.runUpgradeLabel}>{label} Lv.{runShopUpgrades[type]}</Text>
-              <Text style={styles.runUpgradeCost}>{cost} 💰</Text>
+              <View style={styles.runUpgradeCostRow}><Text style={styles.runUpgradeCost}>{cost}</Text><UiIcon iconKey="ui_coin" fallback="💰" size={12} /></View>
             </TouchableOpacity>
           );
         })}
@@ -1161,7 +1216,7 @@ export default function GameScreen() {
                           style={[styles.upgradeCardContent, { borderColor: getRarityColor(upgrade.rarity) }]}
                         >
                           <View style={styles.upgradeTopLine}>
-                            <Text style={styles.upgradeIcon}>{upgrade.icon}</Text>
+                            <UpgradeIcon upgrade={upgrade} size={30} />
                             <Text style={[styles.upgradeRarityBadge, { backgroundColor: getRarityColor(upgrade.rarity) }]}>
                               {getRarityName(upgrade.rarity)}
                             </Text>
@@ -1183,7 +1238,7 @@ export default function GameScreen() {
                     <View style={styles.rerollContainer}>
                       <TouchableOpacity style={styles.rerollButton} onPress={handleRerollAd}>
                         <LinearGradient colors={['#00ff88', '#00aa66']} style={styles.rerollGradient}>
-                          <Text style={styles.rerollIcon}>📺</Text>
+                          <UiIcon iconKey="ui_ad" fallback="📺" size={18} />
                           <Text style={styles.rerollText}>Trocar (Ad)</Text>
                         </LinearGradient>
                       </TouchableOpacity>
@@ -1193,7 +1248,7 @@ export default function GameScreen() {
                         onPress={handleRerollGems}
                       >
                         <LinearGradient colors={['#b000ff', '#6600cc']} style={styles.rerollGradient}>
-                          <Text style={styles.rerollIcon}>💎</Text>
+                          <UiIcon iconKey="ui_gem" fallback="💎" size={18} />
                           <Text style={styles.rerollText}>Trocar (10)</Text>
                         </LinearGradient>
                       </TouchableOpacity>
@@ -1300,7 +1355,8 @@ export default function GameScreen() {
                     onPress={() => { playSound('buttonConfirm', settings.sound); setShowGameOver(false); setShowAdRevive(true); }}
                   >
                     <LinearGradient colors={['#ff0055', '#cc0000']} style={styles.buttonGradient}>
-                      <Text style={styles.buttonText}>📺 REVIVER (AD)</Text>
+                      <UiIcon iconKey="ui_ad" fallback="📺" size={18} />
+                      <Text style={styles.buttonText}>REVIVER (AD)</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -1394,6 +1450,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
+  levelLabel: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   levelText: { fontSize: 14, fontWeight: 'bold', color: '#ffd700' },
   xpBarLarge: {
     flex: 1,
@@ -1419,7 +1476,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   progressContainer: { marginBottom: 4 },
-  progressText: { fontSize: 12, color: '#ffffff', marginBottom: 4, textAlign: 'center', fontWeight: 'bold' },
+  progressTextRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 4 },
+  progressText: { fontSize: 12, color: '#ffffff', textAlign: 'center', fontWeight: 'bold' },
   progressBar: {
     height: 14,
     backgroundColor: '#ffffff11',
@@ -1515,6 +1573,7 @@ const styles = StyleSheet.create({
   },
   runUpgradeIcon: { fontSize: 18 },
   runUpgradeLabel: { color: '#ffffff', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
+  runUpgradeCostRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 2 },
   runUpgradeCost: { color: '#ffd700', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
   pauseModal: { width: '86%', maxWidth: 380, borderRadius: 16, overflow: 'hidden' },
   pauseHint: { color: '#ffffff88', fontSize: 12, textAlign: 'center', marginTop: 10 },
@@ -1583,6 +1642,6 @@ const styles = StyleSheet.create({
   reviveButton: { height: 50, borderRadius: 12, overflow: 'hidden', marginBottom: 10, borderWidth: 1.5, borderColor: '#ff4d6d' },
   giveUpButton: { minHeight: 46, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#ff4d6d88', borderRadius: 12, marginTop: 8, backgroundColor: '#330816' },
   giveUpText: { color: '#ffffff', fontSize: 14, fontWeight: 'bold' },
-  buttonGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  buttonGradient: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   buttonText: { fontSize: 16, fontWeight: 'bold', color: '#ffffff' },
 });

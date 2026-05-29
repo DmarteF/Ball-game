@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AdModal } from '@/src/components/AdModal';
 import { UiIcon } from '@/src/components/UiIcon';
+import { ProfileAvatar } from '@/src/components/ProfileAvatar';
 import { useGame } from '@/src/contexts/GameContext';
 import { getWeeklyEvent } from '@/src/game/retention';
 import { playSound } from '@/src/utils/audio';
@@ -11,7 +12,7 @@ import { playSound } from '@/src/utils/audio';
 export default function HomeScreen() {
   const router = useRouter();
   const game = useGame();
-  const { coins, gems, keys, loading, nickname, avatar, level, lastAchievementUnlocked, clearAchievementToast, pendingOfflineReward } = game;
+  const { coins, gems, keys, loading, nickname, avatar, avatarImageUri, level, lastAchievementUnlocked, clearAchievementToast, pendingOfflineReward } = game;
   const [moreOpen, setMoreOpen] = useState(false);
   const [offlineVisible, setOfflineVisible] = useState(!!pendingOfflineReward);
   const [showOfflineAd, setShowOfflineAd] = useState(false);
@@ -61,7 +62,7 @@ export default function HomeScreen() {
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.profileBadge} onPress={() => go('/profile')}>
-          <Text style={styles.statIcon}>{avatar}</Text>
+          <ProfileAvatar avatar={avatar} imageUri={avatarImageUri} size={34} style={styles.profileAvatar} />
           <View>
             <Text style={styles.nickname}>{nickname}</Text>
             <Text style={styles.levelText}>Lv.{level}</Text>
@@ -82,7 +83,7 @@ export default function HomeScreen() {
 
         <TouchableOpacity style={styles.playButton} onPress={() => go('/phase-select')}>
           <LinearGradient colors={['#00f0ff', '#0088ff']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.playGradient}>
-            <Text style={styles.playIcon}>▶</Text>
+            <UiIcon iconKey="ui_play" fallback="▶" size={32} style={styles.playIcon} />
             <Text style={styles.playText}>JOGAR</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
   loadingText: { color: '#00f0ff', fontSize: 16, marginTop: 16 },
   topBar: { paddingTop: 50, paddingHorizontal: 18, paddingBottom: 8, gap: 10 },
   profileBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff22', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 14, gap: 10 },
-  statIcon: { fontSize: 24 },
+  profileAvatar: { borderColor: '#ffffff55' },
   nickname: { color: '#ffffff', fontWeight: 'bold', fontSize: 14 },
   levelText: { color: '#00f0ff', fontSize: 12, fontWeight: 'bold' },
   resources: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -191,7 +192,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 18, fontWeight: '300', color: '#ffffff', letterSpacing: 7, marginTop: 2 },
   playButton: { width: '100%', height: 78, borderRadius: 16, overflow: 'hidden', marginBottom: 12, shadowColor: '#00f0ff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 18 },
   playGradient: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 },
-  playIcon: { fontSize: 30, color: '#ffffff' },
+  playIcon: { tintColor: '#ffffff' },
   playText: { fontSize: 30, fontWeight: 'bold', color: '#ffffff', letterSpacing: 3 },
   primaryRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   primaryCard: { flex: 1, height: 92, borderRadius: 14, overflow: 'hidden' },

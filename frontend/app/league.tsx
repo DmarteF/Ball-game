@@ -7,12 +7,14 @@ import { DIVISIONS, getDaysRemainingInSeason, getDivisionReward, getDivisionMinS
 import { getSkinById } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
 import { SkinIcon } from '@/src/components/SkinIcon';
+import { UiIcon } from '@/src/components/UiIcon';
+import { ProfileAvatar } from '@/src/components/ProfileAvatar';
 
 export default function LeagueScreen() {
   const router = useRouter();
   const game = useGame();
   const listRef = useRef<FlatList>(null);
-  const standings = useMemo(() => game.getLeagueStandings(), [game.league, game.nickname, game.level, game.lifetimeStats, game.unlockedSkins]);
+  const standings = useMemo(() => game.getLeagueStandings(), [game.league, game.nickname, game.avatar, game.avatarImageUri, game.level, game.lifetimeStats, game.unlockedSkins]);
   const playerIndex = standings.findIndex(item => item.id === game.playerId);
   const player = standings[playerIndex] || game.getLeaguePlayer();
   const above = playerIndex > 0 ? standings[playerIndex - 1] : undefined;
@@ -48,7 +50,7 @@ export default function LeagueScreen() {
     return (
       <View style={[styles.row, isPlayer && styles.playerRow]}>
         <Text style={styles.position}>#{index + 1}</Text>
-        <Text style={styles.avatar}>{item.avatar}</Text>
+        <ProfileAvatar avatar={item.avatar} imageUri={item.avatarImageUri} size={34} style={styles.avatarPhoto} />
         <View style={styles.rowInfo}>
           <Text style={styles.name} numberOfLines={1}>{isPlayer ? `${item.name} (Você)` : item.name}</Text>
           <View style={styles.metaRow}>
@@ -57,7 +59,7 @@ export default function LeagueScreen() {
           </View>
         </View>
         <View style={styles.scoreBox}>
-          <Text style={styles.score}>{item.trophies.toLocaleString('pt-BR')} 🏆</Text>
+          <View style={styles.scoreRow}><Text style={styles.score}>{item.trophies.toLocaleString('pt-BR')}</Text><UiIcon iconKey="ui_achievements" fallback="🏆" size={14} /></View>
           <Text style={styles.division}>{item.division}</Text>
           {previous && <Text style={styles.diff}>+{(previous.trophies - item.trophies).toLocaleString('pt-BR')}</Text>}
         </View>
@@ -196,13 +198,14 @@ const styles = StyleSheet.create({
   row: { height: 68, flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff10', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingHorizontal: 10, marginBottom: 8, gap: 8 },
   playerRow: { borderColor: '#00ff88', backgroundColor: '#00ff8820' },
   position: { width: 42, color: '#00f0ff', fontWeight: 'bold' },
-  avatar: { fontSize: 24 },
+  avatarPhoto: { borderColor: '#ffffff55' },
   rowInfo: { flex: 1 },
   name: { color: '#ffffff', fontSize: 14, fontWeight: 'bold' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   metaSkin: { borderWidth: 0, backgroundColor: 'transparent' },
   meta: { color: '#ffffff99', fontSize: 11, marginTop: 2 },
   scoreBox: { alignItems: 'flex-end', minWidth: 82 },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   score: { color: '#ffd700', fontSize: 12, fontWeight: 'bold' },
   division: { color: '#ffffff', fontSize: 10, marginTop: 2 },
   diff: { color: '#ffffff77', fontSize: 10, marginTop: 2 },

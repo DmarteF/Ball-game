@@ -445,22 +445,58 @@ export const getRarityName = (rarity: UpgradeRarity): string => {
   }
 };
 
+const STARTER_RUN_UPGRADE_IDS = ['damage', 'speed', 'coinBoost', 'critical'];
+
+const PERMANENT_TO_RUN_UPGRADE_IDS: Record<string, string[]> = {
+  baseDamage: ['damage'],
+  baseSpeed: ['speed'],
+  coinMultiplier: ['coinBoost'],
+  critChance: ['critical'],
+  xpBoost: ['xpBoost'],
+  perfectChance: ['perfectChance'],
+  slowRings: ['frost'],
+};
+
+const getUnlockedRunUpgradeIds = (unlockedUpgradeIds?: string[]) => {
+  const unlockedPermanentIds = unlockedUpgradeIds?.length
+    ? unlockedUpgradeIds
+    : ['baseDamage', 'baseSpeed', 'coinMultiplier', 'critChance'];
+  const runIds = new Set<string>();
+
+  unlockedPermanentIds.forEach(id => {
+    if (UPGRADES.some(upgrade => upgrade.id === id)) runIds.add(id);
+    PERMANENT_TO_RUN_UPGRADE_IDS[id]?.forEach(runId => runIds.add(runId));
+  });
+
+  if (!unlockedUpgradeIds?.length) {
+    STARTER_RUN_UPGRADE_IDS.forEach(id => runIds.add(id));
+  }
+
+  return runIds;
+};
+
+export const getAvailableRunUpgrades = (
+  currentUpgrades: Record<string, number> = {},
+  _playerLevel: number = 1,
+  unlockedUpgradeIds?: string[]
+): Upgrade[] => {
+  const unlocked = getUnlockedRunUpgradeIds(unlockedUpgradeIds);
+
+  return UPGRADES.filter(upgrade =>
+    Boolean(upgrade?.id && upgrade.name && upgrade.description && upgrade.icon) &&
+    (currentUpgrades[upgrade.id] || 0) < upgrade.maxLevel &&
+    unlocked.has(upgrade.id) &&
+    (!upgrade.secret || unlocked.has(upgrade.id))
+  );
+};
+
 export const getRandomUpgrades = (
   count: number = 3,
   currentUpgrades: Record<string, number> = {},
   playerLevel: number = 1,
   unlockedUpgradeIds?: string[]
 ): Upgrade[] => {
-  const starterIds = ['damage', 'speed', 'coinBoost', 'critical'];
-  const unlocked = new Set(unlockedUpgradeIds?.length ? unlockedUpgradeIds : starterIds);
-  const isValid = (upgrade: Upgrade) =>
-    Boolean(upgrade?.id && upgrade.name && upgrade.description && upgrade.icon) &&
-    (currentUpgrades[upgrade.id] || 0) < upgrade.maxLevel &&
-    unlocked.has(upgrade.id) &&
-    (!upgrade.secret || unlocked.has(upgrade.id)) &&
-    (playerLevel >= upgrade.unlockLevel || starterIds.includes(upgrade.id));
-
-  const available = UPGRADES.filter(isValid);
+  const available = getAvailableRunUpgrades(currentUpgrades, playerLevel, unlockedUpgradeIds);
   
   // Apply rarity weighting (common more likely than legendary)
   const weighted: Upgrade[] = [];
@@ -488,7 +524,7 @@ export const getRandomUpgrades = (
       if (unique.length >= count) break;
     }
   }
-  const fallback = UPGRADES.filter(upgrade => starterIds.includes(upgrade.id) && isValid(upgrade));
+  const fallback = available.filter(upgrade => STARTER_RUN_UPGRADE_IDS.includes(upgrade.id));
   for (const upgrade of fallback) {
     if (!seen.has(upgrade.id)) {
       seen.add(upgrade.id);
@@ -498,7 +534,7 @@ export const getRandomUpgrades = (
   }
 
   if (unique.length < count) {
-    const safePool = UPGRADES.filter(upgrade => isValid(upgrade));
+    const safePool = available;
     for (const upgrade of safePool) {
       if (!seen.has(upgrade.id)) {
         seen.add(upgrade.id);

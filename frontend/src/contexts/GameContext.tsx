@@ -75,6 +75,7 @@ interface SaveData {
   playerId: string;
   nickname: string;
   avatar: string;
+  avatarImageUri?: string;
   favoriteSkin: string;
   coins: number;
   gems: number;
@@ -149,7 +150,7 @@ interface GameContextType extends SaveData {
   grantChestReward: (reward: ChestReward) => Promise<void>;
   unlockSkin: (skinId: string) => Promise<void>;
   saveProgress: (patch?: Partial<SaveData>) => Promise<void>;
-  updateProfile: (patch: Partial<Pick<SaveData, 'nickname' | 'avatar' | 'favoriteSkin'>>) => Promise<void>;
+  updateProfile: (patch: Partial<Pick<SaveData, 'nickname' | 'avatar' | 'avatarImageUri' | 'favoriteSkin'>>) => Promise<void>;
   addProfileXp: (amount: number) => Promise<void>;
   collectAchievementReward: (achievementId: string) => Promise<boolean>;
   upgradeSkinLevel: (skinId: string) => Promise<boolean>;
@@ -237,6 +238,7 @@ const defaultSave = (): SaveData => {
   playerId,
   nickname: 'Player',
   avatar: '🔵',
+  avatarImageUri: undefined,
   favoriteSkin: 'neon_blue',
   coins: 600,
   gems: 60,
@@ -405,6 +407,7 @@ const buildLeaguePlayer = (save: SaveData): LeagueRival => {
     id: save.playerId,
     name: save.nickname || 'Player',
     avatar: save.avatar || '🔵',
+    avatarImageUri: save.avatarImageUri,
     favoriteSkin: save.favoriteSkin || save.ballTransformation,
     level: save.level,
     trophies: Math.max(trophies, getDivisionMinScore(division)),
@@ -554,6 +557,7 @@ const normalizeSave = (rawSave: Partial<SaveData> | null | undefined): SaveData 
     playerId: safeString(parsed.playerId, base.playerId),
     nickname: safeString(parsed.nickname, base.nickname),
     avatar: safeString(parsed.avatar, base.avatar),
+    avatarImageUri: typeof parsed.avatarImageUri === 'string' && parsed.avatarImageUri.length > 0 ? parsed.avatarImageUri : undefined,
     favoriteSkin: unlockedSkins.includes(parsed.favoriteSkin || '') ? parsed.favoriteSkin || selectedSkin : selectedSkin,
     coins: safeNumber(parsed.coins, base.coins),
     gems: safeNumber(parsed.gems, base.gems),
@@ -833,7 +837,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 'skinEquips', current.ballTransformation === transformationId ? 0 : 1));
   };
 
-  const updateProfile = async (patch: Partial<Pick<SaveData, 'nickname' | 'avatar' | 'favoriteSkin'>>) => {
+  const updateProfile = async (patch: Partial<Pick<SaveData, 'nickname' | 'avatar' | 'avatarImageUri' | 'favoriteSkin'>>) => {
     const current = saveRef.current;
     const favoriteSkin = patch.favoriteSkin && current.unlockedSkins.includes(patch.favoriteSkin) ? patch.favoriteSkin : current.favoriteSkin;
     await persist({ ...current, ...patch, favoriteSkin });
