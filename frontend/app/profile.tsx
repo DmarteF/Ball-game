@@ -14,6 +14,7 @@ import { ProfileAvatar } from '@/src/components/ProfileAvatar';
 import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { SUPPORTED_LANGUAGES, useTranslation } from '@/src/i18n';
 import { useGameText } from '@/src/i18n/gameText';
+import { DISPLAY_HZ_OPTIONS, GAME_FPS_OPTIONS } from '@/src/utils/performance';
 
 const AVATARS = ['🔵', '🐶', '🐱', '🐷', '🐰', '👻', '🤖', '🐉', '💀', '🌌'];
 
@@ -158,6 +159,35 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.sectionTitle}>DESEMPENHO</Text>
+          <Text style={styles.stat}>FPS do jogo</Text>
+          <View style={styles.optionGrid}>
+            {GAME_FPS_OPTIONS.map(fps => (
+              <TouchableOpacity
+                key={fps}
+                style={[styles.optionButton, game.settings.gameFps === fps && styles.optionActive]}
+                onPress={() => game.updateAudioSettings({ gameFps: fps })}
+              >
+                <Text style={[styles.optionText, game.settings.gameFps === fps && styles.optionTextActive]}>{fps} FPS</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={[styles.stat, styles.optionSectionLabel]}>Hz alvo da tela</Text>
+          <View style={styles.optionGrid}>
+            {DISPLAY_HZ_OPTIONS.map(hz => (
+              <TouchableOpacity
+                key={hz}
+                style={[styles.optionButton, game.settings.displayHz === hz && styles.optionActive]}
+                onPress={() => game.updateAudioSettings({ displayHz: hz })}
+              >
+                <Text style={[styles.optionText, game.settings.displayHz === hz && styles.optionTextActive]}>{hz} Hz</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.helpText}>Use 30/45 FPS em aparelhos fracos. O jogo usa o menor valor entre FPS e Hz para reduzir travamentos.</Text>
+        </View>
+
+        <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('settings.language').toUpperCase()}</Text>
           <Text style={styles.stat}>{t('settings.selectLanguage')}</Text>
           <View style={styles.languageGrid}>
@@ -266,6 +296,13 @@ const styles = StyleSheet.create({
   toggleButton: { flexGrow: 1, minWidth: 96, backgroundColor: '#ffffff14', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   toggleActive: { backgroundColor: '#00f0ff', borderColor: '#00f0ff' },
   toggleText: { color: '#ffffff', fontWeight: 'bold', fontSize: 12, textAlign: 'center', flexShrink: 1 },
+  optionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  optionButton: { minWidth: 76, flexGrow: 1, flexBasis: '28%', minHeight: 42, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', backgroundColor: '#ffffff14', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  optionActive: { borderColor: '#00ff88', backgroundColor: '#00ff8822' },
+  optionText: { color: '#ffffff', fontWeight: 'bold', fontSize: 12, textAlign: 'center' },
+  optionTextActive: { color: '#00ff88' },
+  optionSectionLabel: { marginTop: 12 },
+  helpText: { color: '#ffffff99', fontSize: 12, lineHeight: 17, marginTop: 10 },
   languageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   languageButton: { minWidth: 128, flexGrow: 1, flexBasis: '45%', minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', backgroundColor: '#ffffff14', paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   languageActive: { borderColor: '#00ff88', backgroundColor: '#00ff8822' },

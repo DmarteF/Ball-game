@@ -249,19 +249,24 @@ export const tickArenaPhysics = (
     skinPassive?: SkinDefinition['passive'];
     skinLevel?: number;
     onLevelUp?: boolean;
+    deltaTime?: number;
   } = {}
 ): ArenaTickResult => {
   if (state.finished || state.crushed) return { state, brokeRing: false, brokeSolid: false };
   const now = Date.now();
   const shrink = options.shrinkMultiplier ?? 1;
+  const deltaTime = Math.max(0.5, Math.min(3, options.deltaTime ?? 1));
   const previousDist = Math.hypot(state.ball.x - state.center, state.ball.y - state.center);
   let next: DualArenaState = {
     ...state,
-    ball: { x: state.ball.x + state.velocity.x * (options.speedMultiplier ?? 1), y: state.ball.y + state.velocity.y * (options.speedMultiplier ?? 1) },
+    ball: {
+      x: state.ball.x + state.velocity.x * (options.speedMultiplier ?? 1) * deltaTime,
+      y: state.ball.y + state.velocity.y * (options.speedMultiplier ?? 1) * deltaTime,
+    },
     velocity: clampBallSpeed({ ...state.velocity }, 2.05 * (options.speedMultiplier ?? 1), 5.2),
-    rings: updateRings(state.rings, shrink, now, options.ringMinGap ?? 7),
-    aiTimer: state.aiTimer + 1,
-    lastSolidBreak: Math.max(0, state.lastSolidBreak - 1),
+    rings: updateRings(state.rings, shrink * deltaTime, now, options.ringMinGap ?? 7),
+    aiTimer: state.aiTimer + deltaTime,
+    lastSolidBreak: Math.max(0, state.lastSolidBreak - deltaTime),
   };
 
   const dx = next.ball.x - next.center;

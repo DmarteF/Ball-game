@@ -18,6 +18,7 @@ import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { MuteButton } from '@/src/components/MuteButton';
 import { getDualArenaSize, getSafePaddingBottom, getSafePaddingTop } from '@/src/utils/gameplayLayout';
 import { startFrameLoop } from '@/src/utils/frameLoop';
+import { getPerformanceFrameIntervalMs } from '@/src/utils/performance';
 import { useGameText } from '@/src/i18n/gameText';
 import { useTranslation } from '@/src/i18n';
 
@@ -153,7 +154,7 @@ export default function CompeteScreen() {
 
   useEffect(() => {
     if (paused || result || levelChoices.length > 0) return;
-    const stopLoop = startFrameLoop(() => {
+    const stopLoop = startFrameLoop((deltaTime) => {
       setPlayerArena(current => {
         if (!current) return current;
         const beforeLevel = current.level;
@@ -174,6 +175,7 @@ export default function CompeteScreen() {
           ringMinGap: 8,
           skinPassive: playerSkin.passive,
           skinLevel: game.skinLevels[playerSkin.id] || 1,
+          deltaTime,
         });
         const next = tick.state;
         if (tick.brokeRing) playSound(tick.brokeSolid ? 'hitHeavy' : 'ringBreak', game.settings.sound);
@@ -210,6 +212,7 @@ export default function CompeteScreen() {
           ringMinGap: 8,
           skinPassive: rivalSkin.passive,
           skinLevel: game.skinLevels[rivalSkin.id] || 1,
+          deltaTime,
         });
         let next = tick.state;
         if (tick.brokeRing) playSound(tick.brokeSolid ? 'hitHeavy' : 'ringBreak', game.settings.sound);
@@ -225,7 +228,7 @@ export default function CompeteScreen() {
         }
         return next;
       });
-    }, { minIntervalMs: 32 });
+    }, { minIntervalMs: getPerformanceFrameIntervalMs(game.settings) });
     return stopLoop;
   }, [paused, !!result, playerArena?.id, levelChoices.length, game.stats.baseDamage, game.stats.coinMultiplier, game.stats.xpMultiplier, runUpgrades, match.rival.trophies]);
 

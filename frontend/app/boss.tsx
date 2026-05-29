@@ -28,6 +28,7 @@ import { MuteButton } from '@/src/components/MuteButton';
 import { SkinIcon } from '@/src/components/SkinIcon';
 import { getDualArenaSize, getSafePaddingBottom, getSafePaddingTop } from '@/src/utils/gameplayLayout';
 import { startFrameLoop } from '@/src/utils/frameLoop';
+import { getPerformanceFrameIntervalMs } from '@/src/utils/performance';
 import { useTranslation } from '@/src/i18n';
 import { useGameText } from '@/src/i18n/gameText';
 
@@ -144,7 +145,7 @@ export default function BossScreen() {
 
   useEffect(() => {
     if (duelState !== 'playing') return;
-    const stopLoop = startFrameLoop(() => {
+    const stopLoop = startFrameLoop((deltaTime) => {
       setPlayerArena(current => {
         if (!current) return current;
         const beforeLevel = current.level;
@@ -165,6 +166,7 @@ export default function BossScreen() {
           ringMinGap: 8,
           skinPassive: playerSkin.passive,
           skinLevel: game.skinLevels[playerSkin.id] || 1,
+          deltaTime,
         });
         const result = tick.state;
         if (tick.brokeRing) playSound(tick.brokeSolid ? 'hitHeavy' : 'ringBreak', game.settings.sound);
@@ -201,6 +203,7 @@ export default function BossScreen() {
           ringMinGap: 8,
           skinPassive: bossSkin.passive,
           skinLevel: game.skinLevels[bossSkin.id] || 1,
+          deltaTime,
         });
         let next = tick.state;
         if (tick.brokeRing) playSound(tick.brokeSolid ? 'hitHeavy' : 'ringBreak', game.settings.sound);
@@ -219,7 +222,7 @@ export default function BossScreen() {
         }
         return next;
       });
-    }, { minIntervalMs: 32 });
+    }, { minIntervalMs: getPerformanceFrameIntervalMs(game.settings) });
     return stopLoop;
   }, [duelState, activeLevel.id, activeLevel.bossDamageMultiplier, activeLevel.bossShrinkMultiplier, game.stats.baseDamage, game.stats.coinMultiplier, game.stats.xpMultiplier, runUpgrades, levelChoices.length]);
 

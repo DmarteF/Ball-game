@@ -25,6 +25,7 @@ import {
 } from '@/src/game/retention';
 import { getLocalDayKey, getLocalWeekKey } from '@/src/utils/time';
 import { applyAudioSettings, DEFAULT_AUDIO_SETTINGS, AudioSettings } from '@/src/utils/audio';
+import { DEFAULT_PERFORMANCE_SETTINGS, PerformanceSettings, normalizePerformanceSettings } from '@/src/utils/performance';
 import { DEFAULT_LANGUAGE, LanguageCode, normalizeLanguage } from '@/src/i18n';
 import {
   LeagueRival,
@@ -71,6 +72,8 @@ export interface InventoryItem {
   rarity: string;
   amount: number;
 }
+
+type GameSettings = { sound: boolean; haptics: boolean } & AudioSettings & PerformanceSettings;
 
 interface SaveData {
   playerId: string;
@@ -128,7 +131,7 @@ interface SaveData {
   };
   bossProgress: BossProgressSave;
   language: LanguageCode;
-  settings: { sound: boolean; haptics: boolean } & AudioSettings;
+  settings: GameSettings;
   league: LeagueSave;
   dailyMissions: DailyMissionSave;
   weeklyEvent: WeeklyEventSave;
@@ -201,7 +204,7 @@ interface GameContextType extends SaveData {
   claimOfflineReward: (double?: boolean) => Promise<void>;
   refreshTimedSystems: () => Promise<void>;
   updateLanguage: (language: LanguageCode) => Promise<void>;
-  updateAudioSettings: (patch: Partial<AudioSettings>) => Promise<void>;
+  updateAudioSettings: (patch: Partial<GameSettings>) => Promise<void>;
   getLeaguePlayer: () => LeagueRival;
   getLeagueStandings: () => LeagueRival[];
   collectDivisionReward: (division: string) => Promise<boolean>;
@@ -292,7 +295,7 @@ const defaultSave = (): SaveData => {
   },
   bossProgress: createBossProgress(),
   language: DEFAULT_LANGUAGE,
-  settings: { sound: true, haptics: true, ...DEFAULT_AUDIO_SETTINGS },
+  settings: { sound: true, haptics: true, ...DEFAULT_AUDIO_SETTINGS, ...DEFAULT_PERFORMANCE_SETTINGS },
   league: defaultLeagueSave(playerId),
   dailyMissions: createDailyMissions(),
   weeklyEvent: createWeeklyEvent(),
@@ -582,7 +585,11 @@ const normalizeSave = (rawSave: Partial<SaveData> | null | undefined): SaveData 
     lifetimeStats,
     bossProgress: normalizeBossProgress(parsed.bossProgress),
     language: normalizeLanguage(parsed.language),
-    settings: { ...base.settings, ...(parsed.settings || {}) },
+    settings: {
+      ...base.settings,
+      ...(parsed.settings || {}),
+      ...normalizePerformanceSettings(parsed.settings),
+    },
     league: parsed.league || defaultLeagueSave(safeString(parsed.playerId, base.playerId), 0),
     unlockedUpgrades: getUnlockedUpgradesForProfile(profileLevel, currentPhase),
     dailyMissions,
@@ -1232,9 +1239,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await persist({ ...saveRef.current, language: normalizeLanguage(language) });
   };
 
-  const updateAudioSettings = async (patch: Partial<AudioSettings>) => {
+  const updateAudioSettings = async (patch: Partial<GameSettings>) => {
     const current = saveRef.current;
-    const settings = { ...current.settings, ...patch };
+    const settings = {
+      ...current.settings,
+      ...patch,
+      ...normalizePerformanceSettings({ ...current.settings, ...patch }),
+    };
     settings.sound = !settings.masterMuted && !settings.sfxMuted;
     applyAudioSettings(settings);
     await persist({ ...current, settings });

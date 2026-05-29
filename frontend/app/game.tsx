@@ -34,6 +34,7 @@ import { ECONOMY_BALANCE, getComboMultiplier, getGlobalCoinsFromRun, getRunProfi
 import { playSound } from '@/src/utils/audio';
 import { triggerHaptic } from '@/src/utils/feedback';
 import { getSafePaddingBottom, getSafePaddingTop, getSingleArenaSize } from '@/src/utils/gameplayLayout';
+import { getPerformanceFrameIntervalMs } from '@/src/utils/performance';
 import { useTranslation } from '@/src/i18n';
 
 const BALL_RADIUS = 10;
@@ -41,7 +42,7 @@ const INNER_RADIUS = 35;
 const INITIAL_BALL_SPEED = GAMEPLAY_TUNING.solo.ballSpeed;
 const XP_BASE_REQUIREMENT = 150;
 const DIFFICULTY_SCALE = 0.13;
-const FRAME_STEP_MS = 1000 / 60;
+const PHYSICS_STEP_MS = 1000 / 60;
 const MAX_FRAME_DELTA_STEPS = 2;
 const VISUAL_RENDER_INTERVAL_MS = 33;
 
@@ -104,6 +105,7 @@ export default function GameScreen() {
   const CENTER_Y = GAME_SIZE / 2;
   const OUTER_RADIUS = GAME_SIZE / 2 - 8;
   const { stats, updateGems, unlockPhase, gems, coins: accountCoins, ballTransformation, level: savedLevel, profileXp, settings, unlockedUpgrades, permanentUpgrades, recordRunRewards, recordAdUse } = useGame();
+  const frameIntervalMs = getPerformanceFrameIntervalMs(settings);
   
   const [isPaused, setIsPaused] = useState(false);
   const [showPauseMenu, setShowPauseMenu] = useState(false);
@@ -306,10 +308,14 @@ export default function GameScreen() {
     const frame = (timestamp: number) => {
       const previousTimestamp = lastFrameTimeRef.current ?? timestamp;
       const elapsedMs = Math.max(0, timestamp - previousTimestamp);
+      if (elapsedMs < frameIntervalMs) {
+        animationFrameRef.current = requestAnimationFrame(frame);
+        return;
+      }
       lastFrameTimeRef.current = timestamp;
 
       if (!isPausedRef.current && !isGameOverRef.current && !showLevelUpRef.current && initializedRef.current) {
-        const deltaSteps = Math.min(MAX_FRAME_DELTA_STEPS, Math.max(0.5, elapsedMs / FRAME_STEP_MS || 1));
+        const deltaSteps = Math.min(MAX_FRAME_DELTA_STEPS, Math.max(0.5, elapsedMs / PHYSICS_STEP_MS || 1));
         updateGame(deltaSteps);
       }
 
