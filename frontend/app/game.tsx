@@ -169,16 +169,17 @@ export default function GameScreen() {
     arenaGold: runShopUpgrades.gold,
     permanentUpgrades,
     modeBonus: {
-      damageMultiplier: stats.baseDamage,
       speedMultiplier: 1,
     },
   });
-  const baseDamage = soloAttributes.damageMultiplier;
-  const critChance = stats.critChance + (currentUpgrades['critical'] || 0) * 5 + (currentUpgrades['criticalOverload'] || 0) * 2 + (skinPassive.type === 'crit_chance' ? skinPassive.value : 0);
-  const coinMultiplier = soloAttributes.coinMultiplier * (1 + (currentUpgrades['magnetCoins'] || 0) * 0.25);
-  const xpMultiplier = soloAttributes.xpMultiplier;
-  const speedMultiplier = 1 + (currentUpgrades['speed'] || 0) * 0.08 + (soloAttributes.speedMultiplier - 1);
-  const perfectDiamondChance = Math.min(0.18, 0.03 + (currentUpgrades['perfectChance'] || 0) * 0.01 + (skinPassive.type === 'perfect_chance' || skinPassive.type === 'cosmic_critical' || skinPassive.type === 'league_king_wave' ? skinPassive.value : 0));
+  const baseDamage = soloAttributes.damage;
+  const finalStatsRef = useRef(soloAttributes);
+  const currentUpgradesRef = useRef(currentUpgrades);
+
+  useEffect(() => {
+    finalStatsRef.current = soloAttributes;
+    currentUpgradesRef.current = currentUpgrades;
+  }, [soloAttributes, currentUpgrades]);
 
   const getSafeUpgradeOptions = (previous: Upgrade[] = []) => {
     const options = getRandomUpgrades(3, currentUpgrades, savedLevel, unlockedUpgrades)
@@ -385,7 +386,15 @@ export default function GameScreen() {
   };
 
   const updateGame = (deltaTime = 1) => {
-    const targetSpeed = (INITIAL_BALL_SPEED + Math.min(GAMEPLAY_TUNING.solo.ballMaxBonus, (Number(phase) - 1 || 0) * GAMEPLAY_TUNING.solo.ballPhaseGain)) * speedMultiplier;
+    const liveStats = finalStatsRef.current;
+    const liveUpgrades = currentUpgradesRef.current;
+    const liveDamage = liveStats.damage;
+    const liveCoinMultiplier = liveStats.goldMultiplier;
+    const liveXpMultiplier = liveStats.xpMultiplier;
+    const liveSpeedMultiplier = liveStats.speedMultiplier;
+    const liveCritChance = liveStats.critChance + (liveUpgrades['criticalOverload'] || 0) * 2;
+    const livePerfectDiamondChance = Math.min(0.18, 0.03 + liveStats.rewardChance);
+    const targetSpeed = (INITIAL_BALL_SPEED + Math.min(GAMEPLAY_TUNING.solo.ballMaxBonus, (Number(phase) - 1 || 0) * GAMEPLAY_TUNING.solo.ballPhaseGain)) * liveSpeedMultiplier;
     velocityRef.current = clampBallSpeed(velocityRef.current, targetSpeed * 0.78, targetSpeed * 1.42);
 
     if (
@@ -448,8 +457,8 @@ export default function GameScreen() {
 
     if (perfectEscape.ring && perfectEscape.index >= 0) {
       updatedRings[perfectEscape.index] = { ...perfectEscape.ring, status: 'cleared', hp: 0 };
-      const perfectCoins = Math.max(2, Math.floor(5 * coinMultiplier));
-      const perfectXp = Math.floor((10 + Math.random() * 8) * xpMultiplier);
+      const perfectCoins = Math.max(2, Math.floor(5 * liveCoinMultiplier));
+      const perfectXp = Math.floor((10 + Math.random() * 8) * liveXpMultiplier);
       awardCoins(perfectCoins);
       awardXp(perfectXp);
       setRunRewards(prev => ({ ...prev, perfectEscapes: prev.perfectEscapes + 1 }));
@@ -458,7 +467,7 @@ export default function GameScreen() {
       triggerImpact('perfect');
       playSound('perfect', settings.sound);
 
-      if (Math.random() < perfectDiamondChance) {
+      if (Math.random() < livePerfectDiamondChance) {
         awardGem(1);
         if (skinPassive.type === 'perfect_chance') addBonus('Perfect Chance!');
         addFloatingNumber('Perfect +1 💎', ballPosRef.current.x + 10, ballPosRef.current.y + 10, false, '#c084fc');
@@ -514,7 +523,7 @@ export default function GameScreen() {
       if (ghostPass) {
         updatedRings[index] = { ...updatedRings[index], status: 'cleared', hp: 0 };
         setRunRewards(prev => ({ ...prev, perfectEscapes: prev.perfectEscapes + 1 }));
-        awardXp(Math.floor((8 + Math.random() * 6) * xpMultiplier));
+        awardXp(Math.floor((8 + Math.random() * 6) * liveXpMultiplier));
         addBonus('Phase!');
         addFloatingNumber('Phase!', ballPosRef.current.x, ballPosRef.current.y, false, '#dff7ff');
         registerCombo(ballPosRef.current.x, ballPosRef.current.y, 'Phase');
@@ -522,8 +531,8 @@ export default function GameScreen() {
         triggerImpact('skin');
       } else {
       const megaCrit = skinPassive.type === 'mega_crit' && Math.random() < (skinPassive.chance || 0);
-      const isCrit = megaCrit || Math.random() * 100 < critChance;
-      const damage = baseDamage * (1 + (currentUpgrades['laserCut'] && Math.random() < 0.08 ? currentUpgrades['laserCut'] * 0.5 : 0)) * (isCrit ? (megaCrit ? skinPassive.value : stats.critMultiplier + (currentUpgrades['criticalOverload'] || 0) * 0.15) : 1);
+      const isCrit = megaCrit || Math.random() * 100 < liveCritChance;
+      const damage = liveDamage * (1 + (liveUpgrades['laserCut'] && Math.random() < 0.08 ? liveUpgrades['laserCut'] * 0.5 : 0)) * (isCrit ? (megaCrit ? skinPassive.value : liveStats.critDamage) : 1);
       const wasAlive = hitRing.hp > 0;
       const newHP = Math.max(0, hitRing.hp - damage);
       
@@ -547,25 +556,25 @@ export default function GameScreen() {
         registerCombo(ballPosRef.current.x, ballPosRef.current.y, 'Break');
         triggerImpact('break');
         playSound('ringBreak', settings.sound);
-        awardCoins(Math.max(6, Math.floor((hitRing.type === 'solid' ? 18 : 12) * coinMultiplier)));
-        awardXp(Math.floor(((hitRing.type === 'solid' ? 16 : 8) + Math.random() * (hitRing.type === 'solid' ? 12 : 7)) * xpMultiplier));
-        if (currentUpgrades['chainBreak']) {
+        awardCoins(Math.max(6, Math.floor((hitRing.type === 'solid' ? 18 : 12) * liveCoinMultiplier)));
+        awardXp(Math.floor(((hitRing.type === 'solid' ? 16 : 8) + Math.random() * (hitRing.type === 'solid' ? 12 : 7)) * liveXpMultiplier));
+        if (liveUpgrades['chainBreak']) {
           updatedRings = updatedRings.map((ring, ringIndex) => {
             if (ringIndex <= index || ring.status !== 'active') return ring;
-            const hp = Math.max(0, ring.hp - baseDamage * currentUpgrades['chainBreak'] * 0.35);
+            const hp = Math.max(0, ring.hp - liveDamage * liveUpgrades['chainBreak'] * 0.35);
             return { ...ring, hp, status: hp <= 0 ? 'broken' as const : ring.status };
           });
           addFloatingNumber('Chain Break', ballPosRef.current.x, ballPosRef.current.y - 18, false, '#ffd700');
         }
       }
 
-      let coinsGained = Math.floor(damage * 0.5 * coinMultiplier);
+      let coinsGained = Math.floor(damage * 0.5 * liveCoinMultiplier);
       if (skinPassive.type === 'coin_on_hit' && Math.random() < (skinPassive.chance || 0)) {
         coinsGained += skinPassive.value;
         addBonus('Bonus Coins!');
         addFloatingNumber(`+${skinPassive.value} 💰`, ballPosRef.current.x, ballPosRef.current.y + 10, false, '#ffd700');
       }
-      const xpGained = Math.floor((isCrit ? 2 : 1) * xpMultiplier);
+      const xpGained = Math.floor((isCrit ? 2 : 1) * liveXpMultiplier);
       
       awardCoins(coinsGained);
       setScore(prev => prev + damage);
@@ -611,6 +620,8 @@ export default function GameScreen() {
     const ring = rings[hitIndex];
     if (!ring) return rings;
     const next = [...rings];
+    const liveUpgrades = currentUpgradesRef.current;
+    const liveCoinMultiplier = finalStatsRef.current.goldMultiplier;
     const markSkinEffect = () => {
       setRunRewards(prev => ({ ...prev, skinEffects: prev.skinEffects + 1 }));
       triggerImpact('skin');
@@ -624,26 +635,26 @@ export default function GameScreen() {
       markSkinEffect();
     }
 
-    if (currentUpgrades['slowField'] && Math.random() < 0.08 + currentUpgrades['slowField'] * 0.015) {
+    if (liveUpgrades['slowField'] && Math.random() < 0.08 + liveUpgrades['slowField'] * 0.015) {
       addBonus('Slow Field!');
-      return next.map(other => other.status === 'active' ? { ...other, slowUntil: now + 1800 + currentUpgrades['slowField'] * 250 } : other);
+      return next.map(other => other.status === 'active' ? { ...other, slowUntil: now + 1800 + liveUpgrades['slowField'] * 250 } : other);
     }
 
-    if (currentUpgrades['timeFreeze'] && Math.random() < 0.035 + currentUpgrades['timeFreeze'] * 0.01) {
+    if (liveUpgrades['timeFreeze'] && Math.random() < 0.035 + liveUpgrades['timeFreeze'] * 0.01) {
       addBonus('Time Freeze!');
       return next.map(other => other.status === 'active' ? { ...other, slowUntil: now + 2400 } : other);
     }
 
-    if ((skinPassive.type === 'repel_ring' && Math.random() < (skinPassive.chance || 0)) || (currentUpgrades['ringRepulse'] && Math.random() < 0.1)) {
-      const repulse = skinPassive.type === 'repel_ring' ? skinPassive.value : 14 + currentUpgrades['ringRepulse'] * 3;
+    if ((skinPassive.type === 'repel_ring' && Math.random() < (skinPassive.chance || 0)) || (liveUpgrades['ringRepulse'] && Math.random() < 0.1)) {
+      const repulse = skinPassive.type === 'repel_ring' ? skinPassive.value : 14 + liveUpgrades['ringRepulse'] * 3;
       next[hitIndex] = { ...next[hitIndex], radius: Math.min(ring.initialRadius + 24, ring.radius + repulse) };
       addBonus('Repel!');
       addFloatingNumber('Repel', ballPosRef.current.x, ballPosRef.current.y, false, '#c084fc');
       markSkinEffect();
     }
 
-    if (currentUpgrades['shieldPulse'] && Math.random() < 0.06 + currentUpgrades['shieldPulse'] * 0.015) {
-      const until = now + 1100 + currentUpgrades['shieldPulse'] * 350;
+    if (liveUpgrades['shieldPulse'] && Math.random() < 0.06 + liveUpgrades['shieldPulse'] * 0.015) {
+      const until = now + 1100 + liveUpgrades['shieldPulse'] * 350;
       setInvincibleUntil(until);
       invincibleUntilRef.current = until;
       addBonus('Shield Pulse!');
@@ -696,7 +707,7 @@ export default function GameScreen() {
       setInvincibleUntil(until);
       invincibleUntilRef.current = until;
       if (comboRef.current >= 8) {
-        awardCoins(Math.floor(18 * coinMultiplier));
+        awardCoins(Math.floor(18 * liveCoinMultiplier));
         addFloatingNumber('Crown Combo', ballPosRef.current.x, ballPosRef.current.y - 22, false, '#ffd700');
       }
     }
@@ -836,7 +847,7 @@ export default function GameScreen() {
     }));
 
     const reviveAngle = Math.random() * Math.PI * 2;
-    const reviveSpeed = 3.4 * speedMultiplier;
+    const reviveSpeed = 3.4 * finalStatsRef.current.speedMultiplier;
     ballPosRef.current = { x: CENTER_X, y: CENTER_Y };
     ballX.value = CENTER_X;
     ballY.value = CENTER_Y;
@@ -977,7 +988,7 @@ export default function GameScreen() {
 
         <View style={styles.progressContainer}>
           <Text style={styles.progressText}>
-            🌀 Anéis: {activeRings.length}/{totalRings} • DPS {Math.floor(dps)} {combo >= 2 ? `• Combo x${combo}` : ''}
+            🌀 Anéis: {activeRings.length}/{totalRings} • ATK {baseDamage} • DPS {Math.floor(dps)} {combo >= 2 ? `• Combo x${combo}` : ''}
           </Text>
           <View style={styles.progressBar}>
             <LinearGradient

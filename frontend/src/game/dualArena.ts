@@ -258,16 +258,12 @@ export const tickArenaPhysics = (
 
 export const applyArenaRunUpgrade = (state: DualArenaState, upgradeId: string): DualArenaState => {
   const runUpgrades = { ...state.runUpgrades, [upgradeId]: (state.runUpgrades[upgradeId] || 0) + 1 };
-  const atkBonus = ['damage', 'critical', 'laserCut', 'chainBreak', 'shockwave'].includes(upgradeId) ? 1 : 0;
-  const goldBonus = ['coinBoost', 'xpBoost', 'perfectChance'].includes(upgradeId) ? 1 : 0;
   const velocity = upgradeId === 'speed' || upgradeId === 'ricochet'
     ? clampBallSpeed({ x: state.velocity.x * 1.08, y: state.velocity.y * 1.08 }, 2.1, 5.4)
     : state.velocity;
 
   return {
     ...state,
-    atk: state.atk + atkBonus,
-    gold: state.gold + goldBonus,
     velocity,
     runUpgrades,
   };

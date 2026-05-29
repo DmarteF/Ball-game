@@ -42,6 +42,27 @@ export default function UpgradeShopScreen() {
     return Math.floor(upgrade.baseCost * Math.pow(1.5, level));
   };
 
+  const getUpgradeValue = (upgradeId: string, level: number) => {
+    switch (upgradeId) {
+      case 'baseDamage':
+        return `${(10 * Math.pow(1.1, level)).toFixed(1)} dano`;
+      case 'baseSpeed':
+        return `${(100 * Math.pow(1.08, level)).toFixed(0)} vel.`;
+      case 'coinMultiplier':
+        return `${(1 + level * 0.15).toFixed(2)}x moedas`;
+      case 'critChance':
+        return `${5 + level * 2}% crit.`;
+      case 'xpBoost':
+        return `${(1 + level * 0.2).toFixed(2)}x XP`;
+      case 'perfectChance':
+        return `${level}% perfect`;
+      case 'slowRings':
+        return `${Math.min(24, level * 1.8).toFixed(1)}% lento`;
+      default:
+        return `Lv.${level}`;
+    }
+  };
+
   const handlePurchase = async (upgrade: ShopUpgrade) => {
     const cost = getUpgradeCost(upgrade);
     const level = permanentUpgrades[upgrade.id] || 0;
@@ -106,7 +127,11 @@ export default function UpgradeShopScreen() {
                   <Text style={styles.upgradeName}>{upgrade.secret && !isUnlocked ? '???' : upgrade.name}</Text>
                   <Text style={styles.upgradeDescription}>{isUnlocked ? upgrade.description : `🔒 ${upgrade.unlockText}`}</Text>
                   <Text style={styles.upgradeLevel}>{upgrade.secret ? (isUnlocked ? 'Secreto liberado' : 'Upgrade secreto') : `Nível: ${level}/${maxLevel}`}</Text>
-                  {!upgrade.secret && isUnlocked && <Text style={styles.nextEffect}>{isMaxed ? 'Máximo' : `Próximo nível melhora o efeito descrito`}</Text>}
+                  {!upgrade.secret && isUnlocked && (
+                    <Text style={styles.nextEffect}>
+                      {isMaxed ? `Atual: ${getUpgradeValue(upgrade.id, level)} • MAX` : `Atual: ${getUpgradeValue(upgrade.id, level)} • Próx: ${getUpgradeValue(upgrade.id, level + 1)}`}
+                    </Text>
+                  )}
                 </View>
                 
                 <TouchableOpacity
