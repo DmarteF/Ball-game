@@ -1418,7 +1418,7 @@ export default function GameScreen() {
         visible={showAdReroll}
         onClose={() => setShowAdReroll(false)}
         onRewardClaimed={handleAdRerollCompleted}
-        placement="upgrade_reroll"
+        placement="rerollUpgrades"
         rewardType="double"
       />
 
@@ -1426,7 +1426,7 @@ export default function GameScreen() {
         visible={showAdDouble}
         onClose={() => setShowAdDouble(false)}
         onRewardClaimed={handleDoubleRewards}
-        placement="double_run_reward"
+        placement="doubleRewards"
         rewardType="double"
       />
     </LinearGradient>

@@ -163,6 +163,7 @@ export default function HomeScreen() {
       <AdModal
         visible={showOfflineAd}
         onClose={() => setShowOfflineAd(false)}
+        placement="doubleRewards"
         onRewardClaimed={async () => {
           await game.recordAdUse('offline_double');
           await game.claimOfflineReward(true);

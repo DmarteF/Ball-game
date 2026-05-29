@@ -184,6 +184,20 @@ export const audioService = {
     currentMusic = null;
   },
 
+  pauseMusicForAd() {
+    if (!currentMusic) return;
+    try {
+      currentMusic.player.pause();
+    } catch {}
+  },
+
+  resumeMusicAfterAd() {
+    if (!currentMusic || !canPlayMusic()) return;
+    try {
+      currentMusic.player.play();
+    } catch {}
+  },
+
   async playSound(key: SoundKey) {
     await configureAudio();
     const soundKey = normalizeKey(key);
@@ -218,5 +232,7 @@ export const playSound = async (sound: SoundKey, enabled = true) => {
 
 export const playMusic = audioService.playMusic;
 export const stopMusic = audioService.stopMusic;
+export const pauseMusicForAd = audioService.pauseMusicForAd;
+export const resumeMusicAfterAd = audioService.resumeMusicAfterAd;
 export const applyAudioSettings = audioService.applySettings;
 export const DEFAULT_AUDIO_SETTINGS = defaultAudioSettings;

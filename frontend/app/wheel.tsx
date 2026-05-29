@@ -116,7 +116,7 @@ export default function WheelScreen() {
         </View>
       </Modal>
 
-      <AdModal visible={showAd} onClose={() => setShowAd(false)} onRewardClaimed={() => spin('ad')} rewardType="double" />
+      <AdModal visible={showAd} onClose={() => setShowAd(false)} onRewardClaimed={() => spin('ad')} placement="default" rewardType="double" />
     </LinearGradient>
   );
 }

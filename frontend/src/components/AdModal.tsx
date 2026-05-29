@@ -8,7 +8,7 @@ import { RewardedAdPlacement, showRewardedAd } from '@/src/services/adsService';
 interface AdModalProps {
   visible: boolean;
   onClose: () => void;
-  onRewardClaimed: () => void;
+  onRewardClaimed: () => void | Promise<void>;
   rewardType: 'coins' | 'gems' | 'key' | 'chest' | 'revive' | 'double';
   rewardAmount?: number;
   placement?: RewardedAdPlacement;
@@ -40,13 +40,13 @@ export const AdModal: React.FC<AdModalProps> = ({
     setFeedback('Carregando anúncio...');
     const result = await showRewardedAd(placement);
     setAdWatching(false);
-    if (!result.rewarded) {
-      setFeedback('Anúncio indisponível. Tente novamente em instantes.');
+    if (!result.success) {
+      setFeedback(result.error || 'Anúncio indisponível. Tente novamente em instantes.');
       return;
     }
     if (!rewardedRef.current) {
       rewardedRef.current = true;
-      onRewardClaimed();
+      await onRewardClaimed();
       onClose();
     }
   };
@@ -131,9 +131,7 @@ export const AdModal: React.FC<AdModalProps> = ({
               >
                 <UiIcon iconKey={getRewardIconKey()} fallback={getRewardIcon()} size={58} style={styles.icon} />
                 <Text style={styles.title}>Assistir Anúncio?</Text>
-                <Text style={styles.description}>
-                  Assista um anúncio de 5 segundos para ganhar:
-                </Text>
+                <Text style={styles.description}>Assista ao vídeo até o fim para ganhar:</Text>
                 <Text style={styles.reward}>{getRewardText()}</Text>
                 {!!feedback && <Text style={styles.feedback}>{feedback}</Text>}
 
@@ -166,17 +164,15 @@ export const AdModal: React.FC<AdModalProps> = ({
                 colors={['#000000', '#1a1a1a']}
                 style={styles.adScreen}
               >
-                <Text style={styles.adTitle}>ANÚNCIO SIMULADO</Text>
+                <Text style={styles.adTitle}>CARREGANDO ANÚNCIO</Text>
                 <Text style={styles.adSubtitle}>
-                  Preparando recompensa...
+                  A recompensa só é liberada ao concluir o vídeo.
                 </Text>
                 
                 <View style={styles.adContent}>
-                  <Text style={styles.adEmoji}>📱</Text>
-                  <Text style={styles.adText}>Baixe nosso app!</Text>
-                  <Text style={styles.adDescription}>
-                    O melhor aplicativo de exemplo para demonstração
-                  </Text>
+                  <UiIcon iconKey="ui_ad" fallback="📺" size={64} />
+                  <Text style={styles.adText}>Abrindo vídeo premiado</Text>
+                  <Text style={styles.adDescription}>Não feche antes da recompensa aparecer.</Text>
                 </View>
 
                 <View style={styles.countdownContainer}>

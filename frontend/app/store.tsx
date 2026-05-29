@@ -90,11 +90,11 @@ export default function StoreScreen() {
   };
 
   const adPlacement = (): RewardedAdPlacement => {
-    if (ad === 'gems') return 'store_gems';
-    if (ad === 'chest') return 'store_chest';
-    if (ad === 'key') return 'store_key';
-    if (ad === 'offline') return 'store_offline';
-    return 'store_coins';
+    if (ad === 'gems') return 'freeGems';
+    if (ad === 'coins') return 'freeCoins';
+    if (ad === 'chest') return 'freeChest';
+    if (ad === 'offline') return 'doubleRewards';
+    return 'default';
   };
 
   const currencyIcon = (currency: string): UiIconKey =>

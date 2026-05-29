@@ -196,7 +196,7 @@ export default function InventoryScreen() {
         </View>
       </Modal>
 
-      <AdModal visible={showAd} onClose={() => setShowAd(false)} onRewardClaimed={handleFreeChestReward} placement="inventory_free_chest" rewardType="chest" rewardAmount={1} />
+      <AdModal visible={showAd} onClose={() => setShowAd(false)} onRewardClaimed={handleFreeChestReward} placement="freeChest" rewardType="chest" rewardAmount={1} />
     </LinearGradient>
   );
 }

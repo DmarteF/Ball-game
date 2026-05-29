@@ -69,7 +69,7 @@ export default function DailyScreen() {
         })}
       </ScrollView>
 
-      <AdModal visible={!!adAction} onClose={() => setAdAction(null)} onRewardClaimed={completeAdAction} rewardType="double" />
+      <AdModal visible={!!adAction} onClose={() => setAdAction(null)} onRewardClaimed={completeAdAction} placement="default" rewardType="double" />
     </LinearGradient>
   );
 }

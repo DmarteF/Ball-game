@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { GameProvider } from "@/src/contexts/GameContext";
 import { AudioController } from "@/src/components/AudioController";
+import { initializeAds, preloadRewardedAd } from "@/src/services/adsService";
 
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
@@ -22,6 +23,12 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded, error]);
+
+  useEffect(() => {
+    initializeAds().then(ready => {
+      if (ready) preloadRewardedAd('default');
+    });
+  }, []);
 
   // If the CDN is unreachable we fall through on error rather than wedging
   // the app — icons will tofu, but the app still boots.
