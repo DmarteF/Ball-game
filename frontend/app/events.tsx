@@ -3,28 +3,33 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '@/src/contexts/GameContext';
-import { describeReward, getEventMission, getWeeklyEvent } from '@/src/game/retention';
+import { getEventMission, getWeeklyEvent } from '@/src/game/retention';
 import { getEventTimeRemainingLabel } from '@/src/utils/time';
+import { useGameText } from '@/src/i18n/gameText';
+import { useTranslation } from '@/src/i18n';
 
 export default function EventsScreen() {
   const router = useRouter();
   const game = useGame();
+  const gameText = useGameText();
+  const { t, language } = useTranslation();
   const event = getWeeklyEvent(game.weeklyEvent.eventId);
+  const localizedEvent = gameText.eventText(event);
   const allClaimed = game.weeklyEvent.missions.every(item => item.claimed);
 
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
-        <Text style={[styles.title, { color: event.color }]}>{event.name.toUpperCase()}</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text></TouchableOpacity>
+        <Text style={[styles.title, { color: event.color }]}>{localizedEvent.name.toUpperCase()}</Text>
         <Text style={styles.subtitle}>{getEventTimeRemainingLabel()} restantes • {game.weeklyEvent.weekKey}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.hero, { borderColor: event.color + '88' }]}>
-          <Text style={styles.heroTitle}>{event.description}</Text>
-          <Text style={[styles.bonus, { color: event.color }]}>{event.bonus}</Text>
-          <Text style={styles.grand}>Prêmio principal: {describeReward(event.grandReward)}</Text>
+          <Text style={styles.heroTitle}>{localizedEvent.description}</Text>
+          <Text style={[styles.bonus, { color: event.color }]}>{localizedEvent.bonus}</Text>
+          <Text style={styles.grand}>{language === 'pt-BR' ? 'Prêmio principal' : 'Grand prize'}: {gameText.rewardText(event.grandReward)}</Text>
         </View>
 
         {game.weeklyEvent.missions.map(state => {
@@ -34,17 +39,17 @@ export default function EventsScreen() {
           const done = state.progress >= mission.target;
           return (
             <View key={state.id} style={[styles.card, done && !state.claimed && { borderColor: event.color }]}>
-              <Text style={styles.missionTitle}>{mission.title}</Text>
-              <Text style={styles.reward}>{describeReward(mission.reward)}</Text>
+              <Text style={styles.missionTitle}>{gameText.eventMissionTitle(mission)}</Text>
+              <Text style={styles.reward}>{gameText.rewardText(mission.reward)}</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: event.color }]} />
                 <Text style={styles.progressText}>{state.progress}/{mission.target}</Text>
               </View>
               <View style={styles.footer}>
-                <Text style={styles.status}>{state.claimed ? 'Coletada' : done ? 'Disponível' : 'Em progresso'}</Text>
+                <Text style={styles.status}>{state.claimed ? t('common.claimed') : done ? t('common.available') : t('common.inProgress')}</Text>
                 {done && !state.claimed && (
                   <TouchableOpacity style={[styles.claimButton, { backgroundColor: event.color }]} onPress={() => game.collectEventMission(state.id)}>
-                    <Text style={styles.claimText}>COLETAR</Text>
+                    <Text style={styles.claimText}>{t('common.collect').toUpperCase()}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -54,7 +59,7 @@ export default function EventsScreen() {
 
         <TouchableOpacity style={[styles.grandButton, (!allClaimed || game.weeklyEvent.grandClaimed) && styles.disabled]} disabled={!allClaimed || game.weeklyEvent.grandClaimed} onPress={game.collectEventGrandReward}>
           <LinearGradient colors={[event.color, '#0088ff']} style={styles.buttonGradient}>
-            <Text style={styles.buttonText}>{game.weeklyEvent.grandClaimed ? 'PRÊMIO COLETADO' : 'COLETAR PRÊMIO PRINCIPAL'}</Text>
+            <Text style={styles.buttonText}>{game.weeklyEvent.grandClaimed ? t('common.claimed').toUpperCase() : `${t('common.collect').toUpperCase()} ${language === 'pt-BR' ? 'PRÊMIO PRINCIPAL' : 'GRAND PRIZE'}`}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </ScrollView>

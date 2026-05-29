@@ -27,6 +27,9 @@ import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { MuteButton } from '@/src/components/MuteButton';
 import { SkinIcon } from '@/src/components/SkinIcon';
 import { getDualArenaSize, getSafePaddingBottom, getSafePaddingTop } from '@/src/utils/gameplayLayout';
+import { startFrameLoop } from '@/src/utils/frameLoop';
+import { useTranslation } from '@/src/i18n';
+import { useGameText } from '@/src/i18n/gameText';
 
 type DuelState = 'menu' | 'playing' | 'paused' | 'result';
 
@@ -50,9 +53,12 @@ export default function BossScreen() {
   const dimensions = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const game = useGame();
+  const { t, language } = useTranslation();
+  const gameText = useGameText();
   const unlocked = game.lifetimeStats.highestPhase >= 5 || game.level >= 5;
   const progress = normalizeBossProgress(game.bossProgress);
   const monthlyBoss = getMonthlyBoss();
+  const localizedBoss = gameText.bossText(monthlyBoss);
   const currentLevel = getNextBossLevel(progress);
   const completed = isBossDailyComplete(progress);
   const [duelState, setDuelState] = useState<DuelState>('menu');
@@ -138,7 +144,7 @@ export default function BossScreen() {
 
   useEffect(() => {
     if (duelState !== 'playing') return;
-    const interval = setInterval(() => {
+    const stopLoop = startFrameLoop(() => {
       setPlayerArena(current => {
         if (!current) return current;
         const beforeLevel = current.level;
@@ -213,8 +219,8 @@ export default function BossScreen() {
         }
         return next;
       });
-    }, 34);
-    return () => clearInterval(interval);
+    }, { minIntervalMs: 32 });
+    return stopLoop;
   }, [duelState, activeLevel.id, activeLevel.bossDamageMultiplier, activeLevel.bossShrinkMultiplier, game.stats.baseDamage, game.stats.coinMultiplier, game.stats.xpMultiplier, runUpgrades, levelChoices.length]);
 
   useEffect(() => {
@@ -303,9 +309,9 @@ export default function BossScreen() {
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       {duelState === 'menu' ? (
         <View style={[styles.header, { paddingTop: getSafePaddingTop(insets, 52) }]}>
-          <NeonButton title="← VOLTAR" variant="secondary" audioSettings={game.settings} onPress={() => router.back()} style={styles.backButton} />
+          <NeonButton title={`← ${t('common.back').toUpperCase()}`} variant="secondary" audioSettings={game.settings} onPress={() => router.back()} style={styles.backButton} />
           <Text style={styles.title}>BOSS MODE</Text>
-          <Text style={styles.subtitle}>Boss do mês: {monthlyBoss.name}</Text>
+          <Text style={styles.subtitle}>{language === 'pt-BR' ? 'Boss do mês' : 'Monthly boss'}: {localizedBoss.name}</Text>
           {!!bossNotice && <Text style={styles.noticeText}>{bossNotice}</Text>}
         </View>
       ) : playerArena && bossArena ? (
@@ -329,27 +335,31 @@ export default function BossScreen() {
       ) : null}
 
       {duelState === 'menu' && (
-        <ScrollView contentContainerStyle={[styles.menuContent, { paddingBottom: getSafePaddingBottom(insets) }]}>
+        <ScrollView
+          style={styles.menuScroll}
+          contentContainerStyle={[styles.menuContent, { paddingBottom: getSafePaddingBottom(insets) }]}
+          showsVerticalScrollIndicator={false}
+        >
           {!unlocked && <Text style={styles.lockText}>Complete a fase 5 ou alcance nível de perfil 5 para desbloquear.</Text>}
           <View style={[styles.bossCard, { borderColor: bossSkin.primaryColor }]}>
             <SkinIcon skin={bossSkin} size={84} style={styles.bossSkinIcon} />
-            <Text style={styles.bossName}>{monthlyBoss.name}</Text>
-            <Text style={styles.bossText}>Tema: {monthlyBoss.theme}</Text>
-            <Text style={styles.bossText}>{monthlyBoss.description}</Text>
-            <Text style={styles.bossText}>Passiva: {monthlyBoss.passive}</Text>
+            <Text style={styles.bossName}>{localizedBoss.name}</Text>
+            <Text style={styles.bossText}>{language === 'pt-BR' ? 'Tema' : 'Theme'}: {localizedBoss.theme}</Text>
+            <Text style={styles.bossText}>{localizedBoss.description}</Text>
+            <Text style={styles.bossText}>{language === 'pt-BR' ? 'Passiva' : 'Passive'}: {localizedBoss.passive}</Text>
             <Text style={styles.bossText}>Mês ativo: {getBossMonthKey()}</Text>
           </View>
           <View style={styles.progressBox}>
-            <Text style={styles.progressLine}>Nível atual: {completed ? 'Concluído hoje' : currentLevel.name}</Text>
+            <Text style={styles.progressLine}>{language === 'pt-BR' ? 'Nível atual' : 'Current level'}: {completed ? (language === 'pt-BR' ? 'Concluído hoje' : 'Completed today') : gameText.bossLevelName(currentLevel)}</Text>
             <Text style={styles.progressLine}>Vitórias hoje: {Math.min(progress.dailyLevelWins.length, 5)}/5</Text>
-            <Text style={styles.progressLine}>Melhor nível do mês: {monthlyBest}</Text>
+            <Text style={styles.progressLine}>{language === 'pt-BR' ? 'Melhor nível do mês' : 'Best monthly level'}: {monthlyBest === 'Nenhum' ? (language === 'pt-BR' ? 'Nenhum' : 'None') : gameText.bossLevelName(monthlyBest)}</Text>
             <Text style={styles.progressLine}>Vitórias no mês: {progress.monthlyTotalWins}</Text>
             <Text style={styles.progressLine}>Impossível no mês: {progress.monthlyImpossibleWins}</Text>
-            <Text style={styles.progressLine}>Próxima recompensa: {completed ? 'Rejogue por recompensa reduzida' : describeBossReward(currentLevel.reward)}</Text>
+            <Text style={styles.progressLine}>{language === 'pt-BR' ? 'Próxima recompensa' : 'Next reward'}: {completed ? (language === 'pt-BR' ? 'Rejogue por recompensa reduzida' : 'Replay for reduced reward') : describeBossReward(currentLevel.reward)}</Text>
             <Text style={styles.progressLine}>Reset diário: {clock.daily}</Text>
             <Text style={styles.progressLine}>Troca mensal: {clock.monthly}</Text>
           </View>
-          <NeonButton title={completed ? 'ENFRENTAR NOVAMENTE' : 'ENFRENTAR'} variant="primary" disabled={!unlocked} audioSettings={game.settings} onPress={startDuel} />
+          <NeonButton title={completed ? (language === 'pt-BR' ? 'ENFRENTAR NOVAMENTE' : 'FIGHT AGAIN') : (language === 'pt-BR' ? 'ENFRENTAR' : 'FIGHT')} variant="primary" disabled={!unlocked} audioSettings={game.settings} onPress={startDuel} />
         </ScrollView>
       )}
 
@@ -369,7 +379,7 @@ export default function BossScreen() {
                 </TouchableOpacity>
               );
             })}
-            <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={confirmExit} />
+            <NeonButton title={t('common.exit').toUpperCase()} variant="danger" audioSettings={game.settings} onPress={confirmExit} />
           </View>
         </View>
       )}
@@ -377,13 +387,13 @@ export default function BossScreen() {
       <Modal visible={duelState === 'result'} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.resultModal}>
-            <Text style={[styles.resultTitle, { color: resultWon ? '#00ff88' : '#ff0055' }]}>{resultWon ? 'VITÓRIA!' : 'DERROTA'}</Text>
-            <Text style={styles.resultSubtitle}>{resultWon ? 'Resultado decidido pela arena real.' : 'O Boss venceu na arena real.'}</Text>
+            <Text style={[styles.resultTitle, { color: resultWon ? '#00ff88' : '#ff0055' }]}>{resultWon ? t('game.victory').toUpperCase() : t('game.defeat').toUpperCase()}</Text>
+            <Text style={styles.resultSubtitle}>{resultWon ? (language === 'pt-BR' ? 'Resultado decidido pela arena real.' : 'Result decided by the real arena.') : (language === 'pt-BR' ? 'O Boss venceu na arena real.' : 'The Boss won in the real arena.')}</Text>
             {resultRewards.map(item => <Text key={item} style={styles.rewardLine}>{item}</Text>)}
-            <NeonButton title="ENFRENTAR NOVAMENTE" variant="primary" audioSettings={game.settings} onPress={startDuel} />
-            {resultRewards.some(item => item.includes('Chaves') || item.includes('Baú')) && <NeonButton title="ABRIR INVENTÁRIO" variant="primary" audioSettings={game.settings} onPress={() => router.replace('/inventory' as any)} />}
-            <NeonButton title="VOLTAR PARA BOSS" variant="secondary" audioSettings={game.settings} onPress={() => setDuelState('menu')} />
-            <NeonButton title="VOLTAR PARA HOME" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
+            <NeonButton title={language === 'pt-BR' ? 'ENFRENTAR NOVAMENTE' : 'FIGHT AGAIN'} variant="primary" audioSettings={game.settings} onPress={startDuel} />
+            {resultRewards.some(item => item.includes('Chaves') || item.includes('Baú')) && <NeonButton title={t('inventory.openChest').toUpperCase()} variant="primary" audioSettings={game.settings} onPress={() => router.replace('/inventory' as any)} />}
+            <NeonButton title={`${t('common.back').toUpperCase()} BOSS`} variant="secondary" audioSettings={game.settings} onPress={() => setDuelState('menu')} />
+            <NeonButton title={`${t('common.back').toUpperCase()} HOME`} variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
           </View>
         </View>
       </Modal>
@@ -391,10 +401,10 @@ export default function BossScreen() {
       <Modal visible={exitConfirmVisible} transparent animationType="fade" onRequestClose={cancelExit}>
         <View style={styles.modalOverlay}>
           <View style={styles.resultModal}>
-            <Text style={styles.resultTitle}>SAIR DO BOSS?</Text>
-            <Text style={styles.resultSubtitle}>A disputa atual será encerrada como derrota.</Text>
-            <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={leaveDuel} />
-            <NeonButton title="CANCELAR" variant="secondary" audioSettings={game.settings} onPress={cancelExit} />
+            <Text style={styles.resultTitle}>{language === 'pt-BR' ? 'SAIR DO BOSS?' : 'EXIT BOSS?'}</Text>
+            <Text style={styles.resultSubtitle}>{language === 'pt-BR' ? 'A disputa atual será encerrada como derrota.' : 'The current duel will end as a defeat.'}</Text>
+            <NeonButton title={t('common.exit').toUpperCase()} variant="danger" audioSettings={game.settings} onPress={leaveDuel} />
+            <NeonButton title={t('common.cancel').toUpperCase()} variant="secondary" audioSettings={game.settings} onPress={cancelExit} />
           </View>
         </View>
       </Modal>
@@ -403,13 +413,13 @@ export default function BossScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.resultModal}>
             <Text style={styles.resultTitle}>LEVEL UP</Text>
-            <Text style={styles.resultSubtitle}>Escolha uma melhoria temporária.</Text>
+            <Text style={styles.resultSubtitle}>{t('game.chooseUpgrade')}</Text>
             {levelChoices.map(upgrade => (
               <TouchableOpacity key={upgrade.id} style={[styles.choiceCard, { borderColor: getRarityColor(upgrade.rarity) }]} onPress={() => chooseLevelUpgrade(upgrade)}>
                 <UpgradeIcon upgrade={upgrade} size={28} />
                 <View style={styles.choiceTextBox}>
-                  <Text style={styles.choiceTitle}>{upgrade.name} Lv.{(runUpgrades[upgrade.id] || 0) + 1}</Text>
-                  <Text style={styles.choiceText}>{upgrade.description}</Text>
+                  <Text style={styles.choiceTitle}>{gameText.upgradeName(upgrade)} Lv.{(runUpgrades[upgrade.id] || 0) + 1}</Text>
+                  <Text style={styles.choiceText}>{gameText.upgradeDescription(upgrade)}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -439,7 +449,8 @@ const styles = StyleSheet.create({
   title: { color: '#00f0ff', fontSize: 30, fontWeight: 'bold', marginTop: 8 },
   subtitle: { color: '#ffffffaa', marginTop: 4, fontWeight: 'bold' },
   noticeText: { color: '#ffd700', marginTop: 6, fontSize: 12, fontWeight: 'bold' },
-  menuContent: { padding: 16, gap: 12 },
+  menuScroll: { flex: 1 },
+  menuContent: { padding: 16, gap: 12, flexGrow: 1 },
   lockText: { color: '#ffd700', backgroundColor: '#ffd70018', borderWidth: 1, borderColor: '#ffd70066', padding: 12, borderRadius: 12, fontWeight: 'bold' },
   bossCard: { backgroundColor: '#ffffff10', borderWidth: 1.5, borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },
   bossSkinIcon: { borderWidth: 0 },

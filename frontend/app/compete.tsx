@@ -17,6 +17,9 @@ import { UiIcon } from '@/src/components/UiIcon';
 import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { MuteButton } from '@/src/components/MuteButton';
 import { getDualArenaSize, getSafePaddingBottom, getSafePaddingTop } from '@/src/utils/gameplayLayout';
+import { startFrameLoop } from '@/src/utils/frameLoop';
+import { useGameText } from '@/src/i18n/gameText';
+import { useTranslation } from '@/src/i18n';
 
 type Result = { won: boolean; trophiesDelta: number; newPosition: number; rewards: RewardGrant[] };
 
@@ -25,6 +28,8 @@ export default function CompeteScreen() {
   const dimensions = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const game = useGame();
+  const gameText = useGameText();
+  const { language } = useTranslation();
   const match = useMemo(() => game.createLeagueMatch(), []);
   const playerSkin = getSkinById(game.ballTransformation);
   const rivalSkin = getSkinById(match.rival.favoriteSkin);
@@ -37,6 +42,25 @@ export default function CompeteScreen() {
   const [rivalNotice, setRivalNotice] = useState('');
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const finishing = useRef(false);
+  const arenaTheme = language === 'pt-BR' ? match.map.theme : ({
+    'Neon Azul': 'Blue Neon',
+    'Vazio Roxo': 'Purple Void',
+    'Inferno Vermelho': 'Red Inferno',
+    'Gelo Cósmico': 'Cosmic Ice',
+    'Dourado': 'Golden',
+    Glitch: 'Glitch',
+    Plasma: 'Plasma',
+    Sombra: 'Shadow',
+  }[match.map.theme] || match.map.theme);
+  const arenaModifier = language === 'pt-BR' ? match.map.modifier : ({
+    'Anéis rápidos': 'Fast rings',
+    'Anéis resistentes': 'Resistant rings',
+    'Aberturas maiores': 'Larger gaps',
+    'Mais recompensa': 'More rewards',
+    'Perfect favorável': 'Perfect friendly',
+    'Fechamento lento': 'Slow closing',
+    'Rotação invertida': 'Inverted rotation',
+  }[match.map.modifier] || match.map.modifier);
   const playerArenaRef = useRef<DualArenaState | null>(null);
 
   const rivalRank = useMemo(() => {
@@ -129,7 +153,7 @@ export default function CompeteScreen() {
 
   useEffect(() => {
     if (paused || result || levelChoices.length > 0) return;
-    const interval = setInterval(() => {
+    const stopLoop = startFrameLoop(() => {
       setPlayerArena(current => {
         if (!current) return current;
         const beforeLevel = current.level;
@@ -201,8 +225,8 @@ export default function CompeteScreen() {
         }
         return next;
       });
-    }, 34);
-    return () => clearInterval(interval);
+    }, { minIntervalMs: 32 });
+    return stopLoop;
   }, [paused, !!result, playerArena?.id, levelChoices.length, game.stats.baseDamage, game.stats.coinMultiplier, game.stats.xpMultiplier, runUpgrades, match.rival.trophies]);
 
   useEffect(() => {
@@ -284,9 +308,9 @@ export default function CompeteScreen() {
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       {!playerArena || !rivalArena ? (
         <View style={[styles.header, { paddingTop: getSafePaddingTop(insets, 52) }]}>
-          <NeonButton title="← LIGA" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} style={styles.backButton} />
-          <Text style={styles.title}>COMPETIR</Text>
-          <Text style={styles.subtitle}>{match.map.theme} • {match.map.modifier} • {match.rival.trophies.toLocaleString('pt-BR')} troféus</Text>
+          <NeonButton title={language === 'pt-BR' ? '← LIGA' : '← LEAGUE'} variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} style={styles.backButton} />
+          <Text style={styles.title}>{language === 'pt-BR' ? 'COMPETIR' : 'COMPETE'}</Text>
+          <Text style={styles.subtitle}>{arenaTheme} • {arenaModifier} • {match.rival.trophies.toLocaleString('pt-BR')} {language === 'pt-BR' ? 'troféus' : 'trophies'}</Text>
         </View>
       ) : (
         <View style={[styles.topHUD, { paddingTop: getSafePaddingTop(insets, 45) }]}>
@@ -324,7 +348,7 @@ export default function CompeteScreen() {
                 </TouchableOpacity>
               );
             })}
-            <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={confirmExit} />
+            <NeonButton title={language === 'pt-BR' ? 'SAIR' : 'EXIT'} variant="danger" audioSettings={game.settings} onPress={confirmExit} />
           </View>
         </View>
       )}
@@ -332,25 +356,25 @@ export default function CompeteScreen() {
       <Modal visible={!!result} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.resultBox}>
-            <Text style={[styles.resultTitle, { color: result?.won ? '#00ff88' : '#ff4fd8' }]}>{result?.won ? 'VITÓRIA' : 'DERROTA'}</Text>
-            <Text style={styles.resultText}>Resultado definido pela partida real contra {match.rival.name}</Text>
-            <Text style={styles.trophyDelta}>{result?.trophiesDelta || 0} troféus</Text>
-            <Text style={styles.resultText}>Nova posição: #{result?.newPosition}</Text>
-            {result?.rewards.map(reward => <Text key={describeReward(reward)} style={styles.rewardLine}>{describeReward(reward)}</Text>)}
-            <NeonButton title="COMPETIR NOVAMENTE" variant="primary" audioSettings={game.settings} onPress={startMatch} />
-            {result?.rewards.some(reward => reward.type === 'keys' || reward.type === 'chest') && <NeonButton title="ABRIR INVENTÁRIO" variant="primary" audioSettings={game.settings} onPress={() => router.replace('/inventory' as any)} />}
-            <NeonButton title="VOLTAR PARA LIGA" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} />
-            <NeonButton title="VOLTAR PARA HOME" variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
+            <Text style={[styles.resultTitle, { color: result?.won ? '#00ff88' : '#ff4fd8' }]}>{result?.won ? (language === 'pt-BR' ? 'VITÓRIA' : 'VICTORY') : (language === 'pt-BR' ? 'DERROTA' : 'DEFEAT')}</Text>
+            <Text style={styles.resultText}>{language === 'pt-BR' ? 'Resultado definido pela partida real contra' : 'Result decided by the real match against'} {match.rival.name}</Text>
+            <Text style={styles.trophyDelta}>{result?.trophiesDelta || 0} {language === 'pt-BR' ? 'troféus' : 'trophies'}</Text>
+            <Text style={styles.resultText}>{language === 'pt-BR' ? 'Nova posição' : 'New rank'}: #{result?.newPosition}</Text>
+            {result?.rewards.map(reward => <Text key={describeReward(reward)} style={styles.rewardLine}>{gameText.rewardText(reward)}</Text>)}
+            <NeonButton title={language === 'pt-BR' ? 'COMPETIR NOVAMENTE' : 'COMPETE AGAIN'} variant="primary" audioSettings={game.settings} onPress={startMatch} />
+            {result?.rewards.some(reward => reward.type === 'keys' || reward.type === 'chest') && <NeonButton title={language === 'pt-BR' ? 'ABRIR INVENTÁRIO' : 'OPEN INVENTORY'} variant="primary" audioSettings={game.settings} onPress={() => router.replace('/inventory' as any)} />}
+            <NeonButton title={language === 'pt-BR' ? 'VOLTAR PARA LIGA' : 'BACK TO LEAGUE'} variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/league' as any)} />
+            <NeonButton title={language === 'pt-BR' ? 'VOLTAR PARA HOME' : 'BACK TO HOME'} variant="secondary" audioSettings={game.settings} onPress={() => router.replace('/' as any)} />
           </View>
         </View>
       </Modal>
       <Modal visible={exitConfirmVisible} transparent animationType="fade" onRequestClose={cancelExit}>
         <View style={styles.modalOverlay}>
           <View style={styles.resultBox}>
-            <Text style={styles.resultTitle}>SAIR DA LIGA?</Text>
-            <Text style={styles.resultText}>A partida atual será encerrada como derrota.</Text>
-            <NeonButton title="SAIR" variant="danger" audioSettings={game.settings} onPress={leaveMatch} />
-            <NeonButton title="CANCELAR" variant="secondary" audioSettings={game.settings} onPress={cancelExit} />
+            <Text style={styles.resultTitle}>{language === 'pt-BR' ? 'SAIR DA LIGA?' : 'EXIT LEAGUE?'}</Text>
+            <Text style={styles.resultText}>{language === 'pt-BR' ? 'A partida atual será encerrada como derrota.' : 'The current match will end as a defeat.'}</Text>
+            <NeonButton title={language === 'pt-BR' ? 'SAIR' : 'EXIT'} variant="danger" audioSettings={game.settings} onPress={leaveMatch} />
+            <NeonButton title={language === 'pt-BR' ? 'CANCELAR' : 'CANCEL'} variant="secondary" audioSettings={game.settings} onPress={cancelExit} />
           </View>
         </View>
       </Modal>
@@ -358,13 +382,13 @@ export default function CompeteScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.resultBox}>
             <Text style={styles.resultTitle}>LEVEL UP</Text>
-            <Text style={styles.resultText}>Escolha uma melhoria temporária.</Text>
+            <Text style={styles.resultText}>{language === 'pt-BR' ? 'Escolha uma melhoria temporária.' : 'Choose a temporary upgrade.'}</Text>
             {levelChoices.map(upgrade => (
               <TouchableOpacity key={upgrade.id} style={[styles.choiceCard, { borderColor: getRarityColor(upgrade.rarity) }]} onPress={() => chooseLevelUpgrade(upgrade)}>
                 <UpgradeIcon upgrade={upgrade} size={28} />
                 <View style={styles.choiceTextBox}>
-                  <Text style={styles.choiceTitle}>{upgrade.name} Lv.{(runUpgrades[upgrade.id] || 0) + 1}</Text>
-                  <Text style={styles.choiceText}>{upgrade.description}</Text>
+                  <Text style={styles.choiceTitle}>{gameText.upgradeName(upgrade)} Lv.{(runUpgrades[upgrade.id] || 0) + 1}</Text>
+                  <Text style={styles.choiceText}>{gameText.upgradeDescription(upgrade)}</Text>
                 </View>
               </TouchableOpacity>
             ))}

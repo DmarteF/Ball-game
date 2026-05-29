@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,23 +11,52 @@ import { UiIcon } from '@/src/components/UiIcon';
 import { SkinIcon } from '@/src/components/SkinIcon';
 import { UiIconKey } from '@/src/game/uiIcons';
 import { RewardedAdPlacement } from '@/src/services/adsService';
+import { STORE_PRODUCTS, StoreProductId } from '@/src/services/billingConfig';
+import { BillingProduct, getProducts, grantPurchaseReward, initializeBilling, purchaseProduct } from '@/src/services/billingService';
+import { useGameText } from '@/src/i18n/gameText';
+import { useTranslation } from '@/src/i18n';
 
 type Tab = 'chests' | 'gems' | 'keys' | 'specials' | 'free';
 
 export default function StoreScreen() {
   const router = useRouter();
   const game = useGame();
+  const gameText = useGameText();
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('chests');
   const [confirm, setConfirm] = useState<{ title: string; action: () => Promise<void> } | null>(null);
   const [ad, setAd] = useState<null | 'gems' | 'coins' | 'chest' | 'key' | 'offline'>(null);
   const [reward, setReward] = useState<ChestReward | null>(null);
+  const [billingProducts, setBillingProducts] = useState<BillingProduct[]>([]);
+  const [billingLoaded, setBillingLoaded] = useState(false);
+  const [purchasingId, setPurchasingId] = useState<StoreProductId | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadBillingProducts = async () => {
+      await initializeBilling();
+      const products = await getProducts();
+      if (!mounted) return;
+      setBillingProducts(products);
+      setBillingLoaded(true);
+    };
+    loadBillingProducts();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const billingProductMap = useMemo(
+    () => Object.fromEntries(billingProducts.map(item => [item.id, item])) as Partial<Record<StoreProductId, BillingProduct>>,
+    [billingProducts],
+  );
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'chests', label: 'Baús' },
-    { id: 'gems', label: 'Gemas' },
-    { id: 'keys', label: 'Chaves' },
-    { id: 'specials', label: 'Especiais' },
-    { id: 'free', label: 'Grátis' },
+    { id: 'chests', label: t('stats.chests') },
+    { id: 'gems', label: t('stats.diamonds') },
+    { id: 'keys', label: t('stats.keys') },
+    { id: 'specials', label: t('inventory.rewards') },
+    { id: 'free', label: t('shop.freeChest') },
   ];
 
   const simulateChest = async (chestId: string) => {
@@ -115,6 +144,30 @@ export default function StoreScreen() {
     return 'ui_skins';
   };
 
+  const handlePaidPurchase = async (productId: StoreProductId) => {
+    if (purchasingId) return;
+    setPurchasingId(productId);
+    try {
+      const result = await purchaseProduct(productId);
+      if (result.status !== 'confirmed' || !result.transactionId) {
+        Alert.alert(t('purchase.unavailable'), result.message || t('store.purchaseUnavailableText'));
+        playSound('buttonError', game.settings.sound);
+        return;
+      }
+      const grant = await grantPurchaseReward(productId, result.transactionId, game);
+      if (grant.duplicate) {
+        Alert.alert(t('store.purchaseAlreadyProcessed'), t('store.purchaseAlreadyProcessedText'));
+        return;
+      }
+      if (grant.granted) {
+        Alert.alert(t('purchase.successful'), t('ads.rewardGranted'));
+        playSound('buttonConfirm', game.settings.sound);
+      }
+    } finally {
+      setPurchasingId(null);
+    }
+  };
+
   const product = (iconKey: UiIconKey, fallback: string, title: string, subtitle: string, price: string, action: () => Promise<void>, key?: string, priceIconKey?: UiIconKey) => (
     <TouchableOpacity key={key} style={styles.product} onPress={() => setConfirm({ title, action })}>
       <View style={styles.productIcon}><UiIcon iconKey={iconKey} fallback={fallback} size={34} /></View>
@@ -129,11 +182,36 @@ export default function StoreScreen() {
     </TouchableOpacity>
   );
 
+  const paidProduct = (productId: StoreProductId, iconKey: UiIconKey, fallback: string) => {
+    const config = gameText.storeProduct(STORE_PRODUCTS[productId]);
+    const billingProduct = billingProductMap[productId];
+    const unavailable = billingLoaded && !billingProduct?.available;
+    const price = unavailable ? t('common.unavailable') : billingProduct?.localizedPrice || config.fallbackPrice;
+    const isBusy = purchasingId === productId;
+    return (
+      <TouchableOpacity
+        key={productId}
+        style={[styles.product, unavailable && styles.disabledProduct]}
+        onPress={() => handlePaidPurchase(productId)}
+        disabled={isBusy}
+      >
+        <View style={styles.productIcon}><UiIcon iconKey={iconKey} fallback={fallback} size={34} /></View>
+        <View style={styles.productInfo}>
+          <Text style={styles.productTitle}>{config.title}</Text>
+          <Text style={styles.productSubtitle}>{config.description}</Text>
+        </View>
+        <View style={[styles.priceBox, unavailable && styles.unavailablePriceBox]}>
+          <Text style={[styles.price, unavailable && styles.unavailablePrice]}>{isBusy ? '...' : price}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
-        <Text style={styles.title}>LOJA</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text></TouchableOpacity>
+        <Text style={styles.title}>{t('nav.shop').toUpperCase()}</Text>
         <View style={styles.wallet}>
           <View style={styles.walletItem}><UiIcon iconKey="ui_coin" fallback="💰" size={17} /><Text style={styles.walletText}>{game.coins}</Text></View>
           <View style={styles.walletItem}><UiIcon iconKey="ui_gem" fallback="💎" size={17} /><Text style={styles.walletText}>{game.gems}</Text></View>
@@ -153,12 +231,12 @@ export default function StoreScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {tab === 'chests' && (
           <>
-            <Text style={styles.sectionTitle}>Comprar e abrir</Text>
+            <Text style={styles.sectionTitle}>{t('store.buyOpen')}</Text>
             {CHESTS.map(chest => {
-              const chances = Object.entries(chest.chances).map(([r, v]) => `${r} ${Math.round((v || 0) * 100)}%`).join(' / ');
+              const chances = Object.entries(chest.chances).map(([r, v]) => `${gameText.rarity(r).toLowerCase()} ${Math.round((v || 0) * 100)}%`).join(' / ');
               const affordable = canPay(chest.currency, chest.cost);
               return (
-                <TouchableOpacity key={chest.id} style={[styles.chestCard, { borderColor: chest.color + '99' }]} onPress={() => setConfirm({ title: chest.name, action: async () => {
+                <TouchableOpacity key={chest.id} style={[styles.chestCard, { borderColor: chest.color + '99' }]} onPress={() => setConfirm({ title: gameText.chestName(chest), action: async () => {
                   const paid = await pay(chest.currency, chest.cost);
                   if (!paid) return;
                   await simulateChest(chest.id);
@@ -167,8 +245,8 @@ export default function StoreScreen() {
                   <LinearGradient colors={[chest.color + '44', '#ffffff0f']} style={styles.chestCardGradient}>
                     <View style={styles.chestIconBox}><UiIcon iconKey={chestIcon(chest.id)} fallback={chest.icon} size={42} /></View>
                     <View style={styles.chestInfo}>
-                      <Text style={styles.chestTitle}>{chest.name}</Text>
-                      <Text style={styles.chestSubtitle}>{chest.description}</Text>
+                      <Text style={styles.chestTitle}>{gameText.chestName(chest)}</Text>
+                      <Text style={styles.chestSubtitle}>{gameText.chestDescription(chest)}</Text>
                       <Text style={styles.chestChances}>{chances}</Text>
                     </View>
                     <View style={[styles.chestAction, !affordable && styles.disabled]}>
@@ -183,14 +261,14 @@ export default function StoreScreen() {
               );
             })}
 
-            <Text style={styles.sectionTitle}>Baús possuídos</Text>
+            <Text style={styles.sectionTitle}>{t('store.ownedChests')}</Text>
             {game.inventoryItems.filter(item => item.type === 'chest').length === 0 ? (
-              <Text style={styles.emptyText}>Baús ganhos em missões, eventos e pacotes aparecem aqui.</Text>
+              <Text style={styles.emptyText}>{t('store.emptyChests')}</Text>
             ) : game.inventoryItems.filter(item => item.type === 'chest').map(item => (
               <TouchableOpacity key={item.id} style={styles.ownedChest} onPress={() => openStoredChest(item.id, getStoredChestId(item.id))}>
                 <UiIcon iconKey={chestIcon(getStoredChestId(item.id))} fallback={item.icon} size={32} />
                 <View style={styles.ownedInfo}>
-                  <Text style={styles.ownedTitle}>{item.label}</Text>
+                  <Text style={styles.ownedTitle}>{item.type === 'chest' ? gameText.chestName(getStoredChestId(item.id) as ChestDefinition['id']) : item.label}</Text>
                   <Text style={styles.ownedSubtitle}>x{item.amount} disponível</Text>
                 </View>
                 <Text style={styles.ownedOpen}>ABRIR</Text>
@@ -201,40 +279,39 @@ export default function StoreScreen() {
 
         {tab === 'gems' && (
           <>
-            {product('ui_gem', '💎', 'Pacote pequeno', '+80 gemas simuladas', 'Fake', async () => { await game.updateGems(80); await game.recordStorePurchase(); }, 'gems_small')}
-            {product('ui_gem', '💎', 'Pacote médio', '+260 gemas simuladas', 'Fake', async () => { await game.updateGems(260); await game.recordStorePurchase(); }, 'gems_medium')}
-            {product('ui_gem', '💎', 'Pacote grande', '+700 gemas simuladas', 'Fake', async () => { await game.updateGems(700); await game.recordStorePurchase(); }, 'gems_large')}
-            {product('ui_daily_reward', '🎁', 'Oferta diária', '+35 gemas e 1 chave', 'Fake', async () => { await game.updateGems(35); await game.updateKeys(1); await game.recordStorePurchase(); }, 'daily_offer')}
-            <TouchableOpacity style={styles.adButton} onPress={() => setAd('gems')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>Gemas grátis</Text></TouchableOpacity>
+            {paidProduct('diamonds_small', 'ui_gem', '💎')}
+            {paidProduct('diamonds_medium', 'ui_gem', '💎')}
+            {paidProduct('diamonds_large', 'ui_gem', '💎')}
+            {paidProduct('daily_offer', 'ui_daily_reward', '🎁')}
+            <TouchableOpacity style={styles.adButton} onPress={() => setAd('gems')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>{t('store.freeGems')}</Text></TouchableOpacity>
           </>
         )}
 
         {tab === 'keys' && (
           <>
-            {product('ui_key', '🔑', 'Pacote de chaves', '+3 chaves raras', '80', async () => { const paid = await pay('gems', 80); if (paid) { await game.updateKeys(3); await game.recordStorePurchase(); } }, 'keys_pack', 'ui_gem')}
-            {product('ui_legendary_key', '🗝️', 'Chave lendária', '+1 chave lendária', '180', async () => { const paid = await pay('gems', 180); if (paid) { await game.updateLegendaryKeys(1); await game.recordStorePurchase(); } }, 'legendary_key', 'ui_gem')}
-            <TouchableOpacity style={styles.adButton} onPress={() => setAd('key')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>Ganhar chave</Text></TouchableOpacity>
+            {product('ui_key', '🔑', 'Pacote de chaves', '+6 chaves raras', '80', async () => { const paid = await pay('gems', 80); if (paid) { await game.updateKeys(6); await game.recordStorePurchase(); } }, 'keys_pack', 'ui_gem')}
+            {product('ui_legendary_key', '🗝️', 'Chaves lendárias', '+2 chaves lendárias', '180', async () => { const paid = await pay('gems', 180); if (paid) { await game.updateLegendaryKeys(2); await game.recordStorePurchase(); } }, 'legendary_key', 'ui_gem')}
+            <TouchableOpacity style={styles.adButton} onPress={() => setAd('key')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>{t('store.freeKey')}</Text></TouchableOpacity>
           </>
         )}
 
         {tab === 'specials' && (
           <>
-            {product('ui_inventory', '🎒', 'Starter Pack', 'Gemas, moedas e 2 chaves', 'Fake', async () => { await game.updateGems(120); await game.updateCoins(800); await game.updateKeys(2); await game.recordStorePurchase(); }, 'starter_pack')}
-            {product('ui_skins', '✨', 'Pacote de skins', 'Abre 3 baús raros simulados', 'Fake', async () => { await simulateChest('rare'); await simulateChest('rare'); await simulateChest('rare'); await game.recordStorePurchase(); }, 'skin_pack')}
-            {product('ui_fragments', '🧩', 'Pacote de fragmentos', '+55 fragmentos da skin equipada', 'Fake', async () => { await game.grantReward({ type: 'fragments', amount: 55 }); await game.recordStorePurchase(); }, 'fragment_pack')}
-            {product('ui_event', '⚡', 'Pacote de evento', 'Baú raro, gemas e XP', 'Fake', async () => { await game.grantReward({ type: 'chest', chestType: 'rare', amount: 1 }); await game.updateGems(25); await game.addProfileXp(140); await game.recordStorePurchase(); }, 'event_pack')}
-            {product('ui_daily_reward', '🎁', 'Pacote de baús', '2 comuns e 1 épico simulados', 'Fake', async () => { await simulateChest('common'); await simulateChest('common'); await simulateChest('epic'); await game.recordStorePurchase(); }, 'chest_pack')}
-            {product('ui_no_ads', '🚫', 'No Ads', 'Marcador fake para versão futura', 'Fake', async () => game.saveProgress(), 'no_ads')}
+            {paidProduct('starter_pack', 'ui_inventory', '🎒')}
+            {paidProduct('skin_pack', 'ui_skins', '✨')}
+            {paidProduct('fragment_pack', 'ui_fragments', '🧩')}
+            {paidProduct('event_pack', 'ui_event', '⚡')}
+            {paidProduct('chest_pack', 'ui_chest_epic', '🏆')}
           </>
         )}
 
         {tab === 'free' && (
           <>
-            <TouchableOpacity style={styles.adButton} onPress={() => setAd('gems')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>Ganhar gemas</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.adButton} onPress={() => setAd('coins')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>Ganhar moedas</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.adButton} onPress={() => setAd('chest')}><UiIcon iconKey="ui_chest_common" fallback="📦" size={22} /><Text style={styles.adText}>Ganhar baú comum</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.adButton} onPress={() => setAd('key')}><UiIcon iconKey="ui_key" fallback="🔑" size={22} /><Text style={styles.adText}>Ganhar chave</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.adButton} onPress={() => setAd('offline')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>Dobrar recompensa offline</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.adButton} onPress={() => setAd('gems')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>{t('store.freeGems')}</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.adButton} onPress={() => setAd('coins')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>{t('store.freeCoins')}</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.adButton} onPress={() => setAd('chest')}><UiIcon iconKey="ui_chest_common" fallback="📦" size={22} /><Text style={styles.adText}>{t('store.freeCommonChest')}</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.adButton} onPress={() => setAd('key')}><UiIcon iconKey="ui_key" fallback="🔑" size={22} /><Text style={styles.adText}>{t('store.freeKey')}</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.adButton} onPress={() => setAd('offline')}><UiIcon iconKey="ui_ad" fallback="📺" size={22} /><Text style={styles.adText}>{t('store.doubleOffline')}</Text></TouchableOpacity>
           </>
         )}
       </ScrollView>
@@ -243,11 +320,11 @@ export default function StoreScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.confirmBox}>
             <Text style={styles.confirmTitle}>{confirm?.title}</Text>
-            <Text style={styles.confirmText}>Compra simulada. Nenhum pagamento real será feito.</Text>
+            <Text style={styles.confirmText}>Confirme para continuar.</Text>
             <TouchableOpacity style={styles.confirmButton} onPress={async () => { await confirm?.action(); setConfirm(null); }}>
-              <Text style={styles.confirmButtonText}>CONFIRMAR</Text>
+              <Text style={styles.confirmButtonText}>{t('common.confirm').toUpperCase()}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setConfirm(null)}><Text style={styles.cancelText}>Cancelar</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setConfirm(null)}><Text style={styles.cancelText}>{t('common.cancel')}</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -255,20 +332,20 @@ export default function StoreScreen() {
       <Modal visible={!!reward} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitle}>Item recebido</Text>
+            <Text style={styles.confirmTitle}>{t('inventory.youReceived')}</Text>
             {reward?.skinId ? (
               <SkinIcon skin={getSkinById(reward.skinId)} size={74} style={styles.rewardSkinIcon} />
             ) : (
               <UiIcon iconKey={rewardIcon(reward)} fallback={reward?.icon || '🎁'} size={64} />
             )}
-            <Text style={styles.confirmTitle}>{reward?.label}</Text>
-            <Text style={styles.confirmText}>{reward?.rarity.toUpperCase()} • {reward?.type}</Text>
+            <Text style={styles.confirmTitle}>{gameText.chestRewardLabel(reward)}</Text>
+            <Text style={styles.confirmText}>{gameText.rarity(reward?.rarity)} • {reward?.type}</Text>
             {reward?.type === 'skin' && reward.skinId && (
               <TouchableOpacity style={styles.confirmButton} onPress={async () => { await game.setBallTransformation(reward.skinId!); setReward(null); }}>
                 <Text style={styles.confirmButtonText}>EQUIPAR SKIN</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={() => setReward(null)}><Text style={styles.cancelText}>Fechar</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setReward(null)}><Text style={styles.cancelText}>{t('common.close')}</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -319,12 +396,15 @@ const styles = StyleSheet.create({
   ownedOpen: { color: '#00f0ff', fontWeight: 'bold' },
   emptyText: { color: '#ffffff88', fontSize: 13 },
   product: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 10, backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff22' },
+  disabledProduct: { opacity: 0.72 },
   productIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#ffffff18', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   productInfo: { flex: 1 },
   productTitle: { color: '#ffffff', fontSize: 17, fontWeight: 'bold' },
   productSubtitle: { color: '#ffffff99', fontSize: 12, marginTop: 4 },
   priceBox: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 10 },
   price: { color: '#ffd700', fontWeight: 'bold' },
+  unavailablePriceBox: { borderWidth: 1, borderColor: '#ffffff22', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 8 },
+  unavailablePrice: { color: '#ffffff88', fontSize: 12 },
   adButton: { padding: 16, borderRadius: 10, backgroundColor: '#00ff8833', borderWidth: 1, borderColor: '#00ff8877', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   adText: { color: '#ffffff', fontWeight: 'bold', textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: '#000000cc', justifyContent: 'center', alignItems: 'center' },

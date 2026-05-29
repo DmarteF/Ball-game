@@ -12,12 +12,16 @@ import { SkinIcon } from '@/src/components/SkinIcon';
 import { UiIcon } from '@/src/components/UiIcon';
 import { ProfileAvatar } from '@/src/components/ProfileAvatar';
 import { UpgradeIcon } from '@/src/components/UpgradeIcon';
+import { SUPPORTED_LANGUAGES, useTranslation } from '@/src/i18n';
+import { useGameText } from '@/src/i18n/gameText';
 
 const AVATARS = ['🔵', '🐶', '🐱', '🐷', '🐰', '👻', '🤖', '🐉', '💀', '🌌'];
 
 export default function ProfileScreen() {
   const router = useRouter();
   const game = useGame();
+  const { t } = useTranslation();
+  const gameText = useGameText();
   const [nickname, setNickname] = useState(game.nickname);
   const xpNeeded = getProfileXpNeeded(game.level);
   const xpProgress = Math.min(100, (game.profileXp / xpNeeded) * 100);
@@ -36,7 +40,7 @@ export default function ProfileScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       playSound('buttonError', game.settings.sound);
-      Alert.alert('Permissão necessária', 'Autorize o acesso à galeria para escolher uma foto de perfil.');
+      Alert.alert(t('profile.photoPermissionTitle'), t('profile.photoPermissionMessage'));
       return;
     }
 
@@ -68,9 +72,9 @@ export default function ProfileScreen() {
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← VOLTAR</Text>
+          <Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>PERFIL</Text>
+        <Text style={styles.title}>{t('nav.profile').toUpperCase()}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -80,17 +84,17 @@ export default function ProfileScreen() {
           <View style={styles.photoActions}>
             <TouchableOpacity style={styles.photoButton} onPress={chooseProfilePhoto}>
               <UiIcon iconKey="ui_camera" fallback="📷" size={16} />
-              <Text style={styles.photoButtonText}>ALTERAR AVATAR</Text>
+              <Text style={styles.photoButtonText}>{t('profile.changeAvatar').toUpperCase()}</Text>
             </TouchableOpacity>
             {!!game.avatarImageUri && (
               <TouchableOpacity style={[styles.photoButton, styles.removeButton]} onPress={removeProfilePhoto}>
                 <UiIcon iconKey="ui_remove_image" fallback="❌" size={16} />
-                <Text style={styles.photoButtonText}>REMOVER FOTO</Text>
+                <Text style={styles.photoButtonText}>{t('profile.removePhoto').toUpperCase()}</Text>
               </TouchableOpacity>
             )}
           </View>
           <TouchableOpacity style={styles.saveButton} onPress={saveNickname}>
-            <Text style={styles.saveText}>SALVAR NICK</Text>
+            <Text style={styles.saveText}>{t('profile.saveNick').toUpperCase()}</Text>
           </TouchableOpacity>
           <View style={styles.avatarRow}>
             {AVATARS.map(avatar => (
@@ -99,11 +103,11 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.sectionTitle}>SKIN FAVORITA</Text>
+          <Text style={styles.sectionTitle}>{t('profile.favoriteSkin').toUpperCase()}</Text>
           <View style={styles.favoriteSkinBox}>
             <SkinIcon skin={favoriteSkin} size={44} style={styles.favoriteIcon} />
             <View style={styles.favoriteInfo}>
-              <Text style={styles.favoriteName}>{favoriteSkin.name}</Text>
+              <Text style={styles.favoriteName}>{gameText.skinName(favoriteSkin)}</Text>
               <Text style={[styles.favoriteRarity, { color: getSkinRarityColor(favoriteSkin.rarity) }]}>{favoriteSkin.rarity.toUpperCase()}</Text>
             </View>
           </View>
@@ -117,8 +121,8 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>CONTA</Text>
-          <Text style={styles.profileLevel}>Nível {game.level}</Text>
+          <Text style={styles.sectionTitle}>{t('profile.account').toUpperCase()}</Text>
+          <Text style={styles.profileLevel}>{t('game.level')} {game.level}</Text>
           <View style={styles.xpBar}>
             <View style={[styles.xpFill, { width: `${xpProgress}%` }]} />
             <Text style={styles.xpText}>{game.profileXp}/{xpNeeded} XP</Text>
@@ -131,25 +135,42 @@ export default function ProfileScreen() {
           </View>
           <TouchableOpacity style={styles.achievementButton} onPress={() => router.push('/achievements' as any)}>
             <UiIcon iconKey="ui_achievements" fallback="🏆" size={18} />
-            <Text style={styles.achievementButtonText}>Conquistas {completedAchievements}/{ACHIEVEMENTS.length}</Text>
+            <Text style={styles.achievementButtonText}>{t('nav.achievements')} {completedAchievements}/{ACHIEVEMENTS.length}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>ÁUDIO</Text>
+          <Text style={styles.sectionTitle}>{t('settings.sound').toUpperCase()}</Text>
           <View style={styles.toggleRow}>
             <TouchableOpacity style={[styles.toggleButton, !game.settings.musicMuted && styles.toggleActive]} onPress={() => game.updateAudioSettings({ musicMuted: !game.settings.musicMuted })}>
               <UiIcon iconKey={game.settings.musicMuted ? 'ui_mute_off' : 'ui_mute_on'} fallback={game.settings.musicMuted ? '🔇' : '🔊'} size={18} />
-              <Text style={styles.toggleText}>Música {game.settings.musicMuted ? 'OFF' : 'ON'}</Text>
+              <Text style={styles.toggleText}>{t('settings.music')} {game.settings.musicMuted ? 'OFF' : 'ON'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.toggleButton, !game.settings.sfxMuted && styles.toggleActive]} onPress={() => { game.updateAudioSettings({ sfxMuted: !game.settings.sfxMuted }); playSound('buttonClick'); }}>
               <UiIcon iconKey={game.settings.sfxMuted ? 'ui_mute_off' : 'ui_mute_on'} fallback={game.settings.sfxMuted ? '🔇' : '🔊'} size={18} />
-              <Text style={styles.toggleText}>Efeitos {game.settings.sfxMuted ? 'OFF' : 'ON'}</Text>
+              <Text style={styles.toggleText}>{t('settings.effects')} {game.settings.sfxMuted ? 'OFF' : 'ON'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.toggleButton, !game.settings.masterMuted && styles.toggleActive]} onPress={() => game.updateAudioSettings({ masterMuted: !game.settings.masterMuted })}>
               <UiIcon iconKey={game.settings.masterMuted ? 'ui_mute_off' : 'ui_mute_on'} fallback={game.settings.masterMuted ? '🔇' : '🔊'} size={18} />
-              <Text style={styles.toggleText}>Tudo {game.settings.masterMuted ? 'OFF' : 'ON'}</Text>
+              <Text style={styles.toggleText}>{t('settings.master')} {game.settings.masterMuted ? 'OFF' : 'ON'}</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>{t('settings.language').toUpperCase()}</Text>
+          <Text style={styles.stat}>{t('settings.selectLanguage')}</Text>
+          <View style={styles.languageGrid}>
+            {SUPPORTED_LANGUAGES.map(language => (
+              <TouchableOpacity
+                key={language.code}
+                style={[styles.languageButton, game.language === language.code && styles.languageActive]}
+                onPress={() => game.updateLanguage(language.code)}
+              >
+                <Text style={[styles.languageText, game.language === language.code && styles.languageTextActive]}>{language.label}</Text>
+                {game.language === language.code && <Text style={styles.languageCheck}>✓</Text>}
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -172,8 +193,8 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>ESTATÍSTICAS</Text>
-          <Text style={styles.stat}>Partidas: {game.lifetimeStats.runsPlayed}</Text>
+          <Text style={styles.sectionTitle}>{t('profile.statistics').toUpperCase()}</Text>
+          <Text style={styles.stat}>{t('profile.matchesPlayed')}: {game.lifetimeStats.runsPlayed}</Text>
           <Text style={styles.stat}>Anéis destruídos: {game.lifetimeStats.ringsDestroyed}</Text>
           <Text style={styles.stat}>Escapes perfeitos: {game.lifetimeStats.perfectEscapes}</Text>
           <Text style={styles.stat}>Diamantes encontrados: {game.lifetimeStats.diamondsFound}</Text>
@@ -244,5 +265,11 @@ const styles = StyleSheet.create({
   toggleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   toggleButton: { flexGrow: 1, minWidth: 96, backgroundColor: '#ffffff14', borderWidth: 1, borderColor: '#ffffff22', borderRadius: 10, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   toggleActive: { backgroundColor: '#00f0ff', borderColor: '#00f0ff' },
-  toggleText: { color: '#ffffff', fontWeight: 'bold', fontSize: 12 },
+  toggleText: { color: '#ffffff', fontWeight: 'bold', fontSize: 12, textAlign: 'center', flexShrink: 1 },
+  languageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  languageButton: { minWidth: 128, flexGrow: 1, flexBasis: '45%', minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: '#ffffff22', backgroundColor: '#ffffff14', paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  languageActive: { borderColor: '#00ff88', backgroundColor: '#00ff8822' },
+  languageText: { color: '#ffffff', fontWeight: 'bold', fontSize: 13, flexShrink: 1 },
+  languageTextActive: { color: '#00ff88' },
+  languageCheck: { color: '#00ff88', fontSize: 16, fontWeight: 'bold' },
 });

@@ -4,11 +4,15 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AdModal } from '@/src/components/AdModal';
 import { useGame } from '@/src/contexts/GameContext';
-import { describeReward, getDailyMission } from '@/src/game/retention';
+import { getDailyMission } from '@/src/game/retention';
+import { useGameText } from '@/src/i18n/gameText';
+import { useTranslation } from '@/src/i18n';
 
 export default function DailyScreen() {
   const router = useRouter();
   const game = useGame();
+  const gameText = useGameText();
+  const { t } = useTranslation();
   const [adAction, setAdAction] = useState<null | { type: 'reroll' | 'boost'; missionId: string }>(null);
 
   const completeAdAction = async () => {
@@ -21,9 +25,9 @@ export default function DailyScreen() {
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
-        <Text style={styles.title}>MISSÕES DIÁRIAS</Text>
-        <Text style={styles.subtitle}>Rodízio local • {game.dailyMissions.dayKey}</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text></TouchableOpacity>
+        <Text style={styles.title}>{t('daily.title').toUpperCase()}</Text>
+        <Text style={styles.subtitle}>{t('daily.rotation')} • {game.dailyMissions.dayKey}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -36,8 +40,8 @@ export default function DailyScreen() {
             <View key={state.id} style={[styles.card, done && !state.claimed && styles.cardDone]}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleBox}>
-                  <Text style={styles.missionTitle}>{mission.title}</Text>
-                  <Text style={styles.reward}>{describeReward(mission.reward)}</Text>
+                  <Text style={styles.missionTitle}>{gameText.missionTitle(mission)}</Text>
+                  <Text style={styles.reward}>{gameText.rewardText(mission.reward)}</Text>
                 </View>
                 <Text style={styles.difficulty}>{'★'.repeat(mission.difficulty)}</Text>
               </View>
@@ -48,14 +52,14 @@ export default function DailyScreen() {
               <View style={styles.actions}>
                 {done && !state.claimed ? (
                   <TouchableOpacity style={styles.claimButton} onPress={() => game.collectDailyMission(state.id)}>
-                    <Text style={styles.claimText}>COLETAR</Text>
+                    <Text style={styles.claimText}>{t('common.collect').toUpperCase()}</Text>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={styles.status}>{state.claimed ? 'Coletada' : 'Em progresso'}</Text>
+                  <Text style={styles.status}>{state.claimed ? t('common.claimed') : t('common.inProgress')}</Text>
                 )}
                 {!state.claimed && !state.rerolled && (
                   <TouchableOpacity style={styles.smallButton} onPress={() => setAdAction({ type: 'reroll', missionId: state.id })}>
-                    <Text style={styles.smallButtonText}>Trocar 📺</Text>
+                    <Text style={styles.smallButtonText}>{t('game.reroll')} 📺</Text>
                   </TouchableOpacity>
                 )}
                 {!state.claimed && !state.boosted && (

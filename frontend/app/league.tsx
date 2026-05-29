@@ -11,11 +11,15 @@ import { SkinIcon } from '@/src/components/SkinIcon';
 import { UiIcon } from '@/src/components/UiIcon';
 import { ProfileAvatar } from '@/src/components/ProfileAvatar';
 import { getSafePaddingBottom, getSafePaddingTop } from '@/src/utils/gameplayLayout';
+import { useGameText } from '@/src/i18n/gameText';
+import { useTranslation } from '@/src/i18n';
 
 export default function LeagueScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const game = useGame();
+  const gameText = useGameText();
+  const { t, language } = useTranslation();
   const listRef = useRef<FlatList>(null);
   const standings = useMemo(() => game.getLeagueStandings(), [game.league, game.nickname, game.avatar, game.avatarImageUri, game.level, game.lifetimeStats, game.unlockedSkins]);
   const playerIndex = standings.findIndex(item => item.id === game.playerId);
@@ -58,7 +62,7 @@ export default function LeagueScreen() {
           <Text style={styles.name} numberOfLines={1}>{isPlayer ? `${item.name} (Você)` : item.name}</Text>
           <View style={styles.metaRow}>
             <SkinIcon skin={skin} size={16} style={styles.metaSkin} />
-            <Text style={styles.meta}>{skin.name} • Fase {item.maxPhase} • Comp {item.competitionWins}V</Text>
+            <Text style={styles.meta}>{gameText.skinName(skin)} • Fase {item.maxPhase} • Comp {item.competitionWins}V</Text>
           </View>
         </View>
         <View style={styles.scoreBox}>
@@ -73,22 +77,22 @@ export default function LeagueScreen() {
   return (
     <LinearGradient colors={['#08121d', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={[styles.header, { paddingTop: getSafePaddingTop(insets, 56) }]}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
-        <Text style={styles.title}>LIGA NEON</Text>
-        <Text style={styles.subtitle}>Liga local contra rivais fictícios • {standings.length} participantes</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text></TouchableOpacity>
+        <Text style={styles.title}>{t('league.title').toUpperCase()}</Text>
+        <Text style={styles.subtitle}>{language === 'pt-BR' ? `Liga local contra rivais fictícios • ${standings.length} participantes` : `Local league against fictional rivals • ${standings.length} players`}</Text>
       </View>
 
       <View style={styles.summary}>
         <View>
-          <Text style={styles.summaryLabel}>Sua posição</Text>
+          <Text style={styles.summaryLabel}>{language === 'pt-BR' ? 'Sua posição' : 'Your rank'}</Text>
           <Text style={styles.summaryValue}>#{playerIndex + 1}/{standings.length}</Text>
         </View>
         <View>
-          <Text style={styles.summaryLabel}>Troféus</Text>
+          <Text style={styles.summaryLabel}>{language === 'pt-BR' ? 'Troféus' : 'Trophies'}</Text>
           <Text style={styles.summaryValue}>{player.trophies.toLocaleString('pt-BR')}</Text>
         </View>
         <View>
-          <Text style={styles.summaryLabel}>Temporada</Text>
+          <Text style={styles.summaryLabel}>{language === 'pt-BR' ? 'Temporada' : 'Season'}</Text>
           <Text style={styles.summaryValue}>{getDaysRemainingInSeason()}d</Text>
         </View>
       </View>
@@ -96,13 +100,13 @@ export default function LeagueScreen() {
       <View style={styles.trophyPanel}>
         <View style={styles.trophyHeader}>
           <Text style={styles.trophyTitle}>{player.division}</Text>
-          <Text style={styles.trophyText}>{nextDivision ? `${Math.max(0, nextMin - player.trophies)} troféus até ${nextDivision.name}` : 'Divisão máxima'}</Text>
+          <Text style={styles.trophyText}>{nextDivision ? `${Math.max(0, nextMin - player.trophies)} ${language === 'pt-BR' ? 'troféus até' : 'trophies to'} ${nextDivision.name}` : (language === 'pt-BR' ? 'Divisão máxima' : 'Max division')}</Text>
         </View>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${divisionProgress * 100}%` }]} /></View>
         <TouchableOpacity style={styles.competeButton} onPress={() => { playSound('buttonConfirm'); router.push('/compete' as any); }}>
-          <Text style={styles.competeText}>COMPETIR</Text>
+          <Text style={styles.competeText}>{language === 'pt-BR' ? 'COMPETIR' : 'COMPETE'}</Text>
         </TouchableOpacity>
-        <Text style={styles.streakText}>Sequência: {game.league.history.currentWinStreak || 0} vitórias • Melhor: {game.league.history.bestWinStreak || 0}</Text>
+        <Text style={styles.streakText}>{language === 'pt-BR' ? 'Sequência' : 'Streak'}: {game.league.history.currentWinStreak || 0} • {language === 'pt-BR' ? 'Melhor' : 'Best'}: {game.league.history.bestWinStreak || 0}</Text>
       </View>
 
       <View style={styles.topThree}>
@@ -118,7 +122,7 @@ export default function LeagueScreen() {
       <View style={styles.rewardCard}>
         <Text style={styles.rewardTitle}>Recompensa estimada</Text>
         <Text style={styles.rewardText}>{playerIndex === 0 ? 'Skin especial + gemas + baú da divisão' : playerIndex < 10 ? 'Gemas e baú raro/épico' : playerIndex < 50 ? 'Moedas, fragmentos e chave comum' : 'Participação com moedas/XP'}</Text>
-        {above && <Text style={styles.rewardHint}>Faltam {(above.trophies - player.trophies).toLocaleString('pt-BR')} troféus para subir uma posição.</Text>}
+        {above && <Text style={styles.rewardHint}>{language === 'pt-BR' ? `Faltam ${(above.trophies - player.trophies).toLocaleString('pt-BR')} troféus para subir uma posição.` : `${(above.trophies - player.trophies).toLocaleString('pt-BR')} trophies to climb one rank.`}</Text>}
         {nextDivisionReward && (
           <TouchableOpacity style={styles.smallButton} onPress={collectDivision}>
             <Text style={styles.smallButtonText}>Coletar prêmio {nextDivisionReward.name}: {getDivisionReward(nextDivisionReward.name).map(rewardToLabel).join(', ')}</Text>
@@ -140,25 +144,25 @@ export default function LeagueScreen() {
       />
 
       <TouchableOpacity style={[styles.playerDock, { bottom: getSafePaddingBottom(insets, 18) }]} onPress={goToPlayer}>
-        <Text style={styles.dockText}>Minha posição #{playerIndex + 1} • {player.trophies.toLocaleString('pt-BR')} troféus • {player.division}</Text>
+        <Text style={styles.dockText}>{language === 'pt-BR' ? 'Minha posição' : 'My rank'} #{playerIndex + 1} • {player.trophies.toLocaleString('pt-BR')} {language === 'pt-BR' ? 'troféus' : 'trophies'} • {player.division}</Text>
       </TouchableOpacity>
 
       <Modal visible={!!pending} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.seasonModal}>
-            <Text style={styles.seasonTitle}>{pending?.firstInitialChampionUltimate ? 'ULTIMATE DESBLOQUEADA' : 'TEMPORADA ENCERRADA'}</Text>
+            <Text style={styles.seasonTitle}>{pending?.firstInitialChampionUltimate ? (language === 'pt-BR' ? 'ULTIMATE DESBLOQUEADA' : 'ULTIMATE UNLOCKED') : (language === 'pt-BR' ? 'TEMPORADA ENCERRADA' : 'SEASON ENDED')}</Text>
             <Text style={styles.seasonText}>Divisão final: {pending?.finalDivision}</Text>
             <Text style={styles.seasonText}>Posição final: #{pending?.finalPosition}</Text>
             <Text style={styles.seasonText}>Nova divisão: {pending?.newDivision}</Text>
             {pending?.rewards.map(reward => <Text key={rewardToLabel(reward)} style={styles.rewardLine}>{rewardToLabel(reward)}</Text>)}
-            {pending?.skinId && <Text style={styles.skinReward}>Skin: {getSkinById(pending.skinId).name}</Text>}
+            {pending?.skinId && <Text style={styles.skinReward}>Skin: {gameText.skinName(getSkinById(pending.skinId))}</Text>}
             {pending?.skinId ? (
               <TouchableOpacity style={styles.collectButton} onPress={() => collectSeason(true)}>
-                <Text style={styles.collectText}>COLETAR E EQUIPAR</Text>
+                <Text style={styles.collectText}>{language === 'pt-BR' ? 'COLETAR E EQUIPAR' : 'CLAIM AND EQUIP'}</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.collectButton} onPress={() => collectSeason(false)}>
-                <Text style={styles.collectText}>COLETAR</Text>
+                <Text style={styles.collectText}>{t('common.collect').toUpperCase()}</Text>
               </TouchableOpacity>
             )}
           </View>

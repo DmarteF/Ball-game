@@ -6,10 +6,12 @@ import { useGame } from '@/src/contexts/GameContext';
 import { PHASES } from '@/src/game/phases';
 import { playSound } from '@/src/utils/audio';
 import { UiIcon } from '@/src/components/UiIcon';
+import { useTranslation } from '@/src/i18n';
 
 export default function PhaseSelectScreen() {
   const router = useRouter();
   const game = useGame();
+  const { t, language } = useTranslation();
   const { unlockedPhases } = game;
   const infiniteUnlocked = unlockedPhases.includes(6) || game.lifetimeStats.highestPhase >= 5;
 
@@ -32,9 +34,9 @@ export default function PhaseSelectScreen() {
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← VOLTAR</Text>
+          <Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>SELECIONAR FASE</Text>
+        <Text style={styles.title}>{t('phase.select').toUpperCase()}</Text>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.phaseList}>
@@ -42,11 +44,11 @@ export default function PhaseSelectScreen() {
           <LinearGradient colors={infiniteUnlocked ? ['#00ff8888', '#00f0ff33'] : ['#333333', '#222222']} style={styles.cardGradient}>
             <View style={styles.phaseNumber}><UiIcon iconKey="ui_infinite" fallback="∞" size={38} /></View>
             <View style={styles.phaseInfo}>
-              <Text style={[styles.phaseName, !infiniteUnlocked && styles.lockedText]}>Modo Infinito</Text>
-              <Text style={[styles.phaseDescription, !infiniteUnlocked && styles.lockedText]}>{infiniteUnlocked ? 'Ondas sem fim com desafios progressivos.' : 'Complete a Fase 5 para desbloquear.'}</Text>
+              <Text style={[styles.phaseName, !infiniteUnlocked && styles.lockedText]}>{t('phase.infiniteMode')}</Text>
+              <Text style={[styles.phaseDescription, !infiniteUnlocked && styles.lockedText]}>{infiniteUnlocked ? t('phase.infiniteUnlocked') : t('phase.infiniteLocked')}</Text>
               <View style={styles.phaseStats}>
-                <Text style={[styles.phaseDifficulty, !infiniteUnlocked && styles.lockedText]}>Especial</Text>
-                <Text style={[styles.phaseHP, !infiniteUnlocked && styles.lockedText]}>Progressão infinita</Text>
+                <Text style={[styles.phaseDifficulty, !infiniteUnlocked && styles.lockedText]}>{t('phase.special')}</Text>
+                <Text style={[styles.phaseHP, !infiniteUnlocked && styles.lockedText]}>{t('phase.infiniteProgress')}</Text>
               </View>
             </View>
             {!infiniteUnlocked && <View style={styles.lockOverlay}><UiIcon iconKey="ui_locked" fallback="🔒" size={22} /><Text style={styles.lockText}>FASE 5</Text></View>}
@@ -59,14 +61,14 @@ export default function PhaseSelectScreen() {
               <LinearGradient colors={isUnlocked ? [phase.color + '88', phase.color + '44'] : ['#333333', '#222222']} style={styles.cardGradient}>
                 <View style={styles.phaseNumber}><Text style={styles.phaseNumberText}>{phase.id}</Text></View>
                 <View style={styles.phaseInfo}>
-                  <Text style={[styles.phaseName, !isUnlocked && styles.lockedText]}>{phase.name}</Text>
-                  <Text style={[styles.phaseDescription, !isUnlocked && styles.lockedText]}>{phase.description}</Text>
+                  <Text style={[styles.phaseName, !isUnlocked && styles.lockedText]}>{language === 'pt-BR' ? phase.name : `Phase ${phase.id}`}</Text>
+                  <Text style={[styles.phaseDescription, !isUnlocked && styles.lockedText]}>{language === 'pt-BR' ? phase.description : (phase.id === 1 ? 'First neon arena with wide openings.' : 'Progressive arena with stronger rings and tighter openings.')}</Text>
                   <View style={styles.phaseStats}>
-                    <Text style={[styles.phaseDifficulty, !isUnlocked && styles.lockedText]}>Dificuldade: {phase.difficulty}</Text>
-                    <Text style={[styles.phaseHP, !isUnlocked && styles.lockedText]}>{phase.ringMin}-{phase.ringMax} anéis • HP {phase.baseHp}</Text>
+                    <Text style={[styles.phaseDifficulty, !isUnlocked && styles.lockedText]}>{t('phase.difficulty')}: {language === 'pt-BR' ? phase.difficulty : phase.difficulty === 'Difícil' ? 'Hard' : phase.difficulty === 'Avançado' ? 'Advanced' : phase.difficulty === 'Extremo' ? 'Extreme' : phase.difficulty === 'Insano' ? 'Insane' : phase.difficulty}</Text>
+                    <Text style={[styles.phaseHP, !isUnlocked && styles.lockedText]}>{phase.ringMin}-{phase.ringMax} {t('phase.rings')} • HP {phase.baseHp}</Text>
                   </View>
                 </View>
-                {!isUnlocked && <View style={styles.lockOverlay}><UiIcon iconKey="ui_locked" fallback="🔒" size={22} /><Text style={styles.lockText}>BLOQUEADO</Text></View>}
+                {!isUnlocked && <View style={styles.lockOverlay}><UiIcon iconKey="ui_locked" fallback="🔒" size={22} /><Text style={styles.lockText}>{t('common.locked').toUpperCase()}</Text></View>}
               </LinearGradient>
             </TouchableOpacity>
           );

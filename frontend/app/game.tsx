@@ -34,12 +34,16 @@ import { ECONOMY_BALANCE, getComboMultiplier, getGlobalCoinsFromRun, getRunProfi
 import { playSound } from '@/src/utils/audio';
 import { triggerHaptic } from '@/src/utils/feedback';
 import { getSafePaddingBottom, getSafePaddingTop, getSingleArenaSize } from '@/src/utils/gameplayLayout';
+import { useTranslation } from '@/src/i18n';
 
 const BALL_RADIUS = 10;
 const INNER_RADIUS = 35;
 const INITIAL_BALL_SPEED = GAMEPLAY_TUNING.solo.ballSpeed;
 const XP_BASE_REQUIREMENT = 150;
 const DIFFICULTY_SCALE = 0.13;
+const FRAME_STEP_MS = 1000 / 60;
+const MAX_FRAME_DELTA_STEPS = 2;
+const VISUAL_RENDER_INTERVAL_MS = 33;
 
 interface FloatingNumberData {
   id: string;
@@ -83,6 +87,7 @@ const createProceduralPhaseConfig = (phaseNumber: number, playerLevel: number, s
 
 export default function GameScreen() {
   const router = useRouter();
+  const { t, language } = useTranslation();
   const { phase } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const dimensions = useWindowDimensions();
@@ -168,9 +173,10 @@ export default function GameScreen() {
   const shakeX = useSharedValue(0);
   const shakeY = useSharedValue(0);
   const [, setRenderTick] = useState(0);
-  const renderFrameRef = useRef(0);
+  const lastVisualRenderAtRef = useRef(0);
   
-  const gameLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastFrameTimeRef = useRef<number | null>(null);
   const xpToNextLevel = Math.floor(XP_BASE_REQUIREMENT * Math.pow(level, 1.55));
   const xpProgress = Math.min(100, (xp / xpToNextLevel) * 100);
   const protectionSeconds = Math.max(0, Math.ceil((invincibleUntil - Date.now()) / 1000));
@@ -208,7 +214,7 @@ export default function GameScreen() {
     setHasMounted(true);
     initializeGame();
     return () => {
-      if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+      stopGameLoop();
     };
   }, []);
 
@@ -273,6 +279,7 @@ export default function GameScreen() {
     ballX.value = CENTER_X;
     ballY.value = CENTER_Y;
     previousDistanceRef.current = 0;
+    lastVisualRenderAtRef.current = 0;
     rewardsSavedRef.current = false;
     usedReviveRef.current = false;
     comboRef.current = 0;
@@ -285,14 +292,35 @@ export default function GameScreen() {
     startGameLoop();
   };
 
+  const stopGameLoop = () => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    lastFrameTimeRef.current = null;
+  };
+
   const startGameLoop = () => {
-    if (gameLoopRef.current) clearInterval(gameLoopRef.current);
-    
-    gameLoopRef.current = setInterval(() => {
+    stopGameLoop();
+
+    const frame = (timestamp: number) => {
+      const previousTimestamp = lastFrameTimeRef.current ?? timestamp;
+      const elapsedMs = Math.max(0, timestamp - previousTimestamp);
+      lastFrameTimeRef.current = timestamp;
+
       if (!isPausedRef.current && !isGameOverRef.current && !showLevelUpRef.current && initializedRef.current) {
-        updateGame(1);
+        const deltaSteps = Math.min(MAX_FRAME_DELTA_STEPS, Math.max(0.5, elapsedMs / FRAME_STEP_MS || 1));
+        updateGame(deltaSteps);
       }
-    }, 16);
+
+      if (!isGameOverRef.current) {
+        animationFrameRef.current = requestAnimationFrame(frame);
+      } else {
+        animationFrameRef.current = null;
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(frame);
   };
 
   const addBonus = (label: string) => {
@@ -629,8 +657,10 @@ export default function GameScreen() {
 
     previousDistanceRef.current = nextDist;
 
-    renderFrameRef.current = (renderFrameRef.current + 1) % 2;
-    if (renderFrameRef.current === 0) setRenderTick(t => (t + 1) % 1000);
+    if (now - lastVisualRenderAtRef.current >= VISUAL_RENDER_INTERVAL_MS) {
+      lastVisualRenderAtRef.current = now;
+      setRenderTick(t => (t + 1) % 1000);
+    }
   };
 
   const applySkinImpact = (rings: Ring[], hitIndex: number, damage: number, now: number) => {
@@ -884,7 +914,7 @@ export default function GameScreen() {
 
   const handleGameOver = () => {
     isGameOverRef.current = true;
-    if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+    stopGameLoop();
     setResultStatus('defeat');
     setShowGameOver(true);
     triggerImpact('defeat');
@@ -933,7 +963,7 @@ export default function GameScreen() {
 
   const handleGiveUp = async () => {
     playSound('buttonConfirm', settings.sound);
-    if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+    stopGameLoop();
     setShowExitConfirm(false);
     setShowPauseMenu(false);
     setIsPaused(false);
@@ -959,7 +989,7 @@ export default function GameScreen() {
   };
 
   const handleVictory = async () => {
-    if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+    stopGameLoop();
     isGameOverRef.current = true;
     setResultStatus('victory');
     setShowVictory(true);
@@ -1018,6 +1048,7 @@ export default function GameScreen() {
   }
 
   const activeRings = ringsRef.current.filter(r => r.status === 'active' && r.hp > 0);
+  const visualNow = Date.now();
   const totalRings = ringsRef.current.length;
   const remainingPercentage = totalRings > 0 ? (activeRings.length / totalRings) * 100 : 0;
   const profileXpReward = getRunProfileXp(runRewards.xp, runRewards.ringsBroken, runRewards.perfectEscapes, runRewards.bestCombo) * rewardMultiplier;
@@ -1102,7 +1133,7 @@ export default function GameScreen() {
                     cx={CENTER_X}
                     cy={CENTER_Y}
                     r={ring.radius}
-                    stroke={getRingVisualColor(ring)}
+                    stroke={getRingVisualColor(ring, visualNow)}
                     strokeWidth={ring.thickness}
                     fill="none"
                     opacity={isSolidRing ? Math.max(0.65, opacity) : opacity}
@@ -1178,19 +1209,19 @@ export default function GameScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.pauseModal}>
             <LinearGradient colors={['#1a0a2e', '#16003b']} style={styles.modalContent}>
-              <Text style={styles.modalTitle}>PAUSE</Text>
+              <Text style={styles.modalTitle}>{t('game.pause').toUpperCase()}</Text>
               <TouchableOpacity style={styles.actionButton} onPress={closePauseMenu}>
                 <LinearGradient colors={['#00f0ff', '#0088ff']} style={styles.buttonGradient}>
-                  <Text style={styles.buttonText}>CONTINUAR</Text>
+                  <Text style={styles.buttonText}>{t('game.resume').toUpperCase()}</Text>
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={handleRetry}>
                 <LinearGradient colors={['#b000ff', '#6600cc']} style={styles.buttonGradient}>
-                  <Text style={styles.buttonText}>REINICIAR</Text>
+                  <Text style={styles.buttonText}>{language === 'pt-BR' ? 'REINICIAR' : 'RESTART'}</Text>
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity style={styles.giveUpButton} onPress={confirmGiveUp}>
-                <Text style={styles.giveUpText}>Sair para o menu</Text>
+                <Text style={styles.giveUpText}>{t('common.exit')}</Text>
               </TouchableOpacity>
               <Text style={styles.pauseHint}>Configurações: som e vibração salvos no perfil local.</Text>
             </LinearGradient>
@@ -1202,14 +1233,14 @@ export default function GameScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.pauseModal}>
             <LinearGradient colors={['#1a0a2e', '#16003b']} style={styles.modalContent}>
-              <Text style={styles.modalTitle}>SAIR DA PARTIDA?</Text>
-              <Text style={styles.pauseHint}>A rodada será encerrada e as recompensas atuais poderão ser coletadas.</Text>
+              <Text style={styles.modalTitle}>{language === 'pt-BR' ? 'SAIR DA PARTIDA?' : 'EXIT MATCH?'}</Text>
+              <Text style={styles.pauseHint}>{language === 'pt-BR' ? 'A rodada será encerrada e as recompensas atuais poderão ser coletadas.' : 'The run will end and current rewards can be collected.'}</Text>
               <TouchableOpacity style={styles.giveUpButton} onPress={handleGiveUp}>
-                <Text style={styles.giveUpText}>Sair</Text>
+                <Text style={styles.giveUpText}>{t('common.exit')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={cancelGiveUp}>
                 <LinearGradient colors={['#00f0ff', '#0088ff']} style={styles.buttonGradient}>
-                  <Text style={styles.buttonText}>CANCELAR</Text>
+                  <Text style={styles.buttonText}>{t('common.cancel').toUpperCase()}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </LinearGradient>
@@ -1225,7 +1256,7 @@ export default function GameScreen() {
               <LinearGradient colors={['#1a0a2e', '#16003b']} style={styles.modalContent}>
                 <ScrollView contentContainerStyle={styles.levelUpContent} showsVerticalScrollIndicator={false}>
                   <Text style={styles.modalTitle}>LEVEL {level}</Text>
-                  <Text style={styles.modalSubtitle}>Escolha um upgrade</Text>
+                  <Text style={styles.modalSubtitle}>{t('game.chooseUpgrade')}</Text>
 
                   <View style={styles.upgradeGrid}>
                     {availableUpgrades.slice(0, 3).map((upgrade) => (
@@ -1247,7 +1278,7 @@ export default function GameScreen() {
                           <Text style={styles.upgradeName}>{upgrade.name}</Text>
                           <Text style={styles.upgradeDescription}>{upgrade.description}</Text>
                           <Text style={styles.upgradeEffect}>Lv.{currentUpgrades[upgrade.id] || 0} → Lv.{(currentUpgrades[upgrade.id] || 0) + 1}</Text>
-                          <Text style={styles.chooseText}>ESCOLHER</Text>
+                          <Text style={styles.chooseText}>{t('common.select').toUpperCase()}</Text>
                         </LinearGradient>
                       </TouchableOpacity>
                     ))}
@@ -1262,7 +1293,7 @@ export default function GameScreen() {
                       <TouchableOpacity style={styles.rerollButton} onPress={handleRerollAd}>
                         <LinearGradient colors={['#00ff88', '#00aa66']} style={styles.rerollGradient}>
                           <UiIcon iconKey="ui_ad" fallback="📺" size={18} />
-                          <Text style={styles.rerollText}>Trocar (Ad)</Text>
+                          <Text style={styles.rerollText}>{t('game.reroll')} (Ad)</Text>
                         </LinearGradient>
                       </TouchableOpacity>
                       
@@ -1272,7 +1303,7 @@ export default function GameScreen() {
                       >
                         <LinearGradient colors={['#b000ff', '#6600cc']} style={styles.rerollGradient}>
                           <UiIcon iconKey="ui_gem" fallback="💎" size={18} />
-                          <Text style={styles.rerollText}>Trocar (10)</Text>
+                          <Text style={styles.rerollText}>{t('game.reroll')} (10)</Text>
                         </LinearGradient>
                       </TouchableOpacity>
                     </View>
@@ -1290,7 +1321,7 @@ export default function GameScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.victoryModal}>
               <LinearGradient colors={['#1a0a2e', '#16003b']} style={styles.modalContent}>
-                <Text style={styles.victoryTitle}>🎉 VITÓRIA! 🎉</Text>
+                <Text style={styles.victoryTitle}>🎉 {t('game.victory').toUpperCase()} 🎉</Text>
                 <ScrollView style={styles.resultScroll} contentContainerStyle={styles.statsContainer}>
                   <ResultLine fallback="🏁">Fase: {Number(phase) || 1}</ResultLine>
                   <ResultLine fallback="✅">Resultado: vitória</ResultLine>
@@ -1320,7 +1351,7 @@ export default function GameScreen() {
                 )}
                 <TouchableOpacity style={styles.actionButton} onPress={() => handleCollectAndExit(true)}>
                   <LinearGradient colors={['#00f0ff', '#0088ff']} style={styles.buttonGradient}>
-                    <Text style={styles.buttonText}>COLETAR E SAIR</Text>
+                      <Text style={styles.buttonText}>{language === 'pt-BR' ? 'COLETAR E SAIR' : 'CLAIM AND EXIT'}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
                 {Number(phase) < 50 && (
@@ -1345,7 +1376,7 @@ export default function GameScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.gameOverModal}>
               <LinearGradient colors={['#1a0a2e', '#16003b']} style={styles.modalContent}>
-                <Text style={styles.gameOverTitle}>{resultStatus === 'quit' ? '⏸ DESISTÊNCIA' : '💀 DERROTA 💀'}</Text>
+                <Text style={styles.gameOverTitle}>{resultStatus === 'quit' ? (language === 'pt-BR' ? '⏸ DESISTÊNCIA' : '⏸ QUIT') : `💀 ${t('game.defeat').toUpperCase()} 💀`}</Text>
                 <Text style={styles.gameOverSubtitle}>{resultStatus === 'quit' ? 'Rodada encerrada pelo jogador.' : 'A bolinha foi esmagada!'}</Text>
                 
                 <ScrollView style={styles.resultScroll} contentContainerStyle={styles.statsContainer}>
@@ -1379,7 +1410,7 @@ export default function GameScreen() {
                   >
                     <LinearGradient colors={['#ff0055', '#cc0000']} style={styles.buttonGradient}>
                       <UiIcon iconKey="ui_ad" fallback="📺" size={18} />
-                      <Text style={styles.buttonText}>REVIVER (AD)</Text>
+                      <Text style={styles.buttonText}>{language === 'pt-BR' ? 'REVIVER (AD)' : 'REVIVE (AD)'}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}

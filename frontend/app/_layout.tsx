@@ -5,15 +5,27 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
-import { GameProvider } from "@/src/contexts/GameContext";
+import { GameProvider, useGame } from "@/src/contexts/GameContext";
 import { AudioController } from "@/src/components/AudioController";
 import { initializeAds, preloadRewardedAd } from "@/src/services/adsService";
+import { I18nProvider } from "@/src/i18n";
 
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
 // Font.loadAsync against a broken vendor path if any <Icon> mounts before
 // the family is registered — which throws on Android Expo Go.
 SplashScreen.preventAutoHideAsync();
+
+function AppContent() {
+  const game = useGame();
+
+  return (
+    <I18nProvider language={game.language} setLanguage={game.updateLanguage}>
+      <AudioController />
+      <Stack screenOptions={{ headerShown: false }} />
+    </I18nProvider>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();
@@ -38,8 +50,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <GameProvider>
-          <AudioController />
-          <Stack screenOptions={{ headerShown: false }} />
+          <AppContent />
         </GameProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

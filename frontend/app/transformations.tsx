@@ -6,6 +6,8 @@ import { useGame } from '@/src/contexts/GameContext';
 import { SkinIcon } from '@/src/components/SkinIcon';
 import { HIDDEN_RARITIES, SKINS, SkinRarity, getSkinEvolutionCost, getSkinRarityColor } from '@/src/game/skins';
 import { playSound } from '@/src/utils/audio';
+import { useGameText } from '@/src/i18n/gameText';
+import { useTranslation } from '@/src/i18n';
 
 type Filter = 'all' | SkinRarity | 'owned' | 'locked';
 
@@ -27,6 +29,8 @@ const RARITY_ORDER: Record<SkinRarity, number> = { common: 0, rare: 1, epic: 2, 
 export default function TransformationsScreen() {
   const router = useRouter();
   const game = useGame();
+  const gameText = useGameText();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<Filter>('all');
 
   const visibleSkins = SKINS.filter(skin => {
@@ -46,13 +50,13 @@ export default function TransformationsScreen() {
     if (aOwned !== bOwned) return aOwned ? -1 : 1;
     if (RARITY_ORDER[a.rarity] !== RARITY_ORDER[b.rarity]) return RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity];
     if (aHidden !== bHidden) return aHidden ? 1 : -1;
-    return a.name.localeCompare(b.name, 'pt-BR');
+    return gameText.skinName(a).localeCompare(gameText.skinName(b));
   });
 
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => { playSound('buttonClick', game.settings.sound); router.back(); }}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => { playSound('buttonClick', game.settings.sound); router.back(); }}><Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text></TouchableOpacity>
         <View style={styles.headerLine}>
           <Text style={styles.title}>SKINS</Text>
           <Text style={styles.wallet}>💰 {game.coins}  💎 {game.gems}  🔑 {game.keys}</Text>
@@ -67,7 +71,7 @@ export default function TransformationsScreen() {
             const hidden = HIDDEN_RARITIES.includes(rarity);
             return (
               <View key={rarity} style={[styles.progressCard, { borderColor: getSkinRarityColor(rarity) + '77' }]}>
-                <Text style={[styles.progressRarity, { color: getSkinRarityColor(rarity) }]}>{rarity.toUpperCase()}</Text>
+                <Text style={[styles.progressRarity, { color: getSkinRarityColor(rarity) }]}>{gameText.rarity(rarity)}</Text>
                 <Text style={styles.progressCount}>{owned}/{hidden ? '???' : total}</Text>
               </View>
             );
@@ -101,11 +105,11 @@ export default function TransformationsScreen() {
                 >
                   <View style={styles.cardTop}>
                     <SkinIcon skin={skin} hidden={hidden} icon="🔒" size={54} style={styles.previewBall} />
-                    <Text style={[styles.rarityBadge, { backgroundColor: rarityColor }]}>{skin.rarity.toUpperCase()}</Text>
+                    <Text style={[styles.rarityBadge, { backgroundColor: rarityColor }]}>{gameText.rarity(skin.rarity)}</Text>
                   </View>
 
-                  <Text style={styles.skinName} numberOfLines={1}>{hidden ? '???' : skin.name}</Text>
-                  <Text style={styles.skinDescription} numberOfLines={2}>{hidden ? 'Skin oculta' : skin.description}</Text>
+                  <Text style={styles.skinName} numberOfLines={1}>{hidden ? '???' : gameText.skinName(skin)}</Text>
+                  <Text style={styles.skinDescription} numberOfLines={2}>{hidden ? '???' : gameText.skinDescription(skin)}</Text>
                   {owned && !hidden && (
                     <View style={styles.effectRow}>
                       {skin.specialEffects.slice(0, 4).map(effect => (

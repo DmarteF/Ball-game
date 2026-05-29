@@ -8,10 +8,12 @@ import { ProfileAvatar } from '@/src/components/ProfileAvatar';
 import { useGame } from '@/src/contexts/GameContext';
 import { getWeeklyEvent } from '@/src/game/retention';
 import { playSound } from '@/src/utils/audio';
+import { useTranslation } from '@/src/i18n';
 
 export default function HomeScreen() {
   const router = useRouter();
   const game = useGame();
+  const { t } = useTranslation();
   const { coins, gems, keys, loading, nickname, avatar, avatarImageUri, level, lastAchievementUnlocked, clearAchievementToast, pendingOfflineReward } = game;
   const [moreOpen, setMoreOpen] = useState(false);
   const [offlineVisible, setOfflineVisible] = useState(!!pendingOfflineReward);
@@ -29,16 +31,16 @@ export default function HomeScreen() {
   }, [lastAchievementUnlocked, clearAchievementToast]);
 
   const secondaryItems = [
-    { label: 'Loja', icon: '🛒', iconKey: 'ui_store' as const, route: '/store', color: '#00aaff' },
-    { label: 'Inventário', icon: '🎒', iconKey: 'ui_inventory' as const, route: '/inventory', color: '#ffd700' },
-    { label: 'Missões', icon: '📅', iconKey: 'ui_missions' as const, route: '/daily', color: '#ff8800' },
-    { label: 'Evento', icon: '⚡', iconKey: 'ui_event' as const, route: '/events', color: weeklyEvent.color },
-    { label: 'Roleta', icon: '🎡', iconKey: 'ui_wheel' as const, route: '/wheel', color: '#00ff88' },
-    { label: 'Recompensa diária', icon: '🎁', iconKey: 'ui_daily_reward' as const, route: '/wheel', color: '#ffd700' },
-    { label: 'Boss', icon: '👑', iconKey: 'ui_boss' as const, route: '/boss', color: '#ff0055' },
-    { label: 'Liga Neon', icon: '🏅', iconKey: 'ui_league_neon' as const, route: '/league', color: '#00ff88' },
-    { label: 'Conquistas', icon: '🏆', iconKey: 'ui_achievements' as const, route: '/achievements', color: '#ffd700' },
-    { label: 'Configurações', icon: '⚙️', iconKey: 'ui_settings' as const, route: '/profile', color: '#b8f3ff' },
+    { label: t('nav.shop'), icon: '🛒', iconKey: 'ui_store' as const, route: '/store', color: '#00aaff' },
+    { label: t('nav.inventory'), icon: '🎒', iconKey: 'ui_inventory' as const, route: '/inventory', color: '#ffd700' },
+    { label: t('nav.missions'), icon: '📅', iconKey: 'ui_missions' as const, route: '/daily', color: '#ff8800' },
+    { label: t('nav.event'), icon: '⚡', iconKey: 'ui_event' as const, route: '/events', color: weeklyEvent.color },
+    { label: t('nav.wheel'), icon: '🎡', iconKey: 'ui_wheel' as const, route: '/wheel', color: '#00ff88' },
+    { label: t('nav.dailyReward'), icon: '🎁', iconKey: 'ui_daily_reward' as const, route: '/daily-reward', color: '#ffd700' },
+    { label: t('nav.boss'), icon: '👑', iconKey: 'ui_boss' as const, route: '/boss', color: '#ff0055' },
+    { label: t('nav.neonLeague'), icon: '🏅', iconKey: 'ui_league_neon' as const, route: '/league', color: '#00ff88' },
+    { label: t('nav.achievements'), icon: '🏆', iconKey: 'ui_achievements' as const, route: '/achievements', color: '#ffd700' },
+    { label: t('nav.settings'), icon: '⚙️', iconKey: 'ui_settings' as const, route: '/profile', color: '#b8f3ff' },
   ];
 
   const go = (route: string) => {
@@ -52,7 +54,7 @@ export default function HomeScreen() {
       <LinearGradient colors={['#0a0a1a', '#1a0a2e']} style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#00f0ff" />
-          <Text style={styles.loadingText}>Carregando...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </LinearGradient>
     );
@@ -84,7 +86,7 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.playButton} onPress={() => go('/phase-select')}>
           <LinearGradient colors={['#00f0ff', '#0088ff']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.playGradient}>
             <UiIcon iconKey="ui_play" fallback="▶" size={32} style={styles.playIcon} />
-            <Text style={styles.playText}>JOGAR</Text>
+            <Text style={styles.playText}>{t('nav.play').toUpperCase()}</Text>
           </LinearGradient>
         </TouchableOpacity>
 
@@ -92,13 +94,13 @@ export default function HomeScreen() {
           <TouchableOpacity style={styles.primaryCard} onPress={() => go('/upgrade-shop')}>
             <LinearGradient colors={['#b000ff66', '#6600cc33']} style={styles.primaryCardGradient}>
               <UiIcon iconKey="ui_upgrades" fallback="⚔️" size={42} style={styles.primaryIcon} />
-              <Text style={styles.primaryLabel}>UPGRADES</Text>
+              <Text style={styles.primaryLabel}>{t('nav.upgrades').toUpperCase()}</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.primaryCard} onPress={() => go('/transformations')}>
             <LinearGradient colors={['#ff008866', '#cc006633']} style={styles.primaryCardGradient}>
               <UiIcon iconKey="ui_skins" fallback="✨" size={42} style={styles.primaryIcon} />
-              <Text style={styles.primaryLabel}>SKINS</Text>
+              <Text style={styles.primaryLabel}>{t('nav.skins').toUpperCase()}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -111,7 +113,7 @@ export default function HomeScreen() {
               router.push('/achievements' as any);
             }}
           >
-            <Text style={styles.achievementToastTitle}>Conquista desbloqueada</Text>
+            <Text style={styles.achievementToastTitle}>{t('home.achievementUnlocked')}</Text>
             <Text style={styles.achievementToastText}>{lastAchievementUnlocked}</Text>
           </TouchableOpacity>
         )}
@@ -119,16 +121,16 @@ export default function HomeScreen() {
 
       <TouchableOpacity style={styles.moreButton} onPress={() => setMoreOpen(true)}>
         <UiIcon iconKey="ui_menu" fallback="☰" size={26} style={styles.moreIcon} />
-        <Text style={styles.moreText}>Mais</Text>
+        <Text style={styles.moreText}>{t('nav.more')}</Text>
       </TouchableOpacity>
 
       <Modal visible={moreOpen} transparent animationType="fade" onRequestClose={() => setMoreOpen(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.morePanel}>
             <View style={styles.moreHeader}>
-              <Text style={styles.moreTitle}>Menu</Text>
+              <Text style={styles.moreTitle}>{t('common.menu')}</Text>
               <TouchableOpacity onPress={() => setMoreOpen(false)}>
-                <Text style={styles.closeText}>Fechar</Text>
+                <Text style={styles.closeText}>{t('common.close')}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.moreGrid}>
@@ -146,15 +148,15 @@ export default function HomeScreen() {
       <Modal visible={offlineVisible && !!pendingOfflineReward} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.offlineBox}>
-            <Text style={styles.offlineTitle}>RECOMPENSA OFFLINE</Text>
-            <Text style={styles.offlineText}>Você ficou fora por {pendingOfflineReward?.hours}h.</Text>
+            <Text style={styles.offlineTitle}>{t('home.offlineReward').toUpperCase()}</Text>
+            <Text style={styles.offlineText}>{t('home.offlineAway', { hours: pendingOfflineReward?.hours || 0 })}</Text>
             <View style={styles.offlineRewardRow}><UiIcon iconKey="ui_coin" fallback="💰" size={34} /><Text style={styles.offlineReward}>{pendingOfflineReward?.coins}</Text></View>
-            {pendingOfflineReward?.eventBonus && <Text style={styles.offlineText}>Bônus ativo: {pendingOfflineReward.eventBonus}</Text>}
+            {pendingOfflineReward?.eventBonus && <Text style={styles.offlineText}>{t('home.offlineBonus', { bonus: pendingOfflineReward.eventBonus })}</Text>}
             <TouchableOpacity style={styles.offlineButton} onPress={async () => { await game.claimOfflineReward(false); setOfflineVisible(false); }}>
-              <Text style={styles.offlineButtonText}>COLETAR</Text>
+              <Text style={styles.offlineButtonText}>{t('common.collect').toUpperCase()}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.offlineAdButton} onPress={() => setShowOfflineAd(true)}>
-              <Text style={styles.offlineButtonText}>DOBRAR — AD</Text>
+              <Text style={styles.offlineButtonText}>{t('ads.doubleAd').toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -199,13 +201,13 @@ const styles = StyleSheet.create({
   primaryCard: { flex: 1, height: 92, borderRadius: 14, overflow: 'hidden' },
   primaryCardGradient: { flex: 1, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ffffff24' },
   primaryIcon: { marginBottom: 6 },
-  primaryLabel: { color: '#ffffff', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
+  primaryLabel: { color: '#ffffff', fontSize: 13, fontWeight: 'bold', letterSpacing: 1, textAlign: 'center', paddingHorizontal: 6 },
   achievementToast: { marginTop: 4, backgroundColor: '#00ff8822', borderWidth: 1, borderColor: '#00ff88aa', borderRadius: 12, padding: 12 },
   achievementToastTitle: { color: '#00ff88', fontSize: 13, fontWeight: 'bold' },
   achievementToastText: { color: '#ffffff', fontSize: 15, fontWeight: 'bold', marginTop: 2 },
   moreButton: { position: 'absolute', right: 18, bottom: 24, width: 64, height: 64, borderRadius: 18, backgroundColor: '#00f0ff', alignItems: 'center', justifyContent: 'center', shadowColor: '#00f0ff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 14 },
   moreIcon: { tintColor: '#001018' },
-  moreText: { color: '#001018', fontSize: 11, fontWeight: 'bold' },
+  moreText: { color: '#001018', fontSize: 11, fontWeight: 'bold', textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: '#000000cc', justifyContent: 'center', alignItems: 'center', padding: 18 },
   morePanel: { width: '100%', maxWidth: 430, backgroundColor: '#1a0a2e', borderWidth: 1, borderColor: '#00f0ff66', borderRadius: 18, padding: 16 },
   moreHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
@@ -214,7 +216,7 @@ const styles = StyleSheet.create({
   moreGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   moreItem: { width: '47%', minHeight: 76, backgroundColor: '#ffffff12', borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', padding: 10 },
   moreItemIcon: { marginBottom: 5 },
-  moreItemLabel: { color: '#ffffff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
+  moreItemLabel: { color: '#ffffff', fontSize: 12, fontWeight: 'bold', textAlign: 'center', flexShrink: 1 },
   offlineBox: { width: '100%', maxWidth: 380, backgroundColor: '#1a0a2e', borderWidth: 1, borderColor: '#00f0ff66', borderRadius: 16, padding: 22, alignItems: 'center' },
   offlineTitle: { color: '#00f0ff', fontSize: 24, fontWeight: 'bold' },
   offlineText: { color: '#ffffffaa', textAlign: 'center', marginTop: 8 },

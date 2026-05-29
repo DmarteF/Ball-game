@@ -11,10 +11,14 @@ import { triggerHaptic } from '@/src/utils/feedback';
 import { UiIcon } from '@/src/components/UiIcon';
 import { SkinIcon } from '@/src/components/SkinIcon';
 import { UiIconKey } from '@/src/game/uiIcons';
+import { useGameText } from '@/src/i18n/gameText';
+import { useTranslation } from '@/src/i18n';
 
 export default function InventoryScreen() {
   const router = useRouter();
   const game = useGame();
+  const gameText = useGameText();
+  const { t } = useTranslation();
   const [showReward, setShowReward] = useState(false);
   const [showAd, setShowAd] = useState(false);
   const [currentReward, setCurrentReward] = useState<ChestReward | null>(null);
@@ -35,7 +39,7 @@ export default function InventoryScreen() {
   const openChest = async (chest: ChestDefinition, free = false) => {
     if (!free && !canAfford(chest)) {
       playSound('buttonError', game.settings.sound);
-      Alert.alert('Recursos insuficientes', `Você não tem o suficiente para abrir ${chest.name}.`);
+      Alert.alert('Recursos insuficientes', `Você não tem o suficiente para abrir ${gameText.chestName(chest)}.`);
       return;
     }
 
@@ -109,9 +113,9 @@ export default function InventoryScreen() {
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← VOLTAR</Text>
+          <Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>BAÚS & INVENTÁRIO</Text>
+        <Text style={styles.title}>{t('inventory.title').toUpperCase()}</Text>
         <View style={styles.statsRow}>
           <View style={styles.statBadge}><UiIcon iconKey="ui_coin" fallback="💰" size={17} /><Text style={styles.statBadgeText}>{game.coins}</Text></View>
           <View style={styles.statBadge}><UiIcon iconKey="ui_gem" fallback="💎" size={17} /><Text style={styles.statBadgeText}>{game.gems}</Text></View>
@@ -125,22 +129,22 @@ export default function InventoryScreen() {
           <LinearGradient colors={['#ffd700', '#ff8800']} style={styles.freeChestGradient}>
             <UiIcon iconKey="ui_daily_reward" fallback="🎁" size={48} />
             <View style={styles.freeChestInfo}>
-              <Text style={styles.freeChestTitle}>BAÚ GRÁTIS</Text>
-              <Text style={styles.freeChestSubtitle}>Anúncio simulado</Text>
+              <Text style={styles.freeChestTitle}>{t('shop.freeChest').toUpperCase()}</Text>
+              <Text style={styles.freeChestSubtitle}>{t('inventory.freeChestSubtitle')}</Text>
             </View>
             <UiIcon iconKey="ui_ad" fallback="📺" size={30} />
           </LinearGradient>
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>BAÚS</Text>
+        <Text style={styles.sectionTitle}>{t('stats.chests').toUpperCase()}</Text>
         {CHESTS.map(chest => (
           <TouchableOpacity key={chest.id} style={styles.chestCard} onPress={() => openChest(chest)} disabled={opening || !canAfford(chest)}>
             <LinearGradient colors={[chest.color + '66', chest.color + '22']} style={[styles.chestGradient, !canAfford(chest) && styles.disabled]}>
               <UiIcon iconKey={opening ? 'ui_effect' : chestIcon(chest.id)} fallback={opening ? '✨' : chest.icon} size={44} />
               <View style={styles.chestInfo}>
-                <Text style={styles.chestName}>{chest.name}</Text>
-                <Text style={styles.chestRewards}>{chest.description}</Text>
-                <Text style={styles.chestRewards}>Chances: {Object.entries(chest.chances).map(([r, v]) => `${r} ${Math.round((v || 0) * 100)}%`).join(' • ')}</Text>
+                <Text style={styles.chestName}>{gameText.chestName(chest)}</Text>
+                <Text style={styles.chestRewards}>{gameText.chestDescription(chest)}</Text>
+                <Text style={styles.chestRewards}>Chances: {Object.entries(chest.chances).map(([r, v]) => `${gameText.rarity(r).toLowerCase()} ${Math.round((v || 0) * 100)}%`).join(' • ')}</Text>
               </View>
               <View style={styles.priceTag}>
                 <Text style={styles.priceText}>{chest.cost}</Text>
@@ -150,9 +154,9 @@ export default function InventoryScreen() {
           </TouchableOpacity>
         ))}
 
-        <Text style={styles.sectionTitle}>ITENS</Text>
+        <Text style={styles.sectionTitle}>{t('inventory.items').toUpperCase()}</Text>
         {game.inventoryItems.length === 0 ? (
-          <Text style={styles.emptyText}>Trails, auras e efeitos aparecerão aqui.</Text>
+          <Text style={styles.emptyText}>{t('inventory.emptyItems')}</Text>
         ) : game.inventoryItems.map(item => (
           <TouchableOpacity
             key={item.id}
@@ -161,7 +165,7 @@ export default function InventoryScreen() {
             onPress={() => openStoredChest(item.id, getStoredChestId(item.id))}
           >
             <UiIcon iconKey={inventoryIcon(item)} fallback={item.icon} size={24} />
-            <Text style={styles.itemText}>{item.label}</Text>
+            <Text style={styles.itemText}>{item.type === 'chest' ? gameText.chestName(getStoredChestId(item.id) as ChestDefinition['id']) : item.label}</Text>
             <Text style={styles.itemAmount}>{item.type === 'chest' ? 'ABRIR ' : ''}x{item.amount}</Text>
           </TouchableOpacity>
         ))}
@@ -171,24 +175,24 @@ export default function InventoryScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.rewardModal}>
             <LinearGradient colors={['#1a0a2e', '#16003b']} style={styles.modalContent}>
-              <Text style={styles.rewardTitle}>REVELADO</Text>
+              <Text style={styles.rewardTitle}>{t('inventory.revealed').toUpperCase()}</Text>
               {currentReward?.skinId ? (
                 <SkinIcon skin={getSkinById(currentReward.skinId)} size={82} style={styles.rewardSkinIcon} />
               ) : (
                 <UiIcon iconKey={inventoryIcon({ type: currentReward?.type || 'effect', id: currentReward?.type || 'effect' })} fallback={currentReward?.icon || '🎁'} size={66} />
               )}
-              <Text style={styles.rewardValue}>{currentReward?.label}</Text>
-              <Text style={styles.rewardSubtitle}>{currentReward?.isDuplicate ? `Repetida: +${currentReward.amount} fragmentos` : currentReward?.type}</Text>
+              <Text style={styles.rewardValue}>{gameText.chestRewardLabel(currentReward)}</Text>
+              <Text style={styles.rewardSubtitle}>{currentReward?.isDuplicate ? `Duplicate: +${currentReward.amount} fragments` : currentReward?.type}</Text>
               {currentReward?.type === 'skin' && (
                 <TouchableOpacity style={styles.claimButton} onPress={equipRewardSkin}>
                   <LinearGradient colors={['#00ff88', '#00aa66']} style={styles.claimGradient}>
-                    <Text style={styles.claimText}>EQUIPAR</Text>
+                    <Text style={styles.claimText}>{t('inventory.equip').toUpperCase()}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={styles.claimButton} onPress={() => { playSound('buttonClick', game.settings.sound); setShowReward(false); }}>
                 <LinearGradient colors={['#00f0ff', '#0088ff']} style={styles.claimGradient}>
-                  <Text style={styles.claimText}>COLETAR</Text>
+                  <Text style={styles.claimText}>{t('common.collect').toUpperCase()}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </LinearGradient>

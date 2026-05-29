@@ -5,23 +5,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ACHIEVEMENTS, AchievementCategory } from '@/src/game/achievements';
 import { useGame } from '@/src/contexts/GameContext';
 import { getSkinRarityColor } from '@/src/game/skins';
+import { useTranslation } from '@/src/i18n';
+import { useGameText } from '@/src/i18n/gameText';
 
 const CATEGORIES: ('todas' | AchievementCategory)[] = ['todas', 'progresso', 'combate', 'coleção', 'economia', 'baús', 'skins', 'perfect escape', 'boss', 'liga', 'especiais'];
-
-const rewardLabel = (reward: typeof ACHIEVEMENTS[number]['reward']) => {
-  if (reward.type === 'coins') return `💰 ${reward.amount}`;
-  if (reward.type === 'gems') return `💎 ${reward.amount}`;
-  if (reward.type === 'keys') return `🔑 ${reward.amount}`;
-  if (reward.type === 'legendaryKeys') return `🗝️ ${reward.amount}`;
-  if (reward.type === 'chest') return `🎁 Baú ${reward.chestType}`;
-  if (reward.type === 'fragments') return `🧩 ${reward.amount}`;
-  if (reward.type === 'skin') return '🌟 Skin Ultimate';
-  return `XP ${reward.amount}`;
-};
 
 export default function AchievementsScreen() {
   const router = useRouter();
   const game = useGame();
+  const { t } = useTranslation();
+  const gameText = useGameText();
   const [category, setCategory] = useState<typeof CATEGORIES[number]>('todas');
   const completed = Object.values(game.achievements).filter(item => item.completed).length;
   const pending = Object.values(game.achievements).filter(item => item.completed && !item.claimed).length;
@@ -31,11 +24,11 @@ export default function AchievementsScreen() {
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
-        <Text style={styles.title}>CONQUISTAS</Text>
-        <Text style={styles.counter}>{completed}/{ACHIEVEMENTS.length} concluídas • {pending} pendentes</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text></TouchableOpacity>
+        <Text style={styles.title}>{t('nav.achievements').toUpperCase()}</Text>
+        <Text style={styles.counter}>{completed}/{ACHIEVEMENTS.length} {t('achievements.completed')} • {pending} {t('achievements.pending')}</Text>
         <View style={styles.specialBox}>
-          <Text style={styles.specialTitle}>Campeão dos 50 Estágios</Text>
+          <Text style={styles.specialTitle}>{gameText.achievementName({ id: 'stage_50_champion', name: 'Campeão dos 50 Estágios' })}</Text>
           <View style={styles.specialBar}>
             <View style={[styles.specialFill, { width: `${Math.min(100, (champion.progress / 50) * 100)}%` }]} />
             <Text style={styles.specialText}>{champion.progress}/50</Text>
@@ -46,7 +39,7 @@ export default function AchievementsScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {CATEGORIES.map(item => (
           <TouchableOpacity key={item} style={[styles.filter, category === item && styles.filterActive]} onPress={() => setCategory(item)}>
-            <Text style={[styles.filterText, category === item && styles.filterTextActive]}>{item.toUpperCase()}</Text>
+            <Text style={[styles.filterText, category === item && styles.filterTextActive]}>{gameText.category(item).toUpperCase()}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -61,21 +54,21 @@ export default function AchievementsScreen() {
             <View key={achievement.id} style={[styles.card, { borderColor: color + '88' }]}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleBox}>
-                  <Text style={styles.name}>{hidden ? '???' : achievement.name}</Text>
-                  <Text style={[styles.category, { color }]}>{achievement.category.toUpperCase()}</Text>
+                  <Text style={styles.name}>{hidden ? '???' : gameText.achievementName(achievement)}</Text>
+                  <Text style={[styles.category, { color }]}>{gameText.category(achievement.category).toUpperCase()}</Text>
                 </View>
-                <Text style={styles.reward}>{rewardLabel(achievement.reward)}</Text>
+                <Text style={styles.reward}>{gameText.rewardText(achievement.reward)}</Text>
               </View>
-              <Text style={styles.description}>{hidden ? 'Conquista oculta. Continue avançando para revelar.' : achievement.description}</Text>
+              <Text style={styles.description}>{hidden ? t('achievements.hidden') : gameText.achievementDescription(achievement)}</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: color }]} />
                 <Text style={styles.progressText}>{state.progress}/{achievement.required}</Text>
               </View>
               <View style={styles.footer}>
-                <Text style={styles.status}>{state.claimed ? 'Coletada' : state.completed ? 'Disponível' : 'Em progresso'}</Text>
+                <Text style={styles.status}>{state.claimed ? t('common.claimed') : state.completed ? t('common.available') : t('common.inProgress')}</Text>
                 {state.completed && !state.claimed && (
                   <TouchableOpacity style={styles.claimButton} onPress={() => game.collectAchievementReward(achievement.id)}>
-                    <Text style={styles.claimText}>COLETAR</Text>
+                    <Text style={styles.claimText}>{t('common.collect').toUpperCase()}</Text>
                   </TouchableOpacity>
                 )}
               </View>

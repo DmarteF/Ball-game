@@ -17,6 +17,7 @@ import { UiIcon } from '@/src/components/UiIcon';
 import { UpgradeIcon } from '@/src/components/UpgradeIcon';
 import { MuteButton } from '@/src/components/MuteButton';
 import { getSafePaddingBottom, getSafePaddingTop, getSingleArenaSize } from '@/src/utils/gameplayLayout';
+import { startFrameLoop } from '@/src/utils/frameLoop';
 
 export default function InfiniteScreen() {
   const router = useRouter();
@@ -154,8 +155,8 @@ export default function InfiniteScreen() {
   useEffect(() => {
     if (!infiniteUnlocked) return;
     if (paused || finished || choices.length > 0) return;
-    const timer = setInterval(() => setSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
-    const loop = setInterval(() => {
+    const stopTimer = startFrameLoop(() => setSeconds(Math.floor((Date.now() - startedAt) / 1000)), { minIntervalMs: 1000 });
+    const stopLoop = startFrameLoop(() => {
       setArena(current => {
         if (!current) return current;
         const beforeLevel = current.level;
@@ -217,10 +218,10 @@ export default function InfiniteScreen() {
         if (result.crushed) finish(false, result);
         return result;
       });
-    }, 34);
+    }, { minIntervalMs: 32 });
     return () => {
-      clearInterval(timer);
-      clearInterval(loop);
+      stopTimer();
+      stopLoop();
     };
   }, [infiniteUnlocked, paused, finished, choices.length, startedAt, runUpgrades, wave, activeChallengeId]);
 

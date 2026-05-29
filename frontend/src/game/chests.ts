@@ -25,10 +25,10 @@ export interface ChestReward {
 }
 
 export const CHESTS: ChestDefinition[] = [
-  { id: 'common', name: 'Baú Comum', icon: '📦', cost: 180, currency: 'coins', color: '#9ca3af', description: '80% comum, 18% rara, 2% épica.', chances: { common: 0.8, rare: 0.18, epic: 0.02 } },
-  { id: 'rare', name: 'Baú Raro', icon: '💼', cost: 1, currency: 'keys', color: '#00aaff', description: '45% comum, 45% rara, 9% épica, 1% lendária.', chances: { common: 0.45, rare: 0.45, epic: 0.09, legendary: 0.01 } },
-  { id: 'epic', name: 'Baú Épico', icon: '🏆', cost: 120, currency: 'gems', color: '#b000ff', description: '55% rara, 35% épica, 9.5% lendária, 0.5% Ultimate.', chances: { rare: 0.55, epic: 0.35, legendary: 0.095, ultimate: 0.005 } },
-  { id: 'legendary', name: 'Baú Lendário', icon: '💎', cost: 1, currency: 'legendaryKeys', color: '#ffd700', description: '65% épica, 33% lendária, 2% Ultimate.', chances: { epic: 0.65, legendary: 0.33, ultimate: 0.02 } },
+  { id: 'common', name: 'Baú Comum', icon: '📦', cost: 180, currency: 'coins', color: '#9ca3af', description: '70% comum, 24% rara, 6% épica.', chances: { common: 0.7, rare: 0.24, epic: 0.06 } },
+  { id: 'rare', name: 'Baú Raro', icon: '💼', cost: 1, currency: 'keys', color: '#00aaff', description: '25% comum, 55% rara, 17% épica, 3% lendária.', chances: { common: 0.25, rare: 0.55, epic: 0.17, legendary: 0.03 } },
+  { id: 'epic', name: 'Baú Épico', icon: '🏆', cost: 120, currency: 'gems', color: '#b000ff', description: '35% rara, 48% épica, 15% lendária, 2% Ultimate.', chances: { rare: 0.35, epic: 0.48, legendary: 0.15, ultimate: 0.02 } },
+  { id: 'legendary', name: 'Baú Lendário', icon: '💎', cost: 1, currency: 'legendaryKeys', color: '#ffd700', description: '45% épica, 50% lendária, 5% Ultimate.', chances: { epic: 0.45, legendary: 0.5, ultimate: 0.05 } },
 ];
 
 const rarityOrder: SkinRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic', 'ultimate'];

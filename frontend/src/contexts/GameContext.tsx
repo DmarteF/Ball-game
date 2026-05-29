@@ -25,6 +25,7 @@ import {
 } from '@/src/game/retention';
 import { getLocalDayKey, getLocalWeekKey } from '@/src/utils/time';
 import { applyAudioSettings, DEFAULT_AUDIO_SETTINGS, AudioSettings } from '@/src/utils/audio';
+import { DEFAULT_LANGUAGE, LanguageCode, normalizeLanguage } from '@/src/i18n';
 import {
   LeagueRival,
   LeagueSave,
@@ -126,6 +127,7 @@ interface SaveData {
     infiniteChallengeCompletions: number;
   };
   bossProgress: BossProgressSave;
+  language: LanguageCode;
   settings: { sound: boolean; haptics: boolean } & AudioSettings;
   league: LeagueSave;
   dailyMissions: DailyMissionSave;
@@ -198,6 +200,7 @@ interface GameContextType extends SaveData {
   recordStorePurchase: () => Promise<void>;
   claimOfflineReward: (double?: boolean) => Promise<void>;
   refreshTimedSystems: () => Promise<void>;
+  updateLanguage: (language: LanguageCode) => Promise<void>;
   updateAudioSettings: (patch: Partial<AudioSettings>) => Promise<void>;
   getLeaguePlayer: () => LeagueRival;
   getLeagueStandings: () => LeagueRival[];
@@ -288,6 +291,7 @@ const defaultSave = (): SaveData => {
     infiniteChallengeCompletions: 0,
   },
   bossProgress: createBossProgress(),
+  language: DEFAULT_LANGUAGE,
   settings: { sound: true, haptics: true, ...DEFAULT_AUDIO_SETTINGS },
   league: defaultLeagueSave(playerId),
   dailyMissions: createDailyMissions(),
@@ -577,6 +581,7 @@ const normalizeSave = (rawSave: Partial<SaveData> | null | undefined): SaveData 
     stats: { ...defaultStats, ...(parsed.stats || {}) },
     lifetimeStats,
     bossProgress: normalizeBossProgress(parsed.bossProgress),
+    language: normalizeLanguage(parsed.language),
     settings: { ...base.settings, ...(parsed.settings || {}) },
     league: parsed.league || defaultLeagueSave(safeString(parsed.playerId, base.playerId), 0),
     unlockedUpgrades: getUnlockedUpgradesForProfile(profileLevel, currentPhase),
@@ -1223,6 +1228,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await persist(resetTimedSystemsIfNeeded(saveRef.current));
   };
 
+  const updateLanguage = async (language: LanguageCode) => {
+    await persist({ ...saveRef.current, language: normalizeLanguage(language) });
+  };
+
   const updateAudioSettings = async (patch: Partial<AudioSettings>) => {
     const current = saveRef.current;
     const settings = { ...current.settings, ...patch };
@@ -1375,6 +1384,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     recordStorePurchase,
     claimOfflineReward,
     refreshTimedSystems,
+    updateLanguage,
     updateAudioSettings,
     createLeagueMatch,
     recordLeagueCompetitionResult,

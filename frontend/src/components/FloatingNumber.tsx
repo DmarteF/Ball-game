@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -17,7 +17,7 @@ interface FloatingNumberProps {
   onComplete: () => void;
 }
 
-export const FloatingNumber: React.FC<FloatingNumberProps> = ({
+const FloatingNumberBase: React.FC<FloatingNumberProps> = ({
   value,
   x,
   y,
@@ -28,6 +28,11 @@ export const FloatingNumber: React.FC<FloatingNumberProps> = ({
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(1);
   const scale = useSharedValue(isCritical ? 1.5 : 1);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     translateY.value = withTiming(-50, { duration: 1000, easing: Easing.out(Easing.ease) });
@@ -40,9 +45,9 @@ export const FloatingNumber: React.FC<FloatingNumberProps> = ({
       withTiming(isCritical ? 1.2 : 0.8, { duration: 900 })
     );
 
-    const timer = setTimeout(onComplete, 1000);
+    const timer = setTimeout(() => onCompleteRef.current(), 1000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isCritical, opacity, scale, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -76,6 +81,16 @@ export const FloatingNumber: React.FC<FloatingNumberProps> = ({
     </Animated.Text>
   );
 };
+
+export const FloatingNumber = memo(
+  FloatingNumberBase,
+  (prev, next) =>
+    prev.value === next.value &&
+    prev.x === next.x &&
+    prev.y === next.y &&
+    prev.isCritical === next.isCritical &&
+    prev.color === next.color
+);
 
 const styles = StyleSheet.create({
   text: {

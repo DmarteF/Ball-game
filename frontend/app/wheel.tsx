@@ -6,12 +6,16 @@ import { AdModal } from '@/src/components/AdModal';
 import { useGame } from '@/src/contexts/GameContext';
 import { RewardGrant, WHEEL_REWARDS, describeReward } from '@/src/game/retention';
 import { playSound } from '@/src/utils/audio';
+import { useGameText } from '@/src/i18n/gameText';
+import { useTranslation } from '@/src/i18n';
 
 const segmentColors = ['#00f0ff', '#ffd700', '#ff4fd8', '#00ff88', '#8b5cf6', '#ff8800', '#60a5fa', '#ff0055'];
 
 export default function WheelScreen() {
   const router = useRouter();
   const game = useGame();
+  const gameText = useGameText();
+  const { t } = useTranslation();
   const spinValue = useRef(new Animated.Value(0)).current;
   const spinTurns = useRef(0);
   const [reward, setReward] = useState<RewardGrant | null>(null);
@@ -60,9 +64,9 @@ export default function WheelScreen() {
   return (
     <LinearGradient colors={['#0a0a1a', '#1a0a2e', '#16003b']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← VOLTAR</Text></TouchableOpacity>
-        <Text style={styles.title}>ROLETA DIÁRIA</Text>
-        <Text style={styles.subtitle}>1 giro grátis por dia • até 2 extras por anúncio simulado</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backText}>← {t('common.back').toUpperCase()}</Text></TouchableOpacity>
+        <Text style={styles.title}>{t('wheel.title').toUpperCase()}</Text>
+        <Text style={styles.subtitle}>{t('wheel.subtitle')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -75,7 +79,7 @@ export default function WheelScreen() {
               return (
                 <View key={`${item.type}_${index}`} style={[styles.segmentAnchor, { transform: [{ rotate: angle }] }]}>
                   <View style={[styles.segment, { backgroundColor: segmentColors[index % segmentColors.length] + '33', borderColor: active ? '#ffffff' : segmentColors[index % segmentColors.length] }]}>
-                    <Text style={styles.segmentText}>{describeReward(item)}</Text>
+                    <Text style={styles.segmentText}>{gameText.rewardText(item)}</Text>
                   </View>
                 </View>
               );
@@ -87,19 +91,19 @@ export default function WheelScreen() {
         </View>
 
         <View style={styles.resultBox}>
-          <Text style={styles.resultTitle}>{spinning ? 'Girando e desacelerando...' : reward ? 'Prêmio selecionado' : 'Toque para girar'}</Text>
-          <Text style={styles.resultReward}>{reward ? describeReward(reward) : '🎡'}</Text>
+          <Text style={styles.resultTitle}>{spinning ? t('wheel.spinning') : reward ? t('wheel.selectedPrize') : t('wheel.tapSpin')}</Text>
+          <Text style={styles.resultReward}>{reward ? gameText.rewardText(reward) : '🎡'}</Text>
         </View>
 
         <TouchableOpacity style={[styles.spinButton, (game.wheel.freeUsed || spinning) && styles.disabled]} disabled={game.wheel.freeUsed || spinning} onPress={() => spin('free')}>
           <LinearGradient colors={['#00f0ff', '#0088ff']} style={styles.buttonGradient}>
-            <Text style={styles.buttonText}>{game.wheel.freeUsed ? 'GIRO GRÁTIS USADO' : 'GIRAR'}</Text>
+            <Text style={styles.buttonText}>{game.wheel.freeUsed ? t('wheel.freeUsed').toUpperCase() : t('wheel.spin').toUpperCase()}</Text>
           </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.spinButton, (game.wheel.adSpinsUsed >= 2 || spinning) && styles.disabled]} disabled={game.wheel.adSpinsUsed >= 2 || spinning} onPress={() => setShowAd(true)}>
           <LinearGradient colors={['#ffd700', '#ff8800']} style={styles.buttonGradient}>
-            <Text style={styles.buttonText}>GIRAR NOVAMENTE COM ANÚNCIO ({game.wheel.adSpinsUsed}/2)</Text>
+            <Text style={styles.buttonText}>{t('wheel.spinAgainAd').toUpperCase()} ({game.wheel.adSpinsUsed}/2)</Text>
           </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
@@ -107,10 +111,10 @@ export default function WheelScreen() {
       <Modal visible={resultVisible} transparent animationType="fade" onRequestClose={() => setResultVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.resultModal}>
-            <Text style={styles.modalTitle}>PRÊMIO DA ROLETA</Text>
-            <Text style={styles.modalReward}>{reward ? describeReward(reward) : ''}</Text>
+            <Text style={styles.modalTitle}>{t('wheel.prize').toUpperCase()}</Text>
+            <Text style={styles.modalReward}>{reward ? gameText.rewardText(reward) : ''}</Text>
             <TouchableOpacity style={styles.modalButton} onPress={() => setResultVisible(false)}>
-              <Text style={styles.modalButtonText}>COLETAR</Text>
+              <Text style={styles.modalButtonText}>{t('common.collect').toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
         </View>

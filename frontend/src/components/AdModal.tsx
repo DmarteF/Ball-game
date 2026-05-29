@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { UiIcon } from '@/src/components/UiIcon';
 import { UiIconKey } from '@/src/game/uiIcons';
 import { RewardedAdPlacement, showRewardedAd } from '@/src/services/adsService';
+import { useTranslation } from '@/src/i18n';
 
 interface AdModalProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export const AdModal: React.FC<AdModalProps> = ({
   rewardAmount = 100,
   placement = 'double_run_reward',
 }) => {
+  const { t, language } = useTranslation();
   const [adWatching, setAdWatching] = useState(false);
   const [feedback, setFeedback] = useState('');
   const rewardedRef = useRef(false);
@@ -37,11 +39,11 @@ export const AdModal: React.FC<AdModalProps> = ({
   const handleWatchAd = async () => {
     if (adWatching) return;
     setAdWatching(true);
-    setFeedback('Carregando anúncio...');
+    setFeedback(t('ads.loading'));
     const result = await showRewardedAd(placement);
     setAdWatching(false);
     if (!result.success) {
-      setFeedback(result.error || 'Anúncio indisponível. Tente novamente em instantes.');
+      setFeedback(result.error || `${t('ads.unavailable')}. ${t('ads.tryAgainLater')}`);
       return;
     }
     if (!rewardedRef.current) {
@@ -60,19 +62,19 @@ export const AdModal: React.FC<AdModalProps> = ({
   const getRewardText = () => {
     switch (rewardType) {
       case 'coins':
-        return `+${rewardAmount} Moedas`;
+        return `+${rewardAmount} ${t('stats.coins')}`;
       case 'gems':
-        return `+${rewardAmount} Gemas`;
+        return `+${rewardAmount} ${t('stats.diamonds')}`;
       case 'revive':
-        return 'Reviver';
+        return language === 'pt-BR' ? 'Reviver' : 'Revive';
       case 'key':
-        return `+${rewardAmount} Chave`;
+        return `+${rewardAmount} ${t('stats.keys')}`;
       case 'chest':
-        return 'Baú grátis';
+        return t('shop.freeChest');
       case 'double':
-        return 'Dobrar Recompensa';
+        return language === 'pt-BR' ? 'Dobrar Recompensa' : 'Double Reward';
       default:
-        return 'Recompensa';
+        return t('shop.reward');
     }
   };
 
@@ -130,8 +132,8 @@ export const AdModal: React.FC<AdModalProps> = ({
                 style={styles.modalContent}
               >
                 <UiIcon iconKey={getRewardIconKey()} fallback={getRewardIcon()} size={58} style={styles.icon} />
-                <Text style={styles.title}>Assistir Anúncio?</Text>
-                <Text style={styles.description}>Assista ao vídeo até o fim para ganhar:</Text>
+                <Text style={styles.title}>{t('ads.watchAd')}?</Text>
+                <Text style={styles.description}>{t('ads.watchToReceive')}:</Text>
                 <Text style={styles.reward}>{getRewardText()}</Text>
                 {!!feedback && <Text style={styles.feedback}>{feedback}</Text>}
 
@@ -145,7 +147,7 @@ export const AdModal: React.FC<AdModalProps> = ({
                     style={styles.buttonGradient}
                   >
                     <UiIcon iconKey="ui_ad" fallback="📺" size={18} />
-                    <Text style={styles.buttonText}>ASSISTIR ANÚNCIO</Text>
+                    <Text style={styles.buttonText}>{t('ads.watchAd').toUpperCase()}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
@@ -153,7 +155,7 @@ export const AdModal: React.FC<AdModalProps> = ({
                   style={styles.skipButton}
                   onPress={handleSkip}
                 >
-                  <Text style={styles.skipText}>Não, obrigado</Text>
+                  <Text style={styles.skipText}>{language === 'pt-BR' ? 'Não, obrigado' : 'No, thanks'}</Text>
                 </TouchableOpacity>
               </LinearGradient>
             </>
@@ -164,19 +166,19 @@ export const AdModal: React.FC<AdModalProps> = ({
                 colors={['#000000', '#1a1a1a']}
                 style={styles.adScreen}
               >
-                <Text style={styles.adTitle}>CARREGANDO ANÚNCIO</Text>
+                <Text style={styles.adTitle}>{t('ads.loading').toUpperCase()}</Text>
                 <Text style={styles.adSubtitle}>
-                  A recompensa só é liberada ao concluir o vídeo.
+                  {language === 'pt-BR' ? 'A recompensa só é liberada ao concluir o vídeo.' : 'The reward is granted only after finishing the video.'}
                 </Text>
                 
                 <View style={styles.adContent}>
                   <UiIcon iconKey="ui_ad" fallback="📺" size={64} />
-                  <Text style={styles.adText}>Abrindo vídeo premiado</Text>
-                  <Text style={styles.adDescription}>Não feche antes da recompensa aparecer.</Text>
+                  <Text style={styles.adText}>{language === 'pt-BR' ? 'Abrindo vídeo premiado' : 'Opening rewarded video'}</Text>
+                  <Text style={styles.adDescription}>{language === 'pt-BR' ? 'Não feche antes da recompensa aparecer.' : 'Do not close before the reward appears.'}</Text>
                 </View>
 
                 <View style={styles.countdownContainer}>
-                  <Text style={styles.countdownText}>{feedback || 'Aguardando conclusão do anúncio'}</Text>
+                  <Text style={styles.countdownText}>{feedback || (language === 'pt-BR' ? 'Aguardando conclusão do anúncio' : 'Waiting for ad completion')}</Text>
                   <View style={styles.progressBar}>
                     <View style={[styles.progressFill, { width: '72%' }]} />
                   </View>
