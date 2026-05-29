@@ -120,7 +120,7 @@ export default function WheelScreen() {
         </View>
       </Modal>
 
-      <AdModal visible={showAd} onClose={() => setShowAd(false)} onRewardClaimed={() => spin('ad')} placement="default" rewardType="double" />
+      <AdModal visible={showAd} onClose={() => setShowAd(false)} onRewardClaimed={() => spin('ad')} placement="wheel_extra" rewardType="double" />
     </LinearGradient>
   );
 }

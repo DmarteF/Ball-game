@@ -122,6 +122,7 @@ export default function StoreScreen() {
     if (ad === 'gems') return 'freeGems';
     if (ad === 'coins') return 'freeCoins';
     if (ad === 'chest') return 'freeChest';
+    if (ad === 'key') return 'freeKey';
     if (ad === 'offline') return 'doubleRewards';
     return 'default';
   };

@@ -1,0 +1,13 @@
+{
+  "ADS_PRODUCTION": false,
+  "ADMOB_IDS": {
+    "test": {
+      "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+      "rewardedAdUnitId": "ca-app-pub-3940256099942544/5224354917"
+    },
+    "production": {
+      "androidAppId": "ca-app-pub-9631282853092760~5327261134",
+      "rewardedAdUnitId": "ca-app-pub-9631282853092760/3513131950"
+    }
+  }
+}
