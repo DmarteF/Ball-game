@@ -62,6 +62,7 @@ func default_save():
 			"run_upgrades": 0,
 			"criticals": 0,
 			"skin_effects": 0,
+			"skin_equips": 0,
 			"best_combo": 0,
 			"ads_watched": 0,
 			"store_purchases": 0,
@@ -70,6 +71,20 @@ func default_save():
 			"boss_runs": 0,
 			"boss_wins": 0,
 			"boss_losses": 0,
+			"boss_best_difficulty": 0,
+			"boss_impossible_wins": 0,
+			"boss_impossible_days": 0,
+			"league_top_10_finishes": 0,
+			"league_first_place_finishes": 0,
+			"league_ultimate_first_place_finishes": 0,
+			"league_initial_crowns": 0,
+			"league_competition_wins": 0,
+			"league_competition_losses": 0,
+			"league_best_win_streak": 0,
+			"total_trophies_gained": 0,
+			"league_diamond_reached": 0,
+			"league_legendary_reached": 0,
+			"league_ultimate_reached": 0,
 			"infinite_best_seconds": 0,
 			"infinite_best_rings": 0,
 			"infinite_best_level": 1,
@@ -175,7 +190,7 @@ func get_timed_status():
 func claim_offline_reward(double_reward = false):
 	var pending = save.timed.pending_offline_reward
 	if not bool(pending.get("available", false)):
-		return {"ok": false, "message": "Nenhuma recompensa AFK disponivel."}
+		return {"ok": false, "message": "Nenhuma recompensa AFK disponível."}
 	var coins = int(pending.get("coins", 0))
 	if double_reward:
 		coins *= 2
@@ -191,7 +206,7 @@ func daily_reward_available():
 
 func claim_daily_reward():
 	if not daily_reward_available():
-		return {"ok": false, "message": "Recompensa diaria ja coletada."}
+		return {"ok": false, "message": "Recompensa diária já coletada."}
 	save.coins += 350
 	save.gems += 18
 	save.keys += 1
@@ -212,7 +227,7 @@ func spin_wheel(use_ad = false):
 		save.timed.wheel_ad_spins_used = int(save.timed.get("wheel_ad_spins_used", 0)) + 1
 	else:
 		if bool(save.timed.get("wheel_free_used", false)):
-			return {"ok": false, "message": "Giro gratis ja usado hoje."}
+			return {"ok": false, "message": "Giro grátis já usado hoje."}
 		save.timed.wheel_free_used = true
 	var rewards = [
 		{"type": "coins", "amount": 180, "label": "+180 moedas"},
@@ -220,11 +235,11 @@ func spin_wheel(use_ad = false):
 		{"type": "gems", "amount": 6, "label": "+6 diamantes"},
 		{"type": "gems", "amount": 14, "label": "+14 diamantes"},
 		{"type": "key", "amount": 1, "label": "+1 chave"},
-		{"type": "chest", "chest": "common", "amount": 1, "label": "+1 bau comum"},
-		{"type": "chest", "chest": "rare", "amount": 1, "label": "+1 bau raro"},
+		{"type": "chest", "chest": "common", "amount": 1, "label": "+1 baú comum"},
+		{"type": "chest", "chest": "rare", "amount": 1, "label": "+1 baú raro"},
 		{"type": "fragments", "amount": 20, "label": "+20 fragmentos"},
 		{"type": "profile_xp", "amount": 120, "label": "+120 XP"},
-		{"type": "chest", "chest": "epic", "amount": 1, "label": "+1 bau epico"}
+		{"type": "chest", "chest": "epic", "amount": 1, "label": "+1 baú épico"}
 	]
 	var reward = rewards[randi() % rewards.size()]
 	match reward.type:
@@ -285,6 +300,8 @@ func unlock_upgrade(upgrade_id):
 func equip_skin(skin_id):
 	if not (skin_id in save.unlocked_skins):
 		return false
+	if save.equipped_skin != skin_id:
+		save.lifetime_stats.skin_equips = int(save.lifetime_stats.get("skin_equips", 0)) + 1
 	save.equipped_skin = skin_id
 	save.favorite_skin = skin_id
 	save_game()
@@ -380,7 +397,7 @@ func grant_chest_reward(reward, autosave = true):
 			var skin_id = reward.get("skin_id", save.equipped_skin)
 			save.skin_fragments[skin_id] = int(save.skin_fragments.get(skin_id, 0)) + int(reward.get("amount", 1))
 		"key":
-			if reward.get("rarity", "") in ["mythic", "ultimate"] or String(reward.get("label", "")).find("Lendaria") >= 0:
+			if reward.get("rarity", "") in ["mythic", "ultimate"] or String(reward.get("label", "")).find("Lendária") >= 0 or String(reward.get("label", "")).find("Lendaria") >= 0:
 				save.legendary_keys += int(reward.get("amount", 1))
 			else:
 				save.keys += int(reward.get("amount", 1))
@@ -457,9 +474,16 @@ func record_run(summary, multiplier = 1):
 	save.lifetime_stats.criticals += int(summary.get("criticals", 0))
 	save.lifetime_stats.skin_effects += int(summary.get("skin_effects", 0))
 	save.lifetime_stats.best_combo = max(int(save.lifetime_stats.best_combo), best_combo)
+	if String(summary.get("mode", "phase")) == "infinite":
+		save.lifetime_stats.infinite_best_seconds = max(int(save.lifetime_stats.get("infinite_best_seconds", 0)), int(summary.get("duration_seconds", 0)))
+		save.lifetime_stats.infinite_best_rings = max(int(save.lifetime_stats.get("infinite_best_rings", 0)), int(summary.get("rings_broken", 0)))
+		save.lifetime_stats.infinite_best_level = max(int(save.lifetime_stats.get("infinite_best_level", 1)), int(summary.get("run_level", 1)))
+		save.lifetime_stats.infinite_challenge_completions = max(int(save.lifetime_stats.get("infinite_challenge_completions", 0)), int(floor(int(summary.get("run_level", 1)) / 5.0)))
 	var bonus_text = []
 	if won:
 		save.lifetime_stats.phase_wins += 1
+		if not bool(summary.get("used_revive", false)):
+			save.lifetime_stats.no_revive_wins = int(save.lifetime_stats.get("no_revive_wins", 0)) + 1
 		var next_phase = min(50, phase + 1)
 		if not (next_phase in save.unlocked_phases):
 			save.unlocked_phases.append(next_phase)
@@ -467,14 +491,14 @@ func record_run(summary, multiplier = 1):
 		save.current_phase = max(int(save.current_phase), next_phase)
 		if phase >= 50:
 			unlock_skin("cosmic_champion")
-			bonus_text.append("Campeao Cosmico liberado")
+			bonus_text.append("Campeão Cósmico liberado")
 		var phase_config = GameData.get_phase_config(phase)
 		if randf() < float(phase_config.key_chance):
 			save.keys += 1
 			bonus_text.append("+1 chave")
 		if randf() < float(phase_config.chest_chance):
 			add_chest("rare" if phase >= 12 else "common", 1)
-			bonus_text.append("+1 bau")
+			bonus_text.append("+1 baú")
 	save.unlocked_phases.sort()
 	save = _sync_unlocks(save)
 	save_game()

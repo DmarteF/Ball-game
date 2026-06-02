@@ -15,7 +15,7 @@ O jogo usa GDScript, cenas `.tscn`, autoloads e assets nativos do Godot. Nao usa
 
 - Menu principal: deve seguir a tela `frontend/app/index.tsx` da branch `main`, com `Jogar`, `Melhorias`, `Skins` e o menu flutuante `Mais`.
 - Jogar: seletor com 50 fases e modo infinito liberado apos progresso inicial.
-- Arena: a bolinha se move continuamente; toque ou clique na arena para aplicar impulso na direcao tocada.
+- Arena: a bolinha se move continuamente como na branch `main`; os controles visiveis sao pausa/mute e compras ATK/Gold da rodada.
 - Objetivo: sobreviver aos aneis, atravessar o centro da abertura para Perfect, quebrar aneis no impacto e completar a fase.
 
 ## Checklist de fidelidade com a branch main
@@ -24,21 +24,21 @@ Fonte obrigatoria: branch `main`. A versao Godot nao deve criar layout, texto, v
 
 | Tela / sistema | Arquivo/fonte na branch main | Arquivo equivalente no Godot | Status | Diferencas pendentes |
 |---|---|---|---|---|
-| Tela inicial | `frontend/app/index.tsx`, `ProfileAvatar`, `UiIcon`, `retention.ts` | `scenes/MainMenu.tscn`, `scripts/screens/MainMenu.gd` | Em progresso | Copiar exatamente ordem visual, botao flutuante `Mais`, modal, toast de conquista e modal AFK. Remover textos extras. |
+| Tela inicial | `frontend/app/index.tsx`, `ProfileAvatar`, `UiIcon`, `retention.ts` | `scenes/MainMenu.tscn`, `scripts/screens/MainMenu.gd` | Portado em UI/logica base | Layout de topbar, recursos, titulo, botao Jogar, cards Melhorias/Skins, botao Mais, menu modal e AFK foram reajustados. Falta comparacao visual pixel a pixel e toast de conquista. |
 | Jogar / selecao de fases | `frontend/app/phase-select.tsx`, `src/game/phases.ts` | `scenes/PhaseSelect.tscn`, `scripts/screens/PhaseSelect.gd` | Portado em UI | Lista vertical de cards de 140px, modo infinito, descricoes, dificuldade, HP e overlay bloqueado foram recriados. Falta comparacao visual pixel a pixel. |
-| Gameplay solo | `frontend/app/game.tsx`, `src/game/rings.ts`, `src/game/playerAttributes.ts`, `src/game/balance.ts`, `src/game/economy.ts` | `scenes/Game.tscn`, `scripts/screens/GameScreen.gd`, `scripts/game/RingLogic.gd`, `scripts/game/ArenaView.gd` | Em progresso | HUD e barra ATK/Gold foram aproximados da main. Ainda falta portar modal de pausa, revive, level-up em grid e comparar fisica 1:1. |
-| Modo infinito | `frontend/app/infinite.tsx`, `src/game/dualArena.ts`, `src/game/balance.ts` | `scenes/Game.tscn` por enquanto | Pendente | Criar tela/fluxo proprio; modo atual por ondas nao equivale ao da main. |
-| Melhorias | `frontend/app/upgrade-shop.tsx`, `src/game/upgrades.ts`, `src/game/balance.ts` | `scenes/Upgrades.tscn`, `scripts/screens/UpgradeScreen.gd`, `autoload/GameData.gd` | Portado em UI/logica base | Cards, moeda, unlocks, custos e upgrades secretos foram recriados. Falta port literal de todos os textos com acentos/i18n. |
-| Skins | `frontend/app/transformations.tsx`, `src/game/skins.ts`, `src/game/skinImages.ts`, `SkinIcon` | `scenes/Skins.tscn`, `scripts/screens/SkinScreen.gd`, `autoload/GameData.gd` | Portado em UI/logica base | Grade, filtros, progresso por raridade, equipar/evoluir foram recriados. Falta substituir a geracao heuristica por lista literal completa de passivas/efeitos. |
-| Loja | `frontend/app/store.tsx`, `src/services/billingConfig.ts`, `src/services/billingService.ts`, `src/game/chests.ts` | `scenes/Shop.tscn`, `scripts/screens/ShopScreen.gd` | Portado em UI/logica base | Abas, cards de baus, produtos e recompensas locais foram recriados. Falta modal de confirmacao/resultado igual ao React Native. |
-| Inventario / baus | `frontend/app/inventory.tsx`, `src/game/chests.ts`, `SkinIcon`, `UiIcon` | `scenes/Chests.tscn`, `scripts/screens/ChestScreen.gd` | Portado em UI/logica base | Bau gratis, lista de baus, itens guardados e modal de recompensa foram recriados. Falta animacao/delay visual de abertura. |
+| Gameplay solo | `frontend/app/game.tsx`, `src/game/rings.ts`, `src/game/playerAttributes.ts`, `src/game/balance.ts`, `src/game/economy.ts` | `scenes/Game.tscn`, `scripts/screens/GameScreen.gd`, `scripts/game/RingLogic.gd`, `scripts/game/ArenaView.gd` | Em progresso fiel | Ring logic, limites de velocidade, arena responsiva, HUD principal e ATK/Gold foram realinhados. Falta portar modais de pausa/vitoria/derrota/revive/level-up exatamente iguais. |
+| Modo infinito | `frontend/app/infinite.tsx`, `src/game/dualArena.ts`, `src/game/balance.ts` | `scenes/Game.tscn` por enquanto | Em progresso | Existe modo por ondas e estatisticas de conquistas infinitas. Ainda falta tela/fluxo proprio igual ao `infinite.tsx`. |
+| Melhorias | `frontend/app/upgrade-shop.tsx`, `src/game/upgrades.ts`, `src/game/balance.ts` | `scenes/Upgrades.tscn`, `scripts/screens/UpgradeScreen.gd`, `autoload/GameData.gd` | Portado em UI/logica base | Cards, moeda, unlocks, custos, textos, acentos e upgrades secretos foram recriados. Falta comparar posicao pixel a pixel. |
+| Skins | `frontend/app/transformations.tsx`, `src/game/skins.ts`, `src/game/skinImages.ts`, `SkinIcon` | `scenes/Skins.tscn`, `scripts/screens/SkinScreen.gd`, `autoload/GameData.gd` | Portado em UI/dados base | Grade, filtros, progresso por raridade, nomes e descricoes literais, equipar/evoluir foram recriados. Falta portar literalmente todas as passivas/specialEffects e cores/trails 1:1. |
+| Loja | `frontend/app/store.tsx`, `src/services/billingConfig.ts`, `src/services/billingService.ts`, `src/game/chests.ts` | `scenes/Shop.tscn`, `scripts/screens/ShopScreen.gd` | Portado em UI/logica base | Abas, cards de baus, produtos, recompensas e textos principais foram recriados. Falta modal de confirmacao/resultado igual ao React Native. |
+| Inventario / baus | `frontend/app/inventory.tsx`, `src/game/chests.ts`, `SkinIcon`, `UiIcon` | `scenes/Chests.tscn`, `scripts/screens/ChestScreen.gd` | Portado em UI/logica base | Bau gratis, lista de baus, itens guardados, textos e modal de recompensa foram recriados. Falta animacao/delay visual de abertura. |
 | Missoes | `frontend/app/daily.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` | Portado em UI/logica base | 25 missoes, selecao diaria seeded, progresso, coletar, reroll e boost por anuncio stub foram recriados. Falta i18n e estado detalhado por missao como na main. |
-| Evento | `frontend/app/events.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` | Em progresso | Estrutura visual, missoes, progresso e recompensa final foram recriados. Falta portar os 10 eventos completos literalmente. |
-| Roleta | `frontend/app/wheel.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` | Em progresso | 10 recompensas, giro gratis/ad e resultado funcional foram recriados. Falta animacao circular 3600ms e ponteiro igual. |
+| Evento | `frontend/app/events.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` | Portado em dados/logica base | Os 10 eventos semanais, missoes, progresso e recompensa final foram portados. Falta reproduzir layout final/animacoes da tela React Native. |
+| Roleta | `frontend/app/wheel.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` | Portado em logica base | 10 recompensas, giro gratis/ad e resultado funcional foram recriados. Falta animacao circular 3600ms e ponteiro igual. |
 | Recompensa diaria | `frontend/app/daily-reward.tsx`, `GameContext.tsx` | `FeatureScreen.gd` | Portado em UI/logica base | Pacote diario e controle por dia foram recriados. |
 | Boss | `frontend/app/boss.tsx`, `src/game/boss.ts`, `src/game/dualArena.ts`, `DualArenaView` | `FeatureScreen.gd` | Em progresso | Menu Boss, desbloqueio, progresso e entrada no jogo foram recriados. Falta duelo real de duas arenas. |
 | Liga Neon | `frontend/app/league.tsx`, `frontend/app/compete.tsx`, `src/game/league.ts`, `src/game/dualArena.ts` | `FeatureScreen.gd` | Em progresso | Resumo, podium, ranking e reward card foram recriados localmente. Falta port completo de 201 participantes/temporadas/competir. |
-| Conquistas | `frontend/app/achievements.tsx`, `src/game/achievements.ts`, `GameContext.tsx` | `FeatureScreen.gd` | Em progresso | Cards, progresso e coleta foram recriados com lista parcial longa. Falta lista literal completa e filtros horizontais por categoria. |
+| Conquistas | `frontend/app/achievements.tsx`, `src/game/achievements.ts`, `GameContext.tsx` | `FeatureScreen.gd` | Portado em dados/logica base | Lista completa da main foi portada com progresso, coleta e recompensas. Falta filtros horizontais por categoria e esconder conquistas ocultas exatamente como na main. |
 | Configuracoes / perfil | `frontend/app/profile.tsx`, `AudioController`, `GameContext.tsx`, i18n/performance | `FeatureScreen.gd` | Em progresso | Perfil, conta, audio, desempenho, idioma, liga e stats foram recriados em cards. Falta foto/avatar editavel, nickname input e todas as opcoes reais. |
 | Save / progresso | `src/contexts/GameContext.tsx` | `autoload/SaveSystem.gd` | Em progresso | Espelhar schema completo da main: achievements, league, boss, dailyMissions, weeklyEvent, wheel, adLimits e inventoryItems. |
 | Assets | `frontend/assets/**` | `godot/assets/**` | Quase fiel | Skins, UI icons, audio e fonte foram copiados; logos React de template nao sao usados no jogo final. |
@@ -120,7 +120,7 @@ Nao foram copiados os logos padrao do React (`react-logo*.png`, `partial-react-l
 - fases 1-50 com dificuldade procedural baseada no projeto atual;
 - modo infinito jogavel com ondas crescentes reaproveitando a arena;
 - aneis concentricos com rotacao alternada, gaps, aneis solidos, HP, fechamento e spacing;
-- fisica da bolinha com colisao radial, reflexao, parede externa e impulso por toque;
+- fisica da bolinha com colisao radial, reflexao e parede externa;
 - Perfect Escape ao cruzar o vao do anel, com chance pequena de diamante;
 - dano, critico, quebra de aneis, moedas, XP, combo e recompensas por rodada;
 - level-up durante a run com upgrades temporarios;
@@ -143,7 +143,7 @@ Nao foram copiados os logos padrao do React (`react-logo*.png`, `partial-react-l
 
 - Boss ainda usa menu/entrada local e precisa do combate dedicado de duas arenas.
 - Liga Neon ainda usa ranking local/mock; ranking online depende de backend futuro.
-- Eventos e conquistas ainda precisam da lista literal completa e filtros finais da main.
+- Eventos e conquistas ja receberam listas literais da main; ainda faltam filtros/animacoes/layout final das telas React Native.
 - Inventario esta funcional para baus e recompensas, mas ainda precisa da animacao/delay visual de abertura.
 - Billing real nao foi migrado; loja usa fluxo funcional local/mock.
 - Ads reais nao foram integrados; `AdsService.gd` e um stub recompensado.

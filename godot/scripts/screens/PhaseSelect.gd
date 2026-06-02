@@ -18,7 +18,7 @@ func _build_ui():
 	add_child(header)
 
 	var back = Button.new()
-	back.text = "< VOLTAR"
+	back.text = "← VOLTAR"
 	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	back.add_theme_font_size_override("font_size", 16)
 	back.add_theme_color_override("font_color", Color("#00f0ff"))
@@ -58,12 +58,12 @@ func _add_infinite_card(parent, save):
 	row.add_child(_circle_icon("res://assets/ui/ui_infinite.png", "", Color("#ffffff22")))
 	var info = _info_box(row)
 	info.add_child(NeonUI.label("MODO INFINITO", 20, Color.WHITE if unlocked else Color("#ffffff55")))
-	info.add_child(NeonUI.label("Aneis continuam escalando. Recompensas aumentam com combo e tempo." if unlocked else "Libera ao chegar na fase 5.", 14, Color("#ffffffaa") if unlocked else Color("#ffffff55")))
+	info.add_child(NeonUI.label("Ondas sem fim com desafios progressivos." if unlocked else "Complete a Fase 5 para desbloquear.", 14, Color("#ffffffaa") if unlocked else Color("#ffffff55")))
 	var stats = HBoxContainer.new()
 	stats.add_theme_constant_override("separation", 16)
 	info.add_child(stats)
 	stats.add_child(NeonUI.label("ESPECIAL", 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
-	stats.add_child(NeonUI.label("PROGRESSO INFINITO", 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
+	stats.add_child(NeonUI.label("PROGRESSÃO INFINITA", 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
 	_add_press_layer(card, unlocked, Callable(self, "_start_infinite"), "FASE 5")
 
 func _add_phase_card(parent, phase, save):
@@ -80,7 +80,7 @@ func _add_phase_card(parent, phase, save):
 	stats.add_theme_constant_override("separation", 16)
 	info.add_child(stats)
 	stats.add_child(NeonUI.label("DIFICULDADE: %s" % cfg.difficulty.to_upper(), 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
-	stats.add_child(NeonUI.label("%d-%d ANEIS  HP %d" % [cfg.ring_min, cfg.ring_max, cfg.base_hp], 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
+	stats.add_child(NeonUI.label("%d-%d ANÉIS • HP %d" % [cfg.ring_min, cfg.ring_max, cfg.base_hp], 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
 	_add_press_layer(card, unlocked, _start_phase.bind(phase), "BLOQUEADO")
 
 func _make_card(parent, unlocked, color, _colors_unlocked, _colors_locked):

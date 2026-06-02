@@ -72,9 +72,9 @@ func _add_upgrade_card(upgrade, save):
 		locked.add_child(NeonUI.icon("res://assets/ui/ui_locked.png", 14))
 		locked.add_child(NeonUI.label(_unlock_text(upgrade), 14, Color("#ffffffaa")))
 		info.add_child(locked)
-	info.add_child(NeonUI.label("Nivel: %d/%d" % [level, max_level], 12, Color("#00f0ff") if unlocked else Color("#ffffff66")))
+	info.add_child(NeonUI.label("Nível: %d/%d" % [level, max_level], 12, Color("#00f0ff") if unlocked else Color("#ffffff66")))
 	if unlocked:
-		var value_text = "Atual: %s • MAX" % _value_text(upgrade.id, level) if is_maxed else "Atual: %s • Prox: %s" % [_value_text(upgrade.id, level), _value_text(upgrade.id, level + 1)]
+		var value_text = "Atual: %s • MAX" % _value_text(upgrade.id, level) if is_maxed else "Atual: %s • Próx: %s" % [_value_text(upgrade.id, level), _value_text(upgrade.id, level + 1)]
 		info.add_child(NeonUI.label(value_text, 11, Color("#ffffff88")))
 
 	var buy = NeonUI.main_button("MAX" if is_maxed else str(cost), Color("#00ff88") if is_maxed else Color("#00f0ff"), Color("#0088ff"), 48)
@@ -120,13 +120,15 @@ func _buy(upgrade_id):
 	_refresh()
 
 func _unlock_text(upgrade):
+	if upgrade.has("unlock_text"):
+		return String(upgrade.unlock_text)
 	if upgrade.unlock == "phase_3":
 		return "Desbloqueia ao alcançar a fase 3"
 	if upgrade.unlock == "phase_5_or_chest":
-		return "Desbloqueia por baus raros ou fase 5"
+		return "Desbloqueia por baús raros ou fase 5"
 	if upgrade.unlock == "chest":
 		return "Desbloqueia por rank ou recompensas especiais"
-	return "Disponivel desde o inicio"
+	return "Disponível desde o início"
 
 func _value_text(upgrade_id, level):
 	match upgrade_id:

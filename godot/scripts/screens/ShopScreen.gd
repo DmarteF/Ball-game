@@ -7,11 +7,11 @@ var tab_row
 var list
 var active_tab = "chests"
 var tabs = [
-	["chests", "Baus"],
+	["chests", "Baús"],
 	["gems", "Diamantes"],
 	["keys", "Chaves"],
 	["specials", "Recompensas"],
-	["free", "Bau gratis"]
+	["free", "Baú grátis"]
 ]
 
 func _ready():
@@ -80,10 +80,10 @@ func _set_tab(tab):
 	_refresh()
 
 func _build_chests():
-	list.add_child(NeonUI.label("COMPRAR E ABRIR", 12, Color("#ffffff88")))
+	list.add_child(NeonUI.label("Comprar e abrir", 12, Color("#ffffff88")))
 	for chest in GameData.get_chests():
 		_add_chest_product(chest)
-	list.add_child(NeonUI.label("BAUS GUARDADOS", 12, Color("#ffffff88")))
+	list.add_child(NeonUI.label("Baús possuídos", 12, Color("#ffffff88")))
 	var save = SaveSystem.get_save()
 	var found = false
 	for chest in GameData.get_chests():
@@ -92,14 +92,14 @@ func _build_chests():
 			found = true
 			_add_owned_chest(chest, amount)
 	if not found:
-		list.add_child(NeonUI.label("Nenhum bau guardado.", 13, Color("#ffffff88")))
+		list.add_child(NeonUI.label("Baús ganhos em missões, eventos e pacotes aparecem aqui.", 13, Color("#ffffff88")))
 
 func _build_gems():
-	_add_product("res://assets/ui/ui_gem.png", "Diamantes pequenos", "+140 diamantes", "R$ 1,99", "diamonds_small", Color("#00f0ff"), func(): _grant_paid({"gems": 140}))
-	_add_product("res://assets/ui/ui_gem.png", "Diamantes medios", "+480 diamantes", "R$ 4,99", "diamonds_medium", Color("#00f0ff"), func(): _grant_paid({"gems": 480}))
-	_add_product("res://assets/ui/ui_gem.png", "Diamantes grandes", "+1.350 diamantes", "R$ 9,99", "diamonds_large", Color("#00f0ff"), func(): _grant_paid({"gems": 1350}))
-	_add_product("res://assets/ui/ui_daily_reward.png", "Oferta diaria", "Diamantes, chaves e XP", "R$ 2,99", "daily_offer", Color("#ffd700"), func(): _grant_paid({"gems": 90, "keys": 2, "profile_xp": 180}))
-	_add_ad_button("res://assets/ui/ui_ad.png", "Gemas gratis", _ad_gems)
+	_add_product("res://assets/ui/ui_gem.png", "Pacote pequeno de diamantes", "+140 diamantes", "R$ 1,99", "diamonds_small", Color("#00f0ff"), func(): _grant_paid({"gems": 140}))
+	_add_product("res://assets/ui/ui_gem.png", "Pacote médio de diamantes", "+480 diamantes", "R$ 4,99", "diamonds_medium", Color("#00f0ff"), func(): _grant_paid({"gems": 480}))
+	_add_product("res://assets/ui/ui_gem.png", "Pacote grande de diamantes", "+1.350 diamantes", "R$ 9,99", "diamonds_large", Color("#00f0ff"), func(): _grant_paid({"gems": 1350}))
+	_add_product("res://assets/ui/ui_daily_reward.png", "Oferta diária", "Diamantes, chaves e XP", "R$ 2,99", "daily_offer", Color("#ffd700"), func(): _grant_paid({"gems": 90, "keys": 2, "profile_xp": 180}))
+	_add_ad_button("res://assets/ui/ui_ad.png", "Gemas grátis", _ad_gems)
 
 func _build_keys():
 	_add_product("res://assets/ui/ui_key.png", "Pacote de chaves", "+6 chaves raras", "80", "keys_pack", Color("#ffd700"), func():
@@ -107,21 +107,21 @@ func _build_keys():
 			SaveSystem.add_resource("keys", 6)
 			SaveSystem.save_game()
 	)
-	_add_product("res://assets/ui/ui_legendary_key.png", "Chaves lendarias", "+2 chaves lendarias", "180", "legendary_key", Color("#ffd700"), _buy_legendary_key_pack)
-	_add_ad_button("res://assets/ui/ui_ad.png", "Chave gratis", _ad_key)
+	_add_product("res://assets/ui/ui_legendary_key.png", "Chaves lendárias", "+2 chaves lendárias", "180", "legendary_key", Color("#ffd700"), _buy_legendary_key_pack)
+	_add_ad_button("res://assets/ui/ui_ad.png", "Ganhar chave", _ad_key)
 
 func _build_specials():
 	_add_product("res://assets/ui/ui_inventory.png", "Pacote inicial", "Diamantes, moedas, chaves e chave lendaria", "R$ 4,99", "starter_pack", Color("#00aaff"), func(): _grant_paid({"gems": 260, "coins": 2500, "keys": 5, "legendary_keys": 1}))
 	_add_product("res://assets/ui/ui_skins.png", "Pacote de skins", "2 baus raros e 2 baus epicos", "R$ 5,99", "skin_pack", Color("#ff4fd8"), func(): _grant_paid({"rare_chests": 2, "epic_chests": 2}))
 	_add_product("res://assets/ui/ui_fragments.png", "Pacote de fragmentos", "130 fragmentos da skin equipada", "R$ 3,99", "fragment_pack", Color("#b000ff"), func(): _grant_paid({"fragments": 130}))
 	_add_product("res://assets/ui/ui_event.png", "Pacote de evento", "Bau epico, diamantes, chaves e XP", "R$ 4,99", "event_pack", Color("#00ff88"), func(): _grant_paid({"epic_chests": 1, "gems": 90, "keys": 2, "profile_xp": 420}))
-	_add_product("res://assets/ui/ui_chest_epic.png", "Pacote de baus", "3 comuns, 2 raros e 1 epico", "R$ 6,99", "chest_pack", Color("#ffd700"), func(): _grant_paid({"common_chests": 3, "rare_chests": 2, "epic_chests": 1}))
+	_add_product("res://assets/ui/ui_chest_epic.png", "Pacote de baús", "3 comuns, 2 raros e 1 épico", "R$ 6,99", "chest_pack", Color("#ffd700"), func(): _grant_paid({"common_chests": 3, "rare_chests": 2, "epic_chests": 1}))
 
 func _build_free():
-	_add_ad_button("res://assets/ui/ui_ad.png", "Gemas gratis", _ad_gems)
-	_add_ad_button("res://assets/ui/ui_coin.png", "Moedas gratis", _ad_coins)
-	_add_ad_button("res://assets/ui/ui_chest_common.png", "Bau comum gratis", _ad_chest)
-	_add_ad_button("res://assets/ui/ui_key.png", "Chave gratis", _ad_key)
+	_add_ad_button("res://assets/ui/ui_ad.png", "Gemas grátis", _ad_gems)
+	_add_ad_button("res://assets/ui/ui_coin.png", "Ganhar moedas", _ad_coins)
+	_add_ad_button("res://assets/ui/ui_chest_common.png", "Ganhar baú comum", _ad_chest)
+	_add_ad_button("res://assets/ui/ui_key.png", "Ganhar chave", _ad_key)
 
 func _add_chest_product(chest):
 	var color = Color(chest.color)
@@ -157,7 +157,7 @@ func _add_chest_product(chest):
 func _add_owned_chest(chest, amount):
 	var button = Button.new()
 	button.custom_minimum_size = Vector2(0, 64)
-	button.text = "%s\nx%d disponivel" % [chest.name, amount]
+	button.text = "%s\nx%d disponível" % [chest.name, amount]
 	button.icon = load(chest.icon_path) if ResourceLoader.exists(chest.icon_path) else null
 	button.expand_icon = true
 	button.add_theme_font_size_override("font_size", 13)
@@ -283,11 +283,11 @@ func _rarity_label(rarity):
 		"rare":
 			return "Rara"
 		"epic":
-			return "Epica"
+			return "Épica"
 		"legendary":
-			return "Lendaria"
+			return "Lendária"
 		"mythic":
-			return "Mitica"
+			return "Mítica"
 		"ultimate":
 			return "Ultimate"
 	return String(rarity)

@@ -46,7 +46,7 @@ func _build_ui():
 	result_box = VBoxContainer.new()
 	result_box.add_theme_constant_override("separation", 7)
 	box.add_child(result_box)
-	double_button = NeonUI.ghost_button("DOBRAR COM ANUNCIO", Color("#ffd700"), 50)
+	double_button = NeonUI.ghost_button("DOBRAR - ANÚNCIO", Color("#ffd700"), 50)
 	double_button.pressed.connect(_double_rewards)
 	box.add_child(double_button)
 	collect_button = NeonUI.button("COLETAR", Color("#00f0ff"), 54)
@@ -71,7 +71,7 @@ func _refresh():
 	result_box.add_child(NeonUI.label("Fase %d" % int(summary.get("phase", payload.get("phase", 1))), 18, Color("#00f0ff"), HORIZONTAL_ALIGNMENT_CENTER))
 	result_box.add_child(NeonUI.label("Moedas da rodada: %d  x%d" % [int(summary.get("coins", 0)), multiplier], 15, Color("#ffd700"), HORIZONTAL_ALIGNMENT_CENTER))
 	result_box.add_child(NeonUI.label("Diamantes: %d  | XP perfil: %d" % [int(summary.get("gems", 0)) * multiplier, int(summary.get("profile_xp", 0)) * multiplier], 15, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
-	result_box.add_child(NeonUI.label("Aneis quebrados %d  Perfects %d  Combo x%d" % [int(summary.get("rings_broken", 0)), int(summary.get("perfect_escapes", 0)), int(summary.get("best_combo", 0))], 14, Color("#ffffffbb"), HORIZONTAL_ALIGNMENT_CENTER))
+	result_box.add_child(NeonUI.label("Anéis quebrados %d  Perfects %d  Combo x%d" % [int(summary.get("rings_broken", 0)), int(summary.get("perfect_escapes", 0)), int(summary.get("best_combo", 0))], 14, Color("#ffffffbb"), HORIZONTAL_ALIGNMENT_CENTER))
 	if collect_message != "":
 		result_box.add_child(NeonUI.label(collect_message, 13, Color("#00ff88"), HORIZONTAL_ALIGNMENT_CENTER))
 	collect_button.disabled = saved

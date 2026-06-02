@@ -14,7 +14,7 @@ func _ready():
 
 func _build_ui():
 	NeonUI.add_main_background(self)
-	var header = NeonUI.header(self, "INVENTARIO", 56, 16, 16, 25)
+	var header = NeonUI.header(self, "BAÚS & INVENTÁRIO", 56, 16, 16, 25)
 	header.back.pressed.connect(func(): get_tree().current_scene.go_to("menu"))
 	stats_row = HBoxContainer.new()
 	stats_row.add_theme_constant_override("separation", 8)
@@ -56,7 +56,7 @@ func _refresh():
 	stats_row.add_child(NeonUI.resource_badge("res://assets/ui/ui_legendary_key.png", str(save.legendary_keys)))
 	NeonUI.clear_children(list)
 	_add_free_chest_card()
-	list.add_child(NeonUI.label("BAUS", 13, Color("#ffffff88")))
+	list.add_child(NeonUI.label("BAÚS", 13, Color("#ffffff88")))
 	for chest in GameData.get_chests():
 		_add_chest_card(chest, false)
 	list.add_child(NeonUI.label("ITENS", 13, Color("#ffffff88")))
@@ -67,7 +67,7 @@ func _refresh():
 			had_inventory = true
 			_add_chest_card(chest, true, amount)
 	if not had_inventory:
-		list.add_child(NeonUI.label("Nenhum item guardado.", 14, Color("#ffffff88")))
+		list.add_child(NeonUI.label("Trails, auras e efeitos aparecerão aqui.", 14, Color("#ffffff88")))
 
 func _add_free_chest_card():
 	var button = Button.new()
@@ -85,8 +85,8 @@ func _add_free_chest_card():
 	var info = VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(info)
-	info.add_child(NeonUI.label("BAU GRATIS", 18, Color.BLACK))
-	info.add_child(NeonUI.label("Abra um bau comum assistindo anuncio.", 12, Color("#000000aa")))
+	info.add_child(NeonUI.label("BAÚ GRÁTIS", 18, Color.BLACK))
+	info.add_child(NeonUI.label("Recompensa local", 12, Color("#000000aa")))
 	row.add_child(NeonUI.icon("res://assets/ui/ui_ad.png", 30))
 
 func _add_chest_card(chest, owned, amount = 0):
@@ -196,11 +196,11 @@ func _rarity_label(rarity):
 		"rare":
 			return "Rara"
 		"epic":
-			return "Epica"
+			return "Épica"
 		"legendary":
-			return "Lendaria"
+			return "Lendária"
 		"mythic":
-			return "Mitica"
+			return "Mítica"
 		"ultimate":
 			return "Ultimate"
 	return String(rarity)

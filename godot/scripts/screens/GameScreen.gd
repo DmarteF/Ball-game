@@ -35,6 +35,7 @@ var combo = 0
 var best_combo = 0
 var last_combo_at = 0.0
 var last_hit_at = 0.0
+var run_started_ms = 0.0
 var invincible_until = 0.0
 var current_upgrades = {}
 var run_shop_upgrades = {"atk": 0, "gold": 0}
@@ -55,6 +56,8 @@ var floating_numbers = []
 var root_vbox
 var arena_view
 var wallet_label
+var gems_label
+var account_coins_label
 var progress_label
 var xp_label
 var combo_label
@@ -100,13 +103,15 @@ func _build_ui():
 	top_row.add_theme_constant_override("separation", 8)
 	root_vbox.add_child(top_row)
 
-	wallet_label = NeonUI.label("", 14, Color.WHITE)
-	wallet_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var wallet_panel = PanelContainer.new()
-	wallet_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	wallet_panel.add_theme_stylebox_override("panel", NeonUI.flat(Color("#ffffff11"), Color("#ffffff22"), 1, 10))
-	wallet_panel.add_child(wallet_label)
-	top_row.add_child(wallet_panel)
+	var coin_badge = _make_hud_badge("res://assets/ui/ui_coin.png")
+	wallet_label = coin_badge.label
+	top_row.add_child(coin_badge.panel)
+	var gem_badge = _make_hud_badge("res://assets/ui/ui_gem.png")
+	gems_label = gem_badge.label
+	top_row.add_child(gem_badge.panel)
+	var account_badge = _make_hud_badge("res://assets/ui/ui_coin.png")
+	account_coins_label = account_badge.label
+	top_row.add_child(account_badge.panel)
 
 	var mute = Button.new()
 	mute.custom_minimum_size = Vector2(42, 38)
@@ -143,7 +148,6 @@ func _build_ui():
 	root_vbox.add_child(center_box)
 	arena_view = ArenaViewScript.new()
 	arena_view.custom_minimum_size = Vector2(360, 360)
-	arena_view.gui_input.connect(_on_arena_input)
 	center_box.add_child(arena_view)
 
 	result_label = NeonUI.label("", 14, Color("#00ff88"), HORIZONTAL_ALIGNMENT_CENTER)
@@ -167,6 +171,19 @@ func _build_ui():
 
 	_build_level_up_panel()
 
+func _make_hud_badge(icon_path):
+	var panel = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", NeonUI.flat(Color("#ffffff12"), Color("#ffffff22"), 1, 10))
+	var row = HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 5)
+	panel.add_child(row)
+	row.add_child(NeonUI.icon(icon_path, 18))
+	var value = NeonUI.label("0", 13, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	row.add_child(value)
+	return {"panel": panel, "label": value}
+
 func _build_level_up_panel():
 	level_up_panel = PanelContainer.new()
 	level_up_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -184,7 +201,7 @@ func _build_level_up_panel():
 	level_up_list = VBoxContainer.new()
 	level_up_list.add_theme_constant_override("separation", 8)
 	box.add_child(level_up_list)
-	var reroll = NeonUI.ghost_button("REROLL COM ANUNCIO", Color("#ffd700"), 46)
+	var reroll = NeonUI.ghost_button("REROLL COM ANÚNCIO", Color("#ffd700"), 46)
 	reroll.pressed.connect(_reroll_level_up_with_ad)
 	box.add_child(reroll)
 
@@ -193,7 +210,11 @@ func _start_game():
 		return
 	phase_config = GameData.get_phase_config(phase_id)
 	var viewport_size = get_viewport_rect().size
-	arena_size = clamp(min(viewport_size.x - 28.0, viewport_size.y - 280.0), 260.0, 520.0)
+	var safe_top = 45.0
+	var safe_bottom = 14.0
+	var usable_width = max(0.0, viewport_size.x - 24.0)
+	var usable_height = max(0.0, viewport_size.y - safe_top - safe_bottom - 148.0 - 84.0 - 16.0)
+	arena_size = clamp(floor(min(usable_width, usable_height, 520.0)), 214.0, 520.0)
 	arena_view.custom_minimum_size = Vector2(arena_size, arena_size)
 	center = Vector2(arena_size * 0.5, arena_size * 0.5)
 	outer_radius = arena_size * 0.5 - 9.0
@@ -229,6 +250,7 @@ func _start_game():
 	best_combo = 0
 	last_combo_at = 0.0
 	last_hit_at = 0.0
+	run_started_ms = Time.get_ticks_msec()
 	invincible_until = 0.0
 	current_upgrades = {}
 	run_shop_upgrades = {"atk": 0, "gold": 0}
@@ -258,7 +280,7 @@ func _update_game(delta_steps):
 	var save = SaveSystem.get_save()
 	var stats = _final_stats()
 	var target_speed = (INITIAL_BALL_SPEED + min(0.62, (phase_id - 1) * 0.08)) * stats.speed_multiplier
-	velocity = RingLogic.clamp_ball_speed(velocity, target_speed * 0.78, target_speed * 1.55)
+	velocity = RingLogic.clamp_ball_speed(velocity, target_speed * 0.78, target_speed * 1.42)
 
 	var prev_dist = ball_pos.distance_to(center)
 	ball_pos += velocity * delta_steps
@@ -329,7 +351,7 @@ func _handle_ring_hit(index, prev_dist, stats):
 	var dot = velocity.dot(normal)
 	if dot < 0.0:
 		velocity -= 2.0 * dot * normal
-		velocity = RingLogic.clamp_ball_speed(velocity * 1.04, stats.target_speed * 0.88, stats.target_speed * 1.60)
+		velocity = RingLogic.clamp_ball_speed(velocity * 1.04, stats.target_speed * 0.88, stats.target_speed * 1.55)
 	if now_ms - last_hit_at <= 90.0:
 		return
 	last_hit_at = now_ms
@@ -613,9 +635,11 @@ func _update_hud():
 	var active = _active_rings().size()
 	var total = rings.size()
 	var stats = _final_stats()
-	wallet_label.text = "💰 %d" % run_coins
+	wallet_label.text = str(run_coins)
+	gems_label.text = str(run_gems)
+	account_coins_label.text = str(save.coins)
 	var label = "Infinito onda %d" % infinite_wave if game_mode == "infinite" else "Fase %d" % phase_id
-	progress_label.text = "Aneis: %d/%d%s" % [active, total, " • Combo x%d" % combo if combo >= 2 else ""]
+	progress_label.text = "Anéis: %d/%d%s" % [active, total, " • Combo x%d" % combo if combo >= 2 else ""]
 	xp_label.text = "%s  Lv.%d  XP %d/%d" % [label, run_level, run_xp, GameData.get_run_xp_needed(run_level)]
 	combo_label.text = "ATK %d" % int(stats.damage)
 	pause_button.text = "▶" if paused else "⏸"
@@ -652,7 +676,9 @@ func _finish_run(won, quit = false):
 		"best_combo": best_combo,
 		"run_upgrades": run_rewards.run_upgrades,
 		"criticals": run_rewards.criticals,
-		"skin_effects": run_rewards.skin_effects
+		"skin_effects": run_rewards.skin_effects,
+		"used_revive": false,
+		"duration_seconds": int(max(0.0, (Time.get_ticks_msec() - run_started_ms) / 1000.0))
 	}
 	AudioManager.play_sfx("victory" if won else "defeat")
 	get_tree().current_scene.go_to("game_over", {"summary": summary, "phase": phase_id, "won": won})

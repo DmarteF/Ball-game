@@ -49,66 +49,239 @@ const SKIN_NAME_OVERRIDES = {
 	"bunny": "Coelho",
 	"slime": "Slime",
 	"ghost": "Fantasma",
-	"robot": "Robo",
+	"chick": "Pintinho",
+	"frog": "Sapo",
+	"monkey": "Macaquinho",
+	"penguin": "Pinguim",
+	"hamster": "Hamster",
+	"bear_common": "Ursinho",
+	"panda": "Panda",
+	"fox_common": "Raposa",
+	"tiger_common": "Tigre",
+	"cow_common": "Vaquinha",
+	"octopus_common": "Polvo",
+	"fish_common": "Peixinho",
+	"bee_common": "Abelha",
+	"ladybug_common": "Joaninha",
+	"robot": "Robô",
+	"skull": "Caveira",
 	"fire": "Fogo",
 	"ice": "Gelo",
 	"lightning": "Raio",
+	"star_rare": "Estrela",
+	"moon": "Lua",
+	"planet": "Planeta",
+	"crystal": "Cristal",
+	"comet": "Cometa",
+	"wolf_rare": "Lobo",
+	"dragonling_rare": "Dragãozinho",
+	"alien_rare": "Alien",
+	"ninja_rare": "Ninja",
+	"wizard_rare": "Mago",
+	"satellite_rare": "Satélite",
+	"meteor_rare": "Meteoro",
+	"purple_crystal": "Cristal Roxo",
+	"neon_heart": "Coração Neon",
+	"bomb_rare": "Bomba",
+	"red_eye": "Olho Carmesim",
+	"cosmic_eye": "Olho Cósmico",
+	"tiny_dragon": "Dragão Pequeno",
+	"shadow_orb": "Esfera Sombria",
+	"solar_orb": "Esfera Solar",
+	"electric_core": "Núcleo Elétrico",
+	"astral_eye": "Olho Astral",
+	"living_plasma": "Plasma Vivo",
+	"radioactive_core": "Núcleo Radioativo",
+	"blue_comet": "Cometa Azul",
+	"neon_spiral": "Espiral Neon",
+	"flaming_skull": "Caveira Flamejante",
+	"orbital_blade": "Lâmina Orbital",
+	"neon_dragon": "Dragão Neon",
+	"ghost_mask": "Máscara Fantasma",
+	"solar_guardian": "Guardião Solar",
+	"ripple_eye": "Olho Espiral Roxo",
 	"black_hole": "Buraco Negro",
-	"cosmic_champion": "Campeao Cosmico",
+	"neon_phoenix": "Fênix Neon",
+	"astral_dragon": "Dragão Astral",
+	"ghost_king": "Rei Fantasma",
+	"collapsed_star": "Estrela Colapsada",
+	"black_sun": "Sol Negro",
+	"cosmic_emperor": "Imperador Cósmico",
+	"galactic_phoenix": "Fênix Galáctica",
+	"void_dragon": "Dragão do Vazio",
+	"star_king": "Rei das Estrelas",
+	"plasma_heart": "Coração de Plasma",
+	"celestial_core": "Núcleo Celestial",
+	"ring_devourer": "Devorador de Anéis",
+	"dimensional_guardian": "Guardião Dimensional",
+	"astral_crown": "Coroa Astral",
+	"infinite_pulse": "Pulso Infinito",
+	"blue_vortex": "Vórtice Azul",
+	"loop_flame": "Chama de Loop",
+	"red_comet": "Cometa Rubro",
+	"neon_eclipse": "Eclipse Neon",
+	"endless_prism": "Prisma Sem Fim",
+	"cosmic_fragment": "Fragmento Cósmico",
+	"eternal_core": "Núcleo Eterno",
+	"infinite_vortex_mythic": "Vórtice Infinito",
+	"chrono_loop_mythic": "Loop Cronal",
+	"omega_infinity": "Ômega Infinito",
+	"singularity_crown": "Coroa da Singularidade",
+	"living_singularity": "Singularidade Viva",
+	"divine_core": "Núcleo Divino",
+	"void_devourer_ultimate": "Devorador do Vazio",
+	"cosmic_champion": "Campeão Cósmico",
+	"initial_neon_champion": "Campeão Neon Inicial",
+	"league_bronze_champion": "Coroa Bronze Neon",
 	"league_king_neon": "Rei da Liga Neon"
+}
+
+const SKIN_DESCRIPTION_OVERRIDES = {
+	"neon_blue": "Esfera inicial equilibrada.",
+	"puppy": "Chance de moedas extras no impacto.",
+	"kitty": "Aumenta chance crítica.",
+	"piggy": "Aumenta moedas ganhas.",
+	"bunny": "Aumenta velocidade da bolinha.",
+	"slime": "Chance de ricochete sem perder velocidade.",
+	"ghost": "Chance de atravessar parte sólida.",
+	"chick": "Moedas extras em quebras rápidas.",
+	"frog": "Pequeno bônus de ricochete.",
+	"monkey": "Bônus leve de XP.",
+	"penguin": "Pequena chance de desacelerar anéis.",
+	"hamster": "Moedas extras em impactos rápidos.",
+	"bear_common": "Um pouco mais de dano.",
+	"panda": "Bônus leve de XP.",
+	"fox_common": "Velocidade levemente maior.",
+	"tiger_common": "Pequeno bônus crítico.",
+	"cow_common": "Mais moedas ao final.",
+	"octopus_common": "Chance baixa de ricochete.",
+	"fish_common": "Aumenta a velocidade.",
+	"bee_common": "Crítico leve.",
+	"ladybug_common": "Pequeno bônus de moedas.",
+	"robot": "Calcula ricochetes eficientes.",
+	"skull": "Chance de crítico pesado.",
+	"fire": "Aplica dano contínuo.",
+	"ice": "Congela ou desacelera anéis.",
+	"lightning": "Corrente elétrica atinge outro anel.",
+	"star_rare": "Melhora perfect escapes.",
+	"moon": "Bônus leve de dano.",
+	"planet": "Melhora moedas e perfects.",
+	"crystal": "Bônus de gemas por perfect.",
+	"comet": "Mais velocidade e impacto.",
+	"wolf_rare": "Dano e crítico estáveis.",
+	"dragonling_rare": "Chance de queimar anéis.",
+	"alien_rare": "Melhora perfect escapes.",
+	"ninja_rare": "Mais velocidade e crítico.",
+	"wizard_rare": "Chance de desacelerar anéis.",
+	"satellite_rare": "Corrente leve entre anéis.",
+	"meteor_rare": "Impacto mais forte.",
+	"purple_crystal": "Aumenta chance de diamante em perfect.",
+	"neon_heart": "Mais XP ao final.",
+	"bomb_rare": "Chance de dano em área.",
+	"red_eye": "Pode desacelerar o anel atingido.",
+	"cosmic_eye": "Aumenta a chance de diamante por perfect.",
+	"tiny_dragon": "Chamas extras no impacto.",
+	"shadow_orb": "Dano extra em impactos críticos.",
+	"solar_orb": "Dano em área em explosões solares.",
+	"electric_core": "Corrente mais forte entre anéis.",
+	"astral_eye": "Perfects melhores e brilho astral.",
+	"living_plasma": "Dano em cadeia orgânico.",
+	"radioactive_core": "Queima e enfraquece anéis.",
+	"blue_comet": "Velocidade com dano superior.",
+	"neon_spiral": "Desacelera anéis em espiral.",
+	"flaming_skull": "Críticos queimam.",
+	"orbital_blade": "Cortes em cadeia.",
+	"neon_dragon": "Fogo neon em anéis resistentes.",
+	"ghost_mask": "Pode atravessar sólidos.",
+	"solar_guardian": "Dano em área solar.",
+	"ripple_eye": "Pode repelir anéis para fora.",
+	"black_hole": "Pode causar dano em área gravitacional.",
+	"neon_phoenix": "Críticos queimam anéis próximos.",
+	"astral_dragon": "Dano e XP superiores.",
+	"ghost_king": "Atravessa sólidos com mais frequência.",
+	"collapsed_star": "Área crítica devastadora.",
+	"black_sun": "Gravidade e dano em área.",
+	"cosmic_emperor": "Dano e moedas de elite.",
+	"galactic_phoenix": "Queima anéis próximos.",
+	"void_dragon": "Crítico cósmico poderoso.",
+	"star_king": "Mais XP e perfects.",
+	"plasma_heart": "Pulsos de área.",
+	"celestial_core": "Dano e controle celeste.",
+	"ring_devourer": "Dano forte contra anéis externos.",
+	"dimensional_guardian": "Repulsa anéis perigosos.",
+	"astral_crown": "Críticos e XP melhores.",
+	"infinite_pulse": "Recompensa por sobreviver 1 minuto no Infinito. Melhora moedas.",
+	"blue_vortex": "Recompensa por quebrar 25 anéis no Infinito. Melhora velocidade.",
+	"loop_flame": "Recompensa por sobreviver 3 minutos no Infinito. Queima anéis.",
+	"red_comet": "Recompensa por quebrar 50 anéis no Infinito. Aumenta dano.",
+	"neon_eclipse": "Recompensa por sobreviver 5 minutos no Infinito. Melhora perfects.",
+	"endless_prism": "Recompensa por quebrar 100 anéis no Infinito. Aumenta XP.",
+	"cosmic_fragment": "Recompensa por sobreviver 10 minutos no Infinito. Aumenta dano.",
+	"eternal_core": "Recompensa por completar 5 desafios no Infinito. Melhora moedas.",
+	"infinite_vortex_mythic": "Recompensa por sobreviver 15 minutos no Infinito. Dano e XP elevados.",
+	"chrono_loop_mythic": "Recompensa por completar 10 desafios no Infinito. Controla anéis.",
+	"omega_infinity": "Recompensa por sobreviver 20 minutos no Infinito. Bônus completo.",
+	"singularity_crown": "Recompensa por quebrar 300 anéis no Infinito. Área extrema.",
+	"living_singularity": "Ultimate raríssima com dano gravitacional extremo.",
+	"divine_core": "Ultimate com bônus de dano, XP e controle.",
+	"void_devourer_ultimate": "Ultimate oculta que devora anéis com ondas gravitacionais.",
+	"cosmic_champion": "Exclusiva por concluir os 50 estágios. Aumenta dano, moedas, XP, diamantes e pode repelir anéis em crítico.",
+	"initial_neon_champion": "Ultimate exclusiva da primeira coroa na Liga Neon Bronze. Amplifica moedas, XP, combo e proteção.",
+	"league_bronze_champion": "Skin exclusiva por terminar em primeiro na divisão Bronze da Liga Neon.",
+	"league_king_neon": "Ultimate máxima de ranking. Aumenta dano, moedas, XP, perfect diamonds e libera onda em combo alto."
 }
 
 const CHESTS = [
 	{
 		"id": "common",
-		"name": "Bau Comum",
+		"name": "Baú Comum",
 		"icon_path": "res://assets/ui/ui_chest_common.png",
 		"cost": 180,
 		"currency": "coins",
 		"color": "#9ca3af",
-		"description": "70% comum, 24% rara, 6% epica.",
+		"description": "70% comum, 24% rara, 6% épica.",
 		"chances": {"common": 0.70, "rare": 0.24, "epic": 0.06}
 	},
 	{
 		"id": "rare",
-		"name": "Bau Raro",
+		"name": "Baú Raro",
 		"icon_path": "res://assets/ui/ui_chest_rare.png",
 		"cost": 1,
 		"currency": "keys",
 		"color": "#00aaff",
-		"description": "25% comum, 55% rara, 17% epica, 3% lendaria.",
+		"description": "25% comum, 55% rara, 17% épica, 3% lendária.",
 		"chances": {"common": 0.25, "rare": 0.55, "epic": 0.17, "legendary": 0.03}
 	},
 	{
 		"id": "epic",
-		"name": "Bau Epico",
+		"name": "Baú Épico",
 		"icon_path": "res://assets/ui/ui_chest_epic.png",
 		"cost": 120,
 		"currency": "gems",
 		"color": "#b000ff",
-		"description": "35% rara, 48% epica, 15% lendaria, 2% ultimate.",
+		"description": "35% rara, 48% épica, 15% lendária, 2% Ultimate.",
 		"chances": {"rare": 0.35, "epic": 0.48, "legendary": 0.15, "ultimate": 0.02}
 	},
 	{
 		"id": "legendary",
-		"name": "Bau Lendario",
+		"name": "Baú Lendário",
 		"icon_path": "res://assets/ui/ui_chest_legendary.png",
 		"cost": 1,
 		"currency": "legendary_keys",
 		"color": "#ffd700",
-		"description": "45% epica, 50% lendaria, 5% ultimate.",
+		"description": "45% épica, 50% lendária, 5% Ultimate.",
 		"chances": {"epic": 0.45, "legendary": 0.50, "ultimate": 0.05}
 	}
 ]
 
 const PERMANENT_UPGRADES = [
-	{"id": "baseDamage", "name": "Damage", "description": "+10% dano por nivel", "icon_path": "res://assets/ui/ui_damage.png", "base_cost": 100, "max_level": 30, "unlock": "start", "currency": "coins"},
-	{"id": "baseSpeed", "name": "Speed", "description": "+8% velocidade por nivel", "icon_path": "res://assets/ui/ui_speed.png", "base_cost": 120, "max_level": 18, "unlock": "start", "currency": "coins"},
-	{"id": "coinMultiplier", "name": "Cash Gain", "description": "+15% moedas por nivel", "icon_path": "res://assets/ui/ui_coin.png", "base_cost": 200, "max_level": 25, "unlock": "start", "currency": "coins"},
-	{"id": "critChance", "name": "Crit Chance", "description": "+2% critico por nivel", "icon_path": "res://assets/ui/ui_crit.png", "base_cost": 150, "max_level": 20, "unlock": "start", "currency": "coins"},
-	{"id": "xpBoost", "name": "XP Boost", "description": "+20% XP por nivel", "icon_path": "res://assets/ui/ui_xp.png", "base_cost": 180, "max_level": 25, "unlock": "phase_3", "currency": "coins"},
-	{"id": "perfectChance", "name": "Perfect Chance", "description": "+1% chance de diamante no Perfect", "icon_path": "res://assets/ui/ui_perfect.png", "base_cost": 450, "max_level": 12, "unlock": "phase_5_or_chest", "currency": "coins"},
-	{"id": "slowRings", "name": "Slow Rings", "description": "Aneis fecham mais devagar", "icon_path": "res://assets/ui/ui_freeze.png", "base_cost": 600, "max_level": 10, "unlock": "chest", "currency": "gems"}
+	{"id": "baseDamage", "name": "Damage", "description": "+10% dano por nível", "icon_path": "res://assets/ui/ui_damage.png", "base_cost": 100, "max_level": 30, "unlock": "start", "unlock_text": "Disponível desde o início", "currency": "coins"},
+	{"id": "baseSpeed", "name": "Speed", "description": "+8% velocidade por nível", "icon_path": "res://assets/ui/ui_speed.png", "base_cost": 120, "max_level": 18, "unlock": "start", "unlock_text": "Disponível desde o início", "currency": "coins"},
+	{"id": "coinMultiplier", "name": "Cash Gain", "description": "+15% moedas por nível", "icon_path": "res://assets/ui/ui_coin.png", "base_cost": 200, "max_level": 25, "unlock": "start", "unlock_text": "Disponível desde o início", "currency": "coins"},
+	{"id": "critChance", "name": "Crit Chance", "description": "+2% crítico por nível", "icon_path": "res://assets/ui/ui_crit.png", "base_cost": 150, "max_level": 20, "unlock": "start", "unlock_text": "Disponível desde o início", "currency": "coins"},
+	{"id": "xpBoost", "name": "XP Boost", "description": "+20% XP por nível", "icon_path": "res://assets/ui/ui_xp.png", "base_cost": 180, "max_level": 25, "unlock": "phase_3", "unlock_text": "Desbloqueia ao alcançar a fase 3", "currency": "coins"},
+	{"id": "perfectChance", "name": "Perfect Chance", "description": "+1% chance de diamante no perfect", "icon_path": "res://assets/ui/ui_perfect.png", "base_cost": 450, "max_level": 12, "unlock": "phase_5_or_chest", "unlock_text": "Desbloqueia por baús raros ou fase 5", "currency": "coins"},
+	{"id": "slowRings", "name": "Slow Rings", "description": "Anéis fecham mais devagar", "icon_path": "res://assets/ui/ui_freeze.png", "base_cost": 600, "max_level": 10, "unlock": "chest", "unlock_text": "Desbloqueia por rank ou recompensas especiais", "currency": "gems"}
 ]
 
 const RUN_UPGRADES = [
@@ -348,7 +521,7 @@ func roll_chest_reward(chest_id, save):
 	var utility_roll = randf()
 	if utility_roll < 0.10:
 		var amount = 2 if rarity in ["legendary", "mythic", "ultimate"] else 1
-		return {"type": "key", "label": "Chave Lendaria" if rarity in ["mythic", "ultimate"] else "Chave", "rarity": rarity, "amount": amount}
+		return {"type": "key", "label": "Chave Lendária" if rarity in ["mythic", "ultimate"] else "Chave", "rarity": rarity, "amount": amount}
 	if utility_roll < 0.20:
 		var item_type = "trail" if utility_roll < 0.23 else "aura" if utility_roll < 0.285 else "effect"
 		var label = "Trail %s" % rarity
@@ -402,16 +575,16 @@ func _build_skins():
 
 func _tier_for_phase(id):
 	if id <= 5:
-		return {"min": 8, "max": 16, "hp": 12, "close": 0.018, "rotate": 0.0045, "gap": 2.4, "name": "Normal", "desc": "Arena inicial com aberturas grandes e pressao baixa."}
+		return {"min": 8, "max": 16, "hp": 12, "close": 0.018, "rotate": 0.0045, "gap": 2.4, "name": "Normal", "desc": "Arena inicial com aberturas grandes e pressão baixa."}
 	if id <= 10:
-		return {"min": 16, "max": 24, "hp": 34, "close": 0.030, "rotate": 0.0070, "gap": 2.75, "name": "Dificil", "desc": "Rotacao alternada e aneis mais resistentes."}
+		return {"min": 16, "max": 24, "hp": 34, "close": 0.030, "rotate": 0.0070, "gap": 2.75, "name": "Difícil", "desc": "Rotação alternada e anéis um pouco mais resistentes."}
 	if id <= 20:
-		return {"min": 24, "max": 36, "hp": 68, "close": 0.045, "rotate": 0.0100, "gap": 3.15, "name": "Avancado", "desc": "Mais padroes, aberturas menores e aneis resistentes."}
+		return {"min": 24, "max": 36, "hp": 68, "close": 0.045, "rotate": 0.0100, "gap": 3.15, "name": "Avançado", "desc": "Mais padrões, aberturas menores e anéis resistentes."}
 	if id <= 30:
-		return {"min": 36, "max": 50, "hp": 128, "close": 0.067, "rotate": 0.0140, "gap": 3.55, "name": "Extremo", "desc": "Arena exigente para skins e upgrades fortes."}
+		return {"min": 36, "max": 50, "hp": 128, "close": 0.067, "rotate": 0.0140, "gap": 3.55, "name": "Extremo", "desc": "Arena exigente para skins e upgrades mais fortes."}
 	if id <= 40:
-		return {"min": 50, "max": 65, "hp": 220, "close": 0.092, "rotate": 0.0190, "gap": 4.05, "name": "Insano", "desc": "Padroes complexos, fechamento perigoso e melhores baus."}
-	return {"min": 65, "max": 80, "hp": 340, "close": 0.120, "rotate": 0.0250, "gap": 4.60, "name": "Ultimate", "desc": "Arena premium com rotacao intensa e recompensas altas."}
+		return {"min": 50, "max": 65, "hp": 220, "close": 0.092, "rotate": 0.0190, "gap": 4.05, "name": "Insano", "desc": "Padrões complexos, fechamento perigoso e melhores baús."}
+	return {"min": 65, "max": 80, "hp": 340, "close": 0.120, "rotate": 0.0250, "gap": 4.60, "name": "Ultimate", "desc": "Arena premium com rotação intensa, justa e recompensas altas."}
 
 func _pick_rarity(chest):
 	var roll = randf()
@@ -459,6 +632,8 @@ func _skin_name(id):
 	return text.replace("_", " ").capitalize()
 
 func _skin_description(id, passive):
+	if SKIN_DESCRIPTION_OVERRIDES.has(id):
+		return SKIN_DESCRIPTION_OVERRIDES[id]
 	var labels = {
 		"coin_on_hit": "Pode soltar moedas extras no impacto.",
 		"crit_chance": "Aumenta chance critica.",
@@ -573,7 +748,7 @@ func _origin_for_skin(id):
 		return "Conclusao das fases principais"
 	if _has_any(id, ["league_", "initial_neon_champion"]):
 		return "Liga Neon futura"
-	return "Baus e loja"
+	return "Baús e loja"
 
 func _has_any(text, needles):
 	for needle in needles:

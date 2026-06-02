@@ -6,9 +6,9 @@ const FILTERS = [
 	["all", "Todas"],
 	["common", "Comuns"],
 	["rare", "Raras"],
-	["epic", "Epicas"],
-	["legendary", "Lendarias"],
-	["mythic", "Miticas"],
+	["epic", "Épicas"],
+	["legendary", "Lendárias"],
+	["mythic", "Míticas"],
 	["ultimate", "Ultimate"],
 	["owned", "Obtidas"],
 	["locked", "Bloqueadas"]
@@ -240,11 +240,11 @@ func _rarity_label(rarity):
 		"rare":
 			return "Rara"
 		"epic":
-			return "Epica"
+			return "Épica"
 		"legendary":
-			return "Lendaria"
+			return "Lendária"
 		"mythic":
-			return "Mitica"
+			return "Mítica"
 		"ultimate":
 			return "Ultimate"
 	return String(rarity)

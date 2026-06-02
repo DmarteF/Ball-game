@@ -81,12 +81,7 @@ func _build_ui():
 	title_gap.custom_minimum_size = Vector2(0, 14)
 	content.add_child(title_gap)
 
-	var play = NeonUI.button("JOGAR", Color("#00f0ff"), 78)
-	play.add_theme_font_size_override("font_size", 30)
-	play.icon = load("res://assets/ui/ui_play.png") if ResourceLoader.exists("res://assets/ui/ui_play.png") else null
-	play.expand_icon = true
-	play.pressed.connect(func(): _go("phases"))
-	content.add_child(play)
+	_add_play_button(content)
 
 	var primary_row = HBoxContainer.new()
 	primary_row.add_theme_constant_override("separation", 12)
@@ -115,20 +110,70 @@ func _build_ui():
 	_build_menu_overlay()
 	_build_offline_overlay()
 
-func _add_primary_card(parent, text, route, icon_path, color_a, color_b):
+func _add_play_button(parent):
+	var root = Control.new()
+	root.custom_minimum_size = Vector2(0, 78)
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(root)
+
+	var panel = PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	panel.add_theme_stylebox_override("panel", NeonUI.neon_box(Color("#00f0ff"), Color("#00f0ff"), 1, 16, 0.82))
+	root.add_child(panel)
+
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(center)
+	var row = HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	center.add_child(row)
+	row.add_child(NeonUI.icon("res://assets/ui/ui_play.png", 32))
+	var label = NeonUI.label("JOGAR", 30, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	label.add_theme_constant_override("shadow_outline_size", 10)
+	label.add_theme_color_override("font_shadow_color", Color("#0088ff"))
+	row.add_child(label)
+
 	var button = Button.new()
-	button.custom_minimum_size = Vector2(0, 92)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.text = text
-	button.icon = load(icon_path) if ResourceLoader.exists(icon_path) else null
-	button.expand_icon = true
-	button.add_theme_font_size_override("font_size", 13)
-	button.add_theme_color_override("font_color", Color.WHITE)
-	button.add_theme_stylebox_override("normal", NeonUI.neon_box(Color(color_a, 0.40), Color("#ffffff24"), 1, 14, 0.22))
-	button.add_theme_stylebox_override("hover", NeonUI.neon_box(Color(color_a, 0.56), Color(color_a, 0.92), 1, 14, 0.36))
-	button.add_theme_stylebox_override("pressed", NeonUI.neon_box(Color(color_b, 0.44), Color(color_a), 1, 14, 0.18))
+	button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	button.text = ""
+	button.add_theme_stylebox_override("normal", NeonUI.flat(Color.TRANSPARENT, Color.TRANSPARENT, 0, 16))
+	button.add_theme_stylebox_override("hover", NeonUI.flat(Color("#ffffff18"), Color.TRANSPARENT, 0, 16))
+	button.add_theme_stylebox_override("pressed", NeonUI.flat(Color("#00000022"), Color.TRANSPARENT, 0, 16))
+	button.pressed.connect(func(): _go("phases"))
+	root.add_child(button)
+
+func _add_primary_card(parent, text, route, icon_path, color_a, color_b):
+	var root = Control.new()
+	root.custom_minimum_size = Vector2(0, 92)
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(root)
+
+	var panel = PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	panel.add_theme_stylebox_override("panel", NeonUI.neon_box(Color(color_a, 0.40), Color("#ffffff24"), 1, 14, 0.22))
+	root.add_child(panel)
+
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(center)
+	var box = VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 6)
+	center.add_child(box)
+	box.add_child(NeonUI.icon(icon_path, 42))
+	var label = NeonUI.label(text, 13, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	label.add_theme_constant_override("outline_size", 0)
+	box.add_child(label)
+
+	var button = Button.new()
+	button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	button.text = ""
+	button.add_theme_stylebox_override("normal", NeonUI.flat(Color.TRANSPARENT, Color.TRANSPARENT, 0, 14))
+	button.add_theme_stylebox_override("hover", NeonUI.neon_box(Color(color_a, 0.16), Color(color_a, 0.92), 1, 14, 0.36))
+	button.add_theme_stylebox_override("pressed", NeonUI.neon_box(Color(color_b, 0.24), Color(color_a), 1, 14, 0.18))
 	button.pressed.connect(func(): _go(route))
-	parent.add_child(button)
+	root.add_child(button)
 
 func _build_menu_overlay():
 	menu_overlay = PanelContainer.new()
@@ -171,15 +216,15 @@ func _build_menu_overlay():
 
 	var items = [
 		["Loja", "shop", "res://assets/ui/ui_store.png", "#00aaff"],
-		["Inventario", "inventory", "res://assets/ui/ui_inventory.png", "#ffd700"],
-		["Missoes", "missions", "res://assets/ui/ui_missions.png", "#ff8800"],
+		["Inventário", "inventory", "res://assets/ui/ui_inventory.png", "#ffd700"],
+		["Missões", "missions", "res://assets/ui/ui_missions.png", "#ff8800"],
 		["Evento", "event", "res://assets/ui/ui_event.png", "#ff4fd8"],
 		["Roleta", "wheel", "res://assets/ui/ui_wheel.png", "#00ff88"],
-		["Recompensa diaria", "daily_reward", "res://assets/ui/ui_daily_reward.png", "#ffd700"],
+		["Recompensa diária", "daily_reward", "res://assets/ui/ui_daily_reward.png", "#ffd700"],
 		["Boss", "boss", "res://assets/ui/ui_boss.png", "#ff0055"],
 		["Liga Neon", "league", "res://assets/ui/ui_league_neon.png", "#00ff88"],
 		["Conquistas", "achievements", "res://assets/ui/ui_achievements.png", "#ffd700"],
-		["Configuracoes", "settings", "res://assets/ui/ui_settings.png", "#b8f3ff"]
+		["Configurações", "settings", "res://assets/ui/ui_settings.png", "#b8f3ff"]
 	]
 	for item in items:
 		_add_menu_button(grid, item[0], item[1], item[2], Color(item[3]))
@@ -234,7 +279,7 @@ func _build_offline_overlay():
 	var collect = NeonUI.button("COLETAR", Color("#00f0ff"), 48)
 	collect.pressed.connect(_claim_offline.bind(false))
 	box.add_child(collect)
-	var double = NeonUI.button("DOBRAR COM ANUNCIO", Color("#ffd700"), 48)
+	var double = NeonUI.button("DOBRAR - ANÚNCIO", Color("#ffd700"), 48)
 	double.pressed.connect(_claim_offline.bind(true))
 	box.add_child(double)
 
@@ -250,7 +295,7 @@ func _refresh():
 	var has_offline = bool(offline.get("available", false))
 	offline_overlay.visible = has_offline
 	if has_offline:
-		offline_reward_label.text = "Voce ficou %.1fh longe." % float(offline.get("hours", 0.0))
+		offline_reward_label.text = "Você ficou fora por %.1fh." % float(offline.get("hours", 0.0))
 		var coin_value = offline_overlay.find_child("CoinValue", true, false)
 		if coin_value:
 			coin_value.text = str(int(offline.get("coins", 0)))
