@@ -78,7 +78,15 @@ Notas de fidelidade:
 
 Pendencias marcadas assim porque a `main` usa a fonte de sistema do React Native e sombras CSS/React Native; no Godot elas foram aproximadas com `SystemFont`, `StyleBoxFlat` e shader de gradiente. A comparacao visual pixel a pixel ainda deve ser feita no navegador.
 
-## 5. HTML/Web
+## 5. Checklist de telas base
+
+| Tela | Arquivo/fonte na branch main | Cena/script Godot | Status | Diferencas conhecidas |
+| --- | --- | --- | --- | --- |
+| Tela inicial | `frontend/app/index.tsx`, `frontend/src/components/ProfileAvatar.tsx`, `frontend/src/components/UiIcon.tsx` | `scenes/MainMenu.tscn`, `scripts/MainMenu.gd` | Concluida/ajustada | Congelada por etapa; sombras/fonte sao aproximacoes Godot. |
+| Perfil | `frontend/app/profile.tsx`, `frontend/src/components/ProfileAvatar.tsx`, `frontend/src/components/SkinIcon.tsx`, `frontend/src/components/UiIcon.tsx`, `frontend/src/game/skins.ts`, `frontend/src/game/achievements.ts`, `frontend/src/game/upgrades.ts` | `scenes/Profile.tscn`, `scripts/ProfileScreen.gd` | Concluida nesta etapa | Visual e blocos principais portados; edicao de foto real, liga real, conquistas reais e estatisticas reais ainda estao mockadas ate o save completo ser portado. |
+| Configuracoes | Pedido desta etapa + estilo visual da tela inicial | `scenes/Settings.tscn`, `scripts/SettingsScreen.gd` | Concluida nesta etapa | Tela propositalmente simples: audio ligado/mudo, idioma e sobre. Estado salvo em `user://settings.json`. |
+
+## 6. HTML/Web
 
 O preset `Web` foi configurado em `export_presets.cfg`.
 

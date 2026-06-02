@@ -1,6 +1,8 @@
 extends Control
 
 const PLACEHOLDER_SCENE := "res://scenes/Placeholder.tscn"
+const PROFILE_SCENE := "res://scenes/Profile.tscn"
+const SETTINGS_SCENE := "res://scenes/Settings.tscn"
 
 const ICON_PATHS := {
 	"coin": "res://assets/ui/ui_coin.png",
@@ -32,7 +34,7 @@ const SECONDARY_ITEMS := [
 	{ "label": "Boss", "icon": "boss", "color": "#ff005588" },
 	{ "label": "Neon League", "icon": "league", "color": "#00ff8888" },
 	{ "label": "Achievements", "icon": "achievements", "color": "#ffd70088" },
-	{ "label": "Settings", "icon": "settings", "color": "#b8f3ff88" },
+	{ "label": "Settings", "icon": "settings", "color": "#b8f3ff88", "scene": SETTINGS_SCENE },
 ]
 
 const ROUND_GRADIENT_SHADER := """
@@ -295,7 +297,7 @@ func _make_profile_badge() -> Button:
 	button.focus_mode = Control.FOCUS_NONE
 	_clear_button_styles(button)
 	_apply_button_style(button, _make_style("#ffffff12", 14, "#ffffff22", 1))
-	button.pressed.connect(_open_placeholder)
+	button.pressed.connect(_open_profile)
 
 	var margin := MarginContainer.new()
 	_fill(margin)
@@ -409,7 +411,10 @@ func _make_more_item(item: Dictionary) -> Button:
 	button.focus_mode = Control.FOCUS_NONE
 	_clear_button_styles(button)
 	_apply_button_style(button, _make_style("#ffffff12", 12, item["color"], 1))
-	button.pressed.connect(_open_placeholder)
+	if item.has("scene"):
+		button.pressed.connect(_open_scene.bind(String(item["scene"])))
+	else:
+		button.pressed.connect(_open_placeholder)
 
 	var content := VBoxContainer.new()
 	_fill(content)
@@ -601,10 +606,18 @@ func _hide_more_modal() -> void:
 
 
 func _open_placeholder() -> void:
+	_open_scene(PLACEHOLDER_SCENE)
+
+
+func _open_profile() -> void:
+	_open_scene(PROFILE_SCENE)
+
+
+func _open_scene(scene_path: String) -> void:
 	if _more_overlay != null:
 		_more_overlay.visible = false
 	_play_click()
-	get_tree().change_scene_to_file(PLACEHOLDER_SCENE)
+	get_tree().change_scene_to_file(scene_path)
 
 
 func _play_click() -> void:
