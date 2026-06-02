@@ -3,6 +3,8 @@ extends Control
 const PLACEHOLDER_SCENE := "res://scenes/Placeholder.tscn"
 const PROFILE_SCENE := "res://scenes/Profile.tscn"
 const SETTINGS_SCENE := "res://scenes/Settings.tscn"
+const SKINS_SCENE := "res://scenes/Skins.tscn"
+const UPGRADES_SCENE := "res://scenes/Upgrades.tscn"
 const SHOP_SCENE := "res://scenes/Shop.tscn"
 const INVENTORY_SCENE := "res://scenes/Inventory.tscn"
 const MISSIONS_SCENE := "res://scenes/Missions.tscn"
@@ -196,11 +198,11 @@ func _build_content() -> void:
 	content.add_child(primary_row)
 
 	var upgrades := _make_primary_card("upgrades", "UPGRADES", "#b000ff66", "#6600cc33")
-	upgrades.pressed.connect(_open_placeholder)
+	upgrades.pressed.connect(_open_scene.bind(UPGRADES_SCENE))
 	primary_row.add_child(upgrades)
 
 	var skins := _make_primary_card("skins", "SKINS", "#ff008866", "#cc006633")
-	skins.pressed.connect(_open_placeholder)
+	skins.pressed.connect(_open_scene.bind(SKINS_SCENE))
 	primary_row.add_child(skins)
 
 
