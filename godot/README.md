@@ -90,6 +90,22 @@ mkdir -p build/web
 godot --headless --export-release Web build/web/index.html
 ```
 
+Para testar, nao abra `index.html` direto pelo navegador usando `file://`.
+O export Web do Godot precisa ser servido por HTTP:
+
+```bash
+cd godot
+python3 serve_web.py
+```
+
+URL local:
+
+```text
+http://127.0.0.1:8765/index.html
+```
+
+Em ambiente remoto/Codespaces, abra a porta `8765` pela aba/encaminhamento de portas e use a URL encaminhada.
+
 O workflow `.github/workflows/godot-web.yml` da branch `godot-4-rebuild` tambem usa o preset `Web` e publica `godot/build/web`.
 
 Verificacao local feita em 2026-06-02:
@@ -97,6 +113,7 @@ Verificacao local feita em 2026-06-02:
 ```bash
 Godot_v4.3-stable_linux.x86_64 --headless --editor --path godot --quit
 Godot_v4.3-stable_linux.x86_64 --headless --path godot --export-release Web build/web/index.html
+python3 serve_web.py
 ```
 
 Arquivos HTML/Web gerados localmente em `godot/build/web`:
