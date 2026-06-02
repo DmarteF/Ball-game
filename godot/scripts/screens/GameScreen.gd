@@ -11,6 +11,8 @@ const PHYSICS_STEP = 60.0
 const COMBO_WINDOW_MS = 2600.0
 
 var phase_id = 1
+var game_mode = "phase"
+var infinite_wave = 1
 var phase_config = {}
 var rings = []
 var ball_pos = Vector2.ZERO
@@ -63,6 +65,7 @@ var level_up_list
 
 func setup(payload):
 	phase_id = int(payload.get("phase", phase_id))
+	game_mode = String(payload.get("mode", "phase"))
 	if is_node_ready():
 		call_deferred("_start_game")
 
@@ -283,6 +286,9 @@ func _update_game(delta_steps):
 
 	var active_rings = _active_rings()
 	if active_rings.is_empty():
+		if game_mode == "infinite":
+			_continue_infinite()
+			return
 		_finish_run(true)
 		return
 	for ring in active_rings:
@@ -611,7 +617,8 @@ func _update_hud():
 	var total = rings.size()
 	var stats = _final_stats()
 	wallet_label.text = "Rodada %d moedas  %d diamantes    Conta %d / %d" % [run_coins, run_gems, save.coins, save.gems]
-	progress_label.text = "Fase %d %s | Aneis %d/%d | ATK %d | Skin %s" % [phase_id, phase_config.get("difficulty", ""), active, total, stats.damage, GameData.get_skin(save.equipped_skin).name]
+	var label = "Infinito onda %d" % infinite_wave if game_mode == "infinite" else "Fase %d" % phase_id
+	progress_label.text = "%s %s | Aneis %d/%d | ATK %d | Skin %s" % [label, phase_config.get("difficulty", ""), active, total, stats.damage, GameData.get_skin(save.equipped_skin).name]
 	xp_label.text = "Lv.%d  XP %d/%d" % [run_level, run_xp, GameData.get_run_xp_needed(run_level)]
 	combo_label.text = "Combo x%d" % combo if combo >= 2 else ""
 	pause_button.text = "CONTINUAR" if paused else "PAUSAR"
@@ -631,6 +638,7 @@ func _finish_run(won, quit = false):
 	var profile_xp = GameData.get_run_profile_xp(run_rewards.xp, run_rewards.rings_broken, run_rewards.perfect_escapes, best_combo)
 	var summary = {
 		"phase": phase_id,
+		"mode": game_mode,
 		"won": won,
 		"quit": quit,
 		"coins": run_coins,
@@ -647,6 +655,35 @@ func _finish_run(won, quit = false):
 	}
 	AudioManager.play_sfx("victory" if won else "defeat")
 	get_tree().current_scene.go_to("game_over", {"summary": summary, "phase": phase_id, "won": won})
+
+func _continue_infinite():
+	infinite_wave += 1
+	phase_id = clampi(phase_id + 1, 1, 50)
+	run_coins += 35 + infinite_wave * 8
+	run_rewards.coins = run_coins
+	run_rewards.xp += 20 + infinite_wave * 4
+	phase_config = GameData.get_phase_config(phase_id)
+	var save = SaveSystem.get_save()
+	var config = {
+		"count": min(80, 14 + infinite_wave * 3),
+		"inner_radius": INNER_RADIUS,
+		"outer_radius": outer_radius,
+		"base_rotation_speed": min(0.04, float(phase_config.rotation_speed) + infinite_wave * 0.001),
+		"base_hp": int(round(float(phase_config.base_hp) * (1.0 + infinite_wave * 0.12))),
+		"base_gap_size": max(PI / 9.0, float(phase_config.gap_size) - infinite_wave * 0.006),
+		"base_thickness": 5.0,
+		"closing_speed": min(0.15, float(phase_config.closing_speed) + infinite_wave * 0.002),
+		"colors": ["#00f0ff", "#b000ff", "#ff0055", "#00ff88", "#ffd700", "#ff8800"],
+		"min_count": 12,
+		"max_count": 80
+	}
+	rings = RingLogic.create_rings(config, phase_id)
+	ball_pos = center
+	velocity = velocity.normalized() * max(2.0, velocity.length())
+	_add_float("Onda %d" % infinite_wave, ball_pos, Color("#00f0ff"))
+	AudioManager.play_sfx("level_up")
+	_update_hud()
+	_push_arena_state()
 
 func _on_arena_input(event):
 	if not running or paused or level_up_open:

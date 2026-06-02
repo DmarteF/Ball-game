@@ -31,6 +31,20 @@ func default_save():
 		"inventory_chests": {"common": 0, "rare": 0, "epic": 0, "legendary": 0},
 		"unlocked_effects": [],
 		"settings": {"sound": true, "music": true, "haptics": true},
+		"timed": {
+			"last_seen_at": Time.get_unix_time_from_system(),
+			"last_day_key": TimeSystem.day_key(),
+			"last_week_key": TimeSystem.week_key(),
+			"daily_reward_claimed_day": "",
+			"wheel_day_key": TimeSystem.day_key(),
+			"wheel_free_used": false,
+			"wheel_ad_spins_used": 0,
+			"event_week_key": TimeSystem.week_key(),
+			"event_points": 0,
+			"boss_day_key": TimeSystem.day_key(),
+			"boss_attempts": 0,
+			"pending_offline_reward": {"available": false, "coins": 0, "hours": 0.0}
+		},
 		"lifetime_stats": {
 			"runs_played": 0,
 			"rings_destroyed": 0,
@@ -61,11 +75,15 @@ func load_game():
 			if typeof(parsed) == TYPE_DICTIONARY:
 				loaded = parsed
 	save = normalize_save(loaded)
+	_update_timed_on_load(int(save.get("last_seen_at", TimeSystem.now())))
 	save_game()
 	return save
 
 func save_game():
-	save.last_seen_at = Time.get_unix_time_from_system()
+	save.last_seen_at = TimeSystem.now()
+	save.timed.last_seen_at = save.last_seen_at
+	save.timed.last_day_key = TimeSystem.day_key()
+	save.timed.last_week_key = TimeSystem.week_key()
 	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(save, "\t"))
@@ -84,6 +102,15 @@ func normalize_save(raw):
 	for key in base.lifetime_stats.keys():
 		if not next.lifetime_stats.has(key):
 			next.lifetime_stats[key] = base.lifetime_stats[key]
+	for key in base.settings.keys():
+		if not next.settings.has(key):
+			next.settings[key] = base.settings[key]
+	for key in base.timed.keys():
+		if not next.timed.has(key) or typeof(next.timed[key]) != typeof(base.timed[key]):
+			next.timed[key] = base.timed[key]
+	for key in base.timed.pending_offline_reward.keys():
+		if not next.timed.pending_offline_reward.has(key):
+			next.timed.pending_offline_reward[key] = base.timed.pending_offline_reward[key]
 	for chest_id in ["common", "rare", "epic", "legendary"]:
 		if not next.inventory_chests.has(chest_id):
 			next.inventory_chests[chest_id] = 0
@@ -116,6 +143,85 @@ func add_resource(currency, amount):
 		return
 	save[currency] = max(0, int(save.get(currency, 0)) + int(amount))
 	save_game()
+
+func get_timed_status():
+	return {
+		"day_key": TimeSystem.day_key(),
+		"week_key": TimeSystem.week_key(),
+		"daily_available": daily_reward_available(),
+		"wheel_available": wheel_available(),
+		"boss_available": int(save.timed.get("boss_attempts", 0)) < 3,
+		"event_id": TimeSystem.event_id_for_week(),
+		"boss_id": TimeSystem.boss_id_for_day(),
+		"seconds_until_next_day": TimeSystem.seconds_until_next_day(),
+		"offline": save.timed.pending_offline_reward.duplicate(true)
+	}
+
+func claim_offline_reward(double_reward = false):
+	var pending = save.timed.pending_offline_reward
+	if not bool(pending.get("available", false)):
+		return {"ok": false, "message": "Nenhuma recompensa AFK disponivel."}
+	var coins = int(pending.get("coins", 0))
+	if double_reward:
+		coins *= 2
+		record_ad_use()
+	save.coins += coins
+	save.timed.pending_offline_reward = {"available": false, "coins": 0, "hours": 0.0}
+	save_game()
+	return {"ok": true, "coins": coins, "message": "+%d moedas AFK" % coins}
+
+func daily_reward_available():
+	return String(save.timed.get("daily_reward_claimed_day", "")) != TimeSystem.day_key()
+
+func claim_daily_reward():
+	if not daily_reward_available():
+		return {"ok": false, "message": "Recompensa diaria ja coletada."}
+	save.coins += 350
+	save.gems += 18
+	save.keys += 1
+	save.timed.daily_reward_claimed_day = TimeSystem.day_key()
+	save_game()
+	return {"ok": true, "message": "+350 moedas, +18 diamantes, +1 chave", "coins": 350, "gems": 18, "keys": 1}
+
+func wheel_available():
+	_reset_daily_timers_if_needed()
+	return not bool(save.timed.get("wheel_free_used", false)) or int(save.timed.get("wheel_ad_spins_used", 0)) < 2
+
+func spin_wheel(use_ad = false):
+	_reset_daily_timers_if_needed()
+	if use_ad:
+		if int(save.timed.get("wheel_ad_spins_used", 0)) >= 2:
+			return {"ok": false, "message": "Giros com anuncio esgotados hoje."}
+		record_ad_use()
+		save.timed.wheel_ad_spins_used = int(save.timed.get("wheel_ad_spins_used", 0)) + 1
+	else:
+		if bool(save.timed.get("wheel_free_used", false)):
+			return {"ok": false, "message": "Giro gratis ja usado hoje."}
+		save.timed.wheel_free_used = true
+	var rewards = [
+		{"type": "coins", "amount": 180, "label": "+180 moedas"},
+		{"type": "coins", "amount": 420, "label": "+420 moedas"},
+		{"type": "gems", "amount": 12, "label": "+12 diamantes"},
+		{"type": "key", "amount": 1, "label": "+1 chave"},
+		{"type": "chest", "chest": "rare", "amount": 1, "label": "+1 bau raro"},
+		{"type": "effect", "label": "Trilha Neon diaria"}
+	]
+	var reward = rewards[randi() % rewards.size()]
+	match reward.type:
+		"coins":
+			save.coins += int(reward.amount)
+		"gems":
+			save.gems += int(reward.amount)
+		"key":
+			save.keys += int(reward.amount)
+		"chest":
+			add_chest(reward.chest, int(reward.amount))
+			return {"ok": true, "reward": reward, "message": reward.label}
+		"effect":
+			if not (reward.label in save.unlocked_effects):
+				save.unlocked_effects.append(reward.label)
+	save_game()
+	return {"ok": true, "reward": reward, "message": reward.label}
 
 func can_pay(currency, cost):
 	return int(save.get(currency, 0)) >= int(cost)
@@ -299,6 +405,7 @@ func record_run(summary, multiplier = 1):
 	var global_coins = GameData.get_global_coins_from_run(run_coins, best_combo, won)
 	save.coins += global_coins
 	save.gems += gems
+	save.timed.event_points = int(save.timed.get("event_points", 0)) + max(1, int(summary.get("rings_broken", 0)))
 	_apply_profile_xp(profile_xp)
 	save.lifetime_stats.runs_played += 1
 	save.lifetime_stats.rings_destroyed += int(summary.get("rings_broken", 0))
@@ -340,6 +447,28 @@ func _apply_profile_xp(amount):
 		save.profile_xp -= GameData.get_profile_xp_needed(int(save.profile_level))
 		save.profile_level += 1
 	save = _sync_unlocks(save)
+
+func _update_timed_on_load(previous_seen_at):
+	_reset_daily_timers_if_needed()
+	var hours = min(12.0, TimeSystem.hours_since(previous_seen_at))
+	var coins_per_hour = 42 + int(save.profile_level) * 6 + int(save.lifetime_stats.highest_phase) * 4
+	var coins = int(floor(hours * coins_per_hour))
+	if hours >= 0.12 and coins >= 25:
+		save.timed.pending_offline_reward = {"available": true, "coins": coins, "hours": hours}
+
+func _reset_daily_timers_if_needed():
+	var today = TimeSystem.day_key()
+	var week = TimeSystem.week_key()
+	if String(save.timed.get("wheel_day_key", "")) != today:
+		save.timed.wheel_day_key = today
+		save.timed.wheel_free_used = false
+		save.timed.wheel_ad_spins_used = 0
+	if String(save.timed.get("boss_day_key", "")) != today:
+		save.timed.boss_day_key = today
+		save.timed.boss_attempts = 0
+	if String(save.timed.get("event_week_key", "")) != week:
+		save.timed.event_week_key = week
+		save.timed.event_points = 0
 
 func _sync_unlocks(next):
 	var unlocked = _unique_strings(next.unlocked_upgrades)

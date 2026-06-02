@@ -1,6 +1,6 @@
-# Neon Idle Escape - Godot 4 rebuild
+# Neon Idle Escape - Godot 4
 
-Esta pasta contem uma recriacao em Godot 4 do jogo atual, mantendo o projeto Expo/React Native antigo intacto fora de `/godot`.
+Esta pasta contem a versao Godot 4 de Neon Idle Escape, mantendo o projeto Expo/React Native antigo intacto fora de `/godot`.
 
 ## Como abrir
 
@@ -13,7 +13,8 @@ O jogo usa GDScript, cenas `.tscn`, autoloads e assets nativos do Godot. Nao usa
 
 ## Como jogar/testar
 
-- Menu principal: `Jogar`, `Upgrades`, `Skins`, `Loja`, `Baus`.
+- Menu principal: `Melhorias`, `Skins`, `Jogar` e overlay `Menu` com Loja, Inventario, Missoes, Evento, Roleta, Recompensa diaria, Boss, Liga Neon, Conquistas e Configuracoes.
+- Jogar: seletor com 50 fases e modo infinito liberado apos progresso inicial.
 - Arena: a bolinha se move continuamente; toque ou clique na arena para aplicar impulso na direcao tocada.
 - Controles: `GIRAR -`, `IMPULSO`, `GIRAR +`, upgrades de rodada por moedas e pausa.
 - Objetivo: sobreviver aos aneis, atravessar o centro da abertura para Perfect, quebrar aneis no impacto e completar a fase.
@@ -89,8 +90,11 @@ Nao foram copiados os logos padrao do React (`react-logo*.png`, `partial-react-l
 
 - projeto Godot real com `project.godot`, cenas e scripts separados;
 - autoloads `GameData`, `SaveSystem`, `AudioManager`, `AdsService`;
+- autoload `TimeSystem` com relogio local, chave diaria/semanal, reset diario, reset semanal e timers;
 - progresso local em `user://neon_idle_escape_godot_save.json`;
+- coleta AFK/offline ao abrir o jogo, com opcao 2x via anuncio mock;
 - fases 1-50 com dificuldade procedural baseada no projeto atual;
+- modo infinito jogavel com ondas crescentes reaproveitando a arena;
 - aneis concentricos com rotacao alternada, gaps, aneis solidos, HP, fechamento e spacing;
 - fisica da bolinha com colisao radial, reflexao, parede externa e impulso por toque;
 - Perfect Escape ao cruzar o vao do anel, com chance pequena de diamante;
@@ -101,12 +105,22 @@ Nao foram copiados os logos padrao do React (`react-logo*.png`, `partial-react-l
 - baus por raridade com skins, fragmentos, moedas, diamantes, chaves, efeitos e upgrades;
 - tela de skins com filtros, equipar, evoluir e criar com fragmentos;
 - tela de game over/recompensas com dobrar recompensa via anuncio mock;
+- menu inicial polido com identidade Neon Idle Escape, visual escuro/roxo, brilho ciano, cards arredondados e botoes mobile;
+- menu completo com telas polidas para Inventario, Missoes, Evento, Roleta, Recompensa diaria, Boss, Liga Neon, Conquistas e Configuracoes;
+- recompensa diaria funcional: moedas, diamantes e chave uma vez por dia;
+- roleta funcional com giro gratis diario e giros por anuncio mock;
+- inventario com resumo de baus, skins, efeitos e atalhos;
+- missoes, eventos, boss, liga e conquistas estruturados com progresso local/mock para expansao;
+- configuracoes de som, musica e haptics salvas localmente;
 - musica/SFX usando assets originais;
 - UI vertical pensada para celular e Web mobile.
 
 ## Pendencias conhecidas
 
-- boss, liga, missoes diarias, eventos, roleta, inventario detalhado e conquistas ainda estao fora deste primeiro rebuild jogavel.
+- Boss ainda usa tela/estrutura local e precisa de combate dedicado.
+- Liga Neon ainda usa ranking local/mock; ranking online depende de backend futuro.
+- Missoes, eventos e conquistas exibem progresso real/local, mas coleta completa de recompensas e calendario sazonal ainda precisam ser finalizados.
+- Inventario esta funcional como hub de baus/skins/efeitos, mas ainda pode ganhar lista detalhada de todos os itens.
 - Billing real nao foi migrado; loja usa fluxo funcional local/mock.
 - Ads reais nao foram integrados; `AdsService.gd` e um stub recompensado.
 - APK Android esta apenas estruturado.
@@ -115,12 +129,15 @@ Nao foram copiados os logos padrao do React (`react-logo*.png`, `partial-react-l
 
 ## Validacao local realizada
 
-Neste rebuild foi validado no container com Godot 4.3 headless:
+Esta versao foi validada no container com Godot 4.3 headless:
 
 ```bash
 godot --headless --path godot --quit
 godot --headless --path godot --scene res://scenes/Main.tscn --quit-after 1
 godot --headless --path godot --scene res://scenes/Game.tscn --quit-after 1
+godot --headless --path godot --scene res://scenes/MainMenu.tscn --quit-after 1
+godot --headless --path godot --scene res://scenes/PhaseSelect.tscn --quit-after 1
+godot --headless --path godot --scene res://scenes/Feature.tscn --quit-after 1
 godot --headless --path godot --export-release "Web" build/web/index.html
 ```
 

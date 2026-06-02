@@ -8,7 +8,16 @@ const SCENES = {
 	"shop": "res://scenes/Shop.tscn",
 	"upgrades": "res://scenes/Upgrades.tscn",
 	"skins": "res://scenes/Skins.tscn",
-	"chests": "res://scenes/Chests.tscn"
+	"chests": "res://scenes/Chests.tscn",
+	"inventory": "res://scenes/Feature.tscn",
+	"missions": "res://scenes/Feature.tscn",
+	"event": "res://scenes/Feature.tscn",
+	"wheel": "res://scenes/Feature.tscn",
+	"daily_reward": "res://scenes/Feature.tscn",
+	"boss": "res://scenes/Feature.tscn",
+	"league": "res://scenes/Feature.tscn",
+	"achievements": "res://scenes/Feature.tscn",
+	"settings": "res://scenes/Feature.tscn"
 }
 
 @onready var screen_host = $ScreenHost
@@ -29,6 +38,8 @@ func go_to(key, payload = {}):
 	current_screen = packed.instantiate()
 	screen_host.add_child(current_screen)
 	current_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	if SCENES[key] == "res://scenes/Feature.tscn":
+		payload["feature"] = key
 	if current_screen.has_method("setup"):
 		current_screen.setup(payload)
 	if key == "game":
@@ -36,8 +47,11 @@ func go_to(key, payload = {}):
 	elif key != "game_over":
 		AudioManager.play_music("menu")
 
+func _notification(what):
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+		SaveSystem.save_game()
+
 func get_active_payload():
 	if current_screen and current_screen.has_method("get_payload"):
 		return current_screen.get_payload()
 	return {}
-

@@ -6,7 +6,7 @@ config_version=5
 [application]
 
 config/name="Neon Idle Escape Godot"
-config/description="Godot 4 rebuild of the Ball-game / Neon Idle Escape experience."
+config/description="Neon Idle Escape em Godot 4."
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.3", "Mobile", "web")
 config/icon="res://assets/images/app/icon.png"
@@ -14,6 +14,7 @@ config/icon="res://assets/images/app/icon.png"
 [autoload]
 
 GameData="*res://autoload/GameData.gd"
+TimeSystem="*res://autoload/TimeSystem.gd"
 SaveSystem="*res://autoload/SaveSystem.gd"
 AdsService="*res://autoload/AdsService.gd"
 AudioManager="*res://autoload/AudioManager.gd"
@@ -38,4 +39,3 @@ touch_nudge={
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/canvas_textures/default_texture_filter=1
-

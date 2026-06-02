@@ -58,6 +58,9 @@ func play_music(key):
 	current_music = key
 	if not music_enabled:
 		return
+	if music_player == null or not music_player.is_inside_tree():
+		call_deferred("play_music", key)
+		return
 	var path = MUSIC.get(key, "")
 	if path == "" or not ResourceLoader.exists(path):
 		return
@@ -68,6 +71,8 @@ func play_music(key):
 
 func play_sfx(key):
 	if not sound_enabled:
+		return
+	if sfx_players.is_empty() or not is_inside_tree():
 		return
 	var path = SFX.get(key, "")
 	if path == "" or not ResourceLoader.exists(path):
@@ -82,4 +87,3 @@ func play_sfx(key):
 func _on_music_finished():
 	if current_music != "" and music_enabled:
 		music_player.play()
-
