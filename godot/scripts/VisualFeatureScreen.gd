@@ -3,6 +3,7 @@ extends Control
 @export var screen_id := "shop"
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
+const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
 	"shop": "res://assets/ui/ui_store.png",
@@ -205,17 +206,13 @@ func _build_screen() -> void:
 	root.offset_left = 18.0
 	root.offset_top = 50.0
 	root.offset_right = -18.0
-	root.offset_bottom = 0.0
+	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 12)
 	add_child(root)
 
-	var back := _make_back_button()
-	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	back.pressed.connect(_go_back)
-	root.add_child(back)
-
 	var header := _make_header(data)
 	root.add_child(header)
+	NeonBackButtonScript.add_to(self, _go_back)
 
 	if screen_id == "shop":
 		root.add_child(_make_wallet())
@@ -252,7 +249,7 @@ func _populate_content(data: Dictionary) -> void:
 	else:
 		for card_data in data["cards"]:
 			_content.add_child(_make_feature_card(card_data))
-	_content.add_child(_spacer(18))
+	_content.add_child(_spacer(24))
 
 
 func _make_header(data: Dictionary) -> PanelContainer:
@@ -519,17 +516,6 @@ func _make_flat_button(text: String, color: String, size: int) -> Button:
 	button.add_theme_font_size_override("font_size", size)
 	button.add_theme_color_override("font_color", Color(color))
 	_apply_button_style(button, _make_style("#00000000", 0))
-	return button
-
-
-func _make_back_button() -> Button:
-	var button := Button.new()
-	button.text = "Back"
-	button.custom_minimum_size = Vector2(180, 48)
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_override("font", _bold_font)
-	button.add_theme_color_override("font_color", Color("#001018"))
-	_apply_button_style(button, _make_style("#00f0ff", 12, "#00000000", 0, "#00f0ff99", 10))
 	return button
 
 

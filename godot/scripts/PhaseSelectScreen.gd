@@ -3,6 +3,7 @@ extends Control
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const PLACEHOLDER_SCENE := "res://scenes/Placeholder.tscn"
 const GAME_SCENE := "res://scenes/GameScene.tscn"
+const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
 	"infinite": "res://assets/ui/ui_infinite.png",
@@ -41,14 +42,12 @@ func _build_screen() -> void:
 	root.offset_left = 20.0
 	root.offset_top = 50.0
 	root.offset_right = -20.0
-	root.offset_bottom = 0.0
+	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 10)
 	add_child(root)
 
-	var back := _make_back_button()
-	back.pressed.connect(_go_back)
-	root.add_child(back)
 	root.add_child(_make_label("SELECIONAR FASE", 32, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	NeonBackButtonScript.add_to(self, _go_back)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -232,17 +231,6 @@ func _make_label(text: String, font_size: int, color: String, font: Font, alignm
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
-
-
-func _make_back_button() -> Button:
-	var button := Button.new()
-	button.text = "Back"
-	button.custom_minimum_size = Vector2(180, 48)
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_override("font", _bold_font)
-	button.add_theme_color_override("font_color", Color("#001018"))
-	_apply_button_style(button, _make_style("#00f0ff", 12, "#00000000", 0, "#00f0ff99", 10))
-	return button
 
 
 func _make_background_gradient() -> GradientTexture2D:

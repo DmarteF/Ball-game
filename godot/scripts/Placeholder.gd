@@ -1,6 +1,7 @@
 extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
+const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 var _regular_font: Font
 var _bold_font: Font
@@ -44,22 +45,11 @@ func _build_content() -> void:
 	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color("#00f0ff"))
 	column.add_child(title)
+	NeonBackButtonScript.add_to(self, _go_back)
 
-	var back := Button.new()
-	back.text = "Back"
-	back.custom_minimum_size = Vector2(180, 48)
-	back.focus_mode = Control.FOCUS_NONE
-	back.add_theme_font_override("font", _bold_font)
-	back.add_theme_color_override("font_color", Color("#001018"))
-	var style := _make_style("#00f0ff", 12, "#00000000", 0, "#00f0ff99", 10)
-	back.add_theme_stylebox_override("normal", style)
-	back.add_theme_stylebox_override("hover", style)
-	back.add_theme_stylebox_override("pressed", style)
-	back.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	back.pressed.connect(func() -> void:
-		get_tree().change_scene_to_file(MENU_SCENE)
-	)
-	column.add_child(back)
+
+func _go_back() -> void:
+	get_tree().change_scene_to_file(MENU_SCENE)
 
 
 func _make_background_gradient() -> GradientTexture2D:

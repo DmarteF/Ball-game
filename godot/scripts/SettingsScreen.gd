@@ -2,6 +2,7 @@ extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const SETTINGS_PATH := "user://settings.json"
+const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
 	"settings": "res://assets/ui/ui_settings.png",
@@ -42,20 +43,16 @@ func _build_screen() -> void:
 	root.offset_left = 18.0
 	root.offset_top = 50.0
 	root.offset_right = -18.0
-	root.offset_bottom = -18.0
+	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 14)
 	add_child(root)
-
-	var back := _make_back_button()
-	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	back.pressed.connect(_go_back)
-	root.add_child(back)
 
 	var title_row := HBoxContainer.new()
 	title_row.add_theme_constant_override("separation", 12)
 	root.add_child(title_row)
 	title_row.add_child(_make_icon("settings", 34))
 	title_row.add_child(_make_label("CONFIGURAÇÕES", 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	NeonBackButtonScript.add_to(self, _go_back)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -70,7 +67,7 @@ func _build_screen() -> void:
 	content.add_child(_make_audio_card())
 	content.add_child(_make_language_card())
 	content.add_child(_make_about_card())
-	content.add_child(_make_back_card())
+	content.add_child(_spacer(18))
 
 
 func _make_audio_card() -> PanelContainer:
@@ -122,16 +119,6 @@ func _make_about_card() -> PanelContainer:
 	var text := _make_label("Versão Godot 4 em migração fiel, mantendo o visual neon, controles mobile e estrutura preparada para Web.", 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(text)
-	return card
-
-
-func _make_back_card() -> PanelContainer:
-	var card := _make_card()
-	var body := _card_body(card)
-	var back := _make_solid_button("VOLTAR AO MENU", "#00f0ff", "#001018", 220, 52)
-	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	back.pressed.connect(_go_back)
-	body.add_child(back)
 	return card
 
 
@@ -211,17 +198,6 @@ func _make_flat_button(text: String, color: String, size: int) -> Button:
 	return button
 
 
-func _make_back_button() -> Button:
-	var button := Button.new()
-	button.text = "Back"
-	button.custom_minimum_size = Vector2(180, 48)
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_override("font", _bold_font)
-	button.add_theme_color_override("font_color", Color("#001018"))
-	_apply_button_style(button, _make_style("#00f0ff", 12, "#00000000", 0, "#00f0ff99", 10))
-	return button
-
-
 func _make_solid_button(text: String, bg: String, color: String, width: float, height: float) -> Button:
 	var button := Button.new()
 	button.text = text
@@ -232,6 +208,13 @@ func _make_solid_button(text: String, bg: String, color: String, width: float, h
 	button.add_theme_color_override("font_color", Color(color))
 	_apply_button_style(button, _make_style(bg, 10, "#ffffff22", 1))
 	return button
+
+
+func _spacer(height: float) -> Control:
+	var spacer := Control.new()
+	spacer.custom_minimum_size.y = height
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return spacer
 
 
 func _make_background_gradient() -> GradientTexture2D:

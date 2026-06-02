@@ -1,6 +1,7 @@
 extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
+const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
 	"coin": "res://assets/ui/ui_coin.png",
@@ -61,15 +62,12 @@ func _build_screen() -> void:
 	root.offset_left = 20.0
 	root.offset_top = 50.0
 	root.offset_right = -20.0
-	root.offset_bottom = 0.0
+	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 10)
 	add_child(root)
 
-	var back := _make_back_button()
-	back.pressed.connect(_go_back)
-	root.add_child(back)
-
 	root.add_child(_make_label("UPGRADES PERMANENTES", 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	NeonBackButtonScript.add_to(self, _go_back)
 	root.add_child(_make_resource_display())
 
 	var scroll := ScrollContainer.new()
@@ -195,17 +193,6 @@ func _make_label(text: String, font_size: int, color: String, font: Font, alignm
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
-
-
-func _make_back_button() -> Button:
-	var button := Button.new()
-	button.text = "Back"
-	button.custom_minimum_size = Vector2(180, 48)
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_override("font", _bold_font)
-	button.add_theme_color_override("font_color", Color("#001018"))
-	_apply_button_style(button, _make_style("#00f0ff", 12, "#00000000", 0, "#00f0ff99", 10))
-	return button
 
 
 func _make_background_gradient() -> GradientTexture2D:
