@@ -63,7 +63,7 @@ func _build_screen() -> void:
 	header.add_theme_constant_override("separation", 8)
 	root.add_child(header)
 
-	var back := _make_flat_button("← VOLTAR", "#00f0ff", 16)
+	var back := _make_back_button()
 	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	back.pressed.connect(_go_back)
 	header.add_child(back)
@@ -468,6 +468,17 @@ func _make_flat_button(text: String, color: String, size: int) -> Button:
 	button.add_theme_font_size_override("font_size", size)
 	button.add_theme_color_override("font_color", Color(color))
 	_apply_button_style(button, _make_style("#00000000", 0))
+	return button
+
+
+func _make_back_button() -> Button:
+	var button := Button.new()
+	button.text = "Back"
+	button.custom_minimum_size = Vector2(180, 48)
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_color_override("font_color", Color("#001018"))
+	_apply_button_style(button, _make_style("#00f0ff", 12, "#00000000", 0, "#00f0ff99", 10))
 	return button
 
 

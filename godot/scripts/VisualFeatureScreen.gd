@@ -44,13 +44,9 @@ const SCREEN_DATA := {
 		"icon": "inventory",
 		"subtitle": "Área visual para baús, chaves, itens e recompensas guardadas.",
 		"accent": "#ffd700",
-		"cards": [
-			{ "title": "Baú comum", "desc": "3 disponíveis. Recompensas básicas e moedas.", "icon": "chest_common", "button": "ABRIR", "tone": "#9ca3af" },
-			{ "title": "Baú raro", "desc": "Chance visual de diamantes, efeitos e skins raras.", "icon": "chest_rare", "button": "ABRIR", "tone": "#00aaff" },
-			{ "title": "Baú épico", "desc": "Itens melhores preparados para recompensas futuras.", "icon": "chest_epic", "button": "ABRIR", "tone": "#b000ff" },
-			{ "title": "Chaves", "desc": "Chaves comuns e lendárias organizadas em cards.", "icon": "key", "button": "VER", "tone": "#ffd700" },
-			{ "title": "Itens e efeitos", "desc": "Espaço reservado para skins, trilhas e boosts.", "icon": "inventory", "button": "DETALHES", "tone": "#00ff88" },
-		],
+		"empty_title": "Seu inventário está vazio",
+		"empty_desc": "Baús, chaves, skins, efeitos e recompensas aparecerão aqui quando forem obtidos.",
+		"cards": [],
 	},
 	"missions": {
 		"title": "MISSÕES",
@@ -69,11 +65,9 @@ const SCREEN_DATA := {
 		"icon": "event",
 		"subtitle": "Tela visual preparada para eventos temporários e recompensas especiais.",
 		"accent": "#00ff88",
-		"cards": [
-			{ "title": "Festival dos Baús", "desc": "Tempo restante mockado: 2d 14h. Ganhe pontos abrindo baús.", "icon": "product_event", "button": "PARTICIPAR", "tone": "#00ff88" },
-			{ "title": "Trilha de recompensas", "desc": "Moedas, diamantes, chaves e skins futuras.", "icon": "chest_epic", "button": "VER EVENTO", "tone": "#ffd700" },
-			{ "title": "Bônus ativo", "desc": "Mais chance visual de baú raro durante o evento.", "icon": "chest_rare", "button": "DETALHES", "tone": "#00aaff" },
-		],
+		"empty_title": "Nenhum evento ativo no momento",
+		"empty_desc": "Eventos temporários aparecerão aqui com banner, tempo restante e recompensas quando forem ativados.",
+		"cards": [],
 	},
 	"wheel": {
 		"title": "ROLETA",
@@ -102,8 +96,68 @@ const SCREEN_DATA := {
 	},
 }
 
+const SHOP_TABS := [
+	{
+		"id": "chests",
+		"label": "Baús",
+		"section": "COMPRAR E ABRIR",
+		"cards": [
+			{ "title": "Baú Comum", "desc": "Recompensas básicas, moedas e chance de skin comum.", "icon": "chest_common", "button": "ABRIR", "tone": "#9ca3af", "price": "100" },
+			{ "title": "Baú Raro", "desc": "Chance maior de diamantes, itens raros e efeitos.", "icon": "chest_rare", "button": "ABRIR", "tone": "#00aaff", "price": "40" },
+			{ "title": "Baú Épico", "desc": "Recompensas melhores e chance de skins épicas.", "icon": "chest_epic", "button": "ABRIR", "tone": "#b000ff", "price": "120" },
+			{ "title": "Baú Lendário", "desc": "Skins lendárias, diamantes e itens especiais.", "icon": "chest_legendary", "button": "ABRIR", "tone": "#ffd700", "price": "1" },
+		],
+	},
+	{
+		"id": "gems",
+		"label": "Diamantes",
+		"section": "PACOTES DE DIAMANTES",
+		"cards": [
+			{ "title": "Pacote pequeno de diamantes", "desc": "Diamantes para baús, skins e ofertas.", "icon": "product_diamonds", "button": "COMPRAR", "tone": "#00ff88", "price": "R$ 4,90" },
+			{ "title": "Pacote médio de diamantes", "desc": "Mais valor para evoluir sua coleção.", "icon": "product_diamonds", "button": "COMPRAR", "tone": "#00ff88", "price": "R$ 9,90" },
+			{ "title": "Oferta diária", "desc": "Pacote visual diário com diamantes e bônus.", "icon": "product_daily", "button": "COMPRAR", "tone": "#ffd700", "price": "R$ 6,90" },
+			{ "title": "Diamantes grátis", "desc": "Recompensa mockada por anúncio.", "icon": "gem", "button": "VER ANÚNCIO", "tone": "#00f0ff", "price": "+12" },
+		],
+	},
+	{
+		"id": "keys",
+		"label": "Chaves",
+		"section": "CHAVES",
+		"cards": [
+			{ "title": "Pacote de chaves", "desc": "+6 chaves raras para abrir recompensas.", "icon": "key", "button": "COMPRAR", "tone": "#00f0ff", "price": "80" },
+			{ "title": "Chaves lendárias", "desc": "+2 chaves lendárias para baús premium.", "icon": "chest_legendary", "button": "COMPRAR", "tone": "#ffd700", "price": "180" },
+			{ "title": "Chave grátis", "desc": "Recompensa mockada por anúncio.", "icon": "key", "button": "VER ANÚNCIO", "tone": "#00ff88", "price": "+1" },
+		],
+	},
+	{
+		"id": "specials",
+		"label": "Recompensas",
+		"section": "OFERTAS ESPECIAIS",
+		"cards": [
+			{ "title": "Pacote inicial", "desc": "Moedas, diamantes e chaves para acelerar o começo.", "icon": "product_starter", "button": "COMPRAR", "tone": "#00f0ff", "price": "R$ 7,90" },
+			{ "title": "Pacote de skins", "desc": "Visual preparado para liberar skins futuras.", "icon": "product_chests", "button": "COMPRAR", "tone": "#ff00aa", "price": "R$ 12,90" },
+			{ "title": "Pacote de evento", "desc": "Bundle visual temporário preparado para eventos.", "icon": "product_event", "button": "COMPRAR", "tone": "#00ff88", "price": "R$ 14,90" },
+			{ "title": "Pacote de baús", "desc": "Baús variados para recompensas futuras.", "icon": "product_chests", "button": "COMPRAR", "tone": "#ffd700", "price": "R$ 9,90" },
+		],
+	},
+	{
+		"id": "free",
+		"label": "Baú grátis",
+		"section": "RECOMPENSAS GRÁTIS",
+		"cards": [
+			{ "title": "Diamantes grátis", "desc": "Assista um anúncio mockado para receber diamantes.", "icon": "gem", "button": "VER ANÚNCIO", "tone": "#00ff88", "price": "+12" },
+			{ "title": "Moedas grátis", "desc": "Assista um anúncio mockado para receber moedas.", "icon": "coin", "button": "VER ANÚNCIO", "tone": "#ffd700", "price": "+300" },
+			{ "title": "Baú comum grátis", "desc": "Recompensa visual por anúncio.", "icon": "chest_common", "button": "VER ANÚNCIO", "tone": "#00f0ff", "price": "1x" },
+			{ "title": "Dobrar offline", "desc": "Preparado para dobrar recompensas AFK.", "icon": "product_daily", "button": "VER ANÚNCIO", "tone": "#ff8800", "price": "2x" },
+		],
+	},
+]
+
 var _regular_font: Font
 var _bold_font: Font
+var _shop_tab := "chests"
+var _content: VBoxContainer
+var _shop_tab_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -137,13 +191,17 @@ func _build_screen() -> void:
 	root.add_theme_constant_override("separation", 12)
 	add_child(root)
 
-	var back := _make_flat_button("← VOLTAR", "#00f0ff", 16)
+	var back := _make_back_button()
 	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	back.pressed.connect(_go_back)
 	root.add_child(back)
 
 	var header := _make_header(data)
 	root.add_child(header)
+
+	if screen_id == "shop":
+		root.add_child(_make_wallet())
+		root.add_child(_make_shop_tabs())
 
 	if screen_id == "wheel":
 		root.add_child(_make_wheel_visual(data))
@@ -153,14 +211,30 @@ func _build_screen() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	root.add_child(scroll)
 
-	var content := VBoxContainer.new()
-	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content.add_theme_constant_override("separation", 12)
-	scroll.add_child(content)
+	_content = VBoxContainer.new()
+	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_content.add_theme_constant_override("separation", 12)
+	scroll.add_child(_content)
 
-	for card_data in data["cards"]:
-		content.add_child(_make_feature_card(card_data))
-	content.add_child(_spacer(18))
+	_populate_content(data)
+
+
+func _populate_content(data: Dictionary) -> void:
+	for child in _content.get_children():
+		child.queue_free()
+
+	if screen_id == "shop":
+		_content.add_child(_make_section_title(_current_shop_tab()["section"]))
+		for card_data in _current_shop_tab()["cards"]:
+			_content.add_child(_make_feature_card(card_data))
+		_content.add_child(_make_section_title("BAÚS GUARDADOS"))
+		_content.add_child(_make_empty_state("Nenhum baú comprado no inventário", "Baús adquiridos ou recebidos aparecerão aqui para abrir depois.", "chest_common"))
+	elif data.get("cards", []).is_empty() and data.has("empty_title"):
+		_content.add_child(_make_empty_state(String(data["empty_title"]), String(data["empty_desc"]), String(data["icon"])))
+	else:
+		for card_data in data["cards"]:
+			_content.add_child(_make_feature_card(card_data))
+	_content.add_child(_spacer(18))
 
 
 func _make_header(data: Dictionary) -> PanelContainer:
@@ -180,6 +254,106 @@ func _make_header(data: Dictionary) -> PanelContainer:
 	var subtitle := _make_label(String(data["subtitle"]), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(subtitle)
+	return card
+
+
+func _current_shop_tab() -> Dictionary:
+	for tab in SHOP_TABS:
+		if String(tab["id"]) == _shop_tab:
+			return tab
+	return SHOP_TABS[0]
+
+
+func _make_wallet() -> HBoxContainer:
+	var wallet := HBoxContainer.new()
+	wallet.add_theme_constant_override("separation", 8)
+	wallet.add_child(_make_wallet_item("coin", "600"))
+	wallet.add_child(_make_wallet_item("gem", "60"))
+	wallet.add_child(_make_wallet_item("key", "1"))
+	wallet.add_child(_make_wallet_item("chest_legendary", "0"))
+	return wallet
+
+
+func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
+	var item := PanelContainer.new()
+	item.add_theme_stylebox_override("panel", _make_style("#ffffff12", 8, "#ffffff22", 1))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_top", 5)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_bottom", 5)
+	item.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 5)
+	margin.add_child(row)
+	row.add_child(_make_icon(icon_key, 17))
+	row.add_child(_make_label(value, 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return item
+
+
+func _make_shop_tabs() -> HBoxContainer:
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	_shop_tab_buttons.clear()
+	for tab in SHOP_TABS:
+		tabs.add_child(_make_shop_tab_button(tab))
+	return tabs
+
+
+func _make_shop_tab_button(tab: Dictionary) -> Button:
+	var active := String(tab["id"]) == _shop_tab
+	var button := Button.new()
+	button.text = String(tab["label"])
+	button.custom_minimum_size.y = 42
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_font_size_override("font_size", 11)
+	button.set_meta("tab_id", String(tab["id"]))
+	_apply_shop_tab_style(button, active)
+	button.pressed.connect(func() -> void:
+		_shop_tab = String(tab["id"])
+		_refresh_shop_tabs()
+		_populate_content(SCREEN_DATA["shop"])
+	)
+	_shop_tab_buttons.append(button)
+	return button
+
+
+func _refresh_shop_tabs() -> void:
+	for button in _shop_tab_buttons:
+		_apply_shop_tab_style(button, String(button.get_meta("tab_id")) == _shop_tab)
+
+
+func _apply_shop_tab_style(button: Button, active: bool) -> void:
+	button.add_theme_color_override("font_color", Color("#001018") if active else Color("#ffffffaa"))
+	_apply_button_style(button, _make_style("#00f0ff" if active else "#ffffff11", 8))
+
+
+func _make_section_title(text: String) -> Label:
+	var label := _make_label(text, 12, "#ffffff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.add_theme_constant_override("letter_spacing", 1)
+	return label
+
+
+func _make_empty_state(title: String, desc: String, icon_key: String) -> PanelContainer:
+	var card := _make_card("#ffffff10", "#00f0ff44")
+	card.custom_minimum_size.y = 210
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	card.add_child(margin)
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 12)
+	margin.add_child(column)
+	column.add_child(_make_icon(icon_key, 52, Color("#ffffffcc")))
+	column.add_child(_make_label(title, 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var label := _make_label(desc, 13, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(label)
 	return card
 
 
@@ -207,8 +381,14 @@ func _make_feature_card(data: Dictionary) -> PanelContainer:
 	if data.has("progress"):
 		column.add_child(_make_progress_bar(float(data["progress"]), tone))
 
+	var right := VBoxContainer.new()
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	right.add_theme_constant_override("separation", 5)
+	row.add_child(right)
+	if data.has("price"):
+		right.add_child(_make_label(String(data["price"]), 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	var button := _make_action_button(String(data.get("button", "VER")), tone)
-	row.add_child(button)
+	right.add_child(button)
 	return card
 
 
@@ -315,6 +495,17 @@ func _make_flat_button(text: String, color: String, size: int) -> Button:
 	button.add_theme_font_size_override("font_size", size)
 	button.add_theme_color_override("font_color", Color(color))
 	_apply_button_style(button, _make_style("#00000000", 0))
+	return button
+
+
+func _make_back_button() -> Button:
+	var button := Button.new()
+	button.text = "Back"
+	button.custom_minimum_size = Vector2(180, 48)
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_color_override("font_color", Color("#001018"))
+	_apply_button_style(button, _make_style("#00f0ff", 12, "#00000000", 0, "#00f0ff99", 10))
 	return button
 
 
