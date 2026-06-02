@@ -64,6 +64,7 @@ var _all_skin_data: Array = []
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
+	GameState.refresh_unlocks(false)
 	_all_skin_data = _build_all_skin_data()
 	_build_background()
 	_build_screen()
@@ -207,7 +208,7 @@ func _populate_skins() -> void:
 	for child in _content_grid.get_children():
 		child.queue_free()
 	for skin in _all_skin_data:
-		var owned := bool(skin.get("owned", false))
+		var owned := _is_owned(String(skin["id"]))
 		if _filter == "owned" and not owned:
 			continue
 		if _filter == "locked" and owned:
@@ -266,7 +267,7 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 7)
 		column.add_child(row)
-		row.add_child(_make_action("USANDO" if selected else "EQUIPAR", "#00f0ff", selected))
+		row.add_child(_make_action("USANDO" if selected else "EQUIPAR", "#00f0ff", selected, _equip_skin.bind(String(skin["id"]))))
 		row.add_child(_make_action("EVOLUIR", "#00ff88", true))
 	else:
 		column.add_child(_make_label("Revele em baús" if hidden else "Disponível em baús", 11, "#ffffff77", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
@@ -334,13 +335,17 @@ func _make_skin_icon(skin_id: String, hidden: bool, tint: Color) -> PanelContain
 	if hidden:
 		center.add_child(_make_label("?", 26, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
-		var texture := TextureRect.new()
-		texture.texture = load("res://assets/skins/%s.png" % skin_id)
-		texture.custom_minimum_size = Vector2(54, 54)
-		texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		texture.modulate = tint.lightened(0.15)
-		center.add_child(texture)
+		var path := "res://assets/skins/%s.png" % skin_id
+		if ResourceLoader.exists(path):
+			var texture := TextureRect.new()
+			texture.texture = load(path)
+			texture.custom_minimum_size = Vector2(54, 54)
+			texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			texture.modulate = tint.lightened(0.15)
+			center.add_child(texture)
+		else:
+			center.add_child(_make_label("?", 26, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return box
 
 
@@ -357,18 +362,31 @@ func _make_effect_badge(text: String, color: String) -> PanelContainer:
 	return badge
 
 
-func _make_action(text: String, color: String, disabled: bool) -> Button:
+func _make_action(text: String, color: String, disabled: bool, action: Callable = Callable()) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(66, 34)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
 	button.modulate.a = 0.45 if disabled else 1.0
+	button.disabled = disabled
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 10)
 	button.add_theme_color_override("font_color", Color("#001018"))
 	_apply_button_style(button, _make_style(color, 8))
+	if action.is_valid() and not disabled:
+		button.pressed.connect(action)
 	return button
+
+
+func _equip_skin(skin_id: String) -> void:
+	if GameState.equip_skin(skin_id):
+		if has_node("/root/AudioManager"):
+			AudioManager.play_sfx("res://assets/sounds/button_confirm.mp3", -6.0)
+		_populate_skins()
+	else:
+		if has_node("/root/AudioManager"):
+			AudioManager.play_sfx("res://assets/sounds/button_error.mp3", -6.0)
 
 
 func _refresh_filters() -> void:

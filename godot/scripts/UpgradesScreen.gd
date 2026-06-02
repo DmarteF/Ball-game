@@ -20,25 +20,24 @@ const ICON_PATHS := {
 }
 
 const UPGRADES := [
-	{ "id": "baseDamage", "name": "Damage", "desc": "+10% dano por nível", "icon": "damage", "cost": 100, "level": 0, "max": 10, "unlocked": true, "value": "Atual: 10.0 dano • Próx: 11.0 dano" },
-	{ "id": "baseSpeed", "name": "Speed", "desc": "+8% velocidade por nível", "icon": "speed", "cost": 120, "level": 0, "max": 10, "unlocked": true, "value": "Atual: 100 vel. • Próx: 108 vel." },
-	{ "id": "coinMultiplier", "name": "Cash Gain", "desc": "+15% moedas por nível", "icon": "coin", "cost": 200, "level": 0, "max": 10, "unlocked": true, "value": "Atual: 1.00x moedas • Próx: 1.15x moedas" },
-	{ "id": "critChance", "name": "Crit Chance", "desc": "+2% crítico por nível", "icon": "crit", "cost": 150, "level": 0, "max": 10, "unlocked": true, "value": "Atual: 5% crit. • Próx: 7% crit." },
-	{ "id": "xpBoost", "name": "XP Boost", "desc": "+20% XP por nível", "icon": "xp", "cost": 180, "level": 0, "max": 10, "unlocked": false, "unlock": "Desbloqueia ao alcançar a fase 3" },
-	{ "id": "perfectChance", "name": "Perfect Chance", "desc": "+1% chance de diamante no perfect", "icon": "gem", "cost": 450, "level": 0, "max": 7, "unlocked": false, "unlock": "Desbloqueia por baús raros ou fase 5" },
-	{ "id": "slowRings", "name": "Slow Rings", "desc": "Anéis fecham mais devagar", "icon": "freeze", "cost": 600, "level": 0, "max": 5, "unlocked": false, "unlock": "Desbloqueia por rank ou recompensas especiais" },
-	{ "id": "burn", "name": "Queimar", "desc": "Causa dano contínuo de fogo", "icon": "burn", "cost": 0, "level": 0, "max": 5, "unlocked": false, "unlock": "Perfil nível 3" },
-	{ "id": "shockwave", "name": "Onda de Choque", "desc": "Dano em área ao impacto", "icon": "shock", "cost": 0, "level": 0, "max": 5, "unlocked": false, "unlock": "Perfil nível 12" },
-	{ "id": "ringRepulse", "name": "Ring Repulse", "desc": "Empurra o anel atingido para fora", "icon": "repulse", "cost": 0, "level": 0, "max": 5, "unlocked": false, "unlock": "Perfil nível 7" },
+	{ "id": "baseDamage", "name": "Damage", "desc": "+10% dano por nível", "icon": "damage", "unlock": "Disponível desde o início" },
+	{ "id": "baseSpeed", "name": "Speed", "desc": "+8% velocidade por nível", "icon": "speed", "unlock": "Disponível desde o início" },
+	{ "id": "coinMultiplier", "name": "Cash Gain", "desc": "+15% moedas por nível", "icon": "coin", "unlock": "Disponível desde o início" },
+	{ "id": "critChance", "name": "Crit Chance", "desc": "+2% crítico por nível", "icon": "crit", "unlock": "Disponível desde o início" },
+	{ "id": "xpBoost", "name": "XP Boost", "desc": "+20% XP por nível", "icon": "xp", "unlock": "Desbloqueia ao alcançar a fase 3 ou perfil nível 3" },
+	{ "id": "perfectChance", "name": "Perfect Chance", "desc": "+1% chance de diamante no perfect", "icon": "gem", "unlock": "Desbloqueia por fase 5 ou perfil nível 5" },
+	{ "id": "slowRings", "name": "Slow Rings", "desc": "Anéis fecham mais devagar", "icon": "freeze", "unlock": "Desbloqueia por fase 8 ou perfil nível 9" },
 ]
 
 var _regular_font: Font
 var _bold_font: Font
+var _feedback_label: Label
 
 
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
+	GameState.refresh_unlocks(false)
 	_build_background()
 	_build_screen()
 
@@ -69,6 +68,9 @@ func _build_screen() -> void:
 	root.add_child(_make_label("UPGRADES PERMANENTES", 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	NeonBackButtonScript.add_to(self, _go_back)
 	root.add_child(_make_resource_display())
+	_feedback_label = _make_label("", 13, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	_feedback_label.custom_minimum_size.y = 24
+	root.add_child(_feedback_label)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -118,8 +120,13 @@ func _make_resource_pill(icon_key: String, value: String, border: String) -> Pan
 
 
 func _make_upgrade_card(upgrade: Dictionary) -> PanelContainer:
-	var unlocked := Array(GameState.data.get("unlocked_upgrades", [])).has(String(upgrade["id"])) or bool(upgrade["unlocked"])
-	var level := int(GameState.data.get("permanent_upgrades", {}).get(String(upgrade["id"]), upgrade["level"]))
+	var id := String(upgrade["id"])
+	var unlocked := GameState.is_upgrade_unlocked(id)
+	var level := int(GameState.data.get("permanent_upgrades", {}).get(id, 0))
+	var max_level := GameState.get_upgrade_max_level(id)
+	var cost := GameState.get_upgrade_cost(id)
+	var is_maxed := level >= max_level
+	var can_afford := int(GameState.data.get("coins", 0)) >= cost
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 16, "#ffffff22", 2))
 	var margin := MarginContainer.new()
@@ -153,22 +160,84 @@ func _make_upgrade_card(upgrade: Dictionary) -> PanelContainer:
 		locked.add_child(_make_icon("locked", 14))
 		locked.add_child(_make_label(String(upgrade.get("unlock", "Upgrade bloqueado")), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		info.add_child(locked)
-	info.add_child(_make_label("Nível: %s/%s" % [level, upgrade["max"]], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label("Nível: %s/%s" % [level, max_level], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
-		info.add_child(_make_label(String(upgrade.get("value", "")), 11, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+		info.add_child(_make_label(_upgrade_value_text(id, level, max_level), 11, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	var buy := Button.new()
 	buy.custom_minimum_size = Vector2(76, 50)
 	buy.focus_mode = Control.FOCUS_NONE
-	buy.disabled = not unlocked
-	buy.text = str(upgrade["cost"]) if unlocked else ""
-	buy.modulate.a = 1.0 if unlocked else 0.5
+	buy.disabled = not unlocked or is_maxed
+	buy.text = "MAX" if is_maxed else str(cost) if unlocked else ""
+	buy.modulate.a = 1.0 if unlocked and not is_maxed else 0.5
 	buy.add_theme_font_override("font", _bold_font)
 	buy.add_theme_font_size_override("font_size", 16)
 	buy.add_theme_color_override("font_color", Color("#ffffff"))
-	_apply_button_style(buy, _make_style("#0088ff" if unlocked else "#444444", 12, "#00000000", 0, "#00f0ff88" if unlocked else "#00000000", 8))
+	_apply_button_style(buy, _make_style("#00aa77" if is_maxed else "#0088ff" if can_afford and unlocked else "#555555", 12, "#00000000", 0, "#00f0ff88" if unlocked and not is_maxed else "#00000000", 8))
+	if unlocked and not is_maxed:
+		buy.pressed.connect(_buy_upgrade.bind(id))
 	row.add_child(buy)
 	return card
+
+
+func _upgrade_value_text(id: String, level: int, max_level: int) -> String:
+	var current := _upgrade_value(id, level)
+	var next := "MAX" if level >= max_level else _upgrade_value(id, level + 1)
+	return "Atual: %s • Próx: %s" % [current, next]
+
+
+func _upgrade_value(id: String, level: int) -> String:
+	match id:
+		"baseDamage":
+			return "%.1f dano" % (10.0 * pow(1.1, level))
+		"baseSpeed":
+			return "%.0f vel." % (100.0 * pow(1.08, level))
+		"coinMultiplier":
+			return "%.2fx moedas" % (1.0 + level * 0.15)
+		"critChance":
+			return "%s%% crit." % (5 + level * 2)
+		"xpBoost":
+			return "%.2fx XP" % (1.0 + level * 0.2)
+		"perfectChance":
+			return "%s%% perfect" % level
+		"slowRings":
+			return "%.1f%% lento" % min(24.0, level * 1.8)
+	return "Lv.%s" % level
+
+
+func _buy_upgrade(id: String) -> void:
+	var result := GameState.purchase_permanent_upgrade(id)
+	if bool(result.get("ok", false)):
+		_play_sfx("res://assets/sounds/button_confirm.mp3")
+		_rebuild_upgrade_list()
+		_play_feedback("Melhoria comprada! Lv.%s" % int(result.get("level", 0)), "#00ff88")
+		return
+	var reason := String(result.get("reason", ""))
+	var text := "Upgrade bloqueado"
+	if reason == "coins":
+		text = "Moedas insuficientes: precisa de %s" % int(result.get("cost", GameState.get_upgrade_cost(id)))
+	elif reason == "max":
+		text = "Upgrade no nível máximo"
+	_play_feedback(text, "#ff6b9a")
+	_play_sfx("res://assets/sounds/button_error.mp3")
+
+
+func _rebuild_upgrade_list() -> void:
+	for child in get_children():
+		child.queue_free()
+	_build_background()
+	_build_screen()
+
+
+func _play_feedback(text: String, color: String) -> void:
+	if _feedback_label:
+		_feedback_label.text = text
+		_feedback_label.add_theme_color_override("font_color", Color(color))
+
+
+func _play_sfx(path: String) -> void:
+	if has_node("/root/AudioManager"):
+		AudioManager.play_sfx(path, -6.0)
 
 
 func _make_icon(key: String, icon_size: int) -> TextureRect:

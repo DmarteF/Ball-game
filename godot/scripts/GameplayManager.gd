@@ -14,6 +14,19 @@ const COMBO_WINDOW_MSEC := 2600
 const PHYSICS_STEPS_PER_SECOND := 60.0
 const TWO_PI := PI * 2.0
 const RING_COLORS := ["#00f0ff", "#b000ff", "#ff0055", "#00ff88", "#ffd700", "#ff8800"]
+const RING_PALETTES := [
+	["#00f0ff", "#b000ff", "#ff0055", "#00ff88", "#ffd700", "#ff8800"],
+	["#00f0ff", "#7c3aed", "#ff4fd8", "#22d3ee", "#00ff88", "#c084fc"],
+	["#38bdf8", "#a855f7", "#f43f5e", "#14f195", "#facc15", "#fb7185"],
+	["#67e8f9", "#8b5cf6", "#ec4899", "#10b981", "#f97316", "#e879f9"],
+]
+const BACKGROUND_PALETTES := [
+	["#0a0a1a", "#1a0a2e", "#16003b"],
+	["#050816", "#081a3a", "#18002f"],
+	["#07020f", "#240817", "#390928"],
+	["#03010a", "#12052a", "#25004a"],
+	["#020617", "#0b102a", "#24104a"],
+]
 const ICON_PATHS := {
 	"coin": "res://assets/ui/ui_coin.png",
 	"gem": "res://assets/ui/ui_gem.png",
@@ -78,10 +91,17 @@ var particles: Array[Dictionary] = []
 var trail_points: Array[Dictionary] = []
 var floating_feedback: Array[Dictionary] = []
 var temporary_upgrade: Dictionary = {}
+var ring_spawn_delay := 1.0
+var ring_pacing_multiplier := 1.0
+var rapid_clear_streak := 0
+var last_ring_clear_msec := 0
+var background_palette_index := 0
+var ring_palette_index := 0
 
 var _regular_font: Font
 var _bold_font: Font
 var _skin_texture: Texture2D
+var _background_texture_rect: TextureRect
 var _hud_phase: Label
 var _hud_resources: HBoxContainer
 var _resource_labels: Dictionary = {}
@@ -114,6 +134,7 @@ func _ready() -> void:
 	phase_id = clampi(int(GameState.data.get("selected_phase", GameState.data.get("current_phase", 1))), 1, 50)
 	phase_config = LevelData.get_phase_config(phase_id)
 	gameplay_config = LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
+	_select_visual_palettes()
 	_load_skin_texture()
 	_setup_audio()
 	_build_background()
@@ -176,6 +197,10 @@ func _start_level() -> void:
 	trail_points.clear()
 	floating_feedback.clear()
 	temporary_upgrade = {}
+	ring_spawn_delay = _base_ring_spawn_delay()
+	ring_pacing_multiplier = 1.0
+	rapid_clear_streak = 0
+	last_ring_clear_msec = 0
 	_update_arena_metrics()
 	rings = _create_rings()
 	var start_angle: float = randf() * TWO_PI
@@ -223,6 +248,7 @@ func _create_rings() -> Array[Dictionary]:
 	var spacing: float = available_radius / max(1.0, float(count - 1))
 	var difficulty: float = 1.0 + max(0, phase_id - 1) * 0.22
 	var phase_gap: float = max(PI / 7.5, float(gameplay_config["gap_size"]))
+	var palette: Array = RING_PALETTES[ring_palette_index]
 	var solid_indexes: Dictionary = { count - 1: true }
 	for i in range(count):
 		var progress := 0.0 if count == 1 else float(i) / float(count - 1)
@@ -247,19 +273,20 @@ func _create_rings() -> Array[Dictionary]:
 			"max_hp": hp,
 			"status": "active",
 			"thickness": 7.0 if is_solid else 5.0,
-			"color": ["#ff3d00", "#ff0055", "#b000ff"][i % 3] if is_solid else RING_COLORS[i % RING_COLORS.size()],
+			"color": ["#ff3d00", "#ff0055", "#b000ff"][i % 3] if is_solid else palette[i % palette.size()],
 			"min_radius": 4.0,
 		})
 	return result
 
 
 func _update_rings(delta_steps: float) -> void:
+	var pacing := _effective_ring_pacing()
 	for i in range(rings.size()):
 		var ring := rings[i]
 		if String(ring.get("status", "")) != "active":
 			continue
 		ring["rotation"] = _normalize_angle(float(ring["rotation"]) + float(ring["rotation_speed"]) * delta_steps)
-		ring["radius"] = max(float(ring["min_radius"]), float(ring["radius"]) - float(ring["closing_speed"]) * delta_steps)
+		ring["radius"] = max(float(ring["min_radius"]), float(ring["radius"]) - float(ring["closing_speed"]) * delta_steps * pacing)
 		rings[i] = ring
 
 
@@ -276,6 +303,7 @@ func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
 			ring["status"] = "cleared"
 			ring["hp"] = 0
 			rings[i] = ring
+			_register_ring_clear()
 			perfect_escapes += 1
 			var perfect_coins: int = max(2, floori(5.0 * _gold_multiplier()))
 			var perfect_xp: int = floori((16.0 + randf() * 10.0) * _xp_multiplier())
@@ -329,6 +357,7 @@ func _check_ring_hit(prev_dist: float) -> void:
 		criticals += 1
 	if new_hp <= 0:
 		rings_destroyed += 1
+		_register_ring_clear()
 		_register_combo("Break", Color("#ffd700"))
 		_award_coins(max(6, floori((18.0 if String(ring.get("type", "normal")) == "solid" else 12.0) * _gold_multiplier())))
 		_award_xp(floori(((16.0 if String(ring.get("type", "normal")) == "solid" else 8.0) + randf() * (12.0 if String(ring.get("type", "normal")) == "solid" else 7.0)) * _xp_multiplier()))
@@ -452,6 +481,7 @@ func _draw_floating_feedback() -> void:
 
 func _build_background() -> void:
 	var background := TextureRect.new()
+	_background_texture_rect = background
 	_fill(background)
 	background.texture = _make_background_gradient()
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -747,12 +777,14 @@ func _crit_damage() -> float:
 
 func _perfect_diamond_bonus() -> float:
 	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	var permanent_upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var temporary_bonus := int(current_upgrades.get("perfectChance", 0)) * 0.01
+	var permanent_bonus := int(permanent_upgrades.get("perfectChance", 0)) * 0.01
 	if skin_id == "neon_blue":
-		return 0.005 + temporary_bonus
+		return 0.005 + temporary_bonus + permanent_bonus
 	if skin_id in ["star_rare", "planet", "crystal", "alien_rare", "purple_crystal", "cosmic_eye", "astral_eye"]:
-		return 0.02 + temporary_bonus
-	return temporary_bonus
+		return 0.02 + temporary_bonus + permanent_bonus
+	return temporary_bonus + permanent_bonus
 
 
 func _skin_damage_bonus() -> float:
@@ -829,6 +861,29 @@ func _register_combo(label: String, color: Color) -> void:
 func _update_combo_timeout() -> void:
 	if combo > 0 and Time.get_ticks_msec() - last_combo_msec > COMBO_WINDOW_MSEC:
 		combo = 0
+	if rapid_clear_streak > 0 and Time.get_ticks_msec() - last_ring_clear_msec > COMBO_WINDOW_MSEC:
+		rapid_clear_streak = 0
+		ring_pacing_multiplier = max(1.0, ring_pacing_multiplier - 0.012)
+
+
+func _base_ring_spawn_delay() -> float:
+	var count: int = int(gameplay_config.get("ring_count", 1))
+	return clampf(1.12 - min(0.42, float(max(0, count - 8)) * 0.018) - min(0.16, float(max(0, phase_id - 1)) * 0.004), 0.42, 1.12)
+
+
+func _effective_ring_pacing() -> float:
+	var active := _active_ring_count()
+	var many_ring_bonus := clampf(float(max(0, active - 8)) * 0.018, 0.0, 0.22)
+	var delay_bonus := clampf((1.12 - ring_spawn_delay) * 0.2, 0.0, 0.14)
+	return clampf(ring_pacing_multiplier + many_ring_bonus + delay_bonus, 1.0, 1.72)
+
+
+func _register_ring_clear() -> void:
+	var now := Time.get_ticks_msec()
+	rapid_clear_streak = rapid_clear_streak + 1 if now - last_ring_clear_msec <= 1800 else 1
+	last_ring_clear_msec = now
+	ring_spawn_delay = clampf(ring_spawn_delay - 0.075 - float(max(0, _active_ring_count() - 10)) * 0.004, 0.32, _base_ring_spawn_delay())
+	ring_pacing_multiplier = clampf(1.0 + rapid_clear_streak * 0.07, 1.0, 1.55)
 
 
 func _combo_coin_multiplier() -> float:
@@ -900,7 +955,7 @@ func _open_level_up() -> void:
 
 
 func _get_safe_upgrade_options() -> Array[Dictionary]:
-	var profile_level := int(GameState.data.get("level", 1))
+	GameState.refresh_unlocks(false)
 	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
 	var pool: Array[Dictionary] = [
 		{ "id": "damage", "name": "Dano+", "description": "+15% de dano", "rarity": "common", "color": "#00f0ff", "unlock": 1 },
@@ -909,22 +964,15 @@ func _get_safe_upgrade_options() -> Array[Dictionary]:
 		{ "id": "critical", "name": "Critico+", "description": "+5% chance critica", "rarity": "common", "color": "#ff0055", "unlock": 1 },
 		{ "id": "xpBoost", "name": "XP Boost", "description": "+50% de XP", "rarity": "common", "color": "#00ff88", "unlock": 3 },
 		{ "id": "perfectChance", "name": "Perfect Chance", "description": "+1% chance de diamante no Perfect", "rarity": "rare", "color": "#c084fc", "unlock": 5 },
+		{ "id": "burn", "name": "Queimar", "description": "Dano extra de impacto", "rarity": "rare", "color": "#ff8800", "unlock": 5 },
+		{ "id": "ringRepulse", "name": "Ring Repulse", "description": "Empurra aneis no impacto", "rarity": "rare", "color": "#8b5cf6", "unlock": 7 },
 	]
 	var filtered: Array[Dictionary] = []
 	for upgrade in pool:
-		var required := int(upgrade["unlock"])
-		var allowed_by_profile := profile_level >= required
-		var allowed_by_save := unlocked.has(String(upgrade["id"])) or String(upgrade["id"]) in ["damage", "speed", "coinBoost", "critical"]
-		if allowed_by_profile and allowed_by_save:
+		if unlocked.has(String(upgrade["id"])):
 			filtered.append(upgrade)
 	filtered.shuffle()
-	if filtered.size() < 3:
-		for upgrade in pool:
-			if not filtered.has(upgrade):
-				filtered.append(upgrade)
-			if filtered.size() >= 3:
-				break
-	return filtered.slice(0, 3)
+	return filtered.slice(0, min(3, filtered.size()))
 
 
 func _rebuild_level_up_cards() -> void:
@@ -1074,6 +1122,8 @@ func _go_to_next_phase() -> void:
 		phase_id = next_phase
 		phase_config = LevelData.get_phase_config(phase_id)
 		gameplay_config = LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
+		_select_visual_palettes()
+		_refresh_background_texture()
 		_start_level()
 
 
@@ -1252,10 +1302,21 @@ func _load_skin_texture() -> void:
 		_skin_texture = load("res://assets/skins/neon_blue.png")
 
 
+func _select_visual_palettes() -> void:
+	background_palette_index = int(fposmod(phase_id + Time.get_ticks_msec() / 1000, BACKGROUND_PALETTES.size()))
+	ring_palette_index = int(fposmod(phase_id * 3 + Time.get_ticks_msec() / 1200, RING_PALETTES.size()))
+
+
+func _refresh_background_texture() -> void:
+	if _background_texture_rect:
+		_background_texture_rect.texture = _make_background_gradient()
+
+
 func _make_background_gradient() -> GradientTexture2D:
 	var gradient := Gradient.new()
+	var palette: Array = BACKGROUND_PALETTES[background_palette_index]
 	gradient.offsets = PackedFloat32Array([0.0, 0.52, 1.0])
-	gradient.colors = PackedColorArray([Color("#0a0a1a"), Color("#1a0a2e"), Color("#16003b")])
+	gradient.colors = PackedColorArray([Color(String(palette[0])), Color(String(palette[1])), Color(String(palette[2]))])
 	var texture := GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.width = 16

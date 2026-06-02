@@ -107,6 +107,20 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Cards e HUD de upgrades temporarios usam icones reais de `assets/ui`.
 - Feedbacks de moeda, XP, diamante e level-up foram reforcados com texto flutuante, particulas e SFX.
 - Upgrades permanentes basicos afetam dano, velocidade, moedas, XP, critico e slow rings.
+- Tela `Upgrades/Melhorias` agora compra upgrades permanentes reais com moedas globais.
+- Custos/limites portados da main:
+  - `baseDamage`: custo base 100, max 30, +10% dano por nivel.
+  - `baseSpeed`: custo base 120, max 18, +8% velocidade por nivel.
+  - `coinMultiplier`: custo base 200, max 25, +15% moedas por nivel.
+  - `critChance`: custo base 150, max 20, +2% critico por nivel.
+  - `xpBoost`: custo base 180, max 25, +20% XP por nivel.
+  - `perfectChance`: custo base 450, max 12, +1% perfect/diamante por nivel.
+  - `slowRings`: custo base 600, max 10, reduz fechamento dos aneis.
+- Desbloqueios reais estao centralizados em `GameState.refresh_unlocks`, usando fase maxima e nivel do perfil; baus/eventos/missoes/conquistas ficaram como fontes futuras documentadas.
+- Upgrades temporarios de level-up so entram no sorteio se estiverem desbloqueados no save. O fallback que completava a lista com upgrades bloqueados foi removido.
+- Ritmo adaptativo dos aneis adicionado: `ring_spawn_delay`, streak de limpeza rapida e bonus por muitos aneis restantes aumentam o ritmo com clamp, e o estado reseta em restart/vitoria/proxima fase.
+- Fundos variaveis por partida/fase adicionados com paletas escuras em roxo, azul, vinho e preto arroxeado. As paletas dos aneis tambem variam em neon.
+- Skins agora sao funcionais: `SkinsScreen.gd` mostra todas as skins, filtra por estado real, permite equipar somente desbloqueadas, salva `equipped_skin` e a gameplay usa o sprite equipado com fallback `neon_blue`.
 - Vitoria salva moedas globais e XP de perfil convertidos como na main.
 - Tela de vitoria foi refeita como resumo limpo com icones/assets, sem scroll interno apertado.
 - `AudioManager.gd` centraliza musica/SFX, respeita audio mudo e evita duplicar musica.
@@ -115,8 +129,8 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 
 - Comparacao visual pixel-perfect com a branch `main` ainda nao foi feita.
 - Reroll de upgrades temporarios por anuncio/gemas ainda nao foi portado.
-- Catalogo completo de upgrades temporarios avancados ainda nao foi portado; a Fase 1 ja usa os upgrades iniciais da main.
-- Efeitos especiais completos de todas as skins ainda nao foram portados.
+- Alguns upgrades temporarios avancados estao estruturados/desbloqueaveis, mas efeitos complexos como corrente, congelamento total, bomba, laser e multihit ainda nao foram portados.
+- Efeitos especiais completos de todas as skins ainda nao foram portados; por enquanto cada skin funciona como sprite equipado e alguns bonus simples ja existentes continuam aplicados.
 - Revive por anuncio, dobrar recompensa por anuncio e coleta/sair separada ainda estao preparados apenas como estrutura.
 - Chaves e baus aparecem no resumo como `0/0`, igual ao estado atual observado da gameplay base, mas drops reais ainda nao foram conectados.
 - Barras visuais de XP foram adicionadas, mas ainda nao estao pixel-perfect em relacao ao React Native.
@@ -174,6 +188,13 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | Upgrade temporario aparecendo corretamente | Sim |
 | Upgrades temporarios funcionam | Sim |
 | Upgrades permanentes aplicados | Sim |
+| Upgrades permanentes compraveis | Sim |
+| Desbloqueio real de upgrades por fase/perfil | Sim |
+| Temporarios respeitam desbloqueio | Sim |
+| Skins equipaveis e persistentes | Sim |
+| Skin equipada usada na gameplay | Sim |
+| Ritmo adaptativo dos aneis | Sim |
+| Fundos escuros variaveis por fase/partida | Sim |
 | Vitoria fiel a main | Em progresso |
 | Tela de vitoria refeita/fiel | Sim |
 | Recompensas salvam | Sim |

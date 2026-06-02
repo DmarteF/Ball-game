@@ -86,8 +86,8 @@ Pendencias marcadas assim porque a `main` usa a fonte de sistema do React Native
 | Jogar / selecao de fases | `frontend/app/phase-select.tsx`, `frontend/src/game/phases.ts`, `assets/ui/ui_infinite.png`, `assets/ui/ui_locked.png` | `scenes/PhaseSelect.tscn`, `scripts/PhaseSelectScreen.gd` | Ajustado | Cards mostram fase, dificuldade e aneis, sem HP/descricao longa. Fase 1 abre a gameplay; demais fases e modo infinito seguem visuais/mockados. |
 | Perfil | `frontend/app/profile.tsx`, `frontend/src/components/ProfileAvatar.tsx`, `frontend/src/components/SkinIcon.tsx`, `frontend/src/components/UiIcon.tsx`, `frontend/src/game/skins.ts`, `frontend/src/game/achievements.ts`, `frontend/src/game/upgrades.ts` | `scenes/Profile.tscn`, `scripts/ProfileScreen.gd` | Ajustado nesta etapa | Configuracoes, audio, idioma, FPS e Hz removidos do Perfil. Botao Back padronizado com Coming soon. Dados reais ainda mockados ate o save completo ser portado. |
 | Configuracoes | Pedido desta etapa + estilo visual da tela inicial | `scenes/Settings.tscn`, `scripts/SettingsScreen.gd` | Concluida nesta etapa | Tela simples: audio ligado/mudo, idioma e sobre. Botao Back padronizado com Coming soon. Estado salvo em `user://settings.json`. |
-| Skins | `frontend/app/transformations.tsx`, `frontend/src/game/skins.ts`, `frontend/src/components/SkinIcon.tsx`, `assets/skins/*` | `scenes/Skins.tscn`, `scripts/SkinsScreen.gd` | Visual ajustado | Grid e filtros reenquadrados para HTML/Web. Equipar/evoluir/desbloquear ainda nao funcionam. |
-| Upgrades/Melhorias | `frontend/app/upgrade-shop.tsx`, `frontend/src/game/upgrades.ts`, `frontend/src/game/balance.ts`, `frontend/src/components/UpgradeIcon.tsx` | `scenes/Upgrades.tscn`, `scripts/UpgradesScreen.gd` | Visual ajustado | Recursos no topo corrigidos em linha com icones/numeros sem quebra vertical. Compra/aplicacao real ainda pendente. |
+| Skins | `frontend/app/transformations.tsx`, `frontend/src/game/skins.ts`, `frontend/src/components/SkinIcon.tsx`, `assets/skins/*` | `scenes/Skins.tscn`, `scripts/SkinsScreen.gd` | Funcional nesta etapa | Filtros usam save real, skins desbloqueadas podem ser equipadas e persistem. Evolucao/efeitos especiais seguem pendentes. |
+| Upgrades/Melhorias | `frontend/app/upgrade-shop.tsx`, `frontend/src/game/upgrades.ts`, `frontend/src/game/balance.ts`, `frontend/src/components/UpgradeIcon.tsx` | `scenes/Upgrades.tscn`, `scripts/UpgradesScreen.gd` | Funcional nesta etapa | Compras reais por moedas, limites/custos da main e feedback implementados. Upgrades secretos/eventos/baus seguem pendentes. |
 | Loja | `frontend/app/store.tsx`, assets `assets/icons/products/*`, `assets/ui/ui_store.png` | `scenes/Shop.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Titulo simples, descricao longa removida e abas reenquadradas. Cards e botoes mockados; sem compra real. |
 | Inventario | `frontend/app/inventory.tsx`, assets de baus/chaves em `assets/ui` | `scenes/Inventory.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Descricao longa removida; estado vazio discreto preparado. |
 | Missoes | `frontend/app/daily.tsx`, `frontend/src/game/retention.ts`, `assets/ui/ui_missions.png` | `scenes/Missions.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Titulo simples; estado vazio discreto enquanto nao ha missoes reais. |
@@ -121,6 +121,7 @@ Funcoes principais disponiveis no `GameState`:
 
 - `add_coins`, `spend_coins`, `add_diamonds`, `spend_diamonds`, `add_keys`, `spend_keys`;
 - `unlock_skin`, `equip_skin`, `upgrade_permanent`, `unlock_level`;
+- `refresh_unlocks`, `get_upgrade_cost`, `get_upgrade_max_level`, `is_upgrade_unlocked`, `purchase_permanent_upgrade`;
 - `save_game`, `load_game`, `set_audio_muted`, `set_language`.
 
 Funcoes principais disponiveis no `TimeManager`:
@@ -136,13 +137,15 @@ Telas que ja leem dados reais:
 - Menu inicial: nome, nivel e recursos.
 - Perfil: nome, nivel, XP, recursos e estatisticas basicas.
 - Configuracoes: audio/idioma salvos no `GameState`.
-- Loja, Skins e Upgrades: recursos do jogador.
+- Loja: recursos do jogador.
+- Skins: recursos, desbloqueios reais e skin equipada.
+- Upgrades: recursos, desbloqueios reais, custos, limites, compra e niveis permanentes.
 - Jogar: fases desbloqueadas e Modo Infinito baseado na maior fase.
 - Boss: disponibilidade visual baseada no cooldown do `TimeManager`.
 
 Ainda mockado/pendente:
 
-- compras, roleta, recompensas reais, missoes reais, boss real, eventos reais, conquistas reais e gameplay.
+- loja funcional, roleta, recompensas reais de baus, missoes reais, boss real, eventos reais e conquistas completas.
 - Recompensas AFK sao calculadas e armazenadas como pendentes, mas nao sao concedidas automaticamente.
 
 Observacao de seguranca: o relogio atual usa horario local do aparelho. Em Android/APK isso pode ser manipulado alterando o relogio do celular. A estrutura ficou preparada para futura validacao online, mas essa validacao ainda nao foi implementada.
@@ -184,7 +187,13 @@ Checklist da etapa:
 | HUD de partida | Sim | HUD limpo com pausa, fase, dificuldade, recursos com icones, nivel, XP, barra de XP e upgrade temporario ativo. |
 | ResourceBadge | Sim | Badges com assets reais para moedas, diamantes, conta e chaves foram adicionados ao HUD. |
 | Upgrades de rodada | Sim | Barra inferior com ATK e GOLD, custos e compra com moedas da run como na `main`. |
-| Upgrade temporario no HUD | Sim | Level-up abre modal neon com 3 upgrades iniciais reais e icones; HUD mostra upgrade ativo com asset. |
+| Upgrade temporario no HUD | Sim | Level-up abre modal neon com ate 3 upgrades desbloqueados reais; HUD mostra upgrade ativo com asset. |
+| Upgrades temporarios respeitam desbloqueio | Sim | Opcoes de level-up so aparecem se o id estiver em `GameState.unlocked_upgrades`. |
+| Upgrades permanentes funcionais | Sim | Tela compra com moedas reais, custo `baseCost * 1.5^nivel`, limites da main e salvamento. |
+| Desbloqueio de upgrades | Sim | Marcos por fase/perfil em `GameState.refresh_unlocks`; baus/eventos/missoes ficam como estrutura futura. |
+| Skins funcionais | Sim | Tela usa save real, impede equipar bloqueada, salva `equipped_skin` e gameplay usa o sprite equipado. |
+| Ritmo adaptativo dos aneis | Sim | `ring_spawn_delay`, streak de clears rapidos e bonus por muitos aneis ajustam o fechamento com clamp. |
+| Fundos e paletas variaveis | Sim | Fases escolhem gradientes escuros e paletas neon diferentes sem clarear o HUD. |
 | Efeitos visuais | Sim | Brilho/trilha da bolinha, impacto, quebra de anel, textos de moeda/XP/level-up e efeito de vitoria. |
 | Audio de gameplay | Sim | `AudioManager.gd` centraliza musica, clique, hit, hit critico, quebra, perfect, XP, level-up, diamante, derrota e vitoria respeitando audio mudo. |
 | Vitoria funcionando | Sim | Ao limpar todos os aneis, mostra tela de vitoria/recompensa. |
@@ -200,6 +209,7 @@ Pendencias da gameplay:
 
 - Comparacao visual pixel a pixel com a `main` ainda pendente.
 - Efeitos de skins avancados, revive/anuncio, dobrar recompensa por anuncio e reroll de upgrades temporarios ainda nao foram portados.
+- Efeitos especiais de skins seguem preparados como hook, mas nao foram implementados nesta etapa.
 - Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
 - Modo infinito ainda nao e jogavel nesta etapa.
 - Fases 2-50 usam a estrutura da main e desbloqueio sequencial, mas ainda precisam de verificacao visual fase a fase.
