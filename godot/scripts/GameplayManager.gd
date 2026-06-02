@@ -52,10 +52,13 @@ var run_upgrades := 0
 var criticals := 0
 var skin_effects := 0
 var run_shop_upgrades := { "atk": 0, "gold": 0 }
+var current_upgrades: Dictionary = {}
+var available_upgrades: Array[Dictionary] = []
 var recent_hit_damage: Array[float] = []
 var rings_destroyed := 0
 var perfect_escapes := 0
 var is_paused := false
+var level_up_active := false
 var finished := false
 var particles: Array[Dictionary] = []
 var trail_points: Array[Dictionary] = []
@@ -75,6 +78,8 @@ var _run_upgrade_bar: HBoxContainer
 var _run_atk_button: Button
 var _run_gold_button: Button
 var _pause_overlay: Control
+var _level_up_overlay: Control
+var _level_up_cards: VBoxContainer
 var _victory_overlay: Control
 var _victory_title: Label
 var _victory_rewards: Label
@@ -93,12 +98,13 @@ func _ready() -> void:
 	_build_background()
 	_build_hud()
 	_build_pause_overlay()
+	_build_level_up_overlay()
 	_build_result_overlays()
 	call_deferred("_start_level")
 
 
 func _process(delta: float) -> void:
-	if is_paused or finished:
+	if is_paused or level_up_active or finished:
 		return
 	_update_game(delta * PHYSICS_STEPS_PER_SECOND)
 	_update_effects(delta)
@@ -118,6 +124,7 @@ func _draw() -> void:
 func _start_level() -> void:
 	finished = false
 	is_paused = false
+	level_up_active = false
 	run_coins = 0
 	run_xp = 0
 	total_run_xp = 0
@@ -133,6 +140,8 @@ func _start_level() -> void:
 	criticals = 0
 	skin_effects = 0
 	run_shop_upgrades = { "atk": 0, "gold": 0 }
+	current_upgrades = {}
+	available_upgrades = []
 	recent_hit_damage.clear()
 	rings_destroyed = 0
 	perfect_escapes = 0
@@ -484,6 +493,16 @@ func _build_pause_overlay() -> void:
 	add_child(_pause_overlay)
 
 
+func _build_level_up_overlay() -> void:
+	_level_up_overlay = _make_modal()
+	var card := _make_modal_content(_level_up_overlay, "LEVEL UP")
+	card.add_child(_make_label("ESCOLHA UMA MELHORIA", 14, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	_level_up_cards = VBoxContainer.new()
+	_level_up_cards.add_theme_constant_override("separation", 10)
+	card.add_child(_level_up_cards)
+	add_child(_level_up_overlay)
+
+
 func _build_result_overlays() -> void:
 	_victory_overlay = _make_modal()
 	var victory_card := _make_modal_content(_victory_overlay, "VITORIA")
@@ -580,9 +599,10 @@ func _active_ring_count() -> int:
 func _base_damage() -> int:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var base_damage := 10.0 * pow(1.1, int(upgrades.get("baseDamage", 0)))
+	var temporary_damage := int(current_upgrades.get("damage", 0)) * 0.15
 	var skin_bonus := _skin_damage_bonus()
 	var arena_bonus := int(run_shop_upgrades.get("atk", 0)) * 0.12
-	return max(1, roundi(base_damage * (1.0 + skin_bonus + arena_bonus)))
+	return max(1, roundi(base_damage * (1.0 + skin_bonus + arena_bonus + temporary_damage)))
 
 
 func _target_ball_speed() -> float:
@@ -592,24 +612,27 @@ func _target_ball_speed() -> float:
 func _speed_multiplier() -> float:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var base_speed := 100.0 * pow(1.08, int(upgrades.get("baseSpeed", 0)))
-	return 1.0 + base_speed / 1200.0 + _skin_speed_bonus()
+	var temporary_speed := int(current_upgrades.get("speed", 0)) * 0.20
+	return 1.0 + base_speed / 1200.0 + _skin_speed_bonus() + temporary_speed + int(current_upgrades.get("ricochet", 0)) * 0.025
 
 
 func _gold_multiplier() -> float:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var base := 1.0 + int(upgrades.get("coinMultiplier", 0)) * 0.15
-	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.12 + _skin_coin_bonus())
+	var temporary_gold := int(current_upgrades.get("coinBoost", 0)) * 0.5
+	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.12 + _skin_coin_bonus() + temporary_gold)
 
 
 func _xp_multiplier() -> float:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var base := 1.0 + int(upgrades.get("xpBoost", 0)) * 0.2
-	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.05 + _skin_xp_bonus())
+	var temporary_xp := int(current_upgrades.get("xpBoost", 0)) * 0.5
+	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.05 + _skin_xp_bonus() + temporary_xp)
 
 
 func _crit_chance() -> float:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	return 5.0 + int(upgrades.get("critChance", 0)) * 2.0 + _skin_crit_bonus()
+	return 5.0 + int(upgrades.get("critChance", 0)) * 2.0 + int(current_upgrades.get("critical", 0)) * 5.0 + _skin_crit_bonus()
 
 
 func _crit_damage() -> float:
@@ -618,11 +641,12 @@ func _crit_damage() -> float:
 
 func _perfect_diamond_bonus() -> float:
 	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	var temporary_bonus := int(current_upgrades.get("perfectChance", 0)) * 0.01
 	if skin_id == "neon_blue":
-		return 0.005
+		return 0.005 + temporary_bonus
 	if skin_id in ["star_rare", "planet", "crystal", "alien_rare", "purple_crystal", "cosmic_eye", "astral_eye"]:
-		return 0.02
-	return 0.0
+		return 0.02 + temporary_bonus
+	return temporary_bonus
 
 
 func _skin_damage_bonus() -> float:
@@ -677,8 +701,7 @@ func _award_xp(amount: int) -> void:
 	if run_xp >= needed:
 		run_xp -= needed
 		run_level += 1
-		temporary_upgrade = { "name": "Level %s" % run_level, "level": run_level, "effect": "Escolha de upgrade pendente" }
-		_play_sfx("coin")
+		_open_level_up()
 
 
 func _register_combo(label: String, color: Color) -> void:
@@ -755,6 +778,88 @@ func _run_xp_needed_for_level(level_value: int) -> int:
 	return floori(XP_BASE_REQUIREMENT * pow(max(1, level_value), 1.55))
 
 
+func _open_level_up() -> void:
+	available_upgrades = _get_safe_upgrade_options()
+	_rebuild_level_up_cards()
+	level_up_active = true
+	_level_up_overlay.visible = true
+	_play_sfx("coin")
+
+
+func _get_safe_upgrade_options() -> Array[Dictionary]:
+	var profile_level := int(GameState.data.get("level", 1))
+	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
+	var pool: Array[Dictionary] = [
+		{ "id": "damage", "name": "Dano+", "description": "+15% de dano", "rarity": "common", "color": "#00f0ff", "unlock": 1 },
+		{ "id": "speed", "name": "Velocidade+", "description": "+20% de velocidade", "rarity": "common", "color": "#00f0ff", "unlock": 1 },
+		{ "id": "coinBoost", "name": "Chuva de Moedas", "description": "+50% de moedas", "rarity": "common", "color": "#ffd700", "unlock": 1 },
+		{ "id": "critical", "name": "Critico+", "description": "+5% chance critica", "rarity": "common", "color": "#ff0055", "unlock": 1 },
+		{ "id": "xpBoost", "name": "XP Boost", "description": "+50% de XP", "rarity": "common", "color": "#00ff88", "unlock": 3 },
+		{ "id": "perfectChance", "name": "Perfect Chance", "description": "+1% chance de diamante no Perfect", "rarity": "rare", "color": "#c084fc", "unlock": 5 },
+	]
+	var filtered: Array[Dictionary] = []
+	for upgrade in pool:
+		var required := int(upgrade["unlock"])
+		var allowed_by_profile := profile_level >= required
+		var allowed_by_save := unlocked.has(String(upgrade["id"])) or String(upgrade["id"]) in ["damage", "speed", "coinBoost", "critical"]
+		if allowed_by_profile and allowed_by_save:
+			filtered.append(upgrade)
+	filtered.shuffle()
+	if filtered.size() < 3:
+		for upgrade in pool:
+			if not filtered.has(upgrade):
+				filtered.append(upgrade)
+			if filtered.size() >= 3:
+				break
+	return filtered.slice(0, 3)
+
+
+func _rebuild_level_up_cards() -> void:
+	for child in _level_up_cards.get_children():
+		child.queue_free()
+	for upgrade in available_upgrades:
+		var button := _make_level_up_button(upgrade)
+		_level_up_cards.add_child(button)
+
+
+func _make_level_up_button(upgrade: Dictionary) -> Button:
+	var id := String(upgrade["id"])
+	var current_level := int(current_upgrades.get(id, 0))
+	var button := _make_button("%s\n%s\nLv.%s > Lv.%s\nSELECIONAR" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 270, 92)
+	button.add_theme_color_override("font_color", Color("#ffffff"))
+	button.add_theme_font_size_override("font_size", 12)
+	_apply_button_style(button, _make_style("#16003bdd", 12, String(upgrade["color"]), 2, String(upgrade["color"]), 8))
+	button.pressed.connect(_select_level_up_upgrade.bind(id))
+	return button
+
+
+func _select_level_up_upgrade(id: String) -> void:
+	current_upgrades[id] = int(current_upgrades.get(id, 0)) + 1
+	run_upgrades += 1
+	temporary_upgrade = _describe_current_upgrades()
+	level_up_active = false
+	_level_up_overlay.visible = false
+	_play_sfx("coin")
+	_update_hud()
+
+
+func _describe_current_upgrades() -> Dictionary:
+	if current_upgrades.is_empty():
+		return {}
+	var labels: Array[String] = []
+	var names := {
+		"damage": "Dano+",
+		"speed": "Velocidade+",
+		"coinBoost": "Chuva de Moedas",
+		"critical": "Critico+",
+		"xpBoost": "XP Boost",
+		"perfectChance": "Perfect Chance",
+	}
+	for key in current_upgrades.keys():
+		labels.append("%s Lv.%s" % [String(names.get(key, key)), int(current_upgrades[key])])
+	return { "name": "Upgrades da run", "level": current_upgrades.size(), "effect": ", ".join(labels) }
+
+
 func _get_run_upgrade_cost(type: String) -> int:
 	var base := 20 if type == "atk" else 18
 	return floori(base * pow(1.35, int(run_shop_upgrades.get(type, 0))))
@@ -816,6 +921,7 @@ func _go_to_phase_select() -> void:
 
 func _hide_all_overlays() -> void:
 	_pause_overlay.visible = false
+	_level_up_overlay.visible = false
 	_victory_overlay.visible = false
 	_defeat_overlay.visible = false
 

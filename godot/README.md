@@ -183,7 +183,7 @@ Checklist da etapa:
 | Colisao funcionando | Sim | Porta a checagem de gap/parte solida, reflexao e separacao da bolinha. |
 | HUD de partida | Em progresso | Agora mostra moedas/diamantes da run, moedas da conta, chaves, aneis, dificuldade, ATK, DPS, combo, nivel e XP. |
 | Upgrades de rodada | Sim | Barra inferior com ATK e GOLD, custos e compra com moedas da run como na `main`. |
-| Upgrade temporario no HUD | Parcial | Level-up completo com escolha de 3 upgrades ainda pendente; estrutura aparece quando ha upgrade temporario. |
+| Upgrade temporario no HUD | Sim | Level-up abre modal neon com 3 upgrades iniciais reais; HUD mostra upgrades ativos da run. |
 | Efeitos visuais | Sim | Brilho/trilha da bolinha, impacto, quebra de anel, texto flutuante e efeito de vitoria. |
 | Audio de gameplay | Sim | Musica, clique, hit, quebra, perfect, derrota e vitoria foram conectados respeitando audio mudo. |
 | Vitoria funcionando | Sim | Ao limpar todos os aneis, mostra tela de vitoria/recompensa. |
@@ -197,7 +197,7 @@ Checklist da etapa:
 Pendencias da gameplay:
 
 - Comparacao visual pixel a pixel com a `main` ainda pendente.
-- Efeitos de skins avancados, revive/anuncio, dobrar recompensa por anuncio e level-up completo dentro da partida ainda nao foram portados.
+- Efeitos de skins avancados, revive/anuncio, dobrar recompensa por anuncio e reroll de upgrades temporarios ainda nao foram portados.
 - Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
 - Modo infinito e Fases 2-50 ainda nao sao jogaveis nesta etapa.
 

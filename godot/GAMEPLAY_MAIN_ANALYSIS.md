@@ -70,7 +70,8 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
    - A gameplay da main tem barra fixa inferior com dois upgrades compraveis com moedas da run: `ATK` e `Gold`.
    - Custo de `ATK` inicia em `20`; custo de `Gold` inicia em `18`.
    - Cada compra usa `floor(base * 1.35^nivel)`.
-   - A main tambem possui modal de level-up com 3 upgrades temporarios escolhiveis e reroll; esta parte ainda nao foi portada integralmente.
+   - A main tambem possui modal de level-up com 3 upgrades temporarios escolhiveis e reroll.
+   - No Godot, a Fase 1 ja abre um modal neon com 3 opcoes reais de upgrade quando a run sobe de nivel; reroll por anuncio/gemas ainda nao foi portado.
 
 9. **Skin equipada**
    - A skin inicial e `neon_blue`.
@@ -100,6 +101,7 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Recompensas de hit, break e perfect usam multiplicadores de moedas/XP.
 - Combo, maior combo, score e DPS foram adicionados.
 - Upgrades de rodada `ATK` e `Gold` foram adicionados no rodape.
+- Modal de level-up com 3 upgrades temporarios reais foi adicionado para a Fase 1.
 - Upgrades permanentes basicos afetam dano, velocidade, moedas, XP, critico e slow rings.
 - Vitoria salva moedas globais e XP de perfil convertidos como na main.
 - Tela de vitoria mostra as mesmas linhas principais da main.
@@ -108,7 +110,8 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 ## Pendencias conhecidas
 
 - Comparacao visual pixel-perfect com a branch `main` ainda nao foi feita.
-- Modal completo de level-up com 3 upgrades temporarios e reroll ainda nao foi portado.
+- Reroll de upgrades temporarios por anuncio/gemas ainda nao foi portado.
+- Catalogo completo de upgrades temporarios avancados ainda nao foi portado; a Fase 1 ja usa os upgrades iniciais da main.
 - Efeitos especiais completos de todas as skins ainda nao foram portados.
 - Revive por anuncio, dobrar recompensa por anuncio e coleta/sair separada ainda estao preparados apenas como estrutura.
 - Chaves e baus aparecem no resumo como `0/0`, igual ao estado atual observado da gameplay base, mas drops reais ainda nao foram conectados.
@@ -129,3 +132,14 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | XP documentado | Sim |
 | HUD original documentado | Sim |
 | Tela de vitoria original documentada | Sim |
+| Fase 1 ajustada conforme main | Sim |
+| HP removido do HUD | Sim |
+| Circulo central removido | Sim |
+| Area visual extra removida | Sim |
+| Debug removido | Sim |
+| Bolinha com sprite real | Sim |
+| Efeitos visuais adicionados | Sim |
+| Audio integrado | Sim |
+| XP aparecendo corretamente | Sim |
+| Upgrade temporario aparecendo corretamente | Sim |
+| Vitoria fiel a main | Em progresso |
