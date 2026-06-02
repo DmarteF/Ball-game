@@ -73,7 +73,9 @@ func _make_infinite_card() -> Button:
 	var infinite_unlocked := int(GameState.data.get("max_unlocked_phase", 1)) >= 5
 	var button := _make_card_button()
 	button.custom_minimum_size.y = 140
-	button.pressed.connect(_open_placeholder)
+	button.disabled = not infinite_unlocked
+	if infinite_unlocked:
+		button.pressed.connect(_open_infinite)
 	var body := _make_card_body(button, "#00ff8888" if infinite_unlocked else "#333333", "#00f0ff33" if infinite_unlocked else "#222222")
 	body.add_child(_make_circle_icon("infinite", "", "#ffffff22"))
 	var info := _make_phase_info("Modo Infinito", "ESPECIAL", "PROGRESSÃO INFINITA", not infinite_unlocked)
@@ -272,6 +274,12 @@ func _go_back() -> void:
 
 func _open_placeholder() -> void:
 	get_tree().change_scene_to_file(PLACEHOLDER_SCENE)
+
+
+func _open_infinite() -> void:
+	if not GameState.select_infinite():
+		return
+	get_tree().change_scene_to_file(GAME_SCENE)
 
 
 func _open_phase(level: int) -> void:

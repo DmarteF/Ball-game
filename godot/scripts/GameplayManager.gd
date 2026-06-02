@@ -6,6 +6,11 @@ const PHASE_SELECT_SCENE := "res://scenes/PhaseSelect.tscn"
 const BALL_RADIUS := 10.0
 const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
+const MIN_RING_SPACING := 8.4
+const MAX_VISIBLE_RINGS := 26
+const MAX_PHYSICS_SUBSTEPS := 6
+const SAFE_STEP_DISTANCE := 8.0
+const MIN_DIRECTION_COMPONENT := 0.24
 const XP_BASE_REQUIREMENT := 150.0
 const RUN_COIN_MULTIPLIER := 0.92
 const GLOBAL_COIN_CONVERSION_RATE := 0.72
@@ -39,21 +44,24 @@ const ICON_PATHS := {
 	"upgrade": "res://assets/ui/ui_upgrades.png",
 }
 const SOUND_PATHS := {
-	"hit": "res://assets/sounds/hit_light.mp3",
-	"hit_heavy": "res://assets/sounds/hit_heavy.mp3",
-	"break": "res://assets/sounds/ring_break.mp3",
-	"perfect": "res://assets/sounds/perfect.mp3",
-	"coin": "res://assets/sounds/coin_gain.mp3",
+	"ring_hit": "res://assets/sounds/hit_light.mp3",
+	"ring_crit": "res://assets/sounds/hit_heavy.mp3",
+	"ring_break": "res://assets/sounds/ring_break.mp3",
+	"ring_clear": "res://assets/sounds/perfect.mp3",
+	"reward_coin": "res://assets/sounds/coin_gain.mp3",
 	"xp": "res://assets/sounds/xp_gain.mp3",
 	"level_up": "res://assets/sounds/level_up.mp3",
 	"diamond": "res://assets/sounds/diamond_gain.mp3",
 	"victory": "res://assets/sounds/victory.mp3",
 	"defeat": "res://assets/sounds/defeat.mp3",
 	"click": "res://assets/sounds/button_click.mp3",
+	"upgrade_select": "res://assets/sounds/button_confirm.mp3",
 }
 const MUSIC_PATH := "res://assets/music/gameplay.mp3"
 
 var phase_id := 1
+var game_mode := "phase"
+var is_infinite := false
 var phase_config: Dictionary
 var gameplay_config: Dictionary
 var rings: Array[Dictionary] = []
@@ -97,6 +105,11 @@ var rapid_clear_streak := 0
 var last_ring_clear_msec := 0
 var background_palette_index := 0
 var ring_palette_index := 0
+var infinite_elapsed := 0.0
+var infinite_level := 1
+var infinite_score := 0
+var last_direction_shift_msec := 0
+var skin_profile: Dictionary = {}
 
 var _regular_font: Font
 var _bold_font: Font
@@ -124,6 +137,8 @@ var _victory_rewards: VBoxContainer
 var _victory_unlock_label: Label
 var _victory_next_button: Button
 var _defeat_overlay: Control
+var _defeat_title: Label
+var _defeat_summary: VBoxContainer
 var _music_player: AudioStreamPlayer
 var _sfx_players: Dictionary = {}
 
@@ -131,9 +146,11 @@ var _sfx_players: Dictionary = {}
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
-	phase_id = clampi(int(GameState.data.get("selected_phase", GameState.data.get("current_phase", 1))), 1, 50)
+	game_mode = String(GameState.data.get("selected_mode", "phase"))
+	is_infinite = game_mode == "infinite"
+	phase_id = 1 if is_infinite else clampi(int(GameState.data.get("selected_phase", GameState.data.get("current_phase", 1))), 1, 50)
 	phase_config = LevelData.get_phase_config(phase_id)
-	gameplay_config = LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
+	gameplay_config = _make_infinite_gameplay_config() if is_infinite else LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
 	_select_visual_palettes()
 	_load_skin_texture()
 	_setup_audio()
@@ -201,12 +218,20 @@ func _start_level() -> void:
 	ring_pacing_multiplier = 1.0
 	rapid_clear_streak = 0
 	last_ring_clear_msec = 0
+	infinite_elapsed = 0.0
+	infinite_level = 1
+	infinite_score = 0
+	if is_infinite:
+		gameplay_config = _make_infinite_gameplay_config()
 	_update_arena_metrics()
 	rings = _create_rings()
-	var start_angle: float = randf() * TWO_PI
+	var start_angle: float = _safe_motion_angle(randf() * TWO_PI)
 	var speed: float = BASE_BALL_SPEED + min(0.62, float(phase_id - 1) * 0.08 + int(GameState.data.get("level", 1)) * 0.006)
+	if is_infinite:
+		speed += 0.16
 	ball_position = arena_center
 	ball_velocity = Vector2(cos(start_angle), sin(start_angle)) * speed
+	last_direction_shift_msec = Time.get_ticks_msec()
 	previous_distance = 0.0
 	_hide_all_overlays()
 	_update_hud()
@@ -215,26 +240,35 @@ func _start_level() -> void:
 
 func _update_game(delta_steps: float) -> void:
 	_update_arena_metrics()
+	var delta_seconds := delta_steps / PHYSICS_STEPS_PER_SECOND
 	var target_speed: float = _target_ball_speed()
-	ball_velocity = _clamp_vector_speed(ball_velocity, target_speed * 0.78, target_speed * 1.42)
-	var previous_vector := ball_position - arena_center
-	var prev_dist := previous_vector.length()
-	ball_position += ball_velocity * delta_steps
-	_bounce_arena_edge()
-	var next_dist := (ball_position - arena_center).length()
+	ball_velocity = _stabilize_velocity(_clamp_vector_speed(ball_velocity, target_speed * 0.78, target_speed * 1.42))
+	var travel := ball_velocity.length() * delta_steps
+	var substeps: int = clampi(ceili(travel / SAFE_STEP_DISTANCE), 1, MAX_PHYSICS_SUBSTEPS)
+	var step_delta := delta_steps / float(substeps)
+	for step in range(substeps):
+		var previous_vector := ball_position - arena_center
+		var prev_dist := previous_vector.length()
+		var prev_pos := ball_position
+		_apply_dynamic_steering(step_delta)
+		ball_position += ball_velocity * step_delta
+		_bounce_arena_edge()
+		var next_dist := (ball_position - arena_center).length()
+		_update_rings(step_delta)
+		_check_perfect_escape(prev_dist, next_dist, prev_pos, ball_position)
+		_check_ring_hit(prev_dist, next_dist, prev_pos, ball_position)
+		_clamp_ring_spacing()
+		previous_distance = next_dist
+		if _is_ball_crushed():
+			_finish_defeat()
+			return
 	_add_trail_point()
 	_update_combo_timeout()
-	_update_rings(delta_steps)
-	_check_perfect_escape(prev_dist, next_dist)
-	_check_ring_hit(prev_dist)
-	_clamp_ring_spacing()
-	if _active_ring_count() == 0:
+	if is_infinite:
+		_update_infinite_mode(delta_seconds)
+	elif _active_ring_count() == 0:
 		_finish_victory()
 		return
-	if _is_ball_crushed():
-		_finish_defeat()
-		return
-	previous_distance = next_dist
 
 
 func _create_rings() -> Array[Dictionary]:
@@ -242,9 +276,9 @@ func _create_rings() -> Array[Dictionary]:
 	var count: int = int(gameplay_config["ring_count"])
 	var inner_radius: float = INNER_RADIUS
 	var available_radius: float = max(1.0, outer_radius - inner_radius)
-	var adaptive_min_spacing: float = min(5.0, max(2.25, available_radius / max(1.0, float(count - 1))))
+	var adaptive_min_spacing: float = MIN_RING_SPACING
 	var max_count_by_spacing: int = max(1, floori(available_radius / adaptive_min_spacing) + 1)
-	count = max(1, min(count, max_count_by_spacing))
+	count = max(1, min(count, min(MAX_VISIBLE_RINGS, max_count_by_spacing)))
 	var spacing: float = available_radius / max(1.0, float(count - 1))
 	var difficulty: float = 1.0 + max(0, phase_id - 1) * 0.22
 	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
@@ -275,8 +309,84 @@ func _create_rings() -> Array[Dictionary]:
 			"thickness": 7.0 if is_solid else 5.0,
 			"color": ["#ff3d00", "#ff0055", "#b000ff"][i % 3] if is_solid else palette[i % palette.size()],
 			"min_radius": 4.0,
+			"effect_color": "",
+			"effect_until": 0,
+			"rotation_multiplier": 1.0,
+			"closing_multiplier": 1.0,
 		})
 	return result
+
+
+func _make_infinite_gameplay_config() -> Dictionary:
+	var level_factor: int = max(1, infinite_level)
+	var player_level := int(GameState.data.get("level", 1))
+	return {
+		"ring_count": clampi(10 + floori(float(level_factor) * 0.45), 10, 18),
+		"base_hp": 18 + floori(float(level_factor) * 2.8) + floori(float(player_level) * 0.25),
+		"closing_speed": 0.010 + min(0.028, float(level_factor) * 0.0009),
+		"rotation_speed": 0.0044 + min(0.011, float(level_factor) * 0.00038),
+		"gap_size": max(PI / 14.0, PI / (3.8 + float(level_factor) * 0.08)),
+	}
+
+
+func _update_infinite_mode(delta_seconds: float) -> void:
+	infinite_elapsed += delta_seconds
+	var next_level := 1 + floori(infinite_elapsed / 22.0) + floori(float(rings_destroyed) / 10.0)
+	if next_level != infinite_level:
+		infinite_level = next_level
+		gameplay_config = _make_infinite_gameplay_config()
+	if rings.size() >= MAX_VISIBLE_RINGS:
+		_prune_inactive_rings()
+	var target_count := clampi(8 + floori(float(infinite_level) * 0.24), 8, 17)
+	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6:
+		_append_infinite_ring()
+	_clamp_ring_spacing()
+
+
+func _prune_inactive_rings() -> void:
+	var kept: Array[Dictionary] = []
+	for ring in rings:
+		if String(ring.get("status", "")) == "active" and int(ring.get("hp", 0)) > 0:
+			kept.append(ring)
+	rings = kept
+
+
+func _append_infinite_ring() -> void:
+	var ring_index := rings.size()
+	rings.append(_make_infinite_ring(ring_index))
+
+
+func _make_infinite_ring(index: int) -> Dictionary:
+	var palette: Array = RING_PALETTES[ring_palette_index]
+	var progress := clampf(float(_active_ring_count()) / 16.0, 0.0, 1.0)
+	var direction := 1.0 if index % 2 == 0 else -1.0
+	var solid_every: int = max(7, 12 - min(5, floori(float(infinite_level) / 3.0)))
+	var is_solid := infinite_level >= 4 and index % solid_every == 0
+	var base_hp := int(gameplay_config.get("base_hp", 20))
+	var hp := floori(float(base_hp) * (1.0 + progress * 0.75) * (1.42 if is_solid else 1.0))
+	var radius := outer_radius - 2.0
+	var gap: float = 0.0 if is_solid else max(PI / 15.0, float(gameplay_config.get("gap_size", PI / 4.0)) * randf_range(0.88, 1.08))
+	return {
+		"id": "infinite_%s_%s" % [floori(infinite_elapsed), index],
+		"type": "solid" if is_solid else "normal",
+		"radius": radius,
+		"initial_radius": radius,
+		"closing_speed": float(gameplay_config.get("closing_speed", 0.012)) * randf_range(0.86, 1.2),
+		"rotation": randf() * TWO_PI,
+		"rotation_speed": float(gameplay_config.get("rotation_speed", 0.005)) * randf_range(0.86, 1.25) * direction,
+		"gap_start": randf() * TWO_PI,
+		"gap_size": gap,
+		"hp": hp,
+		"max_hp": hp,
+		"status": "active",
+		"thickness": 7.0 if is_solid else 5.0,
+		"color": ["#ff3d00", "#ff0055", "#b000ff"][index % 3] if is_solid else palette[index % palette.size()],
+		"min_radius": 4.0,
+		"effect_color": "",
+		"effect_until": 0,
+		"rotation_multiplier": 1.0,
+		"closing_multiplier": 1.0,
+	}
 
 
 func _update_rings(delta_steps: float) -> void:
@@ -285,13 +395,21 @@ func _update_rings(delta_steps: float) -> void:
 		var ring := rings[i]
 		if String(ring.get("status", "")) != "active":
 			continue
-		ring["rotation"] = _normalize_angle(float(ring["rotation"]) + float(ring["rotation_speed"]) * delta_steps)
-		ring["radius"] = max(float(ring["min_radius"]), float(ring["radius"]) - float(ring["closing_speed"]) * delta_steps * pacing)
+		var now := Time.get_ticks_msec()
+		if int(ring.get("effect_until", 0)) > 0 and now >= int(ring.get("effect_until", 0)):
+			ring["effect_color"] = ""
+			ring["effect_until"] = 0
+			ring["rotation_multiplier"] = 1.0
+			ring["closing_multiplier"] = 1.0
+		var rotation_multiplier := float(ring.get("rotation_multiplier", 1.0))
+		var closing_multiplier := float(ring.get("closing_multiplier", 1.0))
+		ring["rotation"] = _normalize_angle(float(ring["rotation"]) + float(ring["rotation_speed"]) * delta_steps * rotation_multiplier)
+		ring["radius"] = max(float(ring["min_radius"]), float(ring["radius"]) - float(ring["closing_speed"]) * delta_steps * pacing * closing_multiplier)
 		rings[i] = ring
 
 
-func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
-	var angle := _normalize_angle((ball_position - arena_center).angle())
+func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2, next_pos: Vector2) -> void:
+	var angle := _segment_angle_at_crossing(prev_pos, next_pos, 0.5)
 	for i in range(rings.size()):
 		var ring := rings[i]
 		if String(ring.get("status", "")) != "active" or String(ring.get("type", "normal")) == "solid":
@@ -300,6 +418,9 @@ func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
 		var crossed: bool = (prev_dist - radius) * (next_dist - radius) <= 0.0
 		var near: bool = abs(next_dist - radius) <= BALL_RADIUS + abs(next_dist - prev_dist) + float(ring["thickness"])
 		if crossed and near and _is_angle_inside_gap(angle, ring, min(0.06, BALL_RADIUS / max(1.0, radius))):
+			_try_apply_skin_effect(i, "perfect")
+			_try_apply_upgrade_effects(i, "perfect", 0)
+			ring = rings[i]
 			ring["status"] = "cleared"
 			ring["hp"] = 0
 			rings[i] = ring
@@ -312,7 +433,7 @@ func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
 			_register_combo("Perfect", Color("#00f0ff"))
 			_spawn_particles(ball_position, Color("#b8f3ff"), 12, 110.0)
 			_spawn_floating("Perfect", ball_position + Vector2(10, -20), Color("#b8f3ff"))
-			_play_sfx("perfect")
+			_play_sfx("ring_clear")
 			if randf() < min(0.18, 0.03 + _perfect_diamond_bonus()):
 				run_diamonds += 1
 				_play_sfx("diamond")
@@ -320,14 +441,14 @@ func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
 			return
 
 
-func _check_ring_hit(prev_dist: float) -> void:
+func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next_pos: Vector2) -> void:
 	var closest_index := -1
 	var closest_dist := INF
 	for i in range(rings.size()):
 		var ring := rings[i]
 		if String(ring.get("status", "")) != "active":
 			continue
-		var collision := _check_ring_collision(ring)
+		var collision := _check_ring_collision(ring, prev_dist, next_dist, prev_pos, next_pos)
 		if bool(collision["overlap"]) and not bool(collision["gap"]) and float(collision["dist"]) < closest_dist:
 			closest_index = i
 			closest_dist = float(collision["dist"])
@@ -335,6 +456,10 @@ func _check_ring_hit(prev_dist: float) -> void:
 		return
 
 	var ring := rings[closest_index]
+	if _skin_can_phase_collision(ring):
+		_spawn_particles(ball_position, Color("#a855f7"), 10, 90.0)
+		_spawn_floating("Phase", ball_position + Vector2(10, -18), Color("#c084fc"))
+		return
 	_separate_and_reflect(ring, prev_dist)
 	var now: int = Time.get_ticks_msec()
 	if now - last_hit_msec <= 90:
@@ -342,6 +467,9 @@ func _check_ring_hit(prev_dist: float) -> void:
 	last_hit_msec = now
 	var is_crit := randf() * 100.0 < _crit_chance()
 	var damage := floori(float(_base_damage()) * (_crit_damage() if is_crit else 1.0))
+	damage += _try_apply_skin_effect(closest_index, "hit")
+	damage += _try_apply_upgrade_effects(closest_index, "hit", damage)
+	ring = rings[closest_index]
 	var new_hp: int = max(0, int(ring["hp"]) - damage)
 	ring["hp"] = new_hp
 	ring["status"] = "broken" if new_hp <= 0 else "active"
@@ -352,29 +480,84 @@ func _check_ring_hit(prev_dist: float) -> void:
 	_track_dps(float(damage))
 	_spawn_particles(ball_position, Color(String(ring["color"])), 6, 70.0)
 	_spawn_floating("+%s%s" % [damage, " CRIT" if is_crit else ""], ball_position + Vector2(8, -12), Color("#ffd700") if is_crit else Color("#ffffff"))
-	_play_sfx("hit_heavy" if is_crit else "hit")
 	if is_crit:
 		criticals += 1
 	if new_hp <= 0:
 		rings_destroyed += 1
+		infinite_score += max(1, damage)
 		_register_ring_clear()
+		_try_apply_skin_effect(closest_index, "break")
+		_try_apply_upgrade_effects(closest_index, "break", damage)
 		_register_combo("Break", Color("#ffd700"))
 		_award_coins(max(6, floori((18.0 if String(ring.get("type", "normal")) == "solid" else 12.0) * _gold_multiplier())))
 		_award_xp(floori(((24.0 if String(ring.get("type", "normal")) == "solid" else 14.0) + phase_id * 0.8 + randf() * (14.0 if String(ring.get("type", "normal")) == "solid" else 9.0)) * _xp_multiplier()))
 		_spawn_particles(ball_position, Color("#ffd700"), 18, 130.0)
 		_spawn_floating("Break!", ball_position + Vector2(-18, -28), Color("#ffd700"))
-		_play_sfx("break")
+		_play_sfx("ring_break")
+	else:
+		_play_sfx("ring_crit" if is_crit else "ring_hit")
 
 
-func _check_ring_collision(ring: Dictionary) -> Dictionary:
+func _check_ring_collision(ring: Dictionary, prev_dist := -1.0, next_dist := -1.0, prev_pos := Vector2.ZERO, next_pos := Vector2.ZERO) -> Dictionary:
 	var offset := ball_position - arena_center
 	var dist_from_center := offset.length()
 	var dist_from_ring: float = abs(dist_from_center - float(ring["radius"]))
 	var overlapping: bool = dist_from_ring <= float(ring["thickness"]) / 2.0 + BALL_RADIUS
+	if prev_dist >= 0.0 and next_dist >= 0.0:
+		var radius := float(ring["radius"])
+		var crossed: bool = (prev_dist - radius) * (next_dist - radius) <= 0.0
+		var swept_near: bool = abs(next_dist - prev_dist) + BALL_RADIUS + float(ring["thickness"]) >= min(abs(prev_dist - radius), abs(next_dist - radius))
+		overlapping = overlapping or (crossed and swept_near)
 	var angle: float = _normalize_angle(offset.angle())
+	if prev_pos != Vector2.ZERO or next_pos != Vector2.ZERO:
+		angle = _segment_angle_at_crossing(prev_pos, next_pos, 0.5)
 	var padding: float = min(0.08, BALL_RADIUS / max(1.0, float(ring["radius"])))
 	var in_gap: bool = false if String(ring.get("type", "normal")) == "solid" else _is_angle_inside_gap(angle, ring, padding)
 	return { "overlap": overlapping, "gap": in_gap, "dist": dist_from_ring, "angle": angle }
+
+
+func _segment_angle_at_crossing(prev_pos: Vector2, next_pos: Vector2, fallback_t: float) -> float:
+	var start := prev_pos - arena_center
+	var end := next_pos - arena_center
+	var t := clampf(fallback_t, 0.0, 1.0)
+	var point := start.lerp(end, t)
+	if point.length() <= 0.01:
+		point = ball_position - arena_center
+	return _normalize_angle(point.angle())
+
+
+func _apply_dynamic_steering(delta_steps: float) -> void:
+	var speed := ball_velocity.length()
+	if speed <= 0.01:
+		return
+	var dir := ball_velocity / speed
+	var too_flat: bool = abs(dir.y) < MIN_DIRECTION_COMPONENT
+	var too_vertical: bool = abs(dir.x) < MIN_DIRECTION_COMPONENT * 0.65
+	var stale: bool = Time.get_ticks_msec() - last_direction_shift_msec > 1450
+	if too_flat or too_vertical or stale:
+		var sign := -1.0 if randf() < 0.5 else 1.0
+		var amount := (0.022 if stale else 0.035) * sign * clampf(delta_steps, 0.5, 2.4)
+		ball_velocity = ball_velocity.rotated(amount)
+		ball_velocity = _stabilize_velocity(ball_velocity)
+		last_direction_shift_msec = Time.get_ticks_msec()
+
+
+func _safe_motion_angle(angle: float) -> float:
+	var vector := Vector2(cos(angle), sin(angle))
+	if abs(vector.y) < MIN_DIRECTION_COMPONENT:
+		vector.y = MIN_DIRECTION_COMPONENT * (-1.0 if vector.y < 0.0 else 1.0)
+	if abs(vector.x) < MIN_DIRECTION_COMPONENT * 0.65:
+		vector.x = MIN_DIRECTION_COMPONENT * 0.65 * (-1.0 if vector.x < 0.0 else 1.0)
+	return _normalize_angle(vector.normalized().angle())
+
+
+func _stabilize_velocity(value: Vector2) -> Vector2:
+	var speed := value.length()
+	if speed <= 0.01:
+		var random_angle := _safe_motion_angle(randf() * TWO_PI)
+		return Vector2(cos(random_angle), sin(random_angle)) * _target_ball_speed()
+	var angle := _safe_motion_angle(value.angle())
+	return Vector2(cos(angle), sin(angle)) * speed
 
 
 func _separate_and_reflect(ring: Dictionary, prev_dist: float) -> void:
@@ -389,7 +572,8 @@ func _separate_and_reflect(ring: Dictionary, prev_dist: float) -> void:
 	if dot < 0.0:
 		ball_velocity -= 2.0 * dot * normal
 		var target_speed := _target_ball_speed()
-		ball_velocity = _clamp_vector_speed(ball_velocity * 1.04, target_speed * 0.88, target_speed * 1.55)
+		ball_velocity = _stabilize_velocity(_clamp_vector_speed(ball_velocity.rotated(randf_range(-0.15, 0.15)) * 1.04, target_speed * 0.88, target_speed * 1.55))
+		last_direction_shift_msec = Time.get_ticks_msec()
 
 
 func _is_ball_crushed() -> bool:
@@ -410,7 +594,7 @@ func _finish_victory() -> void:
 	finished = true
 	var profile_xp_reward := _run_profile_xp() * reward_multiplier
 	var global_coins_reward := _global_coins_from_run(run_coins * reward_multiplier, best_combo, true)
-	GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier)
+	GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier, best_combo)
 	_spawn_particles(arena_center, Color("#00ff88"), 42, 180.0)
 	_play_sfx("victory")
 	_victory_title.text = "FASE %s CONCLUIDA" % phase_id
@@ -427,6 +611,24 @@ func _finish_victory() -> void:
 func _finish_defeat() -> void:
 	finished = true
 	_play_sfx("defeat")
+	if is_infinite:
+		var global_coins_reward := _global_coins_from_run(run_coins, best_combo, false)
+		var profile_xp_reward := _run_profile_xp()
+		var previous_best_seconds := int(GameState.data.get("stats", {}).get("bestInfiniteSeconds", 0))
+		var summary := {
+			"seconds": floori(infinite_elapsed),
+			"rings": rings_destroyed,
+			"coins": global_coins_reward,
+			"xp": profile_xp_reward,
+			"diamonds": run_diamonds,
+			"score": infinite_score,
+			"best_combo": best_combo,
+			"new_record": floori(infinite_elapsed) > previous_best_seconds,
+		}
+		GameState.record_infinite_run(summary)
+		_rebuild_defeat_summary(summary)
+	elif _defeat_summary:
+		_rebuild_defeat_summary({})
 	_defeat_overlay.visible = true
 	queue_redraw()
 
@@ -441,6 +643,8 @@ func _draw_rings() -> void:
 			continue
 		var radius := float(ring["radius"])
 		var color := Color(String(ring["color"]))
+		if not String(ring.get("effect_color", "")).is_empty():
+			color = Color(String(ring.get("effect_color", "")))
 		var thickness := float(ring["thickness"])
 		if String(ring.get("type", "normal")) == "solid":
 			draw_arc(arena_center, radius, 0.0, TWO_PI, 180, Color(color, 0.28), thickness + 7.0, true)
@@ -457,7 +661,7 @@ func _draw_ring_segment(radius: float, start_angle: float, end_angle: float, col
 
 
 func _draw_ball() -> void:
-	var skin_glow := Color("#00f0ff")
+	var skin_glow := Color(String(skin_profile.get("color", "#00f0ff")))
 	draw_circle(ball_position, BALL_RADIUS + 12.0, Color(skin_glow, 0.16))
 	draw_circle(ball_position, BALL_RADIUS + 5.0, Color("#ffffff22"))
 	var rect := Rect2(ball_position - Vector2(BALL_RADIUS, BALL_RADIUS) * 1.65, Vector2(BALL_RADIUS, BALL_RADIUS) * 3.3)
@@ -469,7 +673,7 @@ func _draw_ball() -> void:
 
 func _draw_effects() -> void:
 	for point in trail_points:
-		draw_circle(point["position"], float(point["size"]), Color("#00f0ff", float(point["life"]) * 0.22))
+		draw_circle(point["position"], float(point["size"]), Color(String(point.get("color", "#00f0ff")), float(point["life"]) * 0.22))
 	for particle in particles:
 		draw_circle(particle["position"], float(particle["size"]), Color(particle["color"], float(particle["life"])))
 
@@ -595,7 +799,11 @@ func _build_result_overlays() -> void:
 
 	_defeat_overlay = _make_modal()
 	var defeat_card := _make_modal_content(_defeat_overlay, "GAME OVER")
-	defeat_card.add_child(_make_label("A bolinha foi presa pelos aneis.", 15, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER))
+	_defeat_title = _make_label("A bolinha foi presa pelos aneis.", 15, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	defeat_card.add_child(_defeat_title)
+	_defeat_summary = VBoxContainer.new()
+	_defeat_summary.add_theme_constant_override("separation", 8)
+	defeat_card.add_child(_defeat_summary)
 	defeat_card.add_child(_make_modal_button("TENTAR DE NOVO", _restart_level))
 	defeat_card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
 	add_child(_defeat_overlay)
@@ -704,12 +912,13 @@ func _make_progress_bar(fill_color: String) -> ProgressBar:
 
 func _update_hud() -> void:
 	var active: int = _active_ring_count()
-	_hud_phase.text = "FASE %s" % phase_id
+	_hud_phase.text = "INFINITO" if is_infinite else "FASE %s" % phase_id
 	_set_resource_value("coins", run_coins)
 	_set_resource_value("gems", run_diamonds)
 	_set_resource_value("account", int(GameState.data.get("coins", 0)))
 	_set_resource_value("keys", int(GameState.data.get("keys", 0)))
-	_hud_meta.text = "DIFICULDADE: %s%s" % [String(phase_config["difficulty"]).to_upper(), "   COMBO x%s" % combo if combo >= 2 else ""]
+	var difficulty_text := "INFINITO Lv.%s" % infinite_level if is_infinite else String(phase_config["difficulty"]).to_upper()
+	_hud_meta.text = "DIFICULDADE: %s%s" % [difficulty_text, "   COMBO x%s" % combo if combo >= 2 else ""]
 	var xp_needed := _run_xp_needed_for_level(run_level)
 	_hud_xp.text = "LV.%s   XP %s/%s   +%s XP" % [run_level, run_xp, xp_needed, run_xp]
 	_hud_xp_bar.max_value = xp_needed
@@ -742,7 +951,10 @@ func _base_damage() -> int:
 
 
 func _target_ball_speed() -> float:
-	return (BASE_BALL_SPEED + min(0.62, float(phase_id - 1) * 0.08)) * _speed_multiplier()
+	var difficulty_speed: float = min(0.62, float(phase_id - 1) * 0.08)
+	if is_infinite:
+		difficulty_speed = min(1.05, 0.18 + float(infinite_level - 1) * 0.025)
+	return (BASE_BALL_SPEED + difficulty_speed) * _speed_multiplier()
 
 
 func _speed_multiplier() -> float:
@@ -820,6 +1032,149 @@ func _skin_crit_bonus() -> float:
 	if skin_id in ["kitty", "tiger_common", "bee_common"]:
 		return 3.0
 	return 0.0
+
+
+func _try_apply_skin_effect(ring_index: int, trigger: String) -> int:
+	if ring_index < 0 or ring_index >= rings.size():
+		return 0
+	var effect := String(skin_profile.get("effect", "trail"))
+	var chance := float(skin_profile.get("chance", 0.0))
+	if trigger == "perfect":
+		chance *= 0.65
+	if randf() > chance:
+		return 0
+	skin_effects += 1
+	return _apply_effect_to_ring(ring_index, effect, float(skin_profile.get("value", 0.0)), Color(String(skin_profile.get("color", "#00f0ff"))), "skin")
+
+
+func _try_apply_upgrade_effects(ring_index: int, trigger: String, base_damage_value: int) -> int:
+	var bonus_damage := 0
+	if int(current_upgrades.get("frost", 0)) > 0 and randf() < 0.22 + int(current_upgrades.get("frost", 0)) * 0.04:
+		bonus_damage += _apply_effect_to_ring(ring_index, "freeze", 0.48, Color("#9be8ff"), "upgrade")
+	if int(current_upgrades.get("burn", 0)) > 0:
+		bonus_damage += floori(max(1, base_damage_value) * (0.26 + int(current_upgrades.get("burn", 0)) * 0.08))
+		_apply_effect_to_ring(ring_index, "burn", 0.22, Color("#ff8800"), "upgrade")
+	if int(current_upgrades.get("ringRepulse", 0)) > 0 and trigger == "hit":
+		_apply_effect_to_ring(ring_index, "repulse", 10.0 + int(current_upgrades.get("ringRepulse", 0)) * 3.0, Color("#c084fc"), "upgrade")
+	if int(current_upgrades.get("chainLightning", 0)) > 0 and randf() < 0.16 + int(current_upgrades.get("chainLightning", 0)) * 0.035:
+		_apply_effect_to_ring(ring_index, "chain", 0.30, Color("#38bdf8"), "upgrade")
+	return bonus_damage
+
+
+func _apply_effect_to_ring(ring_index: int, effect: String, value: float, color: Color, source: String) -> int:
+	if ring_index < 0 or ring_index >= rings.size():
+		return 0
+	var ring := rings[ring_index]
+	if String(ring.get("status", "")) != "active":
+		return 0
+	var bonus_damage := 0
+	match effect:
+		"freeze":
+			ring["effect_color"] = "#9be8ff"
+			ring["effect_until"] = Time.get_ticks_msec() + 1850
+			ring["rotation_multiplier"] = clampf(1.0 - max(value, 0.34), 0.28, 0.72)
+			ring["closing_multiplier"] = 0.72
+			_spawn_particles(ball_position, color, 10, 80.0)
+			_spawn_floating("Freeze", ball_position + Vector2(8, -30), color)
+		"burn":
+			bonus_damage = max(1, floori(float(_base_damage()) * max(0.20, value)))
+			ring["effect_color"] = "#ff8800"
+			ring["effect_until"] = Time.get_ticks_msec() + 1150
+			_spawn_particles(ball_position, color, 12, 105.0)
+			_spawn_floating("Burn +%s" % bonus_damage, ball_position + Vector2(6, -32), color)
+		"chain":
+			bonus_damage = _damage_neighbor_ring(ring_index, max(1, floori(float(_base_damage()) * max(0.25, value))), color)
+			_spawn_particles(ball_position, color, 14, 120.0)
+		"area":
+			bonus_damage = _damage_area_rings(ring_index, max(1, floori(float(_base_damage()) * max(0.24, value))), color)
+			_spawn_particles(ball_position, color, 18, 125.0)
+		"repulse":
+			ring["radius"] = min(outer_radius - 2.0, float(ring["radius"]) + max(8.0, value))
+			ring["effect_color"] = "#c084fc"
+			ring["effect_until"] = Time.get_ticks_msec() + 900
+			_spawn_particles(ball_position, color, 9, 95.0)
+		"coin":
+			_award_coins(max(3, floori(value)))
+			_spawn_particles(ball_position, color, 8, 80.0)
+		"xp":
+			_award_xp(max(4, floori(value)))
+			_spawn_particles(ball_position, color, 8, 80.0)
+		"speed":
+			ball_velocity = _stabilize_velocity(ball_velocity * (1.0 + clampf(value, 0.03, 0.12)))
+			_spawn_particles(ball_position, color, 8, 90.0)
+		"crit":
+			bonus_damage = max(1, floori(float(_base_damage()) * max(0.25, value)))
+			_spawn_particles(ball_position, color, 10, 100.0)
+		_:
+			_spawn_particles(ball_position, color, 5, 70.0)
+	rings[ring_index] = ring
+	return bonus_damage
+
+
+func _skin_can_phase_collision(ring: Dictionary) -> bool:
+	if String(skin_profile.get("effect", "")) != "phase":
+		return false
+	if randf() > float(skin_profile.get("chance", 0.0)):
+		return false
+	skin_effects += 1
+	return true
+
+
+func _damage_neighbor_ring(source_index: int, amount: int, color: Color) -> int:
+	var best_index := -1
+	var best_distance := INF
+	for i in range(rings.size()):
+		if i == source_index:
+			continue
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "active":
+			continue
+		var dist: float = abs(float(ring.get("radius", 0.0)) - float(rings[source_index].get("radius", 0.0)))
+		if dist < best_distance:
+			best_distance = dist
+			best_index = i
+	if best_index < 0:
+		return 0
+	var ring := rings[best_index]
+	ring["hp"] = max(0, int(ring.get("hp", 0)) - amount)
+	ring["effect_color"] = "#38bdf8"
+	ring["effect_until"] = Time.get_ticks_msec() + 850
+	if int(ring["hp"]) <= 0:
+		ring["status"] = "broken"
+		rings_destroyed += 1
+		_register_ring_clear()
+		_award_coins(max(3, floori(8.0 * _gold_multiplier())))
+		_award_xp(floori(8.0 * _xp_multiplier()))
+	rings[best_index] = ring
+	_spawn_floating("Chain", ball_position + Vector2(-24, -36), color)
+	return amount
+
+
+func _damage_area_rings(source_index: int, amount: int, color: Color) -> int:
+	var total := 0
+	var source_radius := float(rings[source_index].get("radius", 0.0))
+	for i in range(rings.size()):
+		if i == source_index:
+			continue
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "active":
+			continue
+		if abs(float(ring.get("radius", 0.0)) - source_radius) > MIN_RING_SPACING * 2.2:
+			continue
+		ring["hp"] = max(0, int(ring.get("hp", 0)) - amount)
+		ring["effect_color"] = "#7c3aed"
+		ring["effect_until"] = Time.get_ticks_msec() + 900
+		if int(ring["hp"]) <= 0:
+			ring["status"] = "broken"
+			rings_destroyed += 1
+			_register_ring_clear()
+			_award_coins(max(3, floori(6.0 * _gold_multiplier())))
+			_award_xp(floori(6.0 * _xp_multiplier()))
+		rings[i] = ring
+		total += amount
+	if total > 0:
+		_spawn_floating("Area", ball_position + Vector2(-24, -36), color)
+	return total
 
 
 func _award_coins(amount: int) -> void:
@@ -966,6 +1321,8 @@ func _get_safe_upgrade_options() -> Array[Dictionary]:
 		{ "id": "perfectChance", "name": "Perfect Chance", "description": "+1% chance de diamante no Perfect", "rarity": "rare", "color": "#c084fc", "unlock": 5 },
 		{ "id": "burn", "name": "Queimar", "description": "Dano extra de impacto", "rarity": "rare", "color": "#ff8800", "unlock": 5 },
 		{ "id": "ringRepulse", "name": "Ring Repulse", "description": "Empurra aneis no impacto", "rarity": "rare", "color": "#8b5cf6", "unlock": 7 },
+		{ "id": "frost", "name": "Gelo Neon", "description": "Reduz a rotacao dos aneis", "rarity": "rare", "color": "#9be8ff", "unlock": 8 },
+		{ "id": "chainLightning", "name": "Choque em Cadeia", "description": "Atinge um anel proximo", "rarity": "epic", "color": "#38bdf8", "unlock": 10 },
 	]
 	var filtered: Array[Dictionary] = []
 	for upgrade in pool:
@@ -1010,7 +1367,7 @@ func _select_level_up_upgrade(id: String) -> void:
 	temporary_upgrade = _describe_current_upgrades()
 	level_up_active = false
 	_level_up_overlay.visible = false
-	_play_sfx("coin")
+	_play_sfx("upgrade_select")
 	_update_hud()
 
 
@@ -1026,6 +1383,10 @@ func _describe_current_upgrades() -> Dictionary:
 		"critical": "Critico+",
 		"xpBoost": "XP Boost",
 		"perfectChance": "Perfect Chance",
+		"burn": "Queimar",
+		"ringRepulse": "Ring Repulse",
+		"frost": "Gelo Neon",
+		"chainLightning": "Choque",
 	}
 	for key in current_upgrades.keys():
 		last_key = String(key)
@@ -1046,6 +1407,12 @@ func _upgrade_icon_key(id: String) -> String:
 			return "xp"
 		"perfectChance":
 			return "perfect"
+		"frost", "chainLightning":
+			return "speed"
+		"burn":
+			return "damage"
+		"ringRepulse":
+			return "upgrade"
 		"coinBoost":
 			return "coin"
 		_:
@@ -1072,7 +1439,7 @@ func _buy_run_upgrade(type: String) -> void:
 	if run_coins < cost:
 		_play_sfx("click")
 		return
-	_play_sfx("coin")
+	_play_sfx("upgrade_select")
 	run_coins -= cost
 	run_shop_upgrades[type] = int(run_shop_upgrades.get(type, 0)) + 1
 	run_upgrades += 1
@@ -1145,6 +1512,33 @@ func _rebuild_victory_rewards(global_coins_reward: int, profile_xp_reward: int) 
 	_victory_rewards.add_child(_make_victory_line("upgrade", "Level da rodada", str(run_level)))
 
 
+func _rebuild_defeat_summary(summary: Dictionary) -> void:
+	if not _defeat_summary:
+		return
+	for child in _defeat_summary.get_children():
+		child.queue_free()
+	if is_infinite and not summary.is_empty():
+		var seconds := int(summary.get("seconds", 0))
+		var new_record := bool(summary.get("new_record", false))
+		_defeat_title.text = "RESULTADO DO MODO INFINITO"
+		_defeat_summary.add_child(_make_victory_line("perfect", "Tempo", _format_seconds(seconds)))
+		_defeat_summary.add_child(_make_victory_line("upgrade", "Aneis quebrados", str(summary.get("rings", 0))))
+		_defeat_summary.add_child(_make_victory_line("coin", "Moedas", "+%s" % int(summary.get("coins", 0))))
+		_defeat_summary.add_child(_make_victory_line("xp", "XP", "+%s" % int(summary.get("xp", 0))))
+		if int(summary.get("diamonds", 0)) > 0:
+			_defeat_summary.add_child(_make_victory_line("gem", "Diamantes", "+%s" % int(summary.get("diamonds", 0))))
+		if new_record:
+			_defeat_summary.add_child(_make_label("NOVO RECORDE!", 15, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	else:
+		_defeat_title.text = "A bolinha foi presa pelos aneis."
+
+
+func _format_seconds(seconds: int) -> String:
+	var minutes := seconds / 60
+	var remain := seconds % 60
+	return "%02d:%02d" % [minutes, remain]
+
+
 func _make_victory_line(icon_key: String, label_text: String, value_text: String) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(280, 42)
@@ -1175,6 +1569,8 @@ func _bounce_arena_edge() -> void:
 	var outward_velocity := ball_velocity.dot(normal)
 	if outward_velocity > 0.0:
 		ball_velocity -= 2.0 * outward_velocity * normal
+		ball_velocity = _stabilize_velocity(ball_velocity.rotated(randf_range(-0.10, 0.10)))
+		last_direction_shift_msec = Time.get_ticks_msec()
 
 
 func _clamp_ring_spacing() -> void:
@@ -1185,7 +1581,7 @@ func _clamp_ring_spacing() -> void:
 			continue
 		var min_radius := float(ring["min_radius"])
 		if not inner_active.is_empty():
-			min_radius = max(min_radius, float(inner_active["radius"]) + float(inner_active["thickness"]) / 2.0 + float(ring["thickness"]) / 2.0 + 5.0)
+			min_radius = max(min_radius, float(inner_active["radius"]) + max(MIN_RING_SPACING, float(inner_active["thickness"]) / 2.0 + float(ring["thickness"]) / 2.0 + 2.5))
 		if float(ring["radius"]) < min_radius:
 			ring["radius"] = min_radius
 			rings[i] = ring
@@ -1250,7 +1646,8 @@ func _update_effects(delta: float) -> void:
 
 
 func _add_trail_point() -> void:
-	trail_points.append({ "position": ball_position, "life": 1.0, "size": BALL_RADIUS + 5.0 })
+	var rarity_size := float(skin_profile.get("trail_size", 5.0))
+	trail_points.append({ "position": ball_position, "life": 1.0, "size": BALL_RADIUS + rarity_size, "color": String(skin_profile.get("color", "#00f0ff")) })
 	if trail_points.size() > 18:
 		trail_points.pop_front()
 
@@ -1297,11 +1694,45 @@ func _xp_needed_for_level(player_level: int) -> int:
 
 func _load_skin_texture() -> void:
 	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	skin_profile = _make_skin_profile(skin_id)
 	var path := "res://assets/skins/%s.png" % skin_id
 	if ResourceLoader.exists(path):
 		_skin_texture = load(path)
 	else:
 		_skin_texture = load("res://assets/skins/neon_blue.png")
+
+
+func _make_skin_profile(skin_id: String) -> Dictionary:
+	var id := skin_id.to_lower()
+	var profile := { "id": skin_id, "effect": "trail", "chance": 0.06, "value": 0.0, "color": "#00f0ff", "trail_size": 5.0 }
+	if _id_contains_any(id, ["ice", "frost", "snow", "penguin", "wizard", "red_eye", "neon_spiral"]):
+		profile.merge({ "effect": "freeze", "chance": 0.24, "value": 0.42, "color": "#9be8ff", "trail_size": 7.5 }, true)
+	elif _id_contains_any(id, ["fire", "flame", "dragon", "phoenix", "solar", "meteor"]):
+		profile.merge({ "effect": "burn", "chance": 0.22, "value": 0.55, "color": "#ff8800", "trail_size": 7.0 }, true)
+	elif _id_contains_any(id, ["electric", "lightning", "plasma", "satellite", "orbital"]):
+		profile.merge({ "effect": "chain", "chance": 0.20, "value": 0.36, "color": "#38bdf8", "trail_size": 7.0 }, true)
+	elif _id_contains_any(id, ["ghost", "shadow", "void", "astral"]):
+		profile.merge({ "effect": "phase", "chance": 0.12, "value": 0.0, "color": "#a855f7", "trail_size": 7.5 }, true)
+	elif _id_contains_any(id, ["ripple", "guardian", "king", "repulse", "robot"]):
+		profile.merge({ "effect": "repulse", "chance": 0.18, "value": 14.0, "color": "#c084fc", "trail_size": 6.5 }, true)
+	elif _id_contains_any(id, ["piggy", "cow", "ladybug", "chick", "hamster", "puppy"]):
+		profile.merge({ "effect": "coin", "chance": 0.18, "value": 5.0, "color": "#ffd700", "trail_size": 6.0 }, true)
+	elif _id_contains_any(id, ["monkey", "panda", "heart"]):
+		profile.merge({ "effect": "xp", "chance": 0.18, "value": 8.0, "color": "#00ff88", "trail_size": 6.0 }, true)
+	elif _id_contains_any(id, ["bunny", "fox", "fish", "comet", "ninja"]):
+		profile.merge({ "effect": "speed", "chance": 0.14, "value": 0.05, "color": "#67e8f9", "trail_size": 6.5 }, true)
+	elif _id_contains_any(id, ["kitty", "tiger", "bee", "skull"]):
+		profile.merge({ "effect": "crit", "chance": 0.16, "value": 0.35, "color": "#ff4fd8", "trail_size": 6.5 }, true)
+	elif _id_contains_any(id, ["black_hole", "singularity", "cosmic"]):
+		profile.merge({ "effect": "area", "chance": 0.18, "value": 0.32, "color": "#7c3aed", "trail_size": 8.0 }, true)
+	return profile
+
+
+func _id_contains_any(id: String, needles: Array) -> bool:
+	for needle in needles:
+		if id.contains(String(needle)):
+			return true
+	return false
 
 
 func _select_visual_palettes() -> void:

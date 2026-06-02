@@ -219,11 +219,103 @@ Checklist da etapa:
 Pendencias da gameplay:
 
 - Comparacao visual pixel a pixel com a `main` ainda pendente.
-- Efeitos de skins avancados, revive/anuncio, dobrar recompensa por anuncio e reroll de upgrades temporarios ainda nao foram portados.
-- Efeitos especiais de skins seguem preparados como hook, mas nao foram implementados nesta etapa.
+- Efeitos basicos de skins foram implementados por familias: gelo, fogo, eletrico/cadeia, sombra/fase, repulsao, moeda, XP, velocidade, critico e area. Alguns efeitos ultra-especificos da `main` ainda usam aproximacao funcional simples.
+- Upgrades temporarios agora aplicam efeitos reais quando desbloqueados: `burn`, `frost`, `ringRepulse` e `chainLightning`.
 - Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
-- Modo infinito ainda nao e jogavel nesta etapa.
+- Modo infinito esta jogavel a partir do card `Modo Infinito` quando a Fase 5 estiver liberada. Ele gera aneis continuamente, escala dificuldade, salva recordes e mostra resultado ao perder.
 - Fases 2-50 usam a estrutura da main e desbloqueio sequencial, mas ainda precisam de verificacao visual fase a fase.
+
+## 7.2 Efeitos, fisica e infinito
+
+Arquivos principais:
+
+- `scripts/GameplayManager.gd`
+- `scripts/GameState.gd`
+- `scripts/PhaseSelectScreen.gd`
+
+Skins/effects implementados:
+
+- `freeze`: reduz temporariamente rotacao/fechamento do anel, aplica cor azul e particulas frias.
+- `burn`: aplica dano extra e feedback laranja/vermelho.
+- `chain`: aplica dano em um anel vizinho com cor ciano.
+- `area`: aplica dano em aneis proximos.
+- `phase`: chance de atravessar impacto sem dano.
+- `repulse`: empurra o raio do anel para fora dentro da arena segura.
+- `coin`, `xp`, `speed`, `crit`: alteram ganhos, velocidade ou dano real da rodada.
+- Skins sem efeito especifico recebem brilho/trilha propria por familia visual.
+
+Upgrades de gameplay implementados:
+
+- Permanentes: dano, velocidade, moedas, XP, critico, perfect chance e slow rings.
+- Temporarios: dano, velocidade, moedas, critico, XP, perfect chance, burn, frost, ring repulse e chain lightning.
+- Temporarios aparecem apenas quando desbloqueados no `GameState.unlocked_upgrades`.
+
+Fisica/aneis:
+
+- A bolinha usa substeps quando viaja rapido no frame, reduzindo tunneling em Web/HTML.
+- A colisao avalia o segmento entre posicao anterior e nova posicao, nao apenas overlap no ponto final.
+- A velocidade e clampada e a direcao e estabilizada para evitar trajetorias quase horizontais por muito tempo.
+- Reflexoes recebem pequena variacao angular controlada para a bolinha parecer mais ativa sem ficar aleatoria.
+- A arena de spawn/enquadramento e invisivel, respeita HUD e limita raios minimo/maximo.
+- `MIN_RING_SPACING`, `MAX_VISIBLE_RINGS` e `_clamp_ring_spacing()` impedem sobreposicao confusa entre aneis.
+
+Audio/SFX:
+
+- `ring_hit` toca apenas quando a bolinha bate na parte fechada e o anel continua ativo.
+- `ring_crit` toca apenas em impacto critico.
+- `ring_break` toca quando o anel e quebrado por dano.
+- `ring_clear` toca quando a bolinha passa pelo gap/perfect e o anel e limpo.
+- `reward_coin`, `xp`, `diamond`, `click`, `victory` e `defeat` ficam separados por evento.
+- A musica de gameplay continua sob `AudioManager.play_context("gameplay")`, respeitando mute e loop.
+
+Modo infinito:
+
+- Abre pelo card `Modo Infinito` na tela Jogar/Selecao de Fases.
+- Requer Fase 5 liberada, seguindo a regra visual ja existente.
+- Gera aneis continuamente enquanto o jogador estiver vivo.
+- A dificuldade escala por tempo sobrevivido e aneis quebrados.
+- Escala HP, velocidade de fechamento, rotacao, tamanho do gap, densidade e padroes solidos.
+- Salva `infiniteRuns`, `bestInfiniteSeconds`, `bestInfiniteRings`, `bestInfiniteScore`, `bestCombo` e recursos ganhos.
+- Tela de resultado mostra tempo, aneis quebrados, moedas, XP, diamantes e novo recorde.
+
+Conquistas/missoes/desbloqueios:
+
+- Fases concluidas, aneis quebrados, perfects, moedas, compras de upgrade, skins equipadas, diaria, roleta e modo infinito atualizam estatisticas reais.
+- Conquistas novas: `infinite_first`, `infinite_survivor`, `infinite_breaker`, `combo_starter`, `skin_equipped`, `upgrade_stack`.
+- Recompensas de conquistas continuam coletaveis pela tela de conquistas existente.
+- Hooks de baus, roleta, loja, diaria e missoes ja chamam `GameState` e alimentam progresso.
+
+Checklist desta etapa:
+
+| Item | Status |
+| --- | --- |
+| Efeitos basicos de skins implementados | Sim |
+| Todas as skins disponiveis equipaveis | Sim |
+| Skins bloqueadas respeitam desbloqueio | Sim |
+| Skin equipada aparece na gameplay | Sim |
+| Efeitos de upgrades implementados | Sim |
+| Efeito de gelo reduz velocidade do anel | Sim |
+| Efeito de gelo aplica visual azul/congelado | Sim |
+| Aneis podem ficar mais proximos | Sim |
+| Aneis nunca sobrepoem/fecham um sobre o outro | Sim |
+| Area invisivel de spawn/enquadramento funcionando | Sim |
+| Bolinha rapida nao depende apenas de overlap final | Sim |
+| Fisica polida com substeps/segmento/clamp | Sim |
+| Bolinha muda mais de direcao sem quebrar fisica | Sim |
+| Bolinha evita trajetorias retas/repetitivas demais | Sim |
+| SFX de bater no anel corrigido | Sim |
+| SFX de limpar/quebrar anel corrigido | Sim |
+| SFX nao estao mais invertidos | Sim |
+| SFX sincronizados com eventos | Sim |
+| Modo infinito funcional | Sim |
+| Modo infinito escala dificuldade | Sim |
+| Modo infinito salva recorde | Sim |
+| Conquistas vinculadas as fases | Sim |
+| Conquistas vinculadas ao modo infinito | Sim |
+| Conquistas vinculadas a jogatina real | Sim |
+| Conquistas desbloqueiam upgrades/skins quando aplicavel | Parcial: recompensas coletaveis, unlocks diretos ja funcionam para skins por recompensa. |
+| Missoes recebem progresso da jogatina real | Sim |
+| Save atualizado corretamente | Sim |
 
 ## 7.1 Idioma e audio
 

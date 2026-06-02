@@ -118,6 +118,14 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
   - `slowRings`: custo base 600, max 10, reduz fechamento dos aneis.
 - Desbloqueios reais estao centralizados em `GameState.refresh_unlocks`, usando fase maxima e nivel do perfil; baus/eventos/missoes/conquistas ficaram como fontes futuras documentadas.
 - Upgrades temporarios de level-up so entram no sorteio se estiverem desbloqueados no save. O fallback que completava a lista com upgrades bloqueados foi removido.
+- Efeitos basicos de skins foram portados para a gameplay: freeze, burn, chain, area, phase, repulse, coin, XP, speed e crit.
+- Efeitos de upgrades temporarios foram conectados a calculos reais: frost desacelera e colore o anel, burn soma dano, ringRepulse empurra o raio e chainLightning danifica um anel vizinho.
+- Colisao agora usa substeps e checagem de segmento entre posicao anterior/nova para reduzir tunneling em alta velocidade.
+- Movimento da bolinha foi estabilizado com angulo minimo e pequena variacao controlada em reflexoes, evitando trajetorias longas quase horizontais.
+- Espacamento de aneis usa `MIN_RING_SPACING`, `MAX_VISIBLE_RINGS` e clamp de raios para permitir arena mais cheia sem sobreposicao confusa.
+- SFX foi remapeado por evento: `ring_hit`, `ring_crit`, `ring_break`, `ring_clear`, `reward_coin`, `xp`, `diamond`, `click`, `victory` e `defeat`.
+- Modo infinito foi conectado ao card `Modo Infinito`: gera aneis sem fim, escala dificuldade, salva recordes e mostra resumo de resultado.
+- Conquistas/missoes recebem eventos reais de fase, infinito, aneis, perfects, compras, skins, diaria, roleta e recursos.
 - Ritmo adaptativo dos aneis adicionado: `ring_spawn_delay`, streak de limpeza rapida e bonus por muitos aneis restantes aumentam o ritmo com clamp, e o estado reseta em restart/vitoria/proxima fase.
 - Fundos variaveis por partida/fase adicionados com paletas escuras em roxo, azul, vinho e preto arroxeado. As paletas dos aneis tambem variam em neon.
 - Gaps/aberturas foram reduzidos para evitar fases faceis demais. `LevelData.gd` agora usa clamp menor e `GameplayManager.gd` evita reabrir gaps grandes no desenho/colisao.
@@ -134,8 +142,8 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 
 - Comparacao visual pixel-perfect com a branch `main` ainda nao foi feita.
 - Reroll de upgrades temporarios por anuncio/gemas ainda nao foi portado.
-- Alguns upgrades temporarios avancados estao estruturados/desbloqueaveis, mas efeitos complexos como corrente, congelamento total, bomba, laser e multihit ainda nao foram portados.
-- Efeitos especiais completos de todas as skins ainda nao foram portados; por enquanto cada skin funciona como sprite equipado e alguns bonus simples ja existentes continuam aplicados.
+- Alguns efeitos ultra-especificos da branch `main` ainda estao aproximados por familia funcional. Exemplo: skins cosmicas usam area/crit/trilha quando o comportamento exato ainda nao existe.
+- Efeitos como bomba, laser, multihit avancado e revive/anuncio ainda nao foram portados.
 - Revive por anuncio, dobrar recompensa por anuncio e coleta/sair separada ainda estao preparados apenas como estrutura.
 - Chaves e baus aparecem no resumo como `0/0`, igual ao estado atual observado da gameplay base, mas drops reais ainda nao foram conectados.
 - Barras visuais de XP foram adicionadas, mas ainda nao estao pixel-perfect em relacao ao React Native.
@@ -215,6 +223,16 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | Temporarios respeitam desbloqueio | Sim |
 | Skins equipaveis e persistentes | Sim |
 | Skin equipada usada na gameplay | Sim |
+| Efeitos basicos de skins implementados | Sim |
+| Efeito de gelo reduz velocidade do anel | Sim |
+| Efeito de gelo aplica visual azul/congelado | Sim |
+| Bolinha rapida protegida por substeps/segmento | Sim |
+| Bolinha mais ativa e menos horizontal | Sim |
+| SFX de bater/limpar anel corrigido | Sim |
+| Modo infinito funcional | Sim |
+| Modo infinito salva recordes | Sim |
+| Conquistas vinculadas ao modo infinito | Sim |
+| Missoes recebem progresso da jogatina real | Sim |
 | Ritmo adaptativo dos aneis | Sim |
 | Fundos escuros variaveis por fase/partida | Sim |
 | Vitoria fiel a main | Em progresso |

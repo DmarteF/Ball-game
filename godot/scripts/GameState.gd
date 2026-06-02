@@ -44,6 +44,12 @@ const ACHIEVEMENTS := [
 	{ "id": "first_steps", "name": "First Steps", "name_pt": "Primeiros Passos", "desc": "Play your first run.", "desc_pt": "Jogue a primeira partida.", "metric": "runsPlayed", "required": 1, "reward": { "type": "coins", "amount": 250 }, "rarity": "common" },
 	{ "id": "first_perfect", "name": "First Perfect", "name_pt": "Primeiro Escape", "desc": "Make 1 Perfect Escape.", "desc_pt": "Faça 1 escape perfeito.", "metric": "perfectEscapes", "required": 1, "reward": { "type": "diamonds", "amount": 8 }, "rarity": "rare" },
 	{ "id": "ring_breaker_1", "name": "Ring Breaker I", "name_pt": "Quebrador de Aneis I", "desc": "Destroy 50 rings.", "desc_pt": "Destrua 50 aneis.", "metric": "ringsDestroyed", "required": 50, "reward": { "type": "coins", "amount": 500 }, "rarity": "common" },
+	{ "id": "infinite_first", "name": "Endless Glow", "name_pt": "Brilho Infinito", "desc": "Play Infinite Mode once.", "desc_pt": "Jogue o Modo Infinito uma vez.", "metric": "infiniteRuns", "required": 1, "reward": { "type": "coins", "amount": 400 }, "rarity": "common" },
+	{ "id": "infinite_survivor", "name": "Neon Survivor", "name_pt": "Sobrevivente Neon", "desc": "Survive 60 seconds in Infinite Mode.", "desc_pt": "Sobreviva 60 segundos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 60, "reward": { "type": "diamonds", "amount": 18 }, "rarity": "rare" },
+	{ "id": "infinite_breaker", "name": "Endless Breaker", "name_pt": "Quebrador Infinito", "desc": "Destroy 25 rings in one Infinite Mode run.", "desc_pt": "Destrua 25 aneis em uma partida infinita.", "metric": "bestInfiniteRings", "required": 25, "reward": { "type": "skin", "skin_id": "comet" }, "rarity": "epic" },
+	{ "id": "combo_starter", "name": "Combo Starter", "name_pt": "Inicio de Combo", "desc": "Reach combo 5.", "desc_pt": "Alcance combo 5.", "metric": "bestCombo", "required": 5, "reward": { "type": "coins", "amount": 350 }, "rarity": "common" },
+	{ "id": "skin_equipped", "name": "Fresh Glow", "name_pt": "Brilho Novo", "desc": "Equip a skin.", "desc_pt": "Equipe uma skin.", "metric": "skinEquips", "required": 1, "reward": { "type": "diamonds", "amount": 5 }, "rarity": "common" },
+	{ "id": "upgrade_stack", "name": "Power Stack", "name_pt": "Pilha de Poder", "desc": "Buy 5 permanent upgrades.", "desc_pt": "Compre 5 melhorias permanentes.", "metric": "upgradesBought", "required": 5, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "rare" },
 	{ "id": "stage_champion", "name": "Neon Champion", "name_pt": "Campeao Neon", "desc": "Unlock all 50 phases.", "desc_pt": "Libere todas as 50 fases.", "metric": "highestPhase", "required": 50, "reward": { "type": "skin", "skin_id": "cosmic_champion" }, "rarity": "special" },
 	{ "id": "collector", "name": "Starter Collector", "name_pt": "Colecionador Inicial", "desc": "Unlock 5 skins.", "desc_pt": "Desbloqueie 5 skins.", "metric": "skinsUnlocked", "required": 5, "reward": { "type": "chest", "chest_type": "common", "amount": 1 }, "rarity": "rare" },
 	{ "id": "daily_claim", "name": "Daily Glow", "name_pt": "Brilho Diario", "desc": "Claim a daily reward.", "desc_pt": "Colete uma recompensa diaria.", "metric": "dailyRewardsCollected", "required": 1, "reward": { "type": "diamonds", "amount": 10 }, "rarity": "rare" },
@@ -113,6 +119,7 @@ func default_save() -> Dictionary:
 		"profile_xp": 0,
 		"current_phase": 1,
 		"selected_phase": 1,
+		"selected_mode": "phase",
 		"max_unlocked_phase": 1,
 		"unlocked_phases": [1],
 		"unlocked_skins": ["neon_blue"],
@@ -148,6 +155,16 @@ func default_save() -> Dictionary:
 			"skins_unlocked": 1,
 			"highest_phase": 1,
 			"highest_run_level": 1,
+			"infinite_runs": 0,
+			"infiniteRuns": 0,
+			"best_infinite_seconds": 0,
+			"bestInfiniteSeconds": 0,
+			"best_infinite_rings": 0,
+			"bestInfiniteRings": 0,
+			"best_infinite_score": 0,
+			"bestInfiniteScore": 0,
+			"bestCombo": 0,
+			"runCoins": 0,
 			"boss_runs": 0,
 			"boss_wins": 0,
 			"boss_losses": 0,
@@ -511,6 +528,10 @@ func _update_achievements(save_after := true) -> void:
 	stats["ringsDestroyed"] = max(int(stats.get("ringsDestroyed", 0)), int(stats.get("rings_destroyed", 0)))
 	stats["perfectEscapes"] = max(int(stats.get("perfectEscapes", 0)), int(stats.get("perfect_escapes", 0)))
 	stats["diamondsFound"] = max(int(stats.get("diamondsFound", 0)), int(stats.get("diamonds_found", 0)))
+	stats["infiniteRuns"] = max(int(stats.get("infiniteRuns", 0)), int(stats.get("infinite_runs", 0)))
+	stats["bestInfiniteSeconds"] = max(int(stats.get("bestInfiniteSeconds", 0)), int(stats.get("best_infinite_seconds", 0)))
+	stats["bestInfiniteRings"] = max(int(stats.get("bestInfiniteRings", 0)), int(stats.get("best_infinite_rings", 0)))
+	stats["bestInfiniteScore"] = max(int(stats.get("bestInfiniteScore", 0)), int(stats.get("best_infinite_score", 0)))
 	for achievement in ACHIEVEMENTS:
 		var id := String(achievement["id"])
 		var state: Dictionary = achievements.get(id, { "progress": 0, "completed": false, "claimed": false })
@@ -595,6 +616,8 @@ func unlock_skin(id: String) -> void:
 		skins.append(id)
 	data["unlocked_skins"] = skins
 	data["stats"]["skins_unlocked"] = skins.size()
+	data["stats"]["skinsUnlocked"] = skins.size()
+	_update_achievements(false)
 	save_game()
 
 
@@ -633,7 +656,17 @@ func select_phase(level: int) -> bool:
 	if level < 1 or level > 50 or level > unlocked:
 		return false
 	data["selected_phase"] = level
+	data["selected_mode"] = "phase"
 	data["current_phase"] = max(int(data.get("current_phase", 1)), level)
+	save_game()
+	return true
+
+
+func select_infinite() -> bool:
+	if int(data.get("max_unlocked_phase", 1)) < 5:
+		return false
+	data["selected_mode"] = "infinite"
+	data["selected_phase"] = 1
 	save_game()
 	return true
 
@@ -648,7 +681,7 @@ func add_profile_xp(amount: int) -> void:
 	save_game()
 
 
-func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int, perfect_escapes: int, diamonds: int = 0) -> void:
+func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int, perfect_escapes: int, diamonds: int = 0, best_combo: int = 0) -> void:
 	data["coins"] = max(0, int(data.get("coins", 0)) + coins)
 	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
 	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
@@ -667,6 +700,8 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + perfect_escapes
 	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
 	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds
+	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), best_combo)
 	stats["highest_phase"] = max(int(stats.get("highest_phase", 1)), min(50, phase + 1))
 	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), min(50, phase + 1))
 	data["current_phase"] = max(int(data.get("current_phase", 1)), min(50, phase + 1))
@@ -676,9 +711,59 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	_progress_missions("ringsDestroyed", rings_destroyed)
 	_progress_missions("perfectEscapes", perfect_escapes)
 	_progress_missions("runCoins", coins)
+	_progress_missions("bestCombo", best_combo)
 	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
+
+
+func record_infinite_run(summary: Dictionary) -> void:
+	var coins := int(summary.get("coins", 0))
+	var xp := int(summary.get("xp", 0))
+	var diamonds := int(summary.get("diamonds", 0))
+	var rings_value := int(summary.get("rings", 0))
+	var seconds := int(summary.get("seconds", 0))
+	var score := int(summary.get("score", 0))
+	var combo_value := int(summary.get("best_combo", 0))
+	data["coins"] = max(0, int(data.get("coins", 0)) + coins)
+	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
+	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
+	data["xp"] = max(0, int(data.get("xp", 0)) + xp)
+	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
+		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
+		data["level"] = int(data.get("level", 1)) + 1
+	var stats: Dictionary = data.get("stats", {})
+	stats["runs_played"] = int(stats.get("runs_played", 0)) + 1
+	stats["runsPlayed"] = int(stats.get("runsPlayed", 0)) + 1
+	stats["infinite_runs"] = int(stats.get("infinite_runs", 0)) + 1
+	stats["infiniteRuns"] = int(stats.get("infiniteRuns", 0)) + 1
+	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_value
+	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_value
+	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
+	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds
+	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), combo_value)
+	stats["best_infinite_seconds"] = max(int(stats.get("best_infinite_seconds", 0)), seconds)
+	stats["bestInfiniteSeconds"] = max(int(stats.get("bestInfiniteSeconds", 0)), seconds)
+	stats["best_infinite_rings"] = max(int(stats.get("best_infinite_rings", 0)), rings_value)
+	stats["bestInfiniteRings"] = max(int(stats.get("bestInfiniteRings", 0)), rings_value)
+	stats["best_infinite_score"] = max(int(stats.get("best_infinite_score", 0)), score)
+	stats["bestInfiniteScore"] = max(int(stats.get("bestInfiniteScore", 0)), score)
+	data["stats"] = stats
+	_progress_missions("runsPlayed", 1)
+	_progress_missions("ringsDestroyed", rings_value)
+	_progress_missions("runCoins", coins)
+	_progress_missions("bestCombo", combo_value)
+	refresh_unlocks(false)
+	_update_achievements(false)
+	save_game()
+
+
+func on_ring_destroyed(amount := 1) -> void:
+	_increment_stat("ringsDestroyed", amount, false)
+	_increment_stat("rings_destroyed", amount, false)
+	_progress_missions("ringsDestroyed", amount)
+	_update_achievements(false)
 
 
 func set_audio_muted(muted: bool) -> void:
