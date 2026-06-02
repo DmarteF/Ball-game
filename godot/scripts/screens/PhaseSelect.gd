@@ -6,98 +6,155 @@ func _ready():
 	_build_ui()
 
 func _build_ui():
-	var bg = ColorRect.new()
-	bg.color = Color("#080818")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	NeonUI.add_main_background(self)
 
-	var margin = MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 30)
-	margin.add_theme_constant_override("margin_bottom", 14)
-	add_child(margin)
+	var header = VBoxContainer.new()
+	header.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	header.offset_left = 20
+	header.offset_right = -20
+	header.offset_top = 60
+	header.offset_bottom = 128
+	header.add_theme_constant_override("separation", 10)
+	add_child(header)
 
-	var box = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
-	margin.add_child(box)
-
-	var header = HBoxContainer.new()
-	box.add_child(header)
-	var back = NeonUI.ghost_button("VOLTAR", Color("#00f0ff"), 42)
+	var back = Button.new()
+	back.text = "< VOLTAR"
+	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	back.add_theme_font_size_override("font_size", 16)
+	back.add_theme_color_override("font_color", Color("#00f0ff"))
+	back.add_theme_stylebox_override("normal", NeonUI.flat(Color.TRANSPARENT, Color.TRANSPARENT, 0, 0))
+	back.add_theme_stylebox_override("hover", NeonUI.flat(Color("#ffffff10"), Color.TRANSPARENT, 0, 0))
 	back.pressed.connect(func(): get_tree().current_scene.go_to("menu"))
 	header.add_child(back)
-	var title = NeonUI.label("JOGAR", 30, Color("#00f0ff"), HORIZONTAL_ALIGNMENT_RIGHT)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title)
-
-	var save = SaveSystem.get_save()
-	box.add_child(NeonUI.label("Escolha uma fase ou entre no modo infinito quando liberar.", 13, Color("#ffffffbb")))
+	header.add_child(NeonUI.label("SELECIONAR FASE", 32, Color("#00f0ff")))
 
 	var scroll = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(scroll)
+	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scroll.offset_top = 140
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
 
-	var content = VBoxContainer.new()
-	content.add_theme_constant_override("separation", 10)
-	scroll.add_child(content)
+	var margin = MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	scroll.add_child(margin)
 
-	_add_infinite_card(content, save)
+	var list = VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 16)
+	margin.add_child(list)
 
-	var grid = GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	content.add_child(grid)
-
+	var save = SaveSystem.get_save()
+	_add_infinite_card(list, save)
 	for phase in range(1, 51):
-		_add_phase_button(grid, phase, save)
+		_add_phase_card(list, phase, save)
 
 func _add_infinite_card(parent, save):
-	var unlocked = int(save.lifetime_stats.get("highest_phase", 1)) >= 5 or int(save.current_phase) >= 6
-	var panel = PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", NeonUI.flat(Color("#15092acc"), Color("#00f0ffaa") if unlocked else Color("#ffffff22"), 1, 16))
-	parent.add_child(panel)
-	var row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	panel.add_child(row)
-	row.add_child(NeonUI.icon("res://assets/ui/ui_infinite.png", 54))
-	var text_box = VBoxContainer.new()
-	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(text_box)
-	text_box.add_child(NeonUI.label("MODO INFINITO", 20, Color("#00f0ff") if unlocked else Color("#ffffff88")))
-	text_box.add_child(NeonUI.label("Aneis continuam escalando. Recompensas aumentam com combo e tempo.", 12, Color("#ffffffbb") if unlocked else Color("#ffffff66")))
-	var button = NeonUI.button("ENTRAR", Color("#00f0ff"), 50) if unlocked else NeonUI.ghost_button("LIBERA NA FASE 6", Color("#ffffff66"), 50)
-	button.custom_minimum_size = Vector2(118, 50)
-	button.disabled = not unlocked
-	if unlocked:
-		button.pressed.connect(_start_infinite)
-	row.add_child(button)
+	var unlocked = int(save.lifetime_stats.get("highest_phase", 1)) >= 5 or 6 in save.unlocked_phases
+	var card = _make_card(parent, unlocked, Color("#00ff88"), ["#00ff8888", "#00f0ff33"], ["#333333", "#222222"])
+	var row = _card_row(card)
+	row.add_child(_circle_icon("res://assets/ui/ui_infinite.png", "", Color("#ffffff22")))
+	var info = _info_box(row)
+	info.add_child(NeonUI.label("MODO INFINITO", 20, Color.WHITE if unlocked else Color("#ffffff55")))
+	info.add_child(NeonUI.label("Aneis continuam escalando. Recompensas aumentam com combo e tempo." if unlocked else "Libera ao chegar na fase 5.", 14, Color("#ffffffaa") if unlocked else Color("#ffffff55")))
+	var stats = HBoxContainer.new()
+	stats.add_theme_constant_override("separation", 16)
+	info.add_child(stats)
+	stats.add_child(NeonUI.label("ESPECIAL", 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
+	stats.add_child(NeonUI.label("PROGRESSO INFINITO", 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
+	_add_press_layer(card, unlocked, Callable(self, "_start_infinite"), "FASE 5")
 
-func _add_phase_button(parent, phase, save):
+func _add_phase_card(parent, phase, save):
 	var cfg = GameData.get_phase_config(phase)
 	var unlocked = phase in save.unlocked_phases
-	var button = Button.new()
-	button.custom_minimum_size = Vector2(0, 82)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.text = "FASE %d\n%s" % [phase, cfg.difficulty] if unlocked else "FASE %d\nBLOQ." % phase
-	button.disabled = not unlocked
-	button.add_theme_font_size_override("font_size", 13)
 	var color = Color(cfg.color)
-	button.add_theme_stylebox_override("normal", NeonUI.flat(Color(color, 0.20), Color(color, 0.72), 1, 12))
-	button.add_theme_stylebox_override("hover", NeonUI.flat(Color(color, 0.32), Color(color), 1, 12))
-	button.add_theme_stylebox_override("disabled", NeonUI.flat(Color("#252536"), Color("#ffffff22"), 1, 12))
-	button.add_theme_color_override("font_color", Color.WHITE if unlocked else Color("#ffffff66"))
-	if unlocked:
-		button.pressed.connect(_start_phase.bind(phase))
-	parent.add_child(button)
+	var card = _make_card(parent, unlocked, color, [cfg.color + "88", cfg.color + "44"], ["#333333", "#222222"])
+	var row = _card_row(card)
+	row.add_child(_circle_icon("", str(phase), Color("#ffffff22")))
+	var info = _info_box(row)
+	info.add_child(NeonUI.label(cfg.name, 20, Color.WHITE if unlocked else Color("#ffffff55")))
+	info.add_child(NeonUI.label(cfg.description, 14, Color("#ffffffaa") if unlocked else Color("#ffffff55")))
+	var stats = HBoxContainer.new()
+	stats.add_theme_constant_override("separation", 16)
+	info.add_child(stats)
+	stats.add_child(NeonUI.label("DIFICULDADE: %s" % cfg.difficulty.to_upper(), 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
+	stats.add_child(NeonUI.label("%d-%d ANEIS  HP %d" % [cfg.ring_min, cfg.ring_max, cfg.base_hp], 12, Color("#ffffff88") if unlocked else Color("#ffffff55")))
+	_add_press_layer(card, unlocked, _start_phase.bind(phase), "BLOQUEADO")
+
+func _make_card(parent, unlocked, color, _colors_unlocked, _colors_locked):
+	var root = Control.new()
+	root.custom_minimum_size = Vector2(0, 140)
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(root)
+	var panel = PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var bg = Color(color, 0.42) if unlocked else Color("#333333")
+	var border = Color("#ffffff22")
+	panel.add_theme_stylebox_override("panel", NeonUI.neon_box(bg, border, 2, 16, 0.24 if unlocked else 0.05))
+	root.add_child(panel)
+	return root
+
+func _card_row(card):
+	var margin = MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	card.add_child(margin)
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	margin.add_child(row)
+	return row
+
+func _circle_icon(icon_path, number, color):
+	var panel = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(60, 60)
+	panel.add_theme_stylebox_override("panel", NeonUI.flat(color, Color.TRANSPARENT, 0, 30))
+	var center = CenterContainer.new()
+	panel.add_child(center)
+	if icon_path != "":
+		center.add_child(NeonUI.icon(icon_path, 38))
+	else:
+		center.add_child(NeonUI.label(number, 32, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
+	return panel
+
+func _info_box(parent):
+	var info = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 4)
+	parent.add_child(info)
+	return info
+
+func _add_press_layer(card, unlocked, action, locked_text):
+	var button = Button.new()
+	button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	button.text = ""
+	button.disabled = not unlocked
+	button.add_theme_stylebox_override("normal", NeonUI.flat(Color.TRANSPARENT, Color.TRANSPARENT, 0, 0))
+	button.add_theme_stylebox_override("hover", NeonUI.flat(Color("#ffffff10"), Color.TRANSPARENT, 0, 0))
+	button.add_theme_stylebox_override("pressed", NeonUI.flat(Color("#00000022"), Color.TRANSPARENT, 0, 0))
+	button.pressed.connect(action)
+	card.add_child(button)
+	if not unlocked:
+		var overlay = PanelContainer.new()
+		overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+		overlay.add_theme_stylebox_override("panel", NeonUI.flat(Color("#00000066"), Color.TRANSPARENT, 0, 0))
+		card.add_child(overlay)
+		var center = CenterContainer.new()
+		overlay.add_child(center)
+		var box = VBoxContainer.new()
+		box.alignment = BoxContainer.ALIGNMENT_CENTER
+		center.add_child(box)
+		box.add_child(NeonUI.icon("res://assets/ui/ui_locked.png", 22))
+		box.add_child(NeonUI.label(locked_text, 18, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
 
 func _start_phase(phase):
 	AudioManager.play_sfx("button_confirm")
 	get_tree().current_scene.go_to("game", {"phase": phase, "mode": "phase"})
 
 func _start_infinite():
-	var save = SaveSystem.get_save()
 	AudioManager.play_sfx("button_confirm")
-	get_tree().current_scene.go_to("game", {"phase": max(1, int(save.current_phase)), "mode": "infinite"})
+	get_tree().current_scene.go_to("game", {"phase": max(1, int(SaveSystem.get_save().current_phase)), "mode": "infinite"})

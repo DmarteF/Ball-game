@@ -117,14 +117,35 @@ const RUN_UPGRADES = [
 	{"id": "coinBoost", "name": "Chuva de Moedas", "description": "+50% de moedas", "icon_path": "res://assets/ui/ui_coin.png", "rarity": "common", "max_level": 10, "effects": [{"type": "coinMultiplier", "value": 0.50}]},
 	{"id": "critical", "name": "Critico+", "description": "+5% chance critica", "icon_path": "res://assets/ui/ui_crit.png", "rarity": "common", "max_level": 8, "effects": [{"type": "critChance", "value": 5.0}]},
 	{"id": "xpBoost", "name": "XP Boost", "description": "+50% de XP", "icon_path": "res://assets/ui/ui_xp.png", "rarity": "common", "max_level": 10, "effects": [{"type": "xpMultiplier", "value": 0.50}]},
+	{"id": "bounce", "name": "Ricochete", "description": "+1 ricochete extra", "icon_path": "res://assets/ui/ui_combo.png", "rarity": "rare", "max_level": 5, "effects": [{"type": "bounce", "value": 1.0}]},
 	{"id": "perfectChance", "name": "Perfect Chance", "description": "+1% chance de diamante", "icon_path": "res://assets/ui/ui_perfect.png", "rarity": "rare", "max_level": 7, "effects": [{"type": "perfectChance", "value": 0.01}]},
 	{"id": "burn", "name": "Queimar", "description": "Causa dano continuo", "icon_path": "res://assets/ui/ui_burn.png", "rarity": "rare", "max_level": 5, "effects": [{"type": "burn", "value": 10.0}]},
+	{"id": "penetration", "name": "Veneno", "description": "Aplica dano progressivo", "icon_path": "res://assets/ui/ui_poison.png", "rarity": "rare", "max_level": 5, "effects": [{"type": "poison", "value": 1.0}]},
+	{"id": "ricochet", "name": "Ricochete Vivo", "description": "Mais variacao e velocidade apos impacto", "icon_path": "res://assets/ui/ui_combo.png", "rarity": "rare", "max_level": 5, "effects": [{"type": "ricochet", "value": 1.0}]},
 	{"id": "frost", "name": "Congelamento", "description": "Desacelera aneis", "icon_path": "res://assets/ui/ui_freeze.png", "rarity": "epic", "max_level": 5, "effects": [{"type": "frost", "value": 0.30}]},
+	{"id": "bomb", "name": "Bomba", "description": "Chance de explosao massiva", "icon_path": "res://assets/ui/ui_area.png", "rarity": "epic", "max_level": 5, "effects": [{"type": "bomb", "value": 3.0}]},
+	{"id": "laser", "name": "Raio Laser", "description": "Dispara raio laser", "icon_path": "res://assets/ui/ui_shock.png", "rarity": "epic", "max_level": 5, "effects": [{"type": "laser", "value": 50.0}]},
+	{"id": "multihit", "name": "Multi-Hit", "description": "Multiplos ataques simultaneos", "icon_path": "res://assets/ui/ui_effect.png", "rarity": "legendary", "max_level": 3, "effects": [{"type": "multihit", "value": 1.0}]},
 	{"id": "ringRepulse", "name": "Ring Repulse", "description": "Empurra aneis para fora", "icon_path": "res://assets/ui/ui_repulse.png", "rarity": "rare", "max_level": 5, "effects": [{"type": "repulse", "value": 18.0}]},
 	{"id": "shockwave", "name": "Onda de Choque", "description": "Dano em area ao impacto", "icon_path": "res://assets/ui/ui_area.png", "rarity": "epic", "max_level": 5, "effects": [{"type": "shockwave", "value": 0.50}]},
 	{"id": "chainLightning", "name": "Raio em Cadeia", "description": "Ataca aneis proximos", "icon_path": "res://assets/ui/ui_shock.png", "rarity": "epic", "max_level": 5, "effects": [{"type": "chain", "value": 2.0}]},
 	{"id": "slowField", "name": "Slow Field", "description": "Chance de desacelerar todos", "icon_path": "res://assets/ui/ui_freeze.png", "rarity": "epic", "max_level": 5, "effects": [{"type": "slowField", "value": 0.35}]},
-	{"id": "chainBreak", "name": "Chain Break", "description": "Quebrar um anel fere o proximo", "icon_path": "res://assets/ui/ui_combo.png", "rarity": "legendary", "max_level": 4, "effects": [{"type": "chainBreak", "value": 0.35}]}
+	{"id": "laserCut", "name": "Laser Cut", "description": "Chance de dano alto no anel", "icon_path": "res://assets/ui/ui_shock.png", "rarity": "epic", "max_level": 5, "effects": [{"type": "laserCut", "value": 2.5}]},
+	{"id": "chainBreak", "name": "Chain Break", "description": "Quebrar um anel fere o proximo", "icon_path": "res://assets/ui/ui_combo.png", "rarity": "legendary", "max_level": 4, "effects": [{"type": "chainBreak", "value": 0.35}]},
+	{"id": "shieldPulse", "name": "Shield Pulse", "description": "Escudo curto contra esmagamento", "icon_path": "res://assets/ui/ui_aura.png", "rarity": "epic", "max_level": 4, "effects": [{"type": "shield", "value": 2.0}]},
+	{"id": "timeFreeze", "name": "Time Freeze", "description": "Congela todos os aneis por pouco tempo", "icon_path": "res://assets/ui/ui_freeze.png", "rarity": "legendary", "max_level": 3, "effects": [{"type": "timeFreeze", "value": 1.0}]},
+	{"id": "magnetCoins", "name": "Magnet Coins", "description": "Aumenta moedas da rodada", "icon_path": "res://assets/ui/ui_coin.png", "rarity": "rare", "max_level": 8, "effects": [{"type": "coinMultiplier", "value": 0.25}]},
+	{"id": "criticalOverload", "name": "Critical Overload", "description": "Criticos acumulam dano temporario", "icon_path": "res://assets/ui/ui_crit.png", "rarity": "legendary", "max_level": 4, "effects": [{"type": "critOverload", "value": 0.30}]},
+	{"id": "chronoBreak", "name": "Chrono Break", "description": "Pequena chance de congelar todos os aneis.", "icon_path": "res://assets/ui/ui_freeze.png", "rarity": "legendary", "max_level": 3, "secret": true, "effects": [{"type": "timeFreeze", "value": 1.0}]},
+	{"id": "voidPulse", "name": "Void Pulse", "description": "Chance de causar dano em area ao quebrar um anel.", "icon_path": "res://assets/ui/ui_gravity.png", "rarity": "legendary", "max_level": 4, "secret": true, "effects": [{"type": "areaDamage", "value": 0.45}]},
+	{"id": "diamondInstinct", "name": "Diamond Instinct", "description": "Aumenta chance de diamante em Perfect Escape.", "icon_path": "res://assets/ui/ui_gem.png", "rarity": "epic", "max_level": 4, "secret": true, "effects": [{"type": "perfectChance", "value": 0.018}]},
+	{"id": "comboOverdrive", "name": "Combo Overdrive", "description": "Combos altos aumentam dano e moedas.", "icon_path": "res://assets/ui/ui_combo.png", "rarity": "legendary", "max_level": 3, "secret": true, "effects": [{"type": "comboBoost", "value": 0.25}]},
+	{"id": "lastShield", "name": "Last Shield", "description": "Uma vez por partida, evita morte por esmagamento.", "icon_path": "res://assets/ui/ui_aura.png", "rarity": "legendary", "max_level": 2, "secret": true, "effects": [{"type": "lastShield", "value": 1.0}]},
+	{"id": "royalBreaker", "name": "Royal Breaker", "description": "Aumenta dano contra aneis externos.", "icon_path": "res://assets/ui/ui_achievements.png", "rarity": "legendary", "max_level": 4, "secret": true, "effects": [{"type": "outerDamage", "value": 0.22}]},
+	{"id": "bossHunter", "name": "Boss Hunter", "description": "Aumenta dano e XP em modos competitivos.", "icon_path": "res://assets/ui/ui_boss.png", "rarity": "epic", "max_level": 4, "secret": true, "effects": [{"type": "competitiveBoost", "value": 0.18}]},
+	{"id": "secretMagnet", "name": "Secret Magnet", "description": "Aumenta moedas gerais recebidas no final.", "icon_path": "res://assets/ui/ui_coin.png", "rarity": "epic", "max_level": 5, "secret": true, "effects": [{"type": "coinMultiplier", "value": 0.18}]},
+	{"id": "trophyInstinct", "name": "Trophy Instinct", "description": "Pequeno bonus de trofeus ao vencer competicoes.", "icon_path": "res://assets/ui/ui_achievements.png", "rarity": "epic", "max_level": 3, "secret": true, "effects": [{"type": "trophyBonus", "value": 2.0}]},
+	{"id": "rivalCrusher", "name": "Rival Crusher", "description": "Aumenta dano e XP em partidas competitivas.", "icon_path": "res://assets/ui/ui_crit.png", "rarity": "legendary", "max_level": 3, "secret": true, "effects": [{"type": "competitiveBoost", "value": 0.24}]}
 ]
 
 const PERMANENT_TO_RUN = {
@@ -134,7 +155,7 @@ const PERMANENT_TO_RUN = {
 	"critChance": ["critical"],
 	"xpBoost": ["xpBoost"],
 	"perfectChance": ["perfectChance"],
-	"slowRings": ["frost", "slowField"]
+	"slowRings": ["frost"]
 }
 
 var _skins_cache = []
@@ -324,21 +345,18 @@ func get_random_run_upgrades(count, save, current_levels):
 func roll_chest_reward(chest_id, save):
 	var chest = get_chest(chest_id)
 	var rarity = _pick_rarity(chest)
-	var roll = randf()
-	if roll < 0.10:
+	var utility_roll = randf()
+	if utility_roll < 0.10:
 		var amount = 2 if rarity in ["legendary", "mythic", "ultimate"] else 1
 		return {"type": "key", "label": "Chave Lendaria" if rarity in ["mythic", "ultimate"] else "Chave", "rarity": rarity, "amount": amount}
-	if roll < 0.18:
-		return {"type": "coins", "label": "Moedas", "rarity": rarity, "amount": _rarity_amount(rarity, 140, 280)}
-	if roll < 0.25:
-		return {"type": "gems", "label": "Diamantes", "rarity": rarity, "amount": _rarity_amount(rarity, 4, 9)}
-	if roll < 0.34:
-		var locked = get_locked_permanent_upgrade_ids(save)
-		if locked.size() > 0:
-			var upgrade_id = locked[randi() % locked.size()]
-			var upgrade = get_permanent_upgrade(upgrade_id)
-			return {"type": "upgrade", "label": upgrade.name, "rarity": rarity, "upgrade_id": upgrade_id, "amount": 1}
-		return {"type": "effect", "label": "Efeito %s" % rarity.capitalize(), "rarity": rarity, "amount": 1}
+	if utility_roll < 0.20:
+		var item_type = "trail" if utility_roll < 0.23 else "aura" if utility_roll < 0.285 else "effect"
+		var label = "Trail %s" % rarity
+		if item_type == "aura":
+			label = "Aura %s" % rarity
+		elif item_type == "effect":
+			label = "Efeito %s" % rarity
+		return {"type": item_type, "label": label, "rarity": rarity, "amount": 1}
 	var candidates = []
 	for skin in get_skins():
 		if skin.rarity == rarity and not skin.exclusive:
@@ -375,7 +393,7 @@ func _build_skins():
 				"trail": _trail_for_passive(passive.type),
 				"impact_effect": _impact_for_passive(passive.type),
 				"passive": passive,
-				"fragments_required": _fragments_for_rarity(rarity),
+				"fragments_required": _fragments_required_for_rarity(rarity),
 				"exclusive": _is_exclusive_skin(id),
 				"origin": _origin_for_skin(id)
 			}
@@ -409,6 +427,19 @@ func _rarity_amount(rarity, base, step):
 	return int(base + max(0, index) * step)
 
 func _fragments_for_rarity(rarity):
+	if rarity == "common":
+		return 8
+	if rarity == "rare":
+		return 12
+	if rarity == "epic":
+		return 22
+	if rarity == "legendary":
+		return 36
+	if rarity == "mythic":
+		return 48
+	return 90
+
+func _fragments_required_for_rarity(rarity):
 	if rarity == "common":
 		return 10
 	if rarity == "rare":
@@ -549,4 +580,3 @@ func _has_any(text, needles):
 		if text.find(needle) >= 0:
 			return true
 	return false
-

@@ -13,11 +13,35 @@ O jogo usa GDScript, cenas `.tscn`, autoloads e assets nativos do Godot. Nao usa
 
 ## Como jogar/testar
 
-- Menu principal: `Melhorias`, `Skins`, `Jogar` e overlay `Menu` com Loja, Inventario, Missoes, Evento, Roleta, Recompensa diaria, Boss, Liga Neon, Conquistas e Configuracoes.
+- Menu principal: deve seguir a tela `frontend/app/index.tsx` da branch `main`, com `Jogar`, `Melhorias`, `Skins` e o menu flutuante `Mais`.
 - Jogar: seletor com 50 fases e modo infinito liberado apos progresso inicial.
 - Arena: a bolinha se move continuamente; toque ou clique na arena para aplicar impulso na direcao tocada.
-- Controles: `GIRAR -`, `IMPULSO`, `GIRAR +`, upgrades de rodada por moedas e pausa.
 - Objetivo: sobreviver aos aneis, atravessar o centro da abertura para Perfect, quebrar aneis no impacto e completar a fase.
+
+## Checklist de fidelidade com a branch main
+
+Fonte obrigatoria: branch `main`. A versao Godot nao deve criar layout, texto, valores ou comportamento novo quando ja existir referencia na `main`.
+
+| Tela / sistema | Arquivo/fonte na branch main | Arquivo equivalente no Godot | Status | Diferencas pendentes |
+|---|---|---|---|---|
+| Tela inicial | `frontend/app/index.tsx`, `ProfileAvatar`, `UiIcon`, `retention.ts` | `scenes/MainMenu.tscn`, `scripts/screens/MainMenu.gd` | Em progresso | Copiar exatamente ordem visual, botao flutuante `Mais`, modal, toast de conquista e modal AFK. Remover textos extras. |
+| Jogar / selecao de fases | `frontend/app/phase-select.tsx`, `src/game/phases.ts` | `scenes/PhaseSelect.tscn`, `scripts/screens/PhaseSelect.gd` | Em progresso | Trocar grid compacto por lista vertical de cards de 140px com descricao, dificuldade, HP e overlay bloqueado. |
+| Gameplay solo | `frontend/app/game.tsx`, `src/game/rings.ts`, `src/game/playerAttributes.ts`, `src/game/balance.ts`, `src/game/economy.ts` | `scenes/Game.tscn`, `scripts/screens/GameScreen.gd`, `scripts/game/RingLogic.gd`, `scripts/game/ArenaView.gd` | Em progresso | Remover controles inventados, portar HUD/pausa/level-up/revive/recompensas e comparar fisica 1:1. |
+| Modo infinito | `frontend/app/infinite.tsx`, `src/game/dualArena.ts`, `src/game/balance.ts` | `scenes/Game.tscn` por enquanto | Pendente | Criar tela/fluxo proprio; modo atual por ondas nao equivale ao da main. |
+| Melhorias | `frontend/app/upgrade-shop.tsx`, `src/game/upgrades.ts`, `src/game/balance.ts` | `scenes/Upgrades.tscn`, `scripts/screens/UpgradeScreen.gd`, `autoload/GameData.gd` | Em progresso | Portar todos upgrades temporarios/secretos, nomes, textos, unlocks, custos e cards. |
+| Skins | `frontend/app/transformations.tsx`, `src/game/skins.ts`, `src/game/skinImages.ts`, `SkinIcon` | `scenes/Skins.tscn`, `scripts/screens/SkinScreen.gd`, `autoload/GameData.gd` | Em progresso | Substituir heuristicas por lista literal de skins, passivas, efeitos especiais, raridades e custos. |
+| Loja | `frontend/app/store.tsx`, `src/services/billingConfig.ts`, `src/services/billingService.ts`, `src/game/chests.ts` | `scenes/Shop.tscn`, `scripts/screens/ShopScreen.gd` | Em progresso | Recriar abas `chests/gems/keys/specials/free`, produtos, confirm modal e recompensas mockadas. |
+| Inventario / baus | `frontend/app/inventory.tsx`, `src/game/chests.ts`, `SkinIcon`, `UiIcon` | `scenes/Chests.tscn`, `scripts/screens/ChestScreen.gd`, `FeatureScreen.gd` | Em progresso | Tela precisa mostrar bau gratis, lista de baus, itens guardados, delay/animacao e modal de recompensa. |
+| Missoes | `frontend/app/daily.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` por enquanto | Pendente | Portar 25 missoes, selecao diaria seeded, progresso, coletar, reroll e boost por anuncio. |
+| Evento | `frontend/app/events.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` por enquanto | Pendente | Portar eventos semanais, cores, missoes, progresso e recompensa final. |
+| Roleta | `frontend/app/wheel.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` por enquanto | Pendente | Criar roleta visual com 10 segmentos, ponteiro, animacao de 3600ms e modal de premio. |
+| Recompensa diaria | `frontend/app/daily-reward.tsx`, `GameContext.tsx` | `FeatureScreen.gd` por enquanto | Em progresso | Ajustar tela e storage/logica para bater exatamente com a main. |
+| Boss | `frontend/app/boss.tsx`, `src/game/boss.ts`, `src/game/dualArena.ts`, `DualArenaView` | `FeatureScreen.gd` por enquanto | Pendente | Portar boss mensal, niveis, reset diario/mensal, duas arenas e recompensas. |
+| Liga Neon | `frontend/app/league.tsx`, `frontend/app/compete.tsx`, `src/game/league.ts`, `src/game/dualArena.ts` | `FeatureScreen.gd` por enquanto | Pendente | Portar ranking com 201 participantes, divisoes, podium, competir e recompensas. |
+| Conquistas | `frontend/app/achievements.tsx`, `src/game/achievements.ts`, `GameContext.tsx` | `FeatureScreen.gd` por enquanto | Pendente | Portar todas conquistas, categorias, progresso e coleta de recompensas. |
+| Configuracoes / perfil | `frontend/app/profile.tsx`, `AudioController`, `GameContext.tsx`, i18n/performance | `FeatureScreen.gd` por enquanto | Pendente | Portar perfil, avatar, nickname, idioma, audio, performance, stats e progresso. |
+| Save / progresso | `src/contexts/GameContext.tsx` | `autoload/SaveSystem.gd` | Em progresso | Espelhar schema completo da main: achievements, league, boss, dailyMissions, weeklyEvent, wheel, adLimits e inventoryItems. |
+| Assets | `frontend/assets/**` | `godot/assets/**` | Quase fiel | Skins, UI icons, audio e fonte foram copiados; logos React de template nao sao usados no jogo final. |
 
 ## Export Web / HTML5
 

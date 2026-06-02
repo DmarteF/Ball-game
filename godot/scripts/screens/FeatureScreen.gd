@@ -2,6 +2,36 @@ extends Control
 
 const NeonUI = preload("res://scripts/ui/NeonUI.gd")
 
+const DAILY_MISSIONS = [
+	{"id": "rings_50", "title": "Destruir 50 aneis", "metric": "rings_destroyed", "target": 50, "reward": "+260 moedas"},
+	{"id": "rings_150", "title": "Destruir 150 aneis", "metric": "rings_destroyed", "target": 150, "reward": "+1 chave"},
+	{"id": "perfect_3", "title": "Fazer 3 Perfect Escapes", "metric": "perfect_escapes", "target": 3, "reward": "+5 diamantes"},
+	{"id": "perfect_10", "title": "Fazer 10 Perfect Escapes", "metric": "perfect_escapes", "target": 10, "reward": "+14 diamantes"},
+	{"id": "runs_3", "title": "Jogar 3 partidas", "metric": "runs_played", "target": 3, "reward": "+70 XP"},
+	{"id": "runs_5", "title": "Jogar 5 partidas", "metric": "runs_played", "target": 5, "reward": "+420 moedas"},
+	{"id": "win_1", "title": "Vencer 1 fase", "metric": "phase_wins", "target": 1, "reward": "+8 diamantes"},
+	{"id": "win_3", "title": "Vencer 3 fases", "metric": "phase_wins", "target": 3, "reward": "+1 bau raro"},
+	{"id": "chest_1", "title": "Abrir 1 bau", "metric": "chests_opened", "target": 1, "reward": "+12 fragmentos"},
+	{"id": "chest_3", "title": "Abrir 3 baus", "metric": "chests_opened", "target": 3, "reward": "+1 chave"},
+	{"id": "coins_500", "title": "Ganhar 500 moedas da rodada", "metric": "run_coins", "target": 500, "reward": "+320 moedas"},
+	{"id": "coins_2000", "title": "Ganhar 2.000 moedas da rodada", "metric": "run_coins", "target": 2000, "reward": "+12 diamantes"},
+	{"id": "gems_5", "title": "Ganhar 5 diamantes", "metric": "diamonds_found", "target": 5, "reward": "+120 XP"},
+	{"id": "temp_upgrades_3", "title": "Usar 3 upgrades temporarios", "metric": "run_upgrades", "target": 3, "reward": "+260 moedas"},
+	{"id": "combo_5", "title": "Fazer combo x5", "metric": "best_combo", "target": 5, "reward": "+5 diamantes"},
+	{"id": "combo_10", "title": "Fazer combo x10", "metric": "best_combo", "target": 10, "reward": "+1 chave"},
+	{"id": "equip_skin", "title": "Equipar uma skin diferente", "metric": "skin_equips", "target": 1, "reward": "+10 fragmentos"},
+	{"id": "boss_run", "title": "Jogar Boss Mode 1 vez", "metric": "boss_runs", "target": 1, "reward": "+360 moedas"},
+	{"id": "boss_win", "title": "Vencer Boss Mode 1 vez", "metric": "boss_wins", "target": 1, "reward": "+16 diamantes"},
+	{"id": "offline_claim", "title": "Coletar recompensa offline", "metric": "offline_claims", "target": 1, "reward": "+220 moedas"},
+	{"id": "store_buy", "title": "Comprar algo na loja simulada", "metric": "store_purchases", "target": 1, "reward": "+6 diamantes"},
+	{"id": "watch_ad", "title": "Usar anuncio 1 vez", "metric": "ads_watched", "target": 1, "reward": "+240 moedas"},
+	{"id": "crit_5", "title": "Fazer 5 criticos", "metric": "criticals", "target": 5, "reward": "+90 XP"},
+	{"id": "skin_effect_10", "title": "Quebrar 10 aneis com efeito de skin", "metric": "skin_effects", "target": 10, "reward": "+18 fragmentos"},
+	{"id": "no_revive", "title": "Concluir uma fase sem revive", "metric": "no_revive_wins", "target": 1, "reward": "+10 diamantes"}
+]
+
+const WHEEL_LABELS = ["+180 moedas", "+420 moedas", "+6 diamantes", "+14 diamantes", "+1 chave", "+1 bau comum", "+1 bau raro", "+20 fragmentos", "+120 XP", "+1 bau epico"]
+
 var feature = "inventory"
 var content
 var wallet_label
@@ -103,11 +133,9 @@ func _build_inventory():
 
 func _build_missions():
 	var stats = SaveSystem.get_save().lifetime_stats
-	_add_hero("Missoes", "Objetivos ativos para acelerar progresso, baus e diamantes.", "res://assets/ui/ui_missions.png", Color("#00ff88"))
-	_add_progress_card("Quebrador de Aneis", int(stats.rings_destroyed), 120, "+1 bau raro", Color("#00f0ff"))
-	_add_progress_card("Combo Neon", int(stats.best_combo), 12, "+250 moedas", Color("#ffd700"))
-	_add_progress_card("Colecionador", int(stats.skins_unlocked), 8, "+25 diamantes", Color("#ff4fd8"))
-	_add_card("Status", "Coleta automatica de missoes fica preparada para a proxima etapa.", "res://assets/ui/ui_locked.png", Color("#9ca3af"))
+	_add_hero("Missoes Diarias", "Quatro objetivos do dia, selecionados pelo relogio local.", "res://assets/ui/ui_missions.png", Color("#ff8800"))
+	for mission in _daily_missions_for_today():
+		_add_progress_card(mission.title, int(stats.get(mission.metric, 0)), int(mission.target), mission.reward, Color("#ff8800"))
 
 func _build_event():
 	var timed = SaveSystem.get_timed_status()
@@ -115,17 +143,32 @@ func _build_event():
 	_add_hero("Evento", "Fenda semanal %s" % timed.event_id, "res://assets/ui/ui_event.png", Color("#ff4fd8"))
 	_add_progress_card("Energia da Fenda", points, 350, "Skin/fragmentos sazonais", Color("#ff4fd8"))
 	_add_card("Tempo", "Evento atual: %s\nSemana local: %s" % [timed.event_id, timed.week_key], "res://assets/ui/ui_event.png", Color("#00f0ff"))
-	_add_card("Estrutura", "Pontuacao ja sobe ao jogar. Loja/event pass ficam mockados para expansao.", "res://assets/ui/ui_locked.png", Color("#9ca3af"))
+	_add_card("Progresso", "Pontuacao ja sobe ao jogar. Recompensas finais seguem a estrutura da branch main.", "res://assets/ui/ui_locked.png", Color("#9ca3af"))
 
 func _build_wheel():
 	var timed = SaveSystem.get_timed_status()
-	_add_hero("Roleta", "Giro gratis diario e ate 2 giros com anuncio mockado.", "res://assets/ui/ui_wheel.png", Color("#b000ff"))
+	_add_hero("Roleta", "Giro gratis diario e ate 2 giros com anuncio.", "res://assets/ui/ui_wheel.png", Color("#b000ff"))
+	var wheel_panel = PanelContainer.new()
+	wheel_panel.add_theme_stylebox_override("panel", NeonUI.neon_box(Color("#ffffff10"), Color("#00f0ffaa"), 4, 146, 0.5))
+	wheel_panel.custom_minimum_size = Vector2(292, 292)
+	content.add_child(wheel_panel)
+	var center = CenterContainer.new()
+	wheel_panel.add_child(center)
+	var wheel_grid = GridContainer.new()
+	wheel_grid.columns = 2
+	wheel_grid.add_theme_constant_override("h_separation", 8)
+	wheel_grid.add_theme_constant_override("v_separation", 8)
+	center.add_child(wheel_grid)
+	for label in WHEEL_LABELS:
+		var segment = NeonUI.label(label, 10, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+		segment.custom_minimum_size = Vector2(112, 32)
+		wheel_grid.add_child(segment)
 	_add_card("Disponivel", "Reseta em %s" % TimeSystem.format_timer(timed.seconds_until_next_day), "res://assets/ui/ui_daily_reward.png", Color("#00f0ff"))
 	var free = NeonUI.button("GIRO GRATIS", Color("#00f0ff"), 52)
 	free.disabled = bool(SaveSystem.get_save().timed.wheel_free_used)
 	free.pressed.connect(_spin_wheel.bind(false))
 	content.add_child(free)
-	var ad = NeonUI.ghost_button("GIRO COM ANUNCIO MOCK", Color("#ffd700"), 52)
+	var ad = NeonUI.ghost_button("GIRO COM ANUNCIO", Color("#ffd700"), 52)
 	ad.disabled = int(SaveSystem.get_save().timed.wheel_ad_spins_used) >= 2
 	ad.pressed.connect(_spin_wheel.bind(true))
 	content.add_child(ad)
@@ -235,6 +278,19 @@ func _claim_daily():
 func _on_save_changed(_save):
 	if wallet_label:
 		wallet_label.text = NeonUI.wallet_text(SaveSystem.get_save())
+
+func _daily_missions_for_today():
+	var start = _seeded_index(TimeSystem.day_key(), DAILY_MISSIONS.size())
+	var output = []
+	for offset in range(4):
+		output.append(DAILY_MISSIONS[(start + offset * 7) % DAILY_MISSIONS.size()])
+	return output
+
+func _seeded_index(seed, count):
+	var hash = 0
+	for i in range(seed.length()):
+		hash = int(hash * 31 + seed.unicode_at(i)) & 0x7fffffff
+	return hash % max(1, count)
 
 func _title():
 	match feature:

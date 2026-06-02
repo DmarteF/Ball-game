@@ -201,10 +201,14 @@ func spin_wheel(use_ad = false):
 	var rewards = [
 		{"type": "coins", "amount": 180, "label": "+180 moedas"},
 		{"type": "coins", "amount": 420, "label": "+420 moedas"},
-		{"type": "gems", "amount": 12, "label": "+12 diamantes"},
+		{"type": "gems", "amount": 6, "label": "+6 diamantes"},
+		{"type": "gems", "amount": 14, "label": "+14 diamantes"},
 		{"type": "key", "amount": 1, "label": "+1 chave"},
+		{"type": "chest", "chest": "common", "amount": 1, "label": "+1 bau comum"},
 		{"type": "chest", "chest": "rare", "amount": 1, "label": "+1 bau raro"},
-		{"type": "effect", "label": "Trilha Neon diaria"}
+		{"type": "fragments", "amount": 20, "label": "+20 fragmentos"},
+		{"type": "profile_xp", "amount": 120, "label": "+120 XP"},
+		{"type": "chest", "chest": "epic", "amount": 1, "label": "+1 bau epico"}
 	]
 	var reward = rewards[randi() % rewards.size()]
 	match reward.type:
@@ -217,9 +221,11 @@ func spin_wheel(use_ad = false):
 		"chest":
 			add_chest(reward.chest, int(reward.amount))
 			return {"ok": true, "reward": reward, "message": reward.label}
-		"effect":
-			if not (reward.label in save.unlocked_effects):
-				save.unlocked_effects.append(reward.label)
+		"fragments":
+			var skin_id = save.equipped_skin
+			save.skin_fragments[skin_id] = int(save.skin_fragments.get(skin_id, 0)) + int(reward.amount)
+		"profile_xp":
+			_apply_profile_xp(int(reward.amount))
 	save_game()
 	return {"ok": true, "reward": reward, "message": reward.label}
 
@@ -362,15 +368,7 @@ func grant_chest_reward(reward, autosave = true):
 				save.legendary_keys += int(reward.get("amount", 1))
 			else:
 				save.keys += int(reward.get("amount", 1))
-		"coins":
-			save.coins += int(reward.get("amount", 0))
-		"gems":
-			save.gems += int(reward.get("amount", 0))
-		"upgrade":
-			var upgrade_id = reward.get("upgrade_id", "")
-			if upgrade_id != "" and not (upgrade_id in save.unlocked_upgrades):
-				save.unlocked_upgrades.append(upgrade_id)
-		"effect":
+		"trail", "aura", "effect", "card":
 			var label = reward.get("label", "Efeito")
 			if not (label in save.unlocked_effects):
 				save.unlocked_effects.append(label)

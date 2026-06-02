@@ -46,7 +46,7 @@ func _build_ui():
 	result_box = VBoxContainer.new()
 	result_box.add_theme_constant_override("separation", 7)
 	box.add_child(result_box)
-	double_button = NeonUI.ghost_button("DOBRAR COM ANUNCIO MOCK", Color("#ffd700"), 50)
+	double_button = NeonUI.ghost_button("DOBRAR COM ANUNCIO", Color("#ffd700"), 50)
 	double_button.pressed.connect(_double_rewards)
 	box.add_child(double_button)
 	collect_button = NeonUI.button("COLETAR", Color("#00f0ff"), 54)

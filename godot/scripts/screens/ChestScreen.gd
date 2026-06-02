@@ -32,7 +32,7 @@ func _build_ui():
 	var back = NeonUI.ghost_button("VOLTAR", Color("#00f0ff"), 42)
 	back.pressed.connect(func(): get_tree().current_scene.go_to("menu"))
 	header.add_child(back)
-	var title = NeonUI.label("BAUS", 28, Color("#00f0ff"), HORIZONTAL_ALIGNMENT_RIGHT)
+	var title = NeonUI.label("INVENTARIO", 28, Color("#00f0ff"), HORIZONTAL_ALIGNMENT_RIGHT)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 	wallet_label = NeonUI.label("", 13, Color("#ffd700"))
@@ -67,10 +67,11 @@ func _refresh():
 	var save = SaveSystem.get_save()
 	wallet_label.text = "Moedas %d  Diamantes %d  Chaves %d  Lendarias %d" % [save.coins, save.gems, save.keys, save.legendary_keys]
 	NeonUI.clear_children(list)
-	list.add_child(NeonUI.label("COMPRAR E ABRIR", 13, Color("#ffffff88")))
+	_add_free_chest_card()
+	list.add_child(NeonUI.label("BAUS", 13, Color("#ffffff88")))
 	for chest in GameData.get_chests():
 		_add_chest_card(chest, false)
-	list.add_child(NeonUI.label("BAUS NO INVENTARIO", 13, Color("#ffffff88")))
+	list.add_child(NeonUI.label("ITENS", 13, Color("#ffffff88")))
 	var had_inventory = false
 	for chest in GameData.get_chests():
 		var amount = int(save.inventory_chests.get(chest.id, 0))
@@ -78,7 +79,20 @@ func _refresh():
 			had_inventory = true
 			_add_chest_card(chest, true, amount)
 	if not had_inventory:
-		list.add_child(NeonUI.label("Nenhum bau guardado. Ganhe em fases, loja ou anuncios mock.", 13, Color("#ffffff88")))
+		list.add_child(NeonUI.label("Nenhum item guardado.", 13, Color("#ffffff88")))
+
+func _add_free_chest_card():
+	var button = Button.new()
+	button.custom_minimum_size = Vector2(0, 86)
+	button.text = "BAU GRATIS\nAbra um bau comum assistindo anuncio."
+	button.icon = load("res://assets/ui/ui_daily_reward.png") if ResourceLoader.exists("res://assets/ui/ui_daily_reward.png") else null
+	button.expand_icon = true
+	button.add_theme_font_size_override("font_size", 14)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_stylebox_override("normal", NeonUI.neon_box(Color("#ffd700"), Color("#ff8800"), 1, 14, 0.42))
+	button.add_theme_stylebox_override("hover", NeonUI.neon_box(Color("#ffdf3d"), Color("#ff8800"), 1, 14, 0.55))
+	button.pressed.connect(_open_free_chest)
+	list.add_child(button)
 
 func _add_chest_card(chest, owned, amount = 0):
 	var color = Color(chest.color)
@@ -111,6 +125,15 @@ func _open_owned(chest_id):
 	if reward.is_empty():
 		AudioManager.play_sfx("button_error")
 		return
+	AudioManager.play_sfx("chest_open")
+	_show_reward(reward)
+
+func _open_free_chest():
+	AudioManager.play_sfx("button_click")
+	await AdsService.show_rewarded("inventory_free_chest")
+	var chest = GameData.get_chest("common")
+	var reward = GameData.roll_chest_reward(chest.id, SaveSystem.get_save())
+	SaveSystem.grant_chest_reward(reward)
 	AudioManager.play_sfx("chest_open")
 	_show_reward(reward)
 

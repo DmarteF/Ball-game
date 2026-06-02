@@ -60,6 +60,8 @@ var xp_label
 var combo_label
 var result_label
 var pause_button
+var atk_button
+var gold_button
 var level_up_panel
 var level_up_list
 
@@ -80,10 +82,7 @@ func _process(delta):
 	_update_game(delta_steps)
 
 func _build_ui():
-	var bg = ColorRect.new()
-	bg.color = Color("#080818")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	NeonUI.add_main_background(self)
 
 	var margin = MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -133,43 +132,19 @@ func _build_ui():
 	result_label = NeonUI.label("", 14, Color("#00ff88"), HORIZONTAL_ALIGNMENT_CENTER)
 	root_vbox.add_child(result_label)
 
-	var controls = HBoxContainer.new()
-	controls.add_theme_constant_override("separation", 8)
-	root_vbox.add_child(controls)
-
-	var left_button = NeonUI.ghost_button("GIRAR -", Color("#b000ff"), 50)
-	left_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left_button.pressed.connect(func(): _rotate_velocity(-0.28))
-	controls.add_child(left_button)
-
-	var impulse_button = NeonUI.button("IMPULSO", Color("#00f0ff"), 50)
-	impulse_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	impulse_button.pressed.connect(_impulse_outward)
-	controls.add_child(impulse_button)
-
-	var right_button = NeonUI.ghost_button("GIRAR +", Color("#ff0055"), 50)
-	right_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_button.pressed.connect(func(): _rotate_velocity(0.28))
-	controls.add_child(right_button)
-
 	var shop_row = HBoxContainer.new()
 	shop_row.add_theme_constant_override("separation", 8)
 	root_vbox.add_child(shop_row)
 
-	var atk_button = NeonUI.ghost_button("ATK rodada", Color("#ffd700"), 42)
+	atk_button = NeonUI.ghost_button("ATK Lv.0\n20", Color("#ffd700"), 48)
 	atk_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	atk_button.pressed.connect(func(): _buy_run_upgrade("atk"))
 	shop_row.add_child(atk_button)
 
-	var gold_button = NeonUI.ghost_button("Gold rodada", Color("#ffd700"), 42)
+	gold_button = NeonUI.ghost_button("Gold Lv.0\n18", Color("#ffd700"), 48)
 	gold_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gold_button.pressed.connect(func(): _buy_run_upgrade("gold"))
 	shop_row.add_child(gold_button)
-
-	var exit_button = NeonUI.ghost_button("SAIR", Color("#ffffff88"), 42)
-	exit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	exit_button.pressed.connect(_quit_run)
-	shop_row.add_child(exit_button)
 
 	_build_level_up_panel()
 
@@ -190,7 +165,7 @@ func _build_level_up_panel():
 	level_up_list = VBoxContainer.new()
 	level_up_list.add_theme_constant_override("separation", 8)
 	box.add_child(level_up_list)
-	var reroll = NeonUI.ghost_button("REROLL COM ANUNCIO MOCK", Color("#ffd700"), 46)
+	var reroll = NeonUI.ghost_button("REROLL COM ANUNCIO", Color("#ffd700"), 46)
 	reroll.pressed.connect(_reroll_level_up_with_ad)
 	box.add_child(reroll)
 
@@ -564,7 +539,7 @@ func _reroll_level_up_with_ad():
 	_fill_level_up_options()
 
 func _buy_run_upgrade(kind):
-	var cost = int(floor((20.0 if kind == "atk" else 18.0) * pow(1.35, int(run_shop_upgrades[kind]))))
+	var cost = _run_upgrade_cost(kind)
 	if run_coins < cost:
 		AudioManager.play_sfx("button_error")
 		_add_float("Moedas insuficientes", center, Color("#ff0055"))
@@ -574,6 +549,9 @@ func _buy_run_upgrade(kind):
 	run_rewards.run_upgrades += 1
 	AudioManager.play_sfx("button_confirm")
 	_add_float("ATK+" if kind == "atk" else "Gold+", center + Vector2(0, -24), Color("#ffd700"))
+
+func _run_upgrade_cost(kind):
+	return int(floor((20.0 if kind == "atk" else 18.0) * pow(1.35, int(run_shop_upgrades[kind]))))
 
 func _constrain_outer_wall():
 	var dir = ball_pos - center
@@ -622,6 +600,10 @@ func _update_hud():
 	xp_label.text = "Lv.%d  XP %d/%d" % [run_level, run_xp, GameData.get_run_xp_needed(run_level)]
 	combo_label.text = "Combo x%d" % combo if combo >= 2 else ""
 	pause_button.text = "CONTINUAR" if paused else "PAUSAR"
+	if atk_button:
+		atk_button.text = "ATK Lv.%d\n%d" % [int(run_shop_upgrades.atk), _run_upgrade_cost("atk")]
+	if gold_button:
+		gold_button.text = "Gold Lv.%d\n%d" % [int(run_shop_upgrades.gold), _run_upgrade_cost("gold")]
 
 func _toggle_pause():
 	paused = not paused

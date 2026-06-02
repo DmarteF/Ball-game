@@ -9,7 +9,7 @@ const SCENES = {
 	"upgrades": "res://scenes/Upgrades.tscn",
 	"skins": "res://scenes/Skins.tscn",
 	"chests": "res://scenes/Chests.tscn",
-	"inventory": "res://scenes/Feature.tscn",
+	"inventory": "res://scenes/Chests.tscn",
 	"missions": "res://scenes/Feature.tscn",
 	"event": "res://scenes/Feature.tscn",
 	"wheel": "res://scenes/Feature.tscn",
