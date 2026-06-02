@@ -1,0 +1,65 @@
+name: Godot Web Export
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - godot-4-rebuild
+    paths:
+      - "godot/**"
+      - ".github/workflows/godot-web.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: godot-web-pages
+  cancel-in-progress: true
+
+jobs:
+  export-web:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.3"
+      GODOT_STATUS: "stable"
+      GODOT_BINARY: "Godot_v4.3-stable_linux.x86_64"
+      GODOT_TEMPLATES_DIR: "/home/runner/.local/share/godot/export_templates/4.3.stable"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/${GODOT_BINARY}.zip"
+          unzip -q "${GODOT_BINARY}.zip"
+          chmod +x "${GODOT_BINARY}"
+
+      - name: Install export templates
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz"
+          mkdir -p "${GODOT_TEMPLATES_DIR}"
+          unzip -q "Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz" -d godot_templates
+          cp -R godot_templates/templates/* "${GODOT_TEMPLATES_DIR}/"
+
+      - name: Export HTML5
+        run: |
+          mkdir -p godot/build/web
+          "./${GODOT_BINARY}" --headless --path godot --export-release "Web" build/web/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: godot/build/web
+
+  deploy-pages:
+    runs-on: ubuntu-latest
+    needs: export-web
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
