@@ -3,6 +3,12 @@ extends Control
 const PLACEHOLDER_SCENE := "res://scenes/Placeholder.tscn"
 const PROFILE_SCENE := "res://scenes/Profile.tscn"
 const SETTINGS_SCENE := "res://scenes/Settings.tscn"
+const SHOP_SCENE := "res://scenes/Shop.tscn"
+const INVENTORY_SCENE := "res://scenes/Inventory.tscn"
+const MISSIONS_SCENE := "res://scenes/Missions.tscn"
+const EVENT_SCENE := "res://scenes/Event.tscn"
+const WHEEL_SCENE := "res://scenes/Wheel.tscn"
+const DAILY_REWARD_SCENE := "res://scenes/DailyReward.tscn"
 
 const ICON_PATHS := {
 	"coin": "res://assets/ui/ui_coin.png",
@@ -25,12 +31,12 @@ const ICON_PATHS := {
 }
 
 const SECONDARY_ITEMS := [
-	{ "label": "Shop", "icon": "shop", "color": "#00aaff88" },
-	{ "label": "Inventory", "icon": "inventory", "color": "#ffd70088" },
-	{ "label": "Missions", "icon": "missions", "color": "#ff880088" },
-	{ "label": "Event", "icon": "event", "color": "#00ff8888" },
-	{ "label": "Wheel", "icon": "wheel", "color": "#00ff8888" },
-	{ "label": "Daily Reward", "icon": "daily_reward", "color": "#ffd70088" },
+	{ "label": "Shop", "icon": "shop", "color": "#00aaff88", "scene": SHOP_SCENE },
+	{ "label": "Inventory", "icon": "inventory", "color": "#ffd70088", "scene": INVENTORY_SCENE },
+	{ "label": "Missions", "icon": "missions", "color": "#ff880088", "scene": MISSIONS_SCENE },
+	{ "label": "Event", "icon": "event", "color": "#00ff8888", "scene": EVENT_SCENE },
+	{ "label": "Wheel", "icon": "wheel", "color": "#00ff8888", "scene": WHEEL_SCENE },
+	{ "label": "Daily Reward", "icon": "daily_reward", "color": "#ffd70088", "scene": DAILY_REWARD_SCENE },
 	{ "label": "Boss", "icon": "boss", "color": "#ff005588" },
 	{ "label": "Neon League", "icon": "league", "color": "#00ff8888" },
 	{ "label": "Achievements", "icon": "achievements", "color": "#ffd70088" },

@@ -85,10 +85,6 @@ func _build_screen() -> void:
 
 	content.add_child(_make_profile_card())
 	content.add_child(_make_account_card())
-	content.add_child(_make_audio_card())
-	content.add_child(_make_performance_card())
-	content.add_child(_make_language_card())
-	content.add_child(_make_league_card())
 	content.add_child(_make_stats_card())
 	content.add_child(_make_abilities_card())
 	content.add_child(_spacer(18))
