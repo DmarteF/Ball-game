@@ -1,41 +1,24 @@
 ; Engine configuration file.
-; Open this folder with Godot 4.x.
+; Best edited using the Godot editor, but kept small here for the clean rebuild.
 
 config_version=5
 
 [application]
 
-config/name="Neon Idle Escape Godot"
-config/description="Neon Idle Escape em Godot 4."
-run/main_scene="res://scenes/Main.tscn"
-config/features=PackedStringArray("4.3", "Mobile", "web")
-config/icon="res://assets/images/app/icon.png"
-
-[autoload]
-
-GameData="*res://autoload/GameData.gd"
-TimeSystem="*res://autoload/TimeSystem.gd"
-SaveSystem="*res://autoload/SaveSystem.gd"
-AdsService="*res://autoload/AdsService.gd"
-AudioManager="*res://autoload/AudioManager.gd"
+config/name="Neon Idle Escape"
+run/main_scene="res://scenes/MainMenu.tscn"
+config/features=PackedStringArray("4.3", "Forward Plus")
+config/icon="res://assets/icons/neon_idle_escape_app_icon_1024.png"
 
 [display]
 
-window/size/viewport_width=420
-window/size/viewport_height=760
-window/handheld/orientation=1
+window/size/viewport_width=390
+window/size/viewport_height=844
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-
-[input]
-
-touch_nudge={
-"deadzone": 0.2,
-"events": []
-}
+window/handheld/orientation=1
 
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-textures/canvas_textures/default_texture_filter=1

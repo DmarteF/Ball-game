@@ -1,0 +1,4 @@
+.godot/
+build/
+!assets/original/*.zip
+!assets/original/**/*.zip
