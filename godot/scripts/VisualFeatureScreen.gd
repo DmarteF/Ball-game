@@ -248,7 +248,7 @@ func _populate_content(data: Dictionary) -> void:
 		_content.add_child(_make_section_title("BAÚS GUARDADOS"))
 		_content.add_child(_make_empty_state("Nenhum baú comprado no inventário", "Baús adquiridos ou recebidos aparecerão aqui para abrir depois.", "chest_common"))
 	elif data.get("cards", []).is_empty() and data.has("empty_title"):
-		_content.add_child(_make_empty_state(String(data["empty_title"]), String(data["empty_desc"]), String(data["icon"])))
+		_content.add_child(_make_empty_state(_dynamic_empty_title(data), String(data["empty_desc"]), String(data["icon"])))
 	else:
 		for card_data in data["cards"]:
 			_content.add_child(_make_feature_card(card_data))
@@ -279,10 +279,10 @@ func _current_shop_tab() -> Dictionary:
 func _make_wallet() -> HBoxContainer:
 	var wallet := HBoxContainer.new()
 	wallet.add_theme_constant_override("separation", 8)
-	wallet.add_child(_make_wallet_item("coin", "600"))
-	wallet.add_child(_make_wallet_item("gem", "60"))
-	wallet.add_child(_make_wallet_item("key", "1"))
-	wallet.add_child(_make_wallet_item("chest_legendary", "0"))
+	wallet.add_child(_make_wallet_item("coin", str(GameState.data.get("coins", 0))))
+	wallet.add_child(_make_wallet_item("gem", str(GameState.data.get("diamonds", 0))))
+	wallet.add_child(_make_wallet_item("key", str(GameState.data.get("keys", 0))))
+	wallet.add_child(_make_wallet_item("chest_legendary", str(GameState.data.get("legendary_keys", 0))))
 	return wallet
 
 
@@ -371,6 +371,14 @@ func _make_empty_state(title: String, desc: String, icon_key: String) -> PanelCo
 	if not desc.is_empty():
 		column.add_child(label)
 	return card
+
+
+func _dynamic_empty_title(data: Dictionary) -> String:
+	if screen_id == "boss":
+		return "Boss disponível" if TimeManager.is_boss_available() else "Nenhum boss disponível"
+	if screen_id == "daily_reward":
+		return "Recompensa disponível" if TimeManager.can_claim_daily_reward() else "Recompensa diária já coletada"
+	return String(data["empty_title"])
 
 
 func _make_feature_card(data: Dictionary) -> PanelContainer:

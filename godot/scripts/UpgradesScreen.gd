@@ -89,9 +89,9 @@ func _make_resource_display() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", 10)
-	row.add_child(_make_resource_pill("coin", "600", "#ffd70044"))
-	row.add_child(_make_resource_pill("gem", "60", "#00ff8844"))
-	row.add_child(_make_resource_pill("key", "1", "#00f0ff44"))
+	row.add_child(_make_resource_pill("coin", str(GameState.data.get("coins", 0)), "#ffd70044"))
+	row.add_child(_make_resource_pill("gem", str(GameState.data.get("diamonds", 0)), "#00ff8844"))
+	row.add_child(_make_resource_pill("key", str(GameState.data.get("keys", 0)), "#00f0ff44"))
 	return row
 
 
@@ -120,7 +120,8 @@ func _make_resource_pill(icon_key: String, value: String, border: String) -> Pan
 
 
 func _make_upgrade_card(upgrade: Dictionary) -> PanelContainer:
-	var unlocked := bool(upgrade["unlocked"])
+	var unlocked := Array(GameState.data.get("unlocked_upgrades", [])).has(String(upgrade["id"])) or bool(upgrade["unlocked"])
+	var level := int(GameState.data.get("permanent_upgrades", {}).get(String(upgrade["id"]), upgrade["level"]))
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 16, "#ffffff22", 2))
 	var margin := MarginContainer.new()
@@ -154,7 +155,7 @@ func _make_upgrade_card(upgrade: Dictionary) -> PanelContainer:
 		locked.add_child(_make_icon("locked", 14))
 		locked.add_child(_make_label(String(upgrade.get("unlock", "Upgrade bloqueado")), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		info.add_child(locked)
-	info.add_child(_make_label("Nível: %s/%s" % [upgrade["level"], upgrade["max"]], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label("Nível: %s/%s" % [level, upgrade["max"]], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
 		info.add_child(_make_label(String(upgrade.get("value", "")), 11, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 

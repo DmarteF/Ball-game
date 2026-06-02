@@ -293,29 +293,13 @@ func _fill(control: Control) -> void:
 
 
 func _load_settings() -> void:
-	if not FileAccess.file_exists(SETTINGS_PATH):
-		return
-	var file := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
-	if file == null:
-		return
-	var parsed = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return
-	_audio_muted = bool(parsed.get("audio_muted", parsed.get("master_muted", false)))
-	_language = String(parsed.get("language", "pt"))
+	_audio_muted = bool(GameState.get_setting("audio_muted", false))
+	_language = String(GameState.get_setting("language", "pt"))
 
 
 func _save_settings() -> void:
-	var data := {
-		"audio_muted": _audio_muted,
-		"master_muted": _audio_muted,
-		"music_muted": _audio_muted,
-		"sfx_muted": _audio_muted,
-		"language": _language,
-	}
-	var file := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
-	if file != null:
-		file.store_string(JSON.stringify(data))
+	GameState.set_audio_muted(_audio_muted)
+	GameState.set_language(_language)
 
 
 func _go_back() -> void:

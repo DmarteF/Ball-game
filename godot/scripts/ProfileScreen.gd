@@ -31,7 +31,6 @@ var _language := "pt"
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
-	_load_settings()
 	_build_background()
 	_build_screen()
 
@@ -100,7 +99,7 @@ func _make_profile_card() -> PanelContainer:
 	body.add_child(avatar)
 
 	_nickname_edit = LineEdit.new()
-	_nickname_edit.text = "Player"
+	_nickname_edit.text = String(GameState.data.get("nickname", "Player"))
 	_nickname_edit.max_length = 18
 	_nickname_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_nickname_edit.custom_minimum_size.y = 42
@@ -152,16 +151,19 @@ func _make_account_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
 	body.add_child(_make_section_title("CONTA"))
-	body.add_child(_make_label("Level 1", 24, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	body.add_child(_make_xp_bar(0.0, "0/120 XP"))
+	var level := int(GameState.data.get("level", 1))
+	var xp := int(GameState.data.get("profile_xp", GameState.data.get("xp", 0)))
+	var xp_needed := _xp_needed(level)
+	body.add_child(_make_label("Level %s" % level, 24, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	body.add_child(_make_xp_bar(float(xp) / float(max(1, xp_needed)), "%s/%s XP" % [xp, xp_needed]))
 
 	var resources := HBoxContainer.new()
 	resources.add_theme_constant_override("separation", 8)
 	body.add_child(resources)
-	resources.add_child(_make_resource("coin", "600"))
-	resources.add_child(_make_resource("gem", "60"))
-	resources.add_child(_make_resource("key", "1"))
-	resources.add_child(_make_resource("legendary_key", "0"))
+	resources.add_child(_make_resource("coin", str(GameState.data.get("coins", 0))))
+	resources.add_child(_make_resource("gem", str(GameState.data.get("diamonds", 0))))
+	resources.add_child(_make_resource("key", str(GameState.data.get("keys", 0))))
+	resources.add_child(_make_resource("legendary_key", str(GameState.data.get("legendary_keys", 0))))
 
 	var achievements := _make_outline_button("CONQUISTAS 0/32", "achievements", "#ffd70022", "#ffd70088", "#ffd700")
 	body.add_child(achievements)
@@ -237,18 +239,16 @@ func _make_stats_card() -> PanelContainer:
 	var body := _card_body(card)
 	body.add_child(_make_section_title("ESTATÍSTICAS"))
 	for line in [
-		"Partidas jogadas: 0",
-		"Anéis destruídos: 0",
-		"Escapes perfeitos: 0",
-		"Diamantes encontrados: 0",
-		"Baús abertos: 0",
-		"Skins desbloqueadas: 1",
-		"Maior fase: 1",
-		"Maior nível na partida: 1",
-		"Vitórias no Boss: 0",
-		"Derrotas no Boss: 0",
-		"Melhor nível Boss: Fácil",
-		"Impossível no mês: 0",
+		"Partidas jogadas: %s" % _stat("runs_played", 0),
+		"Anéis destruídos: %s" % _stat("rings_destroyed", 0),
+		"Escapes perfeitos: %s" % _stat("perfect_escapes", 0),
+		"Diamantes encontrados: %s" % _stat("diamonds_found", 0),
+		"Baús abertos: %s" % _stat("chests_opened", 0),
+		"Skins desbloqueadas: %s" % Array(GameState.data.get("unlocked_skins", [])).size(),
+		"Maior fase: %s" % GameState.data.get("max_unlocked_phase", 1),
+		"Maior nível na partida: %s" % _stat("highest_run_level", 1),
+		"Vitórias no Boss: %s" % _stat("boss_wins", 0),
+		"Derrotas no Boss: %s" % _stat("boss_losses", 0),
 	]:
 		body.add_child(_make_stat(line))
 	return card
@@ -634,6 +634,16 @@ func _save_profile_mock() -> void:
 	_nickname_edit.text = _nickname_edit.text.strip_edges().substr(0, 18)
 	if _nickname_edit.text.is_empty():
 		_nickname_edit.text = "Player"
+	GameState.data["nickname"] = _nickname_edit.text
+	GameState.save_game()
+
+
+func _xp_needed(level: int) -> int:
+	return 100 + level * 20
+
+
+func _stat(key: String, fallback: int) -> int:
+	return int(GameState.data.get("stats", {}).get(key, fallback))
 
 
 func _go_back() -> void:

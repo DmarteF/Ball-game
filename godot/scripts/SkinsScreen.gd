@@ -127,9 +127,9 @@ func _make_wallet() -> HBoxContainer:
 	wallet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wallet.alignment = BoxContainer.ALIGNMENT_END
 	wallet.add_theme_constant_override("separation", 8)
-	wallet.add_child(_make_wallet_item("coin", "600"))
-	wallet.add_child(_make_wallet_item("gem", "60"))
-	wallet.add_child(_make_wallet_item("key", "1"))
+	wallet.add_child(_make_wallet_item("coin", str(GameState.data.get("coins", 0))))
+	wallet.add_child(_make_wallet_item("gem", str(GameState.data.get("diamonds", 0))))
+	wallet.add_child(_make_wallet_item("key", str(GameState.data.get("keys", 0))))
 	return wallet
 
 
@@ -161,7 +161,7 @@ func _make_progress_grid() -> GridContainer:
 		for skin in _all_skin_data:
 			if skin["rarity"] == rarity:
 				total += 1
-				if bool(skin.get("owned", false)):
+				if _is_owned(String(skin["id"])):
 					owned += 1
 		var card := PanelContainer.new()
 		card.add_theme_stylebox_override("panel", _make_style("#ffffff10", 10, _rarity_color(rarity) + "77", 1))
@@ -220,8 +220,8 @@ func _populate_skins() -> void:
 
 
 func _make_skin_card(skin: Dictionary) -> PanelContainer:
-	var owned := bool(skin.get("owned", false))
-	var selected := bool(skin.get("selected", false))
+	var owned := _is_owned(String(skin["id"]))
+	var selected := String(GameState.data.get("equipped_skin", "neon_blue")) == String(skin["id"])
 	var hidden := not owned and String(skin["rarity"]) in ["mythic", "ultimate"]
 	var rarity_color := _rarity_color(String(skin["rarity"]))
 	var card := PanelContainer.new()
@@ -403,6 +403,10 @@ func _rarity_name(rarity: String) -> String:
 		"mythic": return "MÍTICO"
 		"ultimate": return "ULTIMATE"
 	return rarity.to_upper()
+
+
+func _is_owned(skin_id: String) -> bool:
+	return Array(GameState.data.get("unlocked_skins", [])).has(skin_id)
 
 
 func _make_icon(key: String, icon_size: int) -> TextureRect:

@@ -154,9 +154,9 @@ func _build_top_bar() -> void:
 	resources.add_theme_constant_override("separation", 8)
 	top_bar.add_child(resources)
 
-	resources.add_child(_make_resource_pill("coin", "600"))
-	resources.add_child(_make_resource_pill("gem", "60"))
-	resources.add_child(_make_resource_pill("key", "1"))
+	resources.add_child(_make_resource_pill("coin", str(GameState.data.get("coins", 0))))
+	resources.add_child(_make_resource_pill("gem", str(GameState.data.get("diamonds", 0))))
+	resources.add_child(_make_resource_pill("key", str(GameState.data.get("keys", 0))))
 
 
 func _build_content() -> void:
@@ -332,8 +332,8 @@ func _make_profile_badge() -> Button:
 	text_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(text_column)
 
-	text_column.add_child(_make_label("Player", 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	text_column.add_child(_make_label("Lv.1", 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	text_column.add_child(_make_label(String(GameState.data.get("nickname", "Player")), 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	text_column.add_child(_make_label("Lv.%s" % GameState.data.get("level", 1), 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return button
 
 

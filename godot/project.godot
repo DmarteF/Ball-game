@@ -10,6 +10,12 @@ run/main_scene="res://scenes/MainMenu.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 config/icon="res://assets/icons/neon_idle_escape_app_icon_1024.png"
 
+[autoload]
+
+SaveManager="*res://scripts/SaveManager.gd"
+TimeManager="*res://scripts/TimeManager.gd"
+GameState="*res://scripts/GameState.gd"
+
 [display]
 
 window/size/viewport_width=390

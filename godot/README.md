@@ -98,7 +98,56 @@ Pendencias marcadas assim porque a `main` usa a fonte de sistema do React Native
 | Liga Neon | `frontend/app/league.tsx`, `frontend/app/compete.tsx`, `assets/ui/ui_league_neon.png` | `scenes/League.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado indisponivel; ranking/liga real pendente. |
 | Conquistas | `frontend/app/achievements.tsx`, `frontend/src/game/achievements.ts`, `assets/ui/ui_achievements.png` | `scenes/Achievements.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado vazio; lista/progresso real pendente. |
 
-## 6. HTML/Web
+## 6. Save, progresso e tempo
+
+Autoloads criados em `project.godot`:
+
+- `scripts/SaveManager.gd`: le e grava o JSON local em `user://neon_idle_escape_save.json`.
+- `scripts/GameState.gd`: estado global do jogador e funcoes simples de economia/progresso.
+- `scripts/TimeManager.gd`: relogio interno, login/saida, offline, daily, eventos e boss.
+
+Dados salvos atualmente:
+
+- moedas, diamantes, chaves e chaves lendarias;
+- XP, nivel, fase atual, fases desbloqueadas e maior fase;
+- skins desbloqueadas, skin equipada, skin favorita, fragmentos e niveis de skin;
+- upgrades desbloqueados e niveis de upgrades permanentes;
+- audio/idioma;
+- ultimo login, ultima saida, ultima recompensa diaria e streak diario;
+- estado base de eventos, boss e recompensas AFK pendentes;
+- estatisticas basicas como partidas, aneis, perfects, diamantes, baus e boss.
+
+Funcoes principais disponiveis no `GameState`:
+
+- `add_coins`, `spend_coins`, `add_diamonds`, `spend_diamonds`, `add_keys`, `spend_keys`;
+- `unlock_skin`, `equip_skin`, `upgrade_permanent`, `unlock_level`;
+- `save_game`, `load_game`, `set_audio_muted`, `set_language`.
+
+Funcoes principais disponiveis no `TimeManager`:
+
+- `get_now_timestamp`, `get_last_login_timestamp`, `get_last_exit_timestamp`;
+- `get_offline_seconds`, `get_offline_minutes`, `get_offline_hours`;
+- `is_new_day`, `can_claim_daily_reward`, `mark_daily_reward_claimed`, `get_daily_streak`, `update_daily_streak`;
+- `calculate_afk_rewards`, `get_pending_afk_rewards`, `claim_afk_rewards`;
+- `get_event_time_remaining`, `is_event_active`, `is_boss_available`, `mark_boss_attempt`, `save_time_state`.
+
+Telas que ja leem dados reais:
+
+- Menu inicial: nome, nivel e recursos.
+- Perfil: nome, nivel, XP, recursos e estatisticas basicas.
+- Configuracoes: audio/idioma salvos no `GameState`.
+- Loja, Skins e Upgrades: recursos do jogador.
+- Jogar: fases desbloqueadas e Modo Infinito baseado na maior fase.
+- Boss: disponibilidade visual baseada no cooldown do `TimeManager`.
+
+Ainda mockado/pendente:
+
+- compras, roleta, recompensas reais, missoes reais, boss real, eventos reais, conquistas reais e gameplay.
+- Recompensas AFK sao calculadas e armazenadas como pendentes, mas nao sao concedidas automaticamente.
+
+Observacao de seguranca: o relogio atual usa horario local do aparelho. Em Android/APK isso pode ser manipulado alterando o relogio do celular. A estrutura ficou preparada para futura validacao online, mas essa validacao ainda nao foi implementada.
+
+## 7. HTML/Web
 
 O preset `Web` foi configurado em `export_presets.cfg`.
 

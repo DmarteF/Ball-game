@@ -66,19 +66,21 @@ func _build_screen() -> void:
 
 
 func _make_infinite_card() -> Button:
+	var infinite_unlocked := int(GameState.data.get("max_unlocked_phase", 1)) >= 5
 	var button := _make_card_button()
 	button.custom_minimum_size.y = 140
 	button.pressed.connect(_open_placeholder)
-	var body := _make_card_body(button, "#333333", "#222222")
+	var body := _make_card_body(button, "#00ff8888" if infinite_unlocked else "#333333", "#00f0ff33" if infinite_unlocked else "#222222")
 	body.add_child(_make_circle_icon("infinite", "", "#ffffff22"))
-	var info := _make_phase_info("Modo Infinito", "Complete a Fase 5 para desbloquear.", "ESPECIAL", "PROGRESSÃO INFINITA", true)
+	var info := _make_phase_info("Modo Infinito", "Ondas sem fim com desafios progressivos." if infinite_unlocked else "Complete a Fase 5 para desbloquear.", "ESPECIAL", "PROGRESSÃO INFINITA", not infinite_unlocked)
 	body.add_child(info)
-	body.add_child(_make_lock_overlay("FASE 5"))
+	if not infinite_unlocked:
+		body.add_child(_make_lock_overlay("FASE 5"))
 	return button
 
 
 func _make_phase_card(phase: Dictionary) -> Button:
-	var unlocked := int(phase["id"]) == 1
+	var unlocked := int(phase["id"]) <= int(GameState.data.get("max_unlocked_phase", 1))
 	var button := _make_card_button()
 	button.custom_minimum_size.y = 140
 	button.disabled = not unlocked
