@@ -25,21 +25,21 @@ Fonte obrigatoria: branch `main`. A versao Godot nao deve criar layout, texto, v
 | Tela / sistema | Arquivo/fonte na branch main | Arquivo equivalente no Godot | Status | Diferencas pendentes |
 |---|---|---|---|---|
 | Tela inicial | `frontend/app/index.tsx`, `ProfileAvatar`, `UiIcon`, `retention.ts` | `scenes/MainMenu.tscn`, `scripts/screens/MainMenu.gd` | Em progresso | Copiar exatamente ordem visual, botao flutuante `Mais`, modal, toast de conquista e modal AFK. Remover textos extras. |
-| Jogar / selecao de fases | `frontend/app/phase-select.tsx`, `src/game/phases.ts` | `scenes/PhaseSelect.tscn`, `scripts/screens/PhaseSelect.gd` | Em progresso | Trocar grid compacto por lista vertical de cards de 140px com descricao, dificuldade, HP e overlay bloqueado. |
-| Gameplay solo | `frontend/app/game.tsx`, `src/game/rings.ts`, `src/game/playerAttributes.ts`, `src/game/balance.ts`, `src/game/economy.ts` | `scenes/Game.tscn`, `scripts/screens/GameScreen.gd`, `scripts/game/RingLogic.gd`, `scripts/game/ArenaView.gd` | Em progresso | Remover controles inventados, portar HUD/pausa/level-up/revive/recompensas e comparar fisica 1:1. |
+| Jogar / selecao de fases | `frontend/app/phase-select.tsx`, `src/game/phases.ts` | `scenes/PhaseSelect.tscn`, `scripts/screens/PhaseSelect.gd` | Portado em UI | Lista vertical de cards de 140px, modo infinito, descricoes, dificuldade, HP e overlay bloqueado foram recriados. Falta comparacao visual pixel a pixel. |
+| Gameplay solo | `frontend/app/game.tsx`, `src/game/rings.ts`, `src/game/playerAttributes.ts`, `src/game/balance.ts`, `src/game/economy.ts` | `scenes/Game.tscn`, `scripts/screens/GameScreen.gd`, `scripts/game/RingLogic.gd`, `scripts/game/ArenaView.gd` | Em progresso | HUD e barra ATK/Gold foram aproximados da main. Ainda falta portar modal de pausa, revive, level-up em grid e comparar fisica 1:1. |
 | Modo infinito | `frontend/app/infinite.tsx`, `src/game/dualArena.ts`, `src/game/balance.ts` | `scenes/Game.tscn` por enquanto | Pendente | Criar tela/fluxo proprio; modo atual por ondas nao equivale ao da main. |
-| Melhorias | `frontend/app/upgrade-shop.tsx`, `src/game/upgrades.ts`, `src/game/balance.ts` | `scenes/Upgrades.tscn`, `scripts/screens/UpgradeScreen.gd`, `autoload/GameData.gd` | Em progresso | Portar todos upgrades temporarios/secretos, nomes, textos, unlocks, custos e cards. |
-| Skins | `frontend/app/transformations.tsx`, `src/game/skins.ts`, `src/game/skinImages.ts`, `SkinIcon` | `scenes/Skins.tscn`, `scripts/screens/SkinScreen.gd`, `autoload/GameData.gd` | Em progresso | Substituir heuristicas por lista literal de skins, passivas, efeitos especiais, raridades e custos. |
-| Loja | `frontend/app/store.tsx`, `src/services/billingConfig.ts`, `src/services/billingService.ts`, `src/game/chests.ts` | `scenes/Shop.tscn`, `scripts/screens/ShopScreen.gd` | Em progresso | Recriar abas `chests/gems/keys/specials/free`, produtos, confirm modal e recompensas mockadas. |
-| Inventario / baus | `frontend/app/inventory.tsx`, `src/game/chests.ts`, `SkinIcon`, `UiIcon` | `scenes/Chests.tscn`, `scripts/screens/ChestScreen.gd`, `FeatureScreen.gd` | Em progresso | Tela precisa mostrar bau gratis, lista de baus, itens guardados, delay/animacao e modal de recompensa. |
-| Missoes | `frontend/app/daily.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` por enquanto | Pendente | Portar 25 missoes, selecao diaria seeded, progresso, coletar, reroll e boost por anuncio. |
-| Evento | `frontend/app/events.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` por enquanto | Pendente | Portar eventos semanais, cores, missoes, progresso e recompensa final. |
-| Roleta | `frontend/app/wheel.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` por enquanto | Pendente | Criar roleta visual com 10 segmentos, ponteiro, animacao de 3600ms e modal de premio. |
-| Recompensa diaria | `frontend/app/daily-reward.tsx`, `GameContext.tsx` | `FeatureScreen.gd` por enquanto | Em progresso | Ajustar tela e storage/logica para bater exatamente com a main. |
-| Boss | `frontend/app/boss.tsx`, `src/game/boss.ts`, `src/game/dualArena.ts`, `DualArenaView` | `FeatureScreen.gd` por enquanto | Pendente | Portar boss mensal, niveis, reset diario/mensal, duas arenas e recompensas. |
-| Liga Neon | `frontend/app/league.tsx`, `frontend/app/compete.tsx`, `src/game/league.ts`, `src/game/dualArena.ts` | `FeatureScreen.gd` por enquanto | Pendente | Portar ranking com 201 participantes, divisoes, podium, competir e recompensas. |
-| Conquistas | `frontend/app/achievements.tsx`, `src/game/achievements.ts`, `GameContext.tsx` | `FeatureScreen.gd` por enquanto | Pendente | Portar todas conquistas, categorias, progresso e coleta de recompensas. |
-| Configuracoes / perfil | `frontend/app/profile.tsx`, `AudioController`, `GameContext.tsx`, i18n/performance | `FeatureScreen.gd` por enquanto | Pendente | Portar perfil, avatar, nickname, idioma, audio, performance, stats e progresso. |
+| Melhorias | `frontend/app/upgrade-shop.tsx`, `src/game/upgrades.ts`, `src/game/balance.ts` | `scenes/Upgrades.tscn`, `scripts/screens/UpgradeScreen.gd`, `autoload/GameData.gd` | Portado em UI/logica base | Cards, moeda, unlocks, custos e upgrades secretos foram recriados. Falta port literal de todos os textos com acentos/i18n. |
+| Skins | `frontend/app/transformations.tsx`, `src/game/skins.ts`, `src/game/skinImages.ts`, `SkinIcon` | `scenes/Skins.tscn`, `scripts/screens/SkinScreen.gd`, `autoload/GameData.gd` | Portado em UI/logica base | Grade, filtros, progresso por raridade, equipar/evoluir foram recriados. Falta substituir a geracao heuristica por lista literal completa de passivas/efeitos. |
+| Loja | `frontend/app/store.tsx`, `src/services/billingConfig.ts`, `src/services/billingService.ts`, `src/game/chests.ts` | `scenes/Shop.tscn`, `scripts/screens/ShopScreen.gd` | Portado em UI/logica base | Abas, cards de baus, produtos e recompensas locais foram recriados. Falta modal de confirmacao/resultado igual ao React Native. |
+| Inventario / baus | `frontend/app/inventory.tsx`, `src/game/chests.ts`, `SkinIcon`, `UiIcon` | `scenes/Chests.tscn`, `scripts/screens/ChestScreen.gd` | Portado em UI/logica base | Bau gratis, lista de baus, itens guardados e modal de recompensa foram recriados. Falta animacao/delay visual de abertura. |
+| Missoes | `frontend/app/daily.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` | Portado em UI/logica base | 25 missoes, selecao diaria seeded, progresso, coletar, reroll e boost por anuncio stub foram recriados. Falta i18n e estado detalhado por missao como na main. |
+| Evento | `frontend/app/events.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` | Em progresso | Estrutura visual, missoes, progresso e recompensa final foram recriados. Falta portar os 10 eventos completos literalmente. |
+| Roleta | `frontend/app/wheel.tsx`, `src/game/retention.ts` | `FeatureScreen.gd` | Em progresso | 10 recompensas, giro gratis/ad e resultado funcional foram recriados. Falta animacao circular 3600ms e ponteiro igual. |
+| Recompensa diaria | `frontend/app/daily-reward.tsx`, `GameContext.tsx` | `FeatureScreen.gd` | Portado em UI/logica base | Pacote diario e controle por dia foram recriados. |
+| Boss | `frontend/app/boss.tsx`, `src/game/boss.ts`, `src/game/dualArena.ts`, `DualArenaView` | `FeatureScreen.gd` | Em progresso | Menu Boss, desbloqueio, progresso e entrada no jogo foram recriados. Falta duelo real de duas arenas. |
+| Liga Neon | `frontend/app/league.tsx`, `frontend/app/compete.tsx`, `src/game/league.ts`, `src/game/dualArena.ts` | `FeatureScreen.gd` | Em progresso | Resumo, podium, ranking e reward card foram recriados localmente. Falta port completo de 201 participantes/temporadas/competir. |
+| Conquistas | `frontend/app/achievements.tsx`, `src/game/achievements.ts`, `GameContext.tsx` | `FeatureScreen.gd` | Em progresso | Cards, progresso e coleta foram recriados com lista parcial longa. Falta lista literal completa e filtros horizontais por categoria. |
+| Configuracoes / perfil | `frontend/app/profile.tsx`, `AudioController`, `GameContext.tsx`, i18n/performance | `FeatureScreen.gd` | Em progresso | Perfil, conta, audio, desempenho, idioma, liga e stats foram recriados em cards. Falta foto/avatar editavel, nickname input e todas as opcoes reais. |
 | Save / progresso | `src/contexts/GameContext.tsx` | `autoload/SaveSystem.gd` | Em progresso | Espelhar schema completo da main: achievements, league, boss, dailyMissions, weeklyEvent, wheel, adLimits e inventoryItems. |
 | Assets | `frontend/assets/**` | `godot/assets/**` | Quase fiel | Skins, UI icons, audio e fonte foram copiados; logos React de template nao sao usados no jogo final. |
 
@@ -126,7 +126,7 @@ Nao foram copiados os logos padrao do React (`react-logo*.png`, `partial-react-l
 - level-up durante a run com upgrades temporarios;
 - upgrades permanentes bloqueados/desbloqueaveis e compraveis;
 - loja funcional com recompensas por anuncios mock e pacotes com diamantes;
-- baus por raridade com skins, fragmentos, moedas, diamantes, chaves, efeitos e upgrades;
+- baus por raridade com skins, fragmentos, chaves, trilhas, auras e efeitos, seguindo `frontend/src/game/chests.ts`;
 - tela de skins com filtros, equipar, evoluir e criar com fragmentos;
 - tela de game over/recompensas com dobrar recompensa via anuncio mock;
 - menu inicial polido com identidade Neon Idle Escape, visual escuro/roxo, brilho ciano, cards arredondados e botoes mobile;
@@ -134,17 +134,17 @@ Nao foram copiados os logos padrao do React (`react-logo*.png`, `partial-react-l
 - recompensa diaria funcional: moedas, diamantes e chave uma vez por dia;
 - roleta funcional com giro gratis diario e giros por anuncio mock;
 - inventario com resumo de baus, skins, efeitos e atalhos;
-- missoes, eventos, boss, liga e conquistas estruturados com progresso local/mock para expansao;
+- missoes, eventos, boss, liga e conquistas estruturados com progresso local, recompensas locais e stubs quando o subsistema completo ainda depende de port futuro;
 - configuracoes de som, musica e haptics salvas localmente;
 - musica/SFX usando assets originais;
 - UI vertical pensada para celular e Web mobile.
 
 ## Pendencias conhecidas
 
-- Boss ainda usa tela/estrutura local e precisa de combate dedicado.
+- Boss ainda usa menu/entrada local e precisa do combate dedicado de duas arenas.
 - Liga Neon ainda usa ranking local/mock; ranking online depende de backend futuro.
-- Missoes, eventos e conquistas exibem progresso real/local, mas coleta completa de recompensas e calendario sazonal ainda precisam ser finalizados.
-- Inventario esta funcional como hub de baus/skins/efeitos, mas ainda pode ganhar lista detalhada de todos os itens.
+- Eventos e conquistas ainda precisam da lista literal completa e filtros finais da main.
+- Inventario esta funcional para baus e recompensas, mas ainda precisa da animacao/delay visual de abertura.
 - Billing real nao foi migrado; loja usa fluxo funcional local/mock.
 - Ads reais nao foram integrados; `AdsService.gd` e um stub recompensado.
 - APK Android esta apenas estruturado.

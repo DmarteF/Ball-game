@@ -86,10 +86,10 @@ func _build_ui():
 
 	var margin = MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 18)
-	margin.add_theme_constant_override("margin_bottom", 14)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 45)
+	margin.add_theme_constant_override("margin_bottom", 12)
 	add_child(margin)
 
 	root_vbox = VBoxContainer.new()
@@ -102,17 +102,31 @@ func _build_ui():
 
 	wallet_label = NeonUI.label("", 14, Color.WHITE)
 	wallet_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_row.add_child(wallet_label)
+	var wallet_panel = PanelContainer.new()
+	wallet_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wallet_panel.add_theme_stylebox_override("panel", NeonUI.flat(Color("#ffffff11"), Color("#ffffff22"), 1, 10))
+	wallet_panel.add_child(wallet_label)
+	top_row.add_child(wallet_panel)
 
-	pause_button = NeonUI.ghost_button("PAUSAR", Color("#00f0ff"), 38)
+	var mute = Button.new()
+	mute.custom_minimum_size = Vector2(42, 38)
+	mute.icon = load("res://assets/ui/ui_mute_on.png") if ResourceLoader.exists("res://assets/ui/ui_mute_on.png") else null
+	mute.add_theme_stylebox_override("normal", NeonUI.flat(Color("#ffffff18"), Color("#ffffff33"), 1, 10))
+	mute.add_theme_stylebox_override("hover", NeonUI.flat(Color("#ffffff22"), Color("#00f0ff55"), 1, 10))
+	mute.pressed.connect(func():
+		var settings = SaveSystem.get_save().settings
+		SaveSystem.set_setting("music", not bool(settings.get("music", true)))
+	)
+	top_row.add_child(mute)
+
+	pause_button = NeonUI.ghost_button("⏸", Color("#ffffff66"), 38)
+	pause_button.custom_minimum_size = Vector2(42, 38)
 	pause_button.pressed.connect(_toggle_pause)
 	top_row.add_child(pause_button)
 
-	progress_label = NeonUI.label("", 13, Color("#ffffffcc"))
-	root_vbox.add_child(progress_label)
-
 	var xp_row = HBoxContainer.new()
 	xp_row.add_theme_constant_override("separation", 8)
+	xp_row.add_theme_stylebox_override("panel", NeonUI.flat(Color("#ffffff11"), Color("#ffffff22"), 1, 10))
 	root_vbox.add_child(xp_row)
 	xp_label = NeonUI.label("", 13, Color("#00f0ff"))
 	xp_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -120,6 +134,9 @@ func _build_ui():
 	combo_label = NeonUI.label("", 13, Color("#ffd700"), HORIZONTAL_ALIGNMENT_RIGHT)
 	combo_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	xp_row.add_child(combo_label)
+
+	progress_label = NeonUI.label("", 12, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	root_vbox.add_child(progress_label)
 
 	var center_box = CenterContainer.new()
 	center_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -137,11 +154,13 @@ func _build_ui():
 	root_vbox.add_child(shop_row)
 
 	atk_button = NeonUI.ghost_button("ATK Lv.0\n20", Color("#ffd700"), 48)
+	atk_button.add_theme_stylebox_override("normal", NeonUI.neon_box(Color("#06162a"), Color("#00f0ffaa"), 1, 12, 0.35))
 	atk_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	atk_button.pressed.connect(func(): _buy_run_upgrade("atk"))
 	shop_row.add_child(atk_button)
 
 	gold_button = NeonUI.ghost_button("Gold Lv.0\n18", Color("#ffd700"), 48)
+	gold_button.add_theme_stylebox_override("normal", NeonUI.neon_box(Color("#06162a"), Color("#00f0ffaa"), 1, 12, 0.35))
 	gold_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gold_button.pressed.connect(func(): _buy_run_upgrade("gold"))
 	shop_row.add_child(gold_button)
@@ -594,12 +613,12 @@ func _update_hud():
 	var active = _active_rings().size()
 	var total = rings.size()
 	var stats = _final_stats()
-	wallet_label.text = "Rodada %d moedas  %d diamantes    Conta %d / %d" % [run_coins, run_gems, save.coins, save.gems]
+	wallet_label.text = "💰 %d" % run_coins
 	var label = "Infinito onda %d" % infinite_wave if game_mode == "infinite" else "Fase %d" % phase_id
-	progress_label.text = "%s %s | Aneis %d/%d | ATK %d | Skin %s" % [label, phase_config.get("difficulty", ""), active, total, stats.damage, GameData.get_skin(save.equipped_skin).name]
-	xp_label.text = "Lv.%d  XP %d/%d" % [run_level, run_xp, GameData.get_run_xp_needed(run_level)]
-	combo_label.text = "Combo x%d" % combo if combo >= 2 else ""
-	pause_button.text = "CONTINUAR" if paused else "PAUSAR"
+	progress_label.text = "Aneis: %d/%d%s" % [active, total, " • Combo x%d" % combo if combo >= 2 else ""]
+	xp_label.text = "%s  Lv.%d  XP %d/%d" % [label, run_level, run_xp, GameData.get_run_xp_needed(run_level)]
+	combo_label.text = "ATK %d" % int(stats.damage)
+	pause_button.text = "▶" if paused else "⏸"
 	if atk_button:
 		atk_button.text = "ATK Lv.%d\n%d" % [int(run_shop_upgrades.atk), _run_upgrade_cost("atk")]
 	if gold_button:

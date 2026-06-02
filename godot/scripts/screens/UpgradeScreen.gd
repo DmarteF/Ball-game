@@ -2,7 +2,7 @@ extends Control
 
 const NeonUI = preload("res://scripts/ui/NeonUI.gd")
 
-var wallet_label
+var coins_row
 var list
 
 func _ready():
@@ -11,97 +11,129 @@ func _ready():
 	_refresh()
 
 func _build_ui():
-	var bg = ColorRect.new()
-	bg.color = Color("#080818")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	var margin = MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 32)
-	margin.add_theme_constant_override("margin_bottom", 14)
-	add_child(margin)
-	var box = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
-	margin.add_child(box)
-	var header = HBoxContainer.new()
-	box.add_child(header)
-	var back = NeonUI.ghost_button("VOLTAR", Color("#00f0ff"), 42)
-	back.pressed.connect(func(): get_tree().current_scene.go_to("menu"))
-	header.add_child(back)
-	var title = NeonUI.label("UPGRADES", 28, Color("#00f0ff"), HORIZONTAL_ALIGNMENT_RIGHT)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title)
-	wallet_label = NeonUI.label("", 13, Color("#ffd700"))
-	box.add_child(wallet_label)
-	box.add_child(NeonUI.label("Upgrades comecam bloqueados e aparecem conforme fase, perfil ou baus.", 13, Color("#ffffffbb")))
-	var scroll = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(scroll)
-	list = VBoxContainer.new()
-	list.add_theme_constant_override("separation", 10)
-	scroll.add_child(list)
+	NeonUI.add_main_background(self)
+	var header_data = NeonUI.header(self, "UPGRADES PERMANENTES", 60, 20, 20, 28)
+	header_data.back.pressed.connect(func(): get_tree().current_scene.go_to("menu"))
+	coins_row = HBoxContainer.new()
+	coins_row.add_theme_constant_override("separation", 8)
+	header_data.box.add_child(coins_row)
+
+	list = NeonUI.make_scroll(self, 174, 20, 20, 20, 16)
 
 func _refresh():
 	if not is_node_ready():
 		return
 	var save = SaveSystem.get_save()
-	wallet_label.text = "Moedas %d  Diamantes %d" % [save.coins, save.gems]
+	NeonUI.clear_children(coins_row)
+	var coins_badge = PanelContainer.new()
+	coins_badge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	coins_badge.add_theme_stylebox_override("panel", NeonUI.neon_box(Color("#ffffff22"), Color("#ffd70044"), 2, 12, 0.22))
+	var coin_box = HBoxContainer.new()
+	coin_box.add_theme_constant_override("separation", 8)
+	coins_badge.add_child(coin_box)
+	coin_box.add_child(NeonUI.icon("res://assets/ui/ui_coin.png", 24))
+	coin_box.add_child(NeonUI.label(str(save.coins), 24, Color("#ffd700")))
+	coins_row.add_child(coins_badge)
+
 	NeonUI.clear_children(list)
 	for upgrade in GameData.get_permanent_upgrades():
 		_add_upgrade_card(upgrade, save)
+	for upgrade in GameData.RUN_UPGRADES:
+		if bool(upgrade.get("secret", false)):
+			_add_secret_upgrade_card(upgrade, save)
 
 func _add_upgrade_card(upgrade, save):
-	var panel = PanelContainer.new()
 	var unlocked = GameData.is_permanent_upgrade_unlocked(upgrade.id, save)
 	var level = int(save.permanent_upgrades.get(upgrade.id, 0))
 	var max_level = int(upgrade.max_level)
 	var is_maxed = level >= max_level
-	var color = Color("#00f0ff") if unlocked else Color("#555566")
-	panel.add_theme_stylebox_override("panel", NeonUI.flat(Color(color, 0.14), Color(color, 0.65), 1, 10))
+	var cost = GameData.get_permanent_upgrade_cost(upgrade.id, level)
+	var can_afford = int(save.coins) >= cost and unlocked and not is_maxed
+	var color = Color("#00f0ff") if unlocked else Color("#666666")
+	var panel = PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", NeonUI.flat(Color("#ffffff18"), Color("#ffffff22"), 2, 16))
 	list.add_child(panel)
 
 	var row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 16)
 	panel.add_child(row)
-	row.add_child(NeonUI.icon(upgrade.icon_path, 44))
-	var text_box = VBoxContainer.new()
-	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(text_box)
-	text_box.add_child(NeonUI.label(upgrade.name if unlocked else "???", 17, Color.WHITE))
-	text_box.add_child(NeonUI.label(upgrade.description if unlocked else _unlock_text(upgrade), 12, Color("#ffffffaa")))
-	text_box.add_child(NeonUI.label("Nivel %d/%d  |  Atual: %s" % [level, max_level, _value_text(upgrade.id, level)], 12, Color("#00f0ff") if unlocked else Color("#ffffff66")))
-	var buy = NeonUI.button("MAX" if is_maxed else _cost_text(upgrade, level), Color("#00ff88") if is_maxed else Color("#ffd700"), 48)
+	row.add_child(_round_icon(upgrade.icon_path, 60))
+
+	var info = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 3)
+	row.add_child(info)
+	info.add_child(NeonUI.label(upgrade.name if unlocked else "???", 18, Color.WHITE))
+	if unlocked:
+		info.add_child(NeonUI.label(upgrade.description, 14, Color("#ffffffaa")))
+	else:
+		var locked = HBoxContainer.new()
+		locked.add_theme_constant_override("separation", 5)
+		locked.add_child(NeonUI.icon("res://assets/ui/ui_locked.png", 14))
+		locked.add_child(NeonUI.label(_unlock_text(upgrade), 14, Color("#ffffffaa")))
+		info.add_child(locked)
+	info.add_child(NeonUI.label("Nivel: %d/%d" % [level, max_level], 12, Color("#00f0ff") if unlocked else Color("#ffffff66")))
+	if unlocked:
+		var value_text = "Atual: %s • MAX" % _value_text(upgrade.id, level) if is_maxed else "Atual: %s • Prox: %s" % [_value_text(upgrade.id, level), _value_text(upgrade.id, level + 1)]
+		info.add_child(NeonUI.label(value_text, 11, Color("#ffffff88")))
+
+	var buy = NeonUI.main_button("MAX" if is_maxed else str(cost), Color("#00ff88") if is_maxed else Color("#00f0ff"), Color("#0088ff"), 48)
 	buy.custom_minimum_size.x = 96
-	buy.disabled = not unlocked or is_maxed
+	buy.disabled = not can_afford and not is_maxed
+	buy.modulate = Color(1, 1, 1, 0.5) if not can_afford and not is_maxed else Color.WHITE
+	buy.icon = load("res://assets/ui/ui_coin.png") if ResourceLoader.exists("res://assets/ui/ui_coin.png") and unlocked and not is_maxed else null
 	buy.pressed.connect(_buy.bind(upgrade.id))
 	row.add_child(buy)
+
+func _add_secret_upgrade_card(upgrade, save):
+	var unlocked = upgrade.id in save.unlocked_upgrades
+	var panel = PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", NeonUI.flat(Color("#ffffff18"), Color("#ffffff22"), 2, 16))
+	list.add_child(panel)
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	panel.add_child(row)
+	row.add_child(_round_icon(upgrade.icon_path, 60))
+	var info = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(info)
+	info.add_child(NeonUI.label(upgrade.name if unlocked else "???", 18, Color.WHITE))
+	info.add_child(NeonUI.label(upgrade.description if unlocked else upgrade.get("secretCondition", "Conquista secreta"), 14, Color("#ffffffaa")))
+	info.add_child(NeonUI.label("Secreto liberado" if unlocked else "Upgrade secreto", 12, Color("#00f0ff")))
+	var ok = NeonUI.main_button("OK" if unlocked else "🔒", Color("#ffd700"), Color("#ff8800"), 48)
+	ok.custom_minimum_size.x = 96
+	ok.disabled = not unlocked
+	row.add_child(ok)
+
+func _round_icon(icon_path, size):
+	var panel = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(size, size)
+	panel.add_theme_stylebox_override("panel", NeonUI.flat(Color("#ffffff22"), Color.TRANSPARENT, 0, int(size / 2.0)))
+	var center = CenterContainer.new()
+	panel.add_child(center)
+	center.add_child(NeonUI.icon(icon_path, 34))
+	return panel
 
 func _buy(upgrade_id):
 	var result = SaveSystem.purchase_permanent_upgrade(upgrade_id)
 	AudioManager.play_sfx("button_confirm" if result.ok else "button_error")
 	_refresh()
 
-func _cost_text(upgrade, level):
-	var currency = "D" if upgrade.currency == "gems" else "M"
-	return "%d %s" % [GameData.get_permanent_upgrade_cost(upgrade.id, level), currency]
-
 func _unlock_text(upgrade):
 	if upgrade.unlock == "phase_3":
-		return "Desbloqueia na fase 3 ou perfil 3."
+		return "Desbloqueia ao alcançar a fase 3"
 	if upgrade.unlock == "phase_5_or_chest":
-		return "Desbloqueia na fase 5 ou em baus."
+		return "Desbloqueia por baus raros ou fase 5"
 	if upgrade.unlock == "chest":
-		return "Desbloqueia por baus ou recompensas especiais."
-	return "Disponivel desde o inicio."
+		return "Desbloqueia por rank ou recompensas especiais"
+	return "Disponivel desde o inicio"
 
 func _value_text(upgrade_id, level):
 	match upgrade_id:
 		"baseDamage":
-			return "+%d%% dano" % int(level * 10)
+			return "%.1f dano" % (10.0 * pow(1.1, level))
 		"baseSpeed":
-			return "+%d%% velocidade" % int(level * 8)
+			return "%.0f vel." % (100.0 * pow(1.08, level))
 		"coinMultiplier":
 			return "%.2fx moedas" % (1.0 + level * 0.15)
 		"critChance":

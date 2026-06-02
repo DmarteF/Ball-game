@@ -54,6 +54,8 @@ func _build_ui():
 	var scroll = ScrollContainer.new()
 	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scroll.offset_top = 118
+	scroll.offset_left = 20
+	scroll.offset_right = -20
 	scroll.offset_bottom = -96
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -62,18 +64,22 @@ func _build_ui():
 	var content = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 12)
-	content.add_theme_constant_override("margin_left", 20)
-	content.add_theme_constant_override("margin_right", 20)
 	scroll.add_child(content)
+
+	var top_spacer = Control.new()
+	top_spacer.custom_minimum_size = Vector2(0, 22)
+	content.add_child(top_spacer)
 
 	var title_box = VBoxContainer.new()
 	title_box.add_theme_constant_override("separation", -2)
-	title_box.add_theme_constant_override("margin_top", 22)
-	title_box.add_theme_constant_override("margin_bottom", 14)
 	content.add_child(title_box)
 	title_box.add_child(NeonUI.title_label("NEON", 60))
 	var subtitle = NeonUI.label("IDLE ESCAPE", 18, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	title_box.add_child(subtitle)
+
+	var title_gap = Control.new()
+	title_gap.custom_minimum_size = Vector2(0, 14)
+	content.add_child(title_gap)
 
 	var play = NeonUI.button("JOGAR", Color("#00f0ff"), 78)
 	play.add_theme_font_size_override("font_size", 30)

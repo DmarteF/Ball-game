@@ -2,7 +2,7 @@ extends Control
 
 const NeonUI = preload("res://scripts/ui/NeonUI.gd")
 
-var wallet_label
+var stats_row
 var list
 var reward_panel
 var reward_label
@@ -13,59 +13,47 @@ func _ready():
 	_refresh()
 
 func _build_ui():
-	var bg = ColorRect.new()
-	bg.color = Color("#080818")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	var margin = MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 32)
-	margin.add_theme_constant_override("margin_bottom", 14)
-	add_child(margin)
-	var box = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
-	margin.add_child(box)
-	var header = HBoxContainer.new()
-	box.add_child(header)
-	var back = NeonUI.ghost_button("VOLTAR", Color("#00f0ff"), 42)
-	back.pressed.connect(func(): get_tree().current_scene.go_to("menu"))
-	header.add_child(back)
-	var title = NeonUI.label("INVENTARIO", 28, Color("#00f0ff"), HORIZONTAL_ALIGNMENT_RIGHT)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title)
-	wallet_label = NeonUI.label("", 13, Color("#ffd700"))
-	box.add_child(wallet_label)
-	var scroll = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(scroll)
-	list = VBoxContainer.new()
-	list.add_theme_constant_override("separation", 10)
-	scroll.add_child(list)
+	NeonUI.add_main_background(self)
+	var header = NeonUI.header(self, "INVENTARIO", 56, 16, 16, 25)
+	header.back.pressed.connect(func(): get_tree().current_scene.go_to("menu"))
+	stats_row = HBoxContainer.new()
+	stats_row.add_theme_constant_override("separation", 8)
+	header.box.add_child(stats_row)
 
+	list = NeonUI.make_scroll(self, 148, 16, 16, 16, 12)
+	_build_reward_modal()
+
+func _build_reward_modal():
 	reward_panel = PanelContainer.new()
 	reward_panel.visible = false
 	reward_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	reward_panel.add_theme_stylebox_override("panel", NeonUI.flat(Color(0, 0, 0, 0.82), Color("#ffd700"), 1, 0))
+	reward_panel.add_theme_stylebox_override("panel", NeonUI.flat(Color("#000000cc"), Color.TRANSPARENT, 0, 0))
 	add_child(reward_panel)
 	var center = CenterContainer.new()
 	reward_panel.add_child(center)
-	var reward_box = VBoxContainer.new()
-	reward_box.custom_minimum_size = Vector2(320, 0)
-	reward_box.add_theme_constant_override("separation", 10)
-	center.add_child(reward_box)
+	var box_panel = PanelContainer.new()
+	box_panel.custom_minimum_size = Vector2(340, 0)
+	box_panel.add_theme_stylebox_override("panel", NeonUI.neon_box(Color("#1a0a2e"), Color("#00f0ff55"), 1, 16, 0.35))
+	center.add_child(box_panel)
+	var box = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	box_panel.add_child(box)
+	box.add_child(NeonUI.label("REVELADO", 24, Color("#ffd700"), HORIZONTAL_ALIGNMENT_CENTER))
 	reward_label = NeonUI.label("", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
-	reward_box.add_child(reward_label)
-	var close = NeonUI.button("FECHAR", Color("#00f0ff"), 48)
+	box.add_child(reward_label)
+	var close = NeonUI.main_button("COLETAR", Color("#00f0ff"), Color("#0088ff"), 50)
 	close.pressed.connect(func(): reward_panel.visible = false)
-	reward_box.add_child(close)
+	box.add_child(close)
 
 func _refresh():
 	if not is_node_ready():
 		return
 	var save = SaveSystem.get_save()
-	wallet_label.text = "Moedas %d  Diamantes %d  Chaves %d  Lendarias %d" % [save.coins, save.gems, save.keys, save.legendary_keys]
+	NeonUI.clear_children(stats_row)
+	stats_row.add_child(NeonUI.resource_badge("res://assets/ui/ui_coin.png", str(save.coins)))
+	stats_row.add_child(NeonUI.resource_badge("res://assets/ui/ui_gem.png", str(save.gems)))
+	stats_row.add_child(NeonUI.resource_badge("res://assets/ui/ui_key.png", str(save.keys)))
+	stats_row.add_child(NeonUI.resource_badge("res://assets/ui/ui_legendary_key.png", str(save.legendary_keys)))
 	NeonUI.clear_children(list)
 	_add_free_chest_card()
 	list.add_child(NeonUI.label("BAUS", 13, Color("#ffffff88")))
@@ -79,38 +67,61 @@ func _refresh():
 			had_inventory = true
 			_add_chest_card(chest, true, amount)
 	if not had_inventory:
-		list.add_child(NeonUI.label("Nenhum item guardado.", 13, Color("#ffffff88")))
+		list.add_child(NeonUI.label("Nenhum item guardado.", 14, Color("#ffffff88")))
 
 func _add_free_chest_card():
 	var button = Button.new()
 	button.custom_minimum_size = Vector2(0, 86)
-	button.text = "BAU GRATIS\nAbra um bau comum assistindo anuncio."
-	button.icon = load("res://assets/ui/ui_daily_reward.png") if ResourceLoader.exists("res://assets/ui/ui_daily_reward.png") else null
-	button.expand_icon = true
-	button.add_theme_font_size_override("font_size", 14)
-	button.add_theme_color_override("font_color", Color.WHITE)
-	button.add_theme_stylebox_override("normal", NeonUI.neon_box(Color("#ffd700"), Color("#ff8800"), 1, 14, 0.42))
-	button.add_theme_stylebox_override("hover", NeonUI.neon_box(Color("#ffdf3d"), Color("#ff8800"), 1, 14, 0.55))
+	button.text = ""
+	button.add_theme_stylebox_override("normal", NeonUI.neon_box(Color("#ffd700"), Color("#ff8800"), 1, 12, 0.42))
+	button.add_theme_stylebox_override("hover", NeonUI.neon_box(Color("#ffdf3d"), Color("#ff8800"), 1, 12, 0.55))
 	button.pressed.connect(_open_free_chest)
 	list.add_child(button)
+	var row = HBoxContainer.new()
+	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	row.add_theme_constant_override("separation", 14)
+	button.add_child(row)
+	row.add_child(NeonUI.icon("res://assets/ui/ui_daily_reward.png", 48))
+	var info = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(info)
+	info.add_child(NeonUI.label("BAU GRATIS", 18, Color.BLACK))
+	info.add_child(NeonUI.label("Abra um bau comum assistindo anuncio.", 12, Color("#000000aa")))
+	row.add_child(NeonUI.icon("res://assets/ui/ui_ad.png", 30))
 
 func _add_chest_card(chest, owned, amount = 0):
 	var color = Color(chest.color)
+	var disabled = not owned and not _can_afford(chest)
 	var button = Button.new()
-	button.custom_minimum_size = Vector2(0, 82)
-	var price = "x%d guardado" % amount if owned else "%d %s" % [int(chest.cost), _currency_label(chest.currency)]
-	button.text = "%s  -  %s\n%s" % [chest.name, price, chest.description]
-	button.icon = load(chest.icon_path) if ResourceLoader.exists(chest.icon_path) else null
-	button.expand_icon = true
-	button.add_theme_font_size_override("font_size", 13)
-	button.add_theme_color_override("font_color", Color.WHITE)
-	button.add_theme_stylebox_override("normal", NeonUI.flat(Color(color, 0.20), Color(color, 0.74), 1, 10))
-	button.add_theme_stylebox_override("hover", NeonUI.flat(Color(color, 0.35), Color(color), 1, 10))
+	button.custom_minimum_size = Vector2(0, 108)
+	button.text = ""
+	button.disabled = disabled
+	button.modulate = Color(1, 1, 1, 0.5) if disabled else Color.WHITE
+	button.add_theme_stylebox_override("normal", NeonUI.neon_box(Color(color, 0.36), Color("#ffffff24"), 1, 12, 0.18))
+	button.add_theme_stylebox_override("hover", NeonUI.neon_box(Color(color, 0.46), color, 1, 12, 0.28))
 	if owned:
 		button.pressed.connect(_open_owned.bind(chest.id))
 	else:
 		button.pressed.connect(_buy_open.bind(chest.id))
 	list.add_child(button)
+	var row = HBoxContainer.new()
+	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	row.add_theme_constant_override("separation", 12)
+	button.add_child(row)
+	row.add_child(NeonUI.icon(chest.icon_path, 44))
+	var info = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 3)
+	row.add_child(info)
+	info.add_child(NeonUI.label(chest.name, 18, Color.WHITE))
+	info.add_child(NeonUI.label(chest.description, 12, Color("#ffffffaa")))
+	info.add_child(NeonUI.label("Chances: %s" % _chance_text(chest), 12, Color("#ffffffaa")))
+	var price = HBoxContainer.new()
+	price.add_theme_constant_override("separation", 4)
+	row.add_child(price)
+	price.add_child(NeonUI.label("ABRIR x%d" % amount if owned else str(chest.cost), 12, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
+	if not owned:
+		price.add_child(NeonUI.icon(_currency_icon(chest.currency), 15))
 
 func _buy_open(chest_id):
 	var result = SaveSystem.buy_and_open_chest(chest_id)
@@ -141,9 +152,9 @@ func _show_reward(reward):
 	var rarity = String(reward.get("rarity", "common")).capitalize()
 	var label = reward.get("label", "Recompensa")
 	var amount = int(reward.get("amount", 1))
-	reward_label.text = "Voce recebeu\n%s\n%s x%d" % [rarity, label, amount]
+	reward_label.text = "%s\n%s\nx%d" % [rarity, label, amount]
 	if reward.get("type", "") == "skin" and reward.has("skin_id"):
-		reward_label.text += "\nSkin equipada automaticamente."
+		reward_label.text += "\nEQUIPAR SKIN em Skins"
 	if reward.get("rarity", "") in ["legendary", "mythic", "ultimate"]:
 		AudioManager.play_sfx("legendary_drop")
 	elif reward.get("rarity", "") in ["rare", "epic"]:
@@ -151,11 +162,45 @@ func _show_reward(reward):
 	reward_panel.visible = true
 	_refresh()
 
-func _currency_label(currency):
+func _can_afford(chest):
+	var save = SaveSystem.get_save()
+	var wallet = int(save.coins)
+	if chest.currency == "gems":
+		wallet = int(save.gems)
+	elif chest.currency == "keys":
+		wallet = int(save.keys)
+	elif chest.currency == "legendary_keys":
+		wallet = int(save.legendary_keys)
+	return wallet >= int(chest.cost)
+
+func _chance_text(chest):
+	var parts = []
+	for rarity in GameData.RARITY_ORDER:
+		if chest.chances.has(rarity):
+			parts.append("%s %d%%" % [_rarity_label(rarity).to_lower(), int(round(float(chest.chances[rarity]) * 100.0))])
+	return " • ".join(parts)
+
+func _currency_icon(currency):
 	if currency == "coins":
-		return "moedas"
+		return "res://assets/ui/ui_coin.png"
 	if currency == "gems":
-		return "diamantes"
+		return "res://assets/ui/ui_gem.png"
 	if currency == "legendary_keys":
-		return "chave lend."
-	return "chave"
+		return "res://assets/ui/ui_legendary_key.png"
+	return "res://assets/ui/ui_key.png"
+
+func _rarity_label(rarity):
+	match rarity:
+		"common":
+			return "Comum"
+		"rare":
+			return "Rara"
+		"epic":
+			return "Epica"
+		"legendary":
+			return "Lendaria"
+		"mythic":
+			return "Mitica"
+		"ultimate":
+			return "Ultimate"
+	return String(rarity)

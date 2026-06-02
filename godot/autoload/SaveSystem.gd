@@ -41,6 +41,9 @@ func default_save():
 			"wheel_ad_spins_used": 0,
 			"event_week_key": TimeSystem.week_key(),
 			"event_points": 0,
+			"daily_mission_claims": {},
+			"event_mission_claims": {},
+			"event_grand_claimed_week": "",
 			"boss_day_key": TimeSystem.day_key(),
 			"boss_attempts": 0,
 			"pending_offline_reward": {"available": false, "coins": 0, "hours": 0.0}
@@ -61,8 +64,18 @@ func default_save():
 			"skin_effects": 0,
 			"best_combo": 0,
 			"ads_watched": 0,
-			"store_purchases": 0
+			"store_purchases": 0,
+			"offline_claims": 0,
+			"no_revive_wins": 0,
+			"boss_runs": 0,
+			"boss_wins": 0,
+			"boss_losses": 0,
+			"infinite_best_seconds": 0,
+			"infinite_best_rings": 0,
+			"infinite_best_level": 1,
+			"infinite_challenge_completions": 0
 		},
+		"achievement_claims": [],
 		"last_seen_at": Time.get_unix_time_from_system()
 	}
 
@@ -111,6 +124,8 @@ func normalize_save(raw):
 	for key in base.timed.pending_offline_reward.keys():
 		if not next.timed.pending_offline_reward.has(key):
 			next.timed.pending_offline_reward[key] = base.timed.pending_offline_reward[key]
+	if typeof(next.get("achievement_claims", [])) != TYPE_ARRAY:
+		next.achievement_claims = []
 	for chest_id in ["common", "rare", "epic", "legendary"]:
 		if not next.inventory_chests.has(chest_id):
 			next.inventory_chests[chest_id] = 0
@@ -166,6 +181,7 @@ func claim_offline_reward(double_reward = false):
 		coins *= 2
 		record_ad_use()
 	save.coins += coins
+	save.lifetime_stats.offline_claims = int(save.lifetime_stats.get("offline_claims", 0)) + 1
 	save.timed.pending_offline_reward = {"available": false, "coins": 0, "hours": 0.0}
 	save_game()
 	return {"ok": true, "coins": coins, "message": "+%d moedas AFK" % coins}
@@ -391,6 +407,31 @@ func grant_ad_reward(kind):
 	elif kind == "chest":
 		add_chest("common", 1)
 		return
+	save_game()
+
+func grant_reward(reward):
+	if reward.is_empty():
+		return
+	match String(reward.get("type", "")):
+		"coins":
+			save.coins += int(reward.get("amount", 0))
+		"gems":
+			save.gems += int(reward.get("amount", 0))
+		"keys":
+			save.keys += int(reward.get("amount", 0))
+		"legendaryKeys", "legendary_keys":
+			save.legendary_keys += int(reward.get("amount", 0))
+		"profileXp", "profile_xp":
+			_apply_profile_xp(int(reward.get("amount", 0)))
+		"fragments":
+			var skin_id = String(reward.get("skin_id", save.equipped_skin))
+			save.skin_fragments[skin_id] = int(save.skin_fragments.get(skin_id, 0)) + int(reward.get("amount", 0))
+		"chest":
+			add_chest(String(reward.get("chest", reward.get("chestType", "common"))), int(reward.get("amount", 1)))
+			return
+		"skin":
+			unlock_skin(String(reward.get("skin_id", reward.get("skinId", ""))))
+			return
 	save_game()
 
 func record_run(summary, multiplier = 1):
