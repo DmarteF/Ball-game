@@ -83,7 +83,7 @@ Pendencias marcadas assim porque a `main` usa a fonte de sistema do React Native
 | Tela | Arquivo/fonte na branch main | Cena/script Godot | Status | Diferencas conhecidas |
 | --- | --- | --- | --- | --- |
 | Tela inicial | `frontend/app/index.tsx`, `frontend/src/components/ProfileAvatar.tsx`, `frontend/src/components/UiIcon.tsx` | `scenes/MainMenu.tscn`, `scripts/MainMenu.gd` | Concluida/ajustada | Congelada por etapa; sombras/fonte sao aproximacoes Godot. |
-| Jogar / selecao de fases | `frontend/app/phase-select.tsx`, `frontend/src/game/phases.ts`, `assets/ui/ui_infinite.png`, `assets/ui/ui_locked.png` | `scenes/PhaseSelect.tscn`, `scripts/PhaseSelectScreen.gd` | Visual criado | Modo Infinito no topo e Fases 1-50 criadas visualmente. Botoes apontam para placeholder; gameplay real pendente. |
+| Jogar / selecao de fases | `frontend/app/phase-select.tsx`, `frontend/src/game/phases.ts`, `assets/ui/ui_infinite.png`, `assets/ui/ui_locked.png` | `scenes/PhaseSelect.tscn`, `scripts/PhaseSelectScreen.gd` | Ajustado | Cards mostram fase, dificuldade e aneis, sem HP/descricao longa. Fase 1 abre a gameplay; demais fases e modo infinito seguem visuais/mockados. |
 | Perfil | `frontend/app/profile.tsx`, `frontend/src/components/ProfileAvatar.tsx`, `frontend/src/components/SkinIcon.tsx`, `frontend/src/components/UiIcon.tsx`, `frontend/src/game/skins.ts`, `frontend/src/game/achievements.ts`, `frontend/src/game/upgrades.ts` | `scenes/Profile.tscn`, `scripts/ProfileScreen.gd` | Ajustado nesta etapa | Configuracoes, audio, idioma, FPS e Hz removidos do Perfil. Botao Back padronizado com Coming soon. Dados reais ainda mockados ate o save completo ser portado. |
 | Configuracoes | Pedido desta etapa + estilo visual da tela inicial | `scenes/Settings.tscn`, `scripts/SettingsScreen.gd` | Concluida nesta etapa | Tela simples: audio ligado/mudo, idioma e sobre. Botao Back padronizado com Coming soon. Estado salvo em `user://settings.json`. |
 | Skins | `frontend/app/transformations.tsx`, `frontend/src/game/skins.ts`, `frontend/src/components/SkinIcon.tsx`, `assets/skins/*` | `scenes/Skins.tscn`, `scripts/SkinsScreen.gd` | Visual ajustado | Grid e filtros reenquadrados para HTML/Web. Equipar/evoluir/desbloquear ainda nao funcionam. |
@@ -147,7 +147,50 @@ Ainda mockado/pendente:
 
 Observacao de seguranca: o relogio atual usa horario local do aparelho. Em Android/APK isso pode ser manipulado alterando o relogio do celular. A estrutura ficou preparada para futura validacao online, mas essa validacao ainda nao foi implementada.
 
-## 7. HTML/Web
+## 7. Gameplay - Fase 1
+
+Referencias analisadas na branch `main`:
+
+- `frontend/app/game.tsx`
+- `frontend/app/phase-select.tsx`
+- `frontend/src/game/phases.ts`
+- `frontend/src/game/rings.ts`
+- `frontend/src/game/balance.ts`
+- `frontend/src/game/playerAttributes.ts`
+- `frontend/src/game/economy.ts`
+
+Arquivos Godot criados/alterados:
+
+- `scenes/GameScene.tscn`
+- `scripts/GameplayManager.gd`
+- `scripts/LevelData.gd`
+- `scripts/PhaseSelectScreen.gd`
+- `scripts/GameState.gd`
+
+Checklist da etapa:
+
+| Item | Status | Observacao |
+| --- | --- | --- |
+| Card da Fase 1 sem HP | Sim | HP removido dos cards de fase. |
+| Card da Fase 1 sem descricao longa | Sim | Cards mostram somente nome, dificuldade e aneis. |
+| Cards mostram fase/dificuldade/aneis | Sim | Aplicado para as fases visuais 1-50. |
+| Fase 1 jogavel | Sim | `PhaseSelect` abre `GameScene` apenas na Fase 1. |
+| Bolinha com sprite real | Sim | Usa `equipped_skin` do `GameState`; fallback `neon_blue.png`. |
+| Aneis visuais | Sim | Aneis neon desenhados por `_draw`, com gaps e anel solido final seguindo a base de `rings.ts`. |
+| Colisao funcionando | Sim | Porta a checagem de gap/parte solida, reflexao e separacao da bolinha. |
+| Vitoria funcionando | Sim | Ao limpar todos os aneis, mostra tela de vitoria/recompensa. |
+| Recompensas salvando | Sim | Moedas, XP, diamantes encontrados, aneis e perfects entram no `GameState`. |
+| Fase 2 liberada ao vencer | Sim | `record_phase_complete` chama `unlock_level(2)`. |
+| Pausa funcionando | Sim | Menu com Continuar, Reiniciar e Sair para fases. |
+
+Pendencias da gameplay:
+
+- Comparacao visual pixel a pixel com a `main` ainda pendente.
+- Efeitos de skins avancados, upgrades temporarios, loja de upgrades da run, revive/anuncio e level-up dentro da partida ainda nao foram portados.
+- Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
+- Modo infinito e Fases 2-50 ainda nao sao jogaveis nesta etapa.
+
+## 8. HTML/Web
 
 O preset `Web` foi configurado em `export_presets.cfg`.
 

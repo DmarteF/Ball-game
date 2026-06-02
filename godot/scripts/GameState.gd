@@ -159,6 +159,35 @@ func unlock_level(level: int) -> void:
 	save_game()
 
 
+func add_profile_xp(amount: int) -> void:
+	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + amount)
+	data["xp"] = max(0, int(data.get("xp", 0)) + amount)
+	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
+		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
+		data["level"] = int(data.get("level", 1)) + 1
+	save_game()
+
+
+func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int, perfect_escapes: int, diamonds: int = 0) -> void:
+	data["coins"] = max(0, int(data.get("coins", 0)) + coins)
+	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
+	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
+	data["xp"] = max(0, int(data.get("xp", 0)) + xp)
+	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
+		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
+		data["level"] = int(data.get("level", 1)) + 1
+	unlock_level(phase + 1)
+	var stats: Dictionary = data.get("stats", {})
+	stats["runs_played"] = int(stats.get("runs_played", 0)) + 1
+	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_destroyed
+	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + perfect_escapes
+	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
+	stats["highest_phase"] = max(int(stats.get("highest_phase", 1)), phase + 1)
+	data["current_phase"] = max(int(data.get("current_phase", 1)), phase + 1)
+	data["stats"] = stats
+	save_game()
+
+
 func set_audio_muted(muted: bool) -> void:
 	data["settings"]["audio_muted"] = muted
 	data["settings"]["master_muted"] = muted
@@ -174,6 +203,10 @@ func set_language(language: String) -> void:
 
 func get_setting(key: String, fallback = null):
 	return data.get("settings", {}).get(key, fallback)
+
+
+func _xp_needed_for_level(player_level: int) -> int:
+	return floori(150.0 * pow(max(1, player_level), 1.55))
 
 
 func _merge_defaults(defaults: Dictionary, loaded: Dictionary) -> Dictionary:

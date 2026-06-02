@@ -2,6 +2,7 @@ extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const PLACEHOLDER_SCENE := "res://scenes/Placeholder.tscn"
+const GAME_SCENE := "res://scenes/GameScene.tscn"
 
 const ICON_PATHS := {
 	"infinite": "res://assets/ui/ui_infinite.png",
@@ -72,7 +73,7 @@ func _make_infinite_card() -> Button:
 	button.pressed.connect(_open_placeholder)
 	var body := _make_card_body(button, "#00ff8888" if infinite_unlocked else "#333333", "#00f0ff33" if infinite_unlocked else "#222222")
 	body.add_child(_make_circle_icon("infinite", "", "#ffffff22"))
-	var info := _make_phase_info("Modo Infinito", "Ondas sem fim com desafios progressivos." if infinite_unlocked else "Complete a Fase 5 para desbloquear.", "ESPECIAL", "PROGRESSÃO INFINITA", not infinite_unlocked)
+	var info := _make_phase_info("Modo Infinito", "ESPECIAL", "PROGRESSÃO INFINITA", not infinite_unlocked)
 	body.add_child(info)
 	if not infinite_unlocked:
 		body.add_child(_make_lock_overlay("FASE 5"))
@@ -86,11 +87,14 @@ func _make_phase_card(phase: Dictionary) -> Button:
 	button.disabled = not unlocked
 	button.modulate.a = 1.0 if unlocked else 0.92
 	if unlocked:
-		button.pressed.connect(_open_placeholder)
+		if int(phase["id"]) == 1:
+			button.pressed.connect(_open_phase_one)
+		else:
+			button.pressed.connect(_open_placeholder)
 	var color := String(phase["color"])
 	var body := _make_card_body(button, color + "88" if unlocked else "#333333", color + "44" if unlocked else "#222222")
 	body.add_child(_make_circle_icon("", str(phase["id"]), "#ffffff22"))
-	body.add_child(_make_phase_info(String(phase["name"]), String(phase["description"]), String(phase["difficulty"]), "%s-%s ANÉIS • HP %s" % [phase["ring_min"], phase["ring_max"], phase["base_hp"]], not unlocked))
+	body.add_child(_make_phase_info(String(phase["name"]), String(phase["difficulty"]), "ANÉIS: %s-%s" % [phase["ring_min"], phase["ring_max"]], not unlocked))
 	if not unlocked:
 		body.add_child(_make_lock_overlay("BLOQUEADA"))
 	return button
@@ -139,17 +143,14 @@ func _make_circle_icon(icon_key: String, text: String, bg: String) -> PanelConta
 	return circle
 
 
-func _make_phase_info(title: String, description: String, difficulty: String, stats: String, locked: bool) -> VBoxContainer:
+func _make_phase_info(title: String, difficulty: String, stats: String, locked: bool) -> VBoxContainer:
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
-	info.add_theme_constant_override("separation", 5)
+	info.add_theme_constant_override("separation", 8)
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var opacity := "55" if locked else ""
 	info.add_child(_make_label(title, 20, "#ffffff" + opacity, _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	var desc := _make_label(description, 14, "#ffffffaa" if not locked else "#ffffff55", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.add_child(desc)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -315,3 +316,7 @@ func _go_back() -> void:
 
 func _open_placeholder() -> void:
 	get_tree().change_scene_to_file(PLACEHOLDER_SCENE)
+
+
+func _open_phase_one() -> void:
+	get_tree().change_scene_to_file(GAME_SCENE)

@@ -1,0 +1,613 @@
+extends Control
+
+const LevelData := preload("res://scripts/LevelData.gd")
+
+const PHASE_SELECT_SCENE := "res://scenes/PhaseSelect.tscn"
+const BALL_RADIUS := 10.0
+const INNER_RADIUS := 35.0
+const BASE_BALL_SPEED := 2.2
+const PHYSICS_STEPS_PER_SECOND := 60.0
+const TWO_PI := PI * 2.0
+const RING_COLORS := ["#00f0ff", "#b000ff", "#ff0055", "#00ff88", "#ffd700", "#ff8800"]
+
+var phase_id := 1
+var phase_config: Dictionary
+var gameplay_config: Dictionary
+var rings: Array[Dictionary] = []
+var ball_position := Vector2.ZERO
+var ball_velocity := Vector2.ZERO
+var arena_center := Vector2.ZERO
+var arena_size := 320.0
+var outer_radius := 154.0
+var previous_distance := 0.0
+var last_hit_msec := 0
+var run_coins := 0
+var run_xp := 0
+var run_diamonds := 0
+var rings_destroyed := 0
+var perfect_escapes := 0
+var is_paused := false
+var finished := false
+
+var _regular_font: Font
+var _bold_font: Font
+var _skin_texture: Texture2D
+var _hud_phase: Label
+var _hud_resources: Label
+var _hud_rings: Label
+var _hud_stats: Label
+var _pause_overlay: Control
+var _victory_overlay: Control
+var _victory_title: Label
+var _victory_rewards: Label
+var _defeat_overlay: Control
+
+
+func _ready() -> void:
+	_regular_font = _make_system_font(400)
+	_bold_font = _make_system_font(700)
+	phase_config = LevelData.get_phase_config(phase_id)
+	gameplay_config = LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
+	_load_skin_texture()
+	_build_background()
+	_build_hud()
+	_build_pause_overlay()
+	_build_result_overlays()
+	call_deferred("_start_level")
+
+
+func _process(delta: float) -> void:
+	if is_paused or finished:
+		return
+	_update_game(delta * PHYSICS_STEPS_PER_SECOND)
+	_update_hud()
+	queue_redraw()
+
+
+func _draw() -> void:
+	_update_arena_metrics()
+	_draw_arena()
+	_draw_rings()
+	_draw_ball()
+
+
+func _start_level() -> void:
+	finished = false
+	is_paused = false
+	run_coins = 0
+	run_xp = 0
+	run_diamonds = 0
+	rings_destroyed = 0
+	perfect_escapes = 0
+	_update_arena_metrics()
+	rings = _create_rings()
+	var start_angle: float = randf() * TWO_PI
+	var speed: float = BASE_BALL_SPEED + min(0.62, float(phase_id - 1) * 0.08 + int(GameState.data.get("level", 1)) * 0.006)
+	ball_position = arena_center
+	ball_velocity = Vector2(cos(start_angle), sin(start_angle)) * speed
+	previous_distance = 0.0
+	_hide_all_overlays()
+	_update_hud()
+	queue_redraw()
+
+
+func _update_game(delta_steps: float) -> void:
+	_update_arena_metrics()
+	var target_speed: float = BASE_BALL_SPEED + min(0.62, float(phase_id - 1) * 0.08)
+	ball_velocity = _clamp_vector_speed(ball_velocity, target_speed * 0.78, target_speed * 1.42)
+	var previous_vector := ball_position - arena_center
+	var prev_dist := previous_vector.length()
+	ball_position += ball_velocity * delta_steps
+	_bounce_arena_edge()
+	var next_dist := (ball_position - arena_center).length()
+	_update_rings(delta_steps)
+	_check_perfect_escape(prev_dist, next_dist)
+	_check_ring_hit(prev_dist)
+	_clamp_ring_spacing()
+	if _active_ring_count() == 0:
+		_finish_victory()
+		return
+	if _is_ball_crushed():
+		_finish_defeat()
+		return
+	previous_distance = next_dist
+
+
+func _create_rings() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var count: int = int(gameplay_config["ring_count"])
+	var inner_radius: float = INNER_RADIUS
+	var available_radius: float = max(1.0, outer_radius - inner_radius)
+	var adaptive_min_spacing: float = min(5.0, max(2.25, available_radius / max(1.0, float(count - 1))))
+	var max_count_by_spacing: int = max(1, floori(available_radius / adaptive_min_spacing) + 1)
+	count = max(1, min(count, max_count_by_spacing))
+	var spacing: float = available_radius / max(1.0, float(count - 1))
+	var difficulty: float = 1.0 + max(0, phase_id - 1) * 0.22
+	var phase_gap: float = max(PI / 7.5, float(gameplay_config["gap_size"]))
+	var solid_indexes: Dictionary = { count - 1: true }
+	for i in range(count):
+		var progress := 0.0 if count == 1 else float(i) / float(count - 1)
+		var direction := 1.0 if i % 2 == 0 else -1.0
+		var pattern_shift := sin(i * 0.9) * 0.18 if phase_id % 3 == 0 else 0.0
+		var inner_speed_bias := 1.35 - progress * 0.55
+		var speed_variation := 0.86 + float((i * 17 + phase_id * 11) % 23) / 100.0
+		var is_solid: bool = solid_indexes.has(i)
+		var hp: int = floori(float(gameplay_config["base_hp"]) * difficulty * (0.9 + progress * 1.55) * (1.45 if is_solid else 1.0))
+		var gap_size: float = max(PI / 7.5, phase_gap * (1.08 - progress * 0.16))
+		result.append({
+			"id": "ring_%s_%s" % [phase_id, i],
+			"type": "solid" if is_solid else "normal",
+			"radius": inner_radius + i * spacing,
+			"initial_radius": inner_radius + i * spacing,
+			"closing_speed": float(gameplay_config["closing_speed"]) * difficulty * (0.75 + progress * 0.42),
+			"rotation": _normalize_angle(i * 0.61 + phase_id * 0.37 + pattern_shift),
+			"rotation_speed": float(gameplay_config["rotation_speed"]) * difficulty * inner_speed_bias * speed_variation * direction,
+			"gap_start": _normalize_angle(i * 0.83 + phase_id * 0.49 + pattern_shift),
+			"gap_size": 0.0 if is_solid else gap_size,
+			"hp": hp,
+			"max_hp": hp,
+			"status": "active",
+			"thickness": 7.0 if is_solid else 5.0,
+			"color": ["#ff3d00", "#ff0055", "#b000ff"][i % 3] if is_solid else RING_COLORS[i % RING_COLORS.size()],
+			"min_radius": 4.0,
+		})
+	return result
+
+
+func _update_rings(delta_steps: float) -> void:
+	for i in range(rings.size()):
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "active":
+			continue
+		ring["rotation"] = _normalize_angle(float(ring["rotation"]) + float(ring["rotation_speed"]) * delta_steps)
+		ring["radius"] = max(float(ring["min_radius"]), float(ring["radius"]) - float(ring["closing_speed"]) * delta_steps)
+		rings[i] = ring
+
+
+func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
+	var angle := _normalize_angle((ball_position - arena_center).angle())
+	for i in range(rings.size()):
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "active" or String(ring.get("type", "normal")) == "solid":
+			continue
+		var radius := float(ring["radius"])
+		var crossed: bool = (prev_dist - radius) * (next_dist - radius) <= 0.0
+		var near: bool = abs(next_dist - radius) <= BALL_RADIUS + abs(next_dist - prev_dist) + float(ring["thickness"])
+		if crossed and near and _is_angle_inside_gap(angle, ring, min(0.06, BALL_RADIUS / max(1.0, radius))):
+			ring["status"] = "cleared"
+			ring["hp"] = 0
+			rings[i] = ring
+			perfect_escapes += 1
+			run_coins += 5
+			run_xp += 10
+			if randf() < 0.03:
+				run_diamonds += 1
+			return
+
+
+func _check_ring_hit(prev_dist: float) -> void:
+	var closest_index := -1
+	var closest_dist := INF
+	for i in range(rings.size()):
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "active":
+			continue
+		var collision := _check_ring_collision(ring)
+		if bool(collision["overlap"]) and not bool(collision["gap"]) and float(collision["dist"]) < closest_dist:
+			closest_index = i
+			closest_dist = float(collision["dist"])
+	if closest_index < 0:
+		return
+
+	var ring := rings[closest_index]
+	_separate_and_reflect(ring, prev_dist)
+	var now: int = Time.get_ticks_msec()
+	if now - last_hit_msec <= 90:
+		return
+	last_hit_msec = now
+	var damage := _base_damage()
+	var new_hp: int = max(0, int(ring["hp"]) - damage)
+	ring["hp"] = new_hp
+	ring["status"] = "broken" if new_hp <= 0 else "active"
+	rings[closest_index] = ring
+	run_coins += max(1, floori(damage * 0.5))
+	run_xp += 1
+	if new_hp <= 0:
+		rings_destroyed += 1
+		run_coins += 18 if String(ring.get("type", "normal")) == "solid" else 12
+		run_xp += 16 if String(ring.get("type", "normal")) == "solid" else 8
+
+
+func _check_ring_collision(ring: Dictionary) -> Dictionary:
+	var offset := ball_position - arena_center
+	var dist_from_center := offset.length()
+	var dist_from_ring: float = abs(dist_from_center - float(ring["radius"]))
+	var overlapping: bool = dist_from_ring <= float(ring["thickness"]) / 2.0 + BALL_RADIUS
+	var angle: float = _normalize_angle(offset.angle())
+	var padding: float = min(0.08, BALL_RADIUS / max(1.0, float(ring["radius"])))
+	var in_gap: bool = false if String(ring.get("type", "normal")) == "solid" else _is_angle_inside_gap(angle, ring, padding)
+	return { "overlap": overlapping, "gap": in_gap, "dist": dist_from_ring, "angle": angle }
+
+
+func _separate_and_reflect(ring: Dictionary, prev_dist: float) -> void:
+	var radial := ball_position - arena_center
+	var dist: float = max(1.0, radial.length())
+	var radial_dir: Vector2 = radial / dist
+	var started_outside: bool = prev_dist >= float(ring["radius"])
+	var normal: Vector2 = radial_dir if started_outside else -radial_dir
+	var safe_distance: float = float(ring["radius"]) + float(ring["thickness"]) / 2.0 + BALL_RADIUS + 2.6 if started_outside else max(0.0, float(ring["radius"]) - float(ring["thickness"]) / 2.0 - BALL_RADIUS - 2.6)
+	ball_position = arena_center + radial_dir * min(outer_radius - BALL_RADIUS, safe_distance)
+	var dot := ball_velocity.dot(normal)
+	if dot < 0.0:
+		ball_velocity -= 2.0 * dot * normal
+		ball_velocity = _clamp_vector_speed(ball_velocity * 1.04, BASE_BALL_SPEED * 0.88, BASE_BALL_SPEED * 1.55)
+
+
+func _is_ball_crushed() -> bool:
+	for ring in rings:
+		if String(ring.get("status", "")) != "active" or int(ring.get("hp", 0)) <= 0:
+			continue
+		var collision := _check_ring_collision(ring)
+		if bool(collision["gap"]) or not bool(collision["overlap"]):
+			continue
+		var dist := (ball_position - arena_center).length()
+		var outer_edge := float(ring["radius"]) + float(ring["thickness"]) / 2.0
+		if outer_edge <= max(0.0, dist - BALL_RADIUS * 0.25) or (dist <= BALL_RADIUS * 1.15 and outer_edge <= BALL_RADIUS + 4.0):
+			return true
+	return false
+
+
+func _finish_victory() -> void:
+	finished = true
+	var phase_reward_coins: int = int(phase_config["reward_coins"])
+	var phase_reward_xp: int = int(phase_config["reward_xp"])
+	var total_coins: int = phase_reward_coins + run_coins
+	var total_xp: int = phase_reward_xp + run_xp
+	GameState.record_phase_complete(phase_id, total_coins, total_xp, rings_destroyed, perfect_escapes, run_diamonds)
+	_victory_title.text = "FASE 1 CONCLUIDA"
+	_victory_rewards.text = "+%s MOEDAS\n+%s XP\n+%s DIAMANTES\nFASE 2 LIBERADA" % [total_coins, total_xp, run_diamonds]
+	_victory_overlay.visible = true
+	queue_redraw()
+
+
+func _finish_defeat() -> void:
+	finished = true
+	_defeat_overlay.visible = true
+	queue_redraw()
+
+
+func _draw_arena() -> void:
+	draw_circle(arena_center, outer_radius + 13.0, Color("#00f0ff10"))
+	draw_arc(arena_center, outer_radius + 4.0, 0.0, TWO_PI, 160, Color("#00f0ff55"), 2.0, true)
+	draw_arc(arena_center, INNER_RADIUS - 8.0, 0.0, TWO_PI, 96, Color("#ffffff22"), 2.0, true)
+
+
+func _draw_rings() -> void:
+	for ring in rings:
+		if String(ring.get("status", "")) != "active":
+			continue
+		var radius := float(ring["radius"])
+		var color := Color(String(ring["color"]))
+		var thickness := float(ring["thickness"])
+		if String(ring.get("type", "normal")) == "solid":
+			draw_arc(arena_center, radius, 0.0, TWO_PI, 180, Color(color, 0.28), thickness + 7.0, true)
+			draw_arc(arena_center, radius, 0.0, TWO_PI, 180, color, thickness, true)
+		else:
+			var gap_center := _normalize_angle(float(ring["gap_start"]) + float(ring["rotation"]))
+			var half_gap := float(ring["gap_size"]) / 2.0
+			_draw_ring_segment(radius, gap_center + half_gap, gap_center - half_gap + TWO_PI, color, thickness)
+		var hp_ratio := clampf(float(ring["hp"]) / max(1.0, float(ring["max_hp"])), 0.0, 1.0)
+		if hp_ratio < 0.98:
+			draw_arc(arena_center, radius - thickness - 2.0, -PI / 2.0, -PI / 2.0 + TWO_PI * hp_ratio, 80, Color("#ffd700aa"), 2.0, true)
+
+
+func _draw_ring_segment(radius: float, start_angle: float, end_angle: float, color: Color, thickness: float) -> void:
+	draw_arc(arena_center, radius, start_angle, end_angle, 150, Color(color, 0.24), thickness + 7.0, true)
+	draw_arc(arena_center, radius, start_angle, end_angle, 150, color, thickness, true)
+
+
+func _draw_ball() -> void:
+	draw_circle(ball_position, BALL_RADIUS + 9.0, Color("#00f0ff22"))
+	draw_circle(ball_position, BALL_RADIUS + 4.0, Color("#ffffff22"))
+	var rect := Rect2(ball_position - Vector2(BALL_RADIUS, BALL_RADIUS) * 1.65, Vector2(BALL_RADIUS, BALL_RADIUS) * 3.3)
+	if _skin_texture:
+		draw_texture_rect(_skin_texture, rect, false)
+	else:
+		draw_circle(ball_position, BALL_RADIUS, Color("#00f0ff"))
+
+
+func _build_background() -> void:
+	var background := TextureRect.new()
+	_fill(background)
+	background.texture = _make_background_gradient()
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_SCALE
+	background.show_behind_parent = true
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(background)
+
+
+func _build_hud() -> void:
+	var hud := VBoxContainer.new()
+	hud.anchor_left = 0.0
+	hud.anchor_top = 0.0
+	hud.anchor_right = 1.0
+	hud.offset_left = 18.0
+	hud.offset_top = 42.0
+	hud.offset_right = -18.0
+	hud.add_theme_constant_override("separation", 8)
+	add_child(hud)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 10)
+	hud.add_child(top)
+	var pause := _make_button("PAUSAR", 96, 40)
+	pause.pressed.connect(_open_pause)
+	top.add_child(pause)
+	_hud_phase = _make_label("FASE 1", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	top.add_child(_hud_phase)
+	_hud_resources = _make_label("", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	hud.add_child(_hud_resources)
+	_hud_rings = _make_label("", 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	hud.add_child(_hud_rings)
+	_hud_stats = _make_label("", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	hud.add_child(_hud_stats)
+
+
+func _build_pause_overlay() -> void:
+	_pause_overlay = _make_modal()
+	var card := _make_modal_content(_pause_overlay, "PAUSA")
+	card.add_child(_make_modal_button("CONTINUAR", _close_pause))
+	card.add_child(_make_modal_button("REINICIAR", _restart_level))
+	card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
+	add_child(_pause_overlay)
+
+
+func _build_result_overlays() -> void:
+	_victory_overlay = _make_modal()
+	var victory_card := _make_modal_content(_victory_overlay, "VITORIA")
+	_victory_title = _make_label("FASE 1 CONCLUIDA", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_victory_rewards = _make_label("", 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	victory_card.add_child(_victory_title)
+	victory_card.add_child(_victory_rewards)
+	victory_card.add_child(_make_modal_button("VOLTAR AS FASES", _go_to_phase_select))
+	victory_card.add_child(_make_modal_button("JOGAR NOVAMENTE", _restart_level))
+	add_child(_victory_overlay)
+
+	_defeat_overlay = _make_modal()
+	var defeat_card := _make_modal_content(_defeat_overlay, "GAME OVER")
+	defeat_card.add_child(_make_label("A bolinha foi presa pelos aneis.", 15, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER))
+	defeat_card.add_child(_make_modal_button("TENTAR DE NOVO", _restart_level))
+	defeat_card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
+	add_child(_defeat_overlay)
+	_hide_all_overlays()
+
+
+func _make_modal() -> PanelContainer:
+	var overlay := PanelContainer.new()
+	_fill(overlay)
+	overlay.visible = false
+	overlay.add_theme_stylebox_override("panel", _make_style("#050014cc", 0))
+	return overlay
+
+
+func _make_modal_content(overlay: Control, title: String) -> VBoxContainer:
+	var center := CenterContainer.new()
+	_fill(center)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(320, 260)
+	panel.add_theme_stylebox_override("panel", _make_style("#16003bdd", 18, "#00f0ff66", 2, "#00f0ff55", 18))
+	center.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_top", 22)
+	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_bottom", 22)
+	panel.add_child(margin)
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 14)
+	margin.add_child(column)
+	column.add_child(_make_label(title, 26, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	overlay.add_child(center)
+	return column
+
+
+func _make_modal_button(text: String, target: Callable) -> Button:
+	var button := _make_button(text, 250, 46)
+	button.pressed.connect(target)
+	return button
+
+
+func _make_button(text: String, width: int, height: int) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(width, height)
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_font_size_override("font_size", 13)
+	button.add_theme_color_override("font_color", Color("#001018"))
+	_apply_button_style(button, _make_style("#00f0ff", 13, "#ffffff33", 1, "#00f0ff88", 10))
+	return button
+
+
+func _update_hud() -> void:
+	var active: int = _active_ring_count()
+	_hud_phase.text = "FASE %s" % phase_id
+	_hud_resources.text = "MOEDAS %s   DIAMANTES %s   CHAVES %s" % [int(GameState.data.get("coins", 0)) + run_coins, int(GameState.data.get("diamonds", 0)) + run_diamonds, int(GameState.data.get("keys", 0))]
+	_hud_rings.text = "ANEIS RESTANTES: %s/%s   DIFICULDADE: %s" % [active, rings.size(), String(phase_config["difficulty"]).to_upper()]
+	_hud_stats.text = "ATK %s   XP +%s   SKIN %s" % [_base_damage(), run_xp, String(GameState.data.get("equipped_skin", "neon_blue")).replace("_", " ").to_upper()]
+
+
+func _active_ring_count() -> int:
+	var count := 0
+	for ring in rings:
+		if String(ring.get("status", "")) == "active" and int(ring.get("hp", 0)) > 0:
+			count += 1
+	return count
+
+
+func _base_damage() -> int:
+	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
+	return 14 + int(upgrades.get("baseDamage", 0)) * 3
+
+
+func _open_pause() -> void:
+	is_paused = true
+	_pause_overlay.visible = true
+
+
+func _close_pause() -> void:
+	_pause_overlay.visible = false
+	is_paused = false
+
+
+func _restart_level() -> void:
+	_start_level()
+
+
+func _go_to_phase_select() -> void:
+	get_tree().change_scene_to_file(PHASE_SELECT_SCENE)
+
+
+func _hide_all_overlays() -> void:
+	_pause_overlay.visible = false
+	_victory_overlay.visible = false
+	_defeat_overlay.visible = false
+
+
+func _bounce_arena_edge() -> void:
+	var offset := ball_position - arena_center
+	var dist := offset.length()
+	var max_dist := outer_radius - BALL_RADIUS
+	if dist <= max_dist or dist <= 0.0:
+		return
+	var normal := offset / dist
+	ball_position = arena_center + normal * max_dist
+	var outward_velocity := ball_velocity.dot(normal)
+	if outward_velocity > 0.0:
+		ball_velocity -= 2.0 * outward_velocity * normal
+
+
+func _clamp_ring_spacing() -> void:
+	var inner_active: Dictionary = {}
+	for i in range(rings.size()):
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "active":
+			continue
+		var min_radius := float(ring["min_radius"])
+		if not inner_active.is_empty():
+			min_radius = max(min_radius, float(inner_active["radius"]) + float(inner_active["thickness"]) / 2.0 + float(ring["thickness"]) / 2.0 + 5.0)
+		if float(ring["radius"]) < min_radius:
+			ring["radius"] = min_radius
+			rings[i] = ring
+		inner_active = ring
+
+
+func _is_angle_inside_gap(angle: float, ring: Dictionary, padding := 0.0) -> bool:
+	var half_gap: float = max(0.0, float(ring["gap_size"]) / 2.0 - padding)
+	return _angle_distance(angle, _normalize_angle(float(ring["gap_start"]) + float(ring["rotation"]))) <= half_gap
+
+
+func _angle_distance(a: float, b: float) -> float:
+	var diff: float = abs(_normalize_angle(a) - _normalize_angle(b))
+	return min(diff, TWO_PI - diff)
+
+
+func _normalize_angle(angle: float) -> float:
+	return fposmod(angle, TWO_PI)
+
+
+func _clamp_vector_speed(value: Vector2, min_speed: float, max_speed: float) -> Vector2:
+	var speed := value.length()
+	if speed <= 0.001:
+		return Vector2.RIGHT * min_speed
+	var clamped := clampf(speed, min_speed, max_speed)
+	return value / speed * clamped
+
+
+func _update_arena_metrics() -> void:
+	arena_size = min(size.x - 24.0, size.y - 260.0)
+	arena_size = clampf(arena_size, 250.0, 520.0)
+	arena_center = Vector2(size.x / 2.0, 154.0 + arena_size / 2.0)
+	outer_radius = arena_size / 2.0 - 8.0
+
+
+func _load_skin_texture() -> void:
+	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	var path := "res://assets/skins/%s.png" % skin_id
+	if ResourceLoader.exists(path):
+		_skin_texture = load(path)
+	else:
+		_skin_texture = load("res://assets/skins/neon_blue.png")
+
+
+func _make_background_gradient() -> GradientTexture2D:
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.52, 1.0])
+	gradient.colors = PackedColorArray([Color("#0a0a1a"), Color("#1a0a2e"), Color("#16003b")])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.width = 16
+	texture.height = 1024
+	texture.fill = GradientTexture2D.FILL_LINEAR
+	texture.fill_from = Vector2(0.0, 0.0)
+	texture.fill_to = Vector2(0.0, 1.0)
+	return texture
+
+
+func _make_label(text: String, font_size: int, color: String, font: Font, alignment: HorizontalAlignment) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = alignment
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", Color(color))
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+
+func _make_style(bg_color: String, radius: int, border_color: String = "#00000000", border_width: int = 0, shadow_color: String = "#00000000", shadow_size: int = 0) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(bg_color)
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_right = radius
+	style.corner_radius_bottom_left = radius
+	style.border_color = Color(border_color)
+	style.border_width_left = border_width
+	style.border_width_top = border_width
+	style.border_width_right = border_width
+	style.border_width_bottom = border_width
+	style.shadow_color = Color(shadow_color)
+	style.shadow_size = shadow_size
+	style.shadow_offset = Vector2.ZERO
+	return style
+
+
+func _apply_button_style(button: Button, style: StyleBoxFlat) -> void:
+	button.add_theme_stylebox_override("normal", style)
+	button.add_theme_stylebox_override("hover", style)
+	button.add_theme_stylebox_override("pressed", style)
+	button.add_theme_stylebox_override("disabled", style)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+
+func _make_system_font(weight: int) -> SystemFont:
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray(["Arial", "Helvetica", "Noto Sans", "DejaVu Sans", "sans-serif"])
+	font.font_weight = weight
+	return font
+
+
+func _fill(control: Control) -> void:
+	control.anchor_left = 0.0
+	control.anchor_top = 0.0
+	control.anchor_right = 1.0
+	control.anchor_bottom = 1.0
+	control.offset_left = 0.0
+	control.offset_top = 0.0
+	control.offset_right = 0.0
+	control.offset_bottom = 0.0
