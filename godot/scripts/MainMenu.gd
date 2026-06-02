@@ -5,6 +5,7 @@ const PROFILE_SCENE := "res://scenes/Profile.tscn"
 const SETTINGS_SCENE := "res://scenes/Settings.tscn"
 const SKINS_SCENE := "res://scenes/Skins.tscn"
 const UPGRADES_SCENE := "res://scenes/Upgrades.tscn"
+const PHASE_SELECT_SCENE := "res://scenes/PhaseSelect.tscn"
 const SHOP_SCENE := "res://scenes/Shop.tscn"
 const INVENTORY_SCENE := "res://scenes/Inventory.tscn"
 const MISSIONS_SCENE := "res://scenes/Missions.tscn"
@@ -379,7 +380,7 @@ func _make_resource_pill(icon_key: String, value: String) -> PanelContainer:
 
 func _make_play_button() -> Button:
 	var button := _make_gradient_button(78, 16, "#00f0ff", "#0088ff", "#00000000", 0, true, "#00f0ffcc", 18)
-	button.pressed.connect(_open_placeholder)
+	button.pressed.connect(_open_scene.bind(PHASE_SELECT_SCENE))
 
 	var content := HBoxContainer.new()
 	_fill(content)

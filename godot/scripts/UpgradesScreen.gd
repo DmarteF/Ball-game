@@ -87,8 +87,8 @@ func _build_screen() -> void:
 
 func _make_resource_display() -> HBoxContainer:
 	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	row.add_theme_constant_override("separation", 8)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 10)
 	row.add_child(_make_resource_pill("coin", "600", "#ffd70044"))
 	row.add_child(_make_resource_pill("gem", "60", "#00ff8844"))
 	row.add_child(_make_resource_pill("key", "1", "#00f0ff44"))
@@ -97,7 +97,8 @@ func _make_resource_display() -> HBoxContainer:
 
 func _make_resource_pill(icon_key: String, value: String, border: String) -> PanelContainer:
 	var box := PanelContainer.new()
-	box.custom_minimum_size = Vector2(92, 46)
+	box.custom_minimum_size = Vector2(106, 48)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_stylebox_override("panel", _make_style("#ffffff22", 12, border, 2))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)
@@ -110,7 +111,11 @@ func _make_resource_pill(icon_key: String, value: String, border: String) -> Pan
 	row.add_theme_constant_override("separation", 8)
 	margin.add_child(row)
 	row.add_child(_make_icon(icon_key, 22))
-	row.add_child(_make_label(value, 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var value_label := _make_label(value, 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	value_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	value_label.clip_text = false
+	value_label.custom_minimum_size.x = 34
+	row.add_child(value_label)
 	return box
 
 
