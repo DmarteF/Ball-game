@@ -247,7 +247,7 @@ func _create_rings() -> Array[Dictionary]:
 	count = max(1, min(count, max_count_by_spacing))
 	var spacing: float = available_radius / max(1.0, float(count - 1))
 	var difficulty: float = 1.0 + max(0, phase_id - 1) * 0.22
-	var phase_gap: float = max(PI / 7.5, float(gameplay_config["gap_size"]))
+	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
 	var palette: Array = RING_PALETTES[ring_palette_index]
 	var solid_indexes: Dictionary = { count - 1: true }
 	for i in range(count):
@@ -258,7 +258,7 @@ func _create_rings() -> Array[Dictionary]:
 		var speed_variation := 0.86 + float((i * 17 + phase_id * 11) % 23) / 100.0
 		var is_solid: bool = solid_indexes.has(i)
 		var hp: int = floori(float(gameplay_config["base_hp"]) * difficulty * (0.9 + progress * 1.55) * (1.45 if is_solid else 1.0))
-		var gap_size: float = max(PI / 7.5, phase_gap * (1.08 - progress * 0.16))
+		var gap_size: float = max(PI / 13.0, phase_gap * (1.02 - progress * 0.14))
 		result.append({
 			"id": "ring_%s_%s" % [phase_id, i],
 			"type": "solid" if is_solid else "normal",
@@ -306,7 +306,7 @@ func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
 			_register_ring_clear()
 			perfect_escapes += 1
 			var perfect_coins: int = max(2, floori(5.0 * _gold_multiplier()))
-			var perfect_xp: int = floori((16.0 + randf() * 10.0) * _xp_multiplier())
+			var perfect_xp: int = floori((28.0 + randf() * 16.0 + phase_id * 1.2) * _xp_multiplier())
 			_award_coins(perfect_coins)
 			_award_xp(perfect_xp)
 			_register_combo("Perfect", Color("#00f0ff"))
@@ -347,7 +347,7 @@ func _check_ring_hit(prev_dist: float) -> void:
 	ring["status"] = "broken" if new_hp <= 0 else "active"
 	rings[closest_index] = ring
 	_award_coins(floori(damage * 0.5 * _gold_multiplier()))
-	_award_xp(floori((2 if is_crit else 1) * _xp_multiplier()))
+	_award_xp(floori((8.0 if is_crit else 5.0) * _xp_multiplier()))
 	run_score += damage
 	_track_dps(float(damage))
 	_spawn_particles(ball_position, Color(String(ring["color"])), 6, 70.0)
@@ -360,7 +360,7 @@ func _check_ring_hit(prev_dist: float) -> void:
 		_register_ring_clear()
 		_register_combo("Break", Color("#ffd700"))
 		_award_coins(max(6, floori((18.0 if String(ring.get("type", "normal")) == "solid" else 12.0) * _gold_multiplier())))
-		_award_xp(floori(((16.0 if String(ring.get("type", "normal")) == "solid" else 8.0) + randf() * (12.0 if String(ring.get("type", "normal")) == "solid" else 7.0)) * _xp_multiplier()))
+		_award_xp(floori(((24.0 if String(ring.get("type", "normal")) == "solid" else 14.0) + phase_id * 0.8 + randf() * (14.0 if String(ring.get("type", "normal")) == "solid" else 9.0)) * _xp_multiplier()))
 		_spawn_particles(ball_position, Color("#ffd700"), 18, 130.0)
 		_spawn_floating("Break!", ball_position + Vector2(-18, -28), Color("#ffd700"))
 		_play_sfx("break")
@@ -931,7 +931,7 @@ func _track_dps(damage: float) -> void:
 
 
 func _run_profile_xp() -> int:
-	return max(8, floori((total_run_xp * 0.42 + rings_destroyed * 3.6 + perfect_escapes * 5.0 + best_combo * 1.2) * PROFILE_XP_MULTIPLIER))
+	return max(24, floori((total_run_xp * 0.58 + rings_destroyed * 6.0 + perfect_escapes * 9.0 + best_combo * 1.8 + phase_id * 10.0) * PROFILE_XP_MULTIPLIER))
 
 
 func _global_coins_from_run(coins_value: int, combo_value: int, won: bool) -> int:
@@ -1111,7 +1111,7 @@ func _restart_level() -> void:
 func _go_to_phase_select() -> void:
 	_play_sfx("click")
 	if has_node("/root/AudioManager"):
-		AudioManager.play_music("res://assets/music/menu.mp3", -16.0)
+		AudioManager.play_context("menu")
 	get_tree().change_scene_to_file(PHASE_SELECT_SCENE)
 
 
@@ -1215,9 +1215,11 @@ func _clamp_vector_speed(value: Vector2, min_speed: float, max_speed: float) -> 
 
 
 func _update_arena_metrics() -> void:
-	arena_size = min(size.x - 18.0, size.y - 248.0)
-	arena_size = clampf(arena_size, 250.0, 520.0)
-	arena_center = Vector2(size.x / 2.0, 142.0 + arena_size / 2.0)
+	var gameplay_top := 228.0
+	var gameplay_bottom := 104.0
+	arena_size = min(size.x - 26.0, size.y - gameplay_top - gameplay_bottom)
+	arena_size = clampf(arena_size, 230.0, 500.0)
+	arena_center = Vector2(size.x / 2.0, gameplay_top + arena_size / 2.0)
 	outer_radius = arena_size / 2.0 - 8.0
 
 
@@ -1270,7 +1272,7 @@ func _spawn_floating(text: String, position: Vector2, color: Color) -> void:
 
 func _setup_audio() -> void:
 	if has_node("/root/AudioManager"):
-		AudioManager.play_music(MUSIC_PATH, -13.0)
+		AudioManager.play_context("gameplay")
 
 
 func _play_sfx(key: String) -> void:

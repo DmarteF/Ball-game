@@ -40,6 +40,49 @@ const SKIN_UNLOCK_MILESTONES := {
 	"comet": { "phase": 15, "level": 9, "source": "Marco de fase temporario" },
 }
 
+const ACHIEVEMENTS := [
+	{ "id": "first_steps", "name": "First Steps", "name_pt": "Primeiros Passos", "desc": "Play your first run.", "desc_pt": "Jogue a primeira partida.", "metric": "runsPlayed", "required": 1, "reward": { "type": "coins", "amount": 250 }, "rarity": "common" },
+	{ "id": "first_perfect", "name": "First Perfect", "name_pt": "Primeiro Escape", "desc": "Make 1 Perfect Escape.", "desc_pt": "Faça 1 escape perfeito.", "metric": "perfectEscapes", "required": 1, "reward": { "type": "diamonds", "amount": 8 }, "rarity": "rare" },
+	{ "id": "ring_breaker_1", "name": "Ring Breaker I", "name_pt": "Quebrador de Aneis I", "desc": "Destroy 50 rings.", "desc_pt": "Destrua 50 aneis.", "metric": "ringsDestroyed", "required": 50, "reward": { "type": "coins", "amount": 500 }, "rarity": "common" },
+	{ "id": "stage_champion", "name": "Neon Champion", "name_pt": "Campeao Neon", "desc": "Unlock all 50 phases.", "desc_pt": "Libere todas as 50 fases.", "metric": "highestPhase", "required": 50, "reward": { "type": "skin", "skin_id": "cosmic_champion" }, "rarity": "special" },
+	{ "id": "collector", "name": "Starter Collector", "name_pt": "Colecionador Inicial", "desc": "Unlock 5 skins.", "desc_pt": "Desbloqueie 5 skins.", "metric": "skinsUnlocked", "required": 5, "reward": { "type": "chest", "chest_type": "common", "amount": 1 }, "rarity": "rare" },
+	{ "id": "daily_claim", "name": "Daily Glow", "name_pt": "Brilho Diario", "desc": "Claim a daily reward.", "desc_pt": "Colete uma recompensa diaria.", "metric": "dailyRewardsCollected", "required": 1, "reward": { "type": "diamonds", "amount": 10 }, "rarity": "rare" },
+	{ "id": "wheel_spin", "name": "Lucky Spin", "name_pt": "Giro da Sorte", "desc": "Spin the wheel once.", "desc_pt": "Gire a roleta uma vez.", "metric": "wheelSpins", "required": 1, "reward": { "type": "coins", "amount": 300 }, "rarity": "common" },
+	{ "id": "upgrade_buyer", "name": "Power Buyer", "name_pt": "Comprador de Poder", "desc": "Buy one permanent upgrade.", "desc_pt": "Compre uma melhoria permanente.", "metric": "upgradesBought", "required": 1, "reward": { "type": "diamonds", "amount": 6 }, "rarity": "common" },
+	{ "id": "store_buyer", "name": "Neon Shopper", "name_pt": "Comprador Neon", "desc": "Buy or claim something in the shop.", "desc_pt": "Compre ou resgate algo na loja.", "metric": "storePurchases", "required": 1, "reward": { "type": "diamonds", "amount": 6 }, "rarity": "common" },
+]
+
+const DAILY_REWARDS := [
+	{ "type": "coins", "amount": 120 },
+	{ "type": "diamonds", "amount": 20 },
+	{ "type": "keys", "amount": 1 },
+	{ "type": "chest", "chest_type": "common", "amount": 1 },
+	{ "type": "chest", "chest_type": "rare", "amount": 1 },
+	{ "type": "diamonds", "amount": 75 },
+	{ "type": "chest", "chest_type": "epic", "amount": 1 },
+]
+
+const WHEEL_REWARDS := [
+	{ "type": "coins", "amount": 180 },
+	{ "type": "coins", "amount": 420 },
+	{ "type": "diamonds", "amount": 6 },
+	{ "type": "diamonds", "amount": 14 },
+	{ "type": "keys", "amount": 1 },
+	{ "type": "chest", "chest_type": "common", "amount": 1 },
+	{ "type": "chest", "chest_type": "rare", "amount": 1 },
+	{ "type": "xp", "amount": 120 },
+	{ "type": "chest", "chest_type": "epic", "amount": 1 },
+]
+
+const DAILY_MISSION_DEFS := [
+	{ "id": "runs_3", "title": "Play 3 runs", "title_pt": "Jogar 3 partidas", "metric": "runsPlayed", "target": 3, "reward": { "type": "xp", "amount": 70 } },
+	{ "id": "win_1", "title": "Win 1 phase", "title_pt": "Vencer 1 fase", "metric": "phaseWins", "target": 1, "reward": { "type": "diamonds", "amount": 8 } },
+	{ "id": "rings_50", "title": "Destroy 50 rings", "title_pt": "Destruir 50 aneis", "metric": "ringsDestroyed", "target": 50, "reward": { "type": "coins", "amount": 260 } },
+	{ "id": "perfect_3", "title": "Make 3 Perfect Escapes", "title_pt": "Fazer 3 Perfect Escapes", "metric": "perfectEscapes", "target": 3, "reward": { "type": "diamonds", "amount": 5 } },
+	{ "id": "store_buy", "title": "Buy or claim in the shop", "title_pt": "Comprar ou resgatar na loja", "metric": "storePurchases", "target": 1, "reward": { "type": "diamonds", "amount": 6 } },
+	{ "id": "wheel_spin", "title": "Spin the wheel", "title_pt": "Girar a roleta", "metric": "wheelSpins", "target": 1, "reward": { "type": "coins", "amount": 240 } },
+]
+
 var data: Dictionary = {}
 
 
@@ -63,6 +106,8 @@ func default_save() -> Dictionary:
 		"diamonds": 60,
 		"keys": 1,
 		"legendary_keys": 0,
+		"inventory": {},
+		"last_reward_text": "",
 		"xp": 0,
 		"level": 1,
 		"profile_xp": 0,
@@ -82,7 +127,7 @@ func default_save() -> Dictionary:
 			"music_muted": false,
 			"sfx_muted": false,
 			"master_muted": false,
-			"language": "pt",
+			"language": "en",
 		},
 		"last_exit_at": now,
 		"last_login_at": now,
@@ -91,6 +136,9 @@ func default_save() -> Dictionary:
 		"pending_afk_rewards": {},
 		"events": {},
 		"boss": { "last_attempt_at": 0 },
+		"wheel": { "day_key": "", "free_used": false, "ad_spins_used": 0, "last_reward": {} },
+		"daily_missions": { "day_key": "", "missions": [] },
+		"achievements": {},
 		"stats": {
 			"runs_played": 0,
 			"rings_destroyed": 0,
@@ -104,6 +152,11 @@ func default_save() -> Dictionary:
 			"boss_wins": 0,
 			"boss_losses": 0,
 			"daily_rewards_collected": 0,
+			"phaseWins": 0,
+			"wheelSpins": 0,
+			"storePurchases": 0,
+			"upgradesBought": 0,
+			"skinEquips": 0,
 		},
 	}
 
@@ -112,6 +165,7 @@ func load_game() -> void:
 	var loaded := SaveManager.load_save()
 	data = _merge_defaults(default_save(), loaded)
 	_migrate_legacy_settings()
+	_ensure_live_systems()
 	refresh_unlocks(false)
 	var now := TimeManager.get_now_timestamp()
 	var offline_seconds := TimeManager.get_offline_seconds()
@@ -152,6 +206,35 @@ func refresh_unlocks(emit_signal := true) -> void:
 		save_game()
 
 
+func _ensure_live_systems() -> void:
+	var day_key := _day_key()
+	if String(data.get("wheel", {}).get("day_key", "")) != day_key:
+		data["wheel"] = { "day_key": day_key, "free_used": false, "ad_spins_used": 0, "last_reward": {} }
+	if String(data.get("daily_missions", {}).get("day_key", "")) != day_key:
+		data["daily_missions"] = _create_daily_missions(day_key)
+	var achievements: Dictionary = data.get("achievements", {})
+	for achievement in ACHIEVEMENTS:
+		var id := String(achievement["id"])
+		if not achievements.has(id):
+			achievements[id] = { "progress": 0, "completed": false, "claimed": false }
+	data["achievements"] = achievements
+	_update_achievements(false)
+
+
+func _day_key() -> String:
+	var now := Time.get_datetime_dict_from_system()
+	return "%04d-%02d-%02d" % [int(now["year"]), int(now["month"]), int(now["day"])]
+
+
+func _create_daily_missions(day_key: String) -> Dictionary:
+	var start: int = abs(hash(day_key)) % DAILY_MISSION_DEFS.size()
+	var missions: Array = []
+	for i in range(4):
+		var definition: Dictionary = DAILY_MISSION_DEFS[(start + i * 2) % DAILY_MISSION_DEFS.size()]
+		missions.append({ "id": definition["id"], "progress": 0, "claimed": false })
+	return { "day_key": day_key, "missions": missions }
+
+
 func _meets_unlock(rule: Dictionary, max_phase: int, profile_level: int) -> bool:
 	return max_phase >= int(rule.get("phase", 999)) or profile_level >= int(rule.get("level", 999))
 
@@ -189,8 +272,285 @@ func purchase_permanent_upgrade(id: String) -> Dictionary:
 	data["coins"] = max(0, int(data.get("coins", 0)) - cost)
 	upgrades[id] = level + 1
 	data["permanent_upgrades"] = upgrades
+	_increment_stat("upgradesBought", 1, false)
+	_progress_missions("upgradesBought", 1)
+	_update_achievements(false)
 	save_game()
 	return { "ok": true, "level": level + 1, "cost": cost }
+
+
+func apply_reward(reward: Dictionary, save_after := false) -> String:
+	var reward_type := String(reward.get("type", ""))
+	var amount := int(reward.get("amount", 1))
+	match reward_type:
+		"coins":
+			data["coins"] = max(0, int(data.get("coins", 0)) + amount)
+			return "+%s coins" % amount
+		"diamonds", "gems":
+			data["diamonds"] = max(0, int(data.get("diamonds", 0)) + amount)
+			_increment_stat("diamondsFound", amount, false)
+			return "+%s diamonds" % amount
+		"keys":
+			data["keys"] = max(0, int(data.get("keys", 0)) + amount)
+			return "+%s keys" % amount
+		"legendaryKeys", "legendary_keys":
+			data["legendary_keys"] = max(0, int(data.get("legendary_keys", 0)) + amount)
+			return "+%s legendary keys" % amount
+		"xp":
+			add_profile_xp(amount)
+			return "+%s XP" % amount
+		"skin":
+			unlock_skin(String(reward.get("skin_id", "")))
+			return "Skin unlocked"
+		"chest":
+			var chest_type := String(reward.get("chest_type", "common"))
+			add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, amount)
+			return "+%s %s chest" % [amount, chest_type]
+	if save_after:
+		save_game()
+	return "Reward"
+
+
+func add_inventory_item(id: String, item_type: String, label: String, icon: String, amount: int) -> void:
+	var inventory: Dictionary = data.get("inventory", {})
+	var item: Dictionary = inventory.get(id, { "id": id, "type": item_type, "label": label, "icon": icon, "amount": 0 })
+	item["amount"] = int(item.get("amount", 0)) + amount
+	inventory[id] = item
+	data["inventory"] = inventory
+
+
+func open_chest(chest_id: String) -> Dictionary:
+	var inventory: Dictionary = data.get("inventory", {})
+	if not inventory.has(chest_id) or int(inventory[chest_id].get("amount", 0)) <= 0:
+		return { "ok": false, "reason": "empty" }
+	var item: Dictionary = inventory[chest_id]
+	item["amount"] = int(item.get("amount", 0)) - 1
+	if int(item["amount"]) <= 0:
+		inventory.erase(chest_id)
+	else:
+		inventory[chest_id] = item
+	data["inventory"] = inventory
+	var reward := _random_chest_reward(chest_id)
+	var text := apply_reward(reward)
+	_increment_stat("chests_opened", 1, false)
+	_increment_stat("chestsOpened", 1, false)
+	_progress_missions("chestsOpened", 1)
+	_update_achievements(false)
+	data["last_reward_text"] = text
+	save_game()
+	return { "ok": true, "reward": reward, "text": text }
+
+
+func _random_chest_reward(chest_id: String) -> Dictionary:
+	if chest_id.contains("legendary"):
+		return { "type": "diamonds", "amount": 95 }
+	if chest_id.contains("epic"):
+		return { "type": "diamonds", "amount": 45 }
+	if chest_id.contains("rare"):
+		return { "type": "keys", "amount": 1 }
+	return { "type": "coins", "amount": 220 }
+
+
+func claim_daily_reward() -> Dictionary:
+	_ensure_live_systems()
+	if not TimeManager.can_claim_daily_reward():
+		return { "ok": false, "reason": "already_claimed" }
+	var streak := TimeManager.update_daily_streak()
+	var day_index := clampi(streak - 1, 0, DAILY_REWARDS.size() - 1)
+	var reward: Dictionary = DAILY_REWARDS[day_index]
+	var text := apply_reward(reward)
+	TimeManager.mark_daily_reward_claimed()
+	data["daily_streak"] = TimeManager.get_daily_streak()
+	_increment_stat("daily_rewards_collected", 1, false)
+	_increment_stat("dailyRewardsCollected", 1, false)
+	_progress_missions("dailyRewardsCollected", 1)
+	_update_achievements(false)
+	data["last_reward_text"] = text
+	save_game()
+	return { "ok": true, "day": day_index + 1, "reward": reward, "text": text }
+
+
+func spin_wheel(source := "free") -> Dictionary:
+	_ensure_live_systems()
+	var wheel: Dictionary = data.get("wheel", {})
+	if source == "free" and bool(wheel.get("free_used", false)):
+		return { "ok": false, "reason": "free_used" }
+	if source == "ad" and int(wheel.get("ad_spins_used", 0)) >= 2:
+		return { "ok": false, "reason": "ad_limit" }
+	var reward: Dictionary = WHEEL_REWARDS[randi() % WHEEL_REWARDS.size()]
+	var text := apply_reward(reward)
+	wheel["free_used"] = true if source == "free" else bool(wheel.get("free_used", false))
+	wheel["ad_spins_used"] = int(wheel.get("ad_spins_used", 0)) + (1 if source == "ad" else 0)
+	wheel["last_reward"] = reward
+	data["wheel"] = wheel
+	_increment_stat("wheelSpins", 1, false)
+	_progress_missions("wheelSpins", 1)
+	_update_achievements(false)
+	data["last_reward_text"] = text
+	save_game()
+	return { "ok": true, "reward": reward, "text": text }
+
+
+func shop_claim(action_id: String) -> Dictionary:
+	var result := { "ok": true, "text": "" }
+	match action_id:
+		"common_chest":
+			if not spend_coins(100):
+				return { "ok": false, "reason": "coins" }
+			add_inventory_item("chest_common", "chest", "Common Chest", "common", 1)
+			result["text"] = "+1 common chest"
+		"rare_chest":
+			if not spend_diamonds(40):
+				return { "ok": false, "reason": "diamonds" }
+			add_inventory_item("chest_rare", "chest", "Rare Chest", "rare", 1)
+			result["text"] = "+1 rare chest"
+		"epic_chest":
+			if not spend_diamonds(120):
+				return { "ok": false, "reason": "diamonds" }
+			add_inventory_item("chest_epic", "chest", "Epic Chest", "epic", 1)
+			result["text"] = "+1 epic chest"
+		"legendary_chest":
+			if int(data.get("legendary_keys", 0)) < 1:
+				return { "ok": false, "reason": "legendary_key" }
+			data["legendary_keys"] = int(data.get("legendary_keys", 0)) - 1
+			add_inventory_item("chest_legendary", "chest", "Legendary Chest", "legendary", 1)
+			result["text"] = "+1 legendary chest"
+		"keys_pack":
+			if not spend_diamonds(80):
+				return { "ok": false, "reason": "diamonds" }
+			data["keys"] = int(data.get("keys", 0)) + 6
+			result["text"] = "+6 keys"
+		"legendary_keys_pack":
+			if not spend_diamonds(180):
+				return { "ok": false, "reason": "diamonds" }
+			data["legendary_keys"] = int(data.get("legendary_keys", 0)) + 2
+			result["text"] = "+2 legendary keys"
+		"ad_gems":
+			data["diamonds"] = int(data.get("diamonds", 0)) + 12
+			result["text"] = "+12 diamonds"
+		"ad_coins":
+			data["coins"] = int(data.get("coins", 0)) + 300
+			result["text"] = "+300 coins"
+		"ad_key":
+			data["keys"] = int(data.get("keys", 0)) + 1
+			result["text"] = "+1 key"
+		"ad_chest":
+			add_inventory_item("chest_common", "chest", "Common Chest", "common", 1)
+			result["text"] = "+1 common chest"
+		_:
+			data["diamonds"] = int(data.get("diamonds", 0)) + 10
+			result["text"] = "Mock purchase +10 diamonds"
+	_increment_stat("storePurchases", 1, false)
+	_progress_missions("storePurchases", 1)
+	_update_achievements(false)
+	data["last_reward_text"] = String(result["text"])
+	save_game()
+	return result
+
+
+func get_daily_mission_def(id: String) -> Dictionary:
+	for definition in DAILY_MISSION_DEFS:
+		if String(definition["id"]) == id:
+			return definition
+	return {}
+
+
+func claim_daily_mission(id: String) -> Dictionary:
+	_ensure_live_systems()
+	var daily: Dictionary = data.get("daily_missions", {})
+	var missions: Array = daily.get("missions", [])
+	for i in range(missions.size()):
+		var mission: Dictionary = missions[i]
+		if String(mission.get("id", "")) != id:
+			continue
+		var definition := get_daily_mission_def(id)
+		if definition.is_empty() or bool(mission.get("claimed", false)) or int(mission.get("progress", 0)) < int(definition["target"]):
+			return { "ok": false, "reason": "not_ready" }
+		var text := apply_reward(definition["reward"])
+		mission["claimed"] = true
+		missions[i] = mission
+		daily["missions"] = missions
+		data["daily_missions"] = daily
+		data["last_reward_text"] = text
+		save_game()
+		return { "ok": true, "text": text }
+	return { "ok": false, "reason": "missing" }
+
+
+func claim_achievement(id: String) -> Dictionary:
+	_update_achievements(false)
+	var achievements: Dictionary = data.get("achievements", {})
+	if not achievements.has(id):
+		return { "ok": false, "reason": "missing" }
+	var state: Dictionary = achievements[id]
+	if not bool(state.get("completed", false)) or bool(state.get("claimed", false)):
+		return { "ok": false, "reason": "not_ready" }
+	var definition := _achievement_def(id)
+	var text := apply_reward(definition.get("reward", {}))
+	state["claimed"] = true
+	achievements[id] = state
+	data["achievements"] = achievements
+	data["last_reward_text"] = text
+	save_game()
+	return { "ok": true, "text": text }
+
+
+func _achievement_def(id: String) -> Dictionary:
+	for achievement in ACHIEVEMENTS:
+		if String(achievement["id"]) == id:
+			return achievement
+	return {}
+
+
+func _update_achievements(save_after := true) -> void:
+	var achievements: Dictionary = data.get("achievements", {})
+	var stats: Dictionary = data.get("stats", {})
+	stats["skinsUnlocked"] = Array(data.get("unlocked_skins", [])).size()
+	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), int(data.get("max_unlocked_phase", 1)))
+	stats["runsPlayed"] = max(int(stats.get("runsPlayed", 0)), int(stats.get("runs_played", 0)))
+	stats["ringsDestroyed"] = max(int(stats.get("ringsDestroyed", 0)), int(stats.get("rings_destroyed", 0)))
+	stats["perfectEscapes"] = max(int(stats.get("perfectEscapes", 0)), int(stats.get("perfect_escapes", 0)))
+	stats["diamondsFound"] = max(int(stats.get("diamondsFound", 0)), int(stats.get("diamonds_found", 0)))
+	for achievement in ACHIEVEMENTS:
+		var id := String(achievement["id"])
+		var state: Dictionary = achievements.get(id, { "progress": 0, "completed": false, "claimed": false })
+		var progress := int(stats.get(String(achievement["metric"]), 0))
+		state["progress"] = min(progress, int(achievement["required"]))
+		if progress >= int(achievement["required"]):
+			state["completed"] = true
+		achievements[id] = state
+	data["stats"] = stats
+	data["achievements"] = achievements
+	if save_after:
+		save_game()
+
+
+func _progress_missions(metric: String, amount: int) -> void:
+	if amount <= 0:
+		return
+	_ensure_live_systems()
+	var daily: Dictionary = data.get("daily_missions", {})
+	var missions: Array = daily.get("missions", [])
+	for i in range(missions.size()):
+		var mission: Dictionary = missions[i]
+		if bool(mission.get("claimed", false)):
+			continue
+		var definition := get_daily_mission_def(String(mission.get("id", "")))
+		if definition.is_empty() or String(definition.get("metric", "")) != metric:
+			continue
+		var next_progress: int = max(int(mission.get("progress", 0)), amount) if metric == "bestCombo" else int(mission.get("progress", 0)) + amount
+		mission["progress"] = min(int(definition["target"]), next_progress)
+		missions[i] = mission
+	daily["missions"] = missions
+	data["daily_missions"] = daily
+
+
+func _increment_stat(metric: String, amount: int, save_after := true) -> void:
+	var stats: Dictionary = data.get("stats", {})
+	stats[metric] = int(stats.get(metric, 0)) + amount
+	data["stats"] = stats
+	if save_after:
+		save_game()
 
 
 func add_coins(amount: int) -> void:
@@ -242,6 +602,8 @@ func equip_skin(id: String) -> bool:
 	if not Array(data.get("unlocked_skins", [])).has(id):
 		return false
 	data["equipped_skin"] = id
+	_increment_stat("skinEquips", 1, false)
+	_progress_missions("skinEquips", 1)
 	save_game()
 	return true
 
@@ -297,13 +659,25 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	unlock_level(min(50, phase + 1))
 	var stats: Dictionary = data.get("stats", {})
 	stats["runs_played"] = int(stats.get("runs_played", 0)) + 1
+	stats["runsPlayed"] = int(stats.get("runsPlayed", 0)) + 1
+	stats["phaseWins"] = int(stats.get("phaseWins", 0)) + 1
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_destroyed
+	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_destroyed
 	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + perfect_escapes
+	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + perfect_escapes
 	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
+	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds
 	stats["highest_phase"] = max(int(stats.get("highest_phase", 1)), min(50, phase + 1))
+	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), min(50, phase + 1))
 	data["current_phase"] = max(int(data.get("current_phase", 1)), min(50, phase + 1))
 	data["stats"] = stats
+	_progress_missions("runsPlayed", 1)
+	_progress_missions("phaseWins", 1)
+	_progress_missions("ringsDestroyed", rings_destroyed)
+	_progress_missions("perfectEscapes", perfect_escapes)
+	_progress_missions("runCoins", coins)
 	refresh_unlocks(false)
+	_update_achievements(false)
 	save_game()
 
 

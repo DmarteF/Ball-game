@@ -120,7 +120,12 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Upgrades temporarios de level-up so entram no sorteio se estiverem desbloqueados no save. O fallback que completava a lista com upgrades bloqueados foi removido.
 - Ritmo adaptativo dos aneis adicionado: `ring_spawn_delay`, streak de limpeza rapida e bonus por muitos aneis restantes aumentam o ritmo com clamp, e o estado reseta em restart/vitoria/proxima fase.
 - Fundos variaveis por partida/fase adicionados com paletas escuras em roxo, azul, vinho e preto arroxeado. As paletas dos aneis tambem variam em neon.
+- Gaps/aberturas foram reduzidos para evitar fases faceis demais. `LevelData.gd` agora usa clamp menor e `GameplayManager.gd` evita reabrir gaps grandes no desenho/colisao.
+- Arena foi reenquadrada para uma area logica invisivel abaixo do HUD, sem circulo, borda, base ou debug visual.
+- XP foi aumentado: hit simples gera cerca de 5 XP, critico cerca de 8 XP, break/perfect escalam com fase/dificuldade e conclusao de fase concede bonus maior ao perfil.
 - Skins agora sao funcionais: `SkinsScreen.gd` mostra todas as skins, filtra por estado real, permite equipar somente desbloqueadas, salva `equipped_skin` e a gameplay usa o sprite equipado com fallback `neon_blue`.
+- Sistemas funcionais adicionados em `GameState.gd`: conquistas, loja simulada, inventario/baus, recompensa diaria, roleta e missoes diarias com save local.
+- `AudioManager.gd` centraliza musica/SFX por contexto: menu persiste entre subtelas, gameplay troca de contexto sem duplicar player, loop e mute/unmute respeitam o save.
 - Vitoria salva moedas globais e XP de perfil convertidos como na main.
 - Tela de vitoria foi refeita como resumo limpo com icones/assets, sem scroll interno apertado.
 - `AudioManager.gd` centraliza musica/SFX, respeita audio mudo e evita duplicar musica.
@@ -183,6 +188,23 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | SFX integrados | Sim |
 | Audio mudo/ligado respeitado | Sim |
 | Audio integrado | Sim |
+| Gaps dos aneis reduzidos | Sim |
+| Arena centralizada abaixo do HUD | Sim |
+| Area de spawn/enquadramento invisivel | Sim |
+| XP por hit/recompensa ajustado | Sim |
+| Conquistas funcionais | Sim |
+| Loja funcional/mockada | Sim |
+| Recompensa diaria funcional | Sim |
+| Roleta funcional | Sim |
+| Inventario funcional | Sim |
+| Missoes funcionais | Sim |
+| Jogo padrao em ingles | Sim |
+| Traducao PT-BR base implementada | Sim |
+| Configuracao de idioma funcionando | Sim |
+| Mute funcionando | Sim |
+| Musica persiste no mesmo contexto | Sim |
+| Musica em loop | Sim |
+| SFX sincronizados com eventos principais | Sim |
 | XP aparecendo corretamente | Sim |
 | Level up funcionando | Sim |
 | Upgrade temporario aparecendo corretamente | Sim |

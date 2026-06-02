@@ -21,7 +21,7 @@ static func get_phase_config(phase_id: int) -> Dictionary:
 		"base_hp": roundi(float(tier["hp"]) + id * 6 + pow(id, 1.32) * 5.2),
 		"closing_speed": min(0.18, float(tier["close"]) + phase_t * 0.025 + id * 0.0011),
 		"rotation_speed": min(0.048, float(tier["rotate"]) + phase_t * 0.0065 + id * 0.00034),
-		"gap_size": max(PI / 9.5, PI / (float(tier["gap"]) + phase_t * 0.82)),
+		"gap_size": max(PI / 12.5, PI / (float(tier["gap"]) + phase_t * 0.82) * 0.72),
 		"reward_coins": roundi(70 + id * 36 + pow(id, 1.18) * 6),
 		"reward_xp": roundi(45 + id * 22 + pow(id, 1.12) * 4),
 		"key_chance": min(0.34, 0.025 + id * 0.0058),
@@ -38,7 +38,7 @@ static func get_solo_gameplay_config(phase_id: int, player_level: int, slow_ring
 		"base_hp": roundi(float(phase["base_hp"]) * difficulty),
 		"closing_speed": min(0.118, (float(phase["closing_speed"]) + player_level * 0.00022) * 0.82 * (1.0 - min(0.28, slow_ring_level * 0.018))),
 		"rotation_speed": min(0.029, (float(phase["rotation_speed"]) + player_level * 0.00014) * 0.9),
-		"gap_size": max(PI / 7.2, float(phase["gap_size"]) - player_level * 0.001),
+		"gap_size": max(PI / 13.0, float(phase["gap_size"]) - player_level * 0.001),
 	}
 
 

@@ -122,6 +122,8 @@ Funcoes principais disponiveis no `GameState`:
 - `add_coins`, `spend_coins`, `add_diamonds`, `spend_diamonds`, `add_keys`, `spend_keys`;
 - `unlock_skin`, `equip_skin`, `upgrade_permanent`, `unlock_level`;
 - `refresh_unlocks`, `get_upgrade_cost`, `get_upgrade_max_level`, `is_upgrade_unlocked`, `purchase_permanent_upgrade`;
+- `apply_reward`, `shop_claim`, `spin_wheel`, `claim_daily_reward`, `open_chest`;
+- `claim_daily_mission`, `claim_achievement`, progresso de missoes/conquistas por metricas salvas;
 - `save_game`, `load_game`, `set_audio_muted`, `set_language`.
 
 Funcoes principais disponiveis no `TimeManager`:
@@ -137,15 +139,20 @@ Telas que ja leem dados reais:
 - Menu inicial: nome, nivel e recursos.
 - Perfil: nome, nivel, XP, recursos e estatisticas basicas.
 - Configuracoes: audio/idioma salvos no `GameState`.
-- Loja: recursos do jogador.
+- Loja: recursos do jogador, compras simuladas, resgates por anuncio mockado, baus/chaves e validacao de saldo.
 - Skins: recursos, desbloqueios reais e skin equipada.
 - Upgrades: recursos, desbloqueios reais, custos, limites, compra e niveis permanentes.
+- Inventario: itens/baus salvos, estado vazio real e abertura de baus com recompensa.
+- Missoes: missoes diarias reais, progresso salvo e coleta de recompensa.
+- Roleta: giro gratis diario, giro extra mockado por anuncio e entrega real de recompensa.
+- Recompensa diaria: streak de 7 dias, TimeManager, coleta uma vez por dia e recompensas reais.
+- Conquistas: progresso por estatisticas, bloqueado/concluido/coletado e recompensa real.
 - Jogar: fases desbloqueadas e Modo Infinito baseado na maior fase.
 - Boss: disponibilidade visual baseada no cooldown do `TimeManager`.
 
 Ainda mockado/pendente:
 
-- loja funcional, roleta, recompensas reais de baus, missoes reais, boss real, eventos reais e conquistas completas.
+- boss real, eventos reais, liga real, conquistas avancadas da main e integracao com pagamento/anuncio real.
 - Recompensas AFK sao calculadas e armazenadas como pendentes, mas nao sao concedidas automaticamente.
 
 Observacao de seguranca: o relogio atual usa horario local do aparelho. Em Android/APK isso pode ser manipulado alterando o relogio do celular. A estrutura ficou preparada para futura validacao online, mas essa validacao ainda nao foi implementada.
@@ -175,6 +182,9 @@ Checklist da etapa:
 
 | Item | Status | Observacao |
 | --- | --- | --- |
+| Gaps reduzidos | Sim | `LevelData.gd` e `GameplayManager.gd` usam aberturas menores, mantendo clamp por fase/dificuldade. |
+| Arena abaixo do HUD | Sim | Area logica invisivel reposicionada com margem superior; sem borda/base/debug visual. |
+| XP ajustado | Sim | Hit simples, critico, break, perfect e bonus de conclusao geram XP maior. |
 | Card da Fase 1 sem HP | Sim | HP removido dos cards de fase. |
 | Card da Fase 1 sem descricao longa | Sim | Cards mostram somente nome, dificuldade e aneis. |
 | Cards mostram fase/dificuldade/aneis | Sim | Aplicado para as fases visuais 1-50. |
@@ -194,6 +204,7 @@ Checklist da etapa:
 | Skins funcionais | Sim | Tela usa save real, impede equipar bloqueada, salva `equipped_skin` e gameplay usa o sprite equipado. |
 | Ritmo adaptativo dos aneis | Sim | `ring_spawn_delay`, streak de clears rapidos e bonus por muitos aneis ajustam o fechamento com clamp. |
 | Fundos e paletas variaveis | Sim | Fases escolhem gradientes escuros e paletas neon diferentes sem clarear o HUD. |
+| Audio global persistente | Sim | `AudioManager.gd` controla contexto menu/gameplay, loop, mute e evita reiniciar a mesma musica. |
 | Efeitos visuais | Sim | Brilho/trilha da bolinha, impacto, quebra de anel, textos de moeda/XP/level-up e efeito de vitoria. |
 | Audio de gameplay | Sim | `AudioManager.gd` centraliza musica, clique, hit, hit critico, quebra, perfect, XP, level-up, diamante, derrota e vitoria respeitando audio mudo. |
 | Vitoria funcionando | Sim | Ao limpar todos os aneis, mostra tela de vitoria/recompensa. |
@@ -213,6 +224,14 @@ Pendencias da gameplay:
 - Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
 - Modo infinito ainda nao e jogavel nesta etapa.
 - Fases 2-50 usam a estrutura da main e desbloqueio sequencial, mas ainda precisam de verificacao visual fase a fase.
+
+## 7.1 Idioma e audio
+
+- Idioma padrao de novo save: English (`settings.language = "en"`).
+- Portugues disponivel em Configuracoes (`pt`) e salvo localmente.
+- A camada de localizacao ja cobre Configuracoes, titulos principais das telas funcionais, missoes e conquistas; alguns textos visuais herdados das telas antigas ainda precisam de refinamento final para ficar 100% traduzidos.
+- `AudioManager.gd` e o unico player persistente de musica. Menu, loja, upgrades, skins, inventario, missoes, roleta, diaria, perfil e configuracoes usam contexto `menu`; partida usa contexto `gameplay`.
+- A mesma musica nao reinicia ao navegar entre telas do mesmo contexto. Mute para a musica/SFX e retoma o contexto atual ao desmutar.
 
 ## 8. HTML/Web
 

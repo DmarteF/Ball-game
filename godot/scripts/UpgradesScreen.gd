@@ -37,6 +37,8 @@ var _feedback_label: Label
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
+	if has_node("/root/AudioManager"):
+		AudioManager.play_context("menu")
 	GameState.refresh_unlocks(false)
 	_build_background()
 	_build_screen()

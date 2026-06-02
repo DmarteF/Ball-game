@@ -13,12 +13,14 @@ const ICON_PATHS := {
 var _regular_font: Font
 var _bold_font: Font
 var _audio_muted := false
-var _language := "pt"
+var _language := "en"
 
 
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
+	if has_node("/root/AudioManager"):
+		AudioManager.play_context("menu")
 	_load_settings()
 	_build_background()
 	_build_screen()
@@ -51,7 +53,7 @@ func _build_screen() -> void:
 	title_row.add_theme_constant_override("separation", 12)
 	root.add_child(title_row)
 	title_row.add_child(_make_icon("settings", 34))
-	title_row.add_child(_make_label("CONFIGURAÇÕES", 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	title_row.add_child(_make_label(_t("settings_title"), 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	NeonBackButtonScript.add_to(self, _go_back)
 
 	var scroll := ScrollContainer.new()
@@ -73,7 +75,7 @@ func _build_screen() -> void:
 func _make_audio_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
-	body.add_child(_make_section_title("ÁUDIO"))
+	body.add_child(_make_section_title(_t("audio")))
 	var button := Button.new()
 	button.custom_minimum_size.y = 58
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -91,7 +93,7 @@ func _make_audio_card() -> PanelContainer:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(row)
 	row.add_child(_make_icon("mute_off" if _audio_muted else "mute_on", 22, Color("#ffffff") if _audio_muted else Color("#001018")))
-	row.add_child(_make_label("Audio: %s" % ("Mudo" if _audio_muted else "Ligado"), 18, "#ffffff" if _audio_muted else "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	row.add_child(_make_label("%s: %s" % [_t("audio"), _t("muted") if _audio_muted else _t("on")], 18, "#ffffff" if _audio_muted else "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	body.add_child(button)
 	return card
 
@@ -99,8 +101,8 @@ func _make_audio_card() -> PanelContainer:
 func _make_language_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
-	body.add_child(_make_section_title("IDIOMA"))
-	body.add_child(_make_label("Escolha o idioma da interface.", 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	body.add_child(_make_section_title(_t("language")))
+	body.add_child(_make_label(_t("choose_language"), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var grid := GridContainer.new()
 	grid.columns = 1
 	grid.add_theme_constant_override("v_separation", 8)
@@ -114,9 +116,9 @@ func _make_language_card() -> PanelContainer:
 func _make_about_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
-	body.add_child(_make_section_title("SOBRE"))
+	body.add_child(_make_section_title(_t("about")))
 	body.add_child(_make_label("Neon Idle Escape", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	var text := _make_label("Versão Godot 4 em migração fiel, mantendo o visual neon, controles mobile e estrutura preparada para Web.", 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var text := _make_label(_t("about_text"), 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(text)
 	return card
@@ -277,12 +279,28 @@ func _fill(control: Control) -> void:
 
 func _load_settings() -> void:
 	_audio_muted = bool(GameState.get_setting("audio_muted", false))
-	_language = String(GameState.get_setting("language", "pt"))
+	_language = String(GameState.get_setting("language", "en"))
 
 
 func _save_settings() -> void:
 	GameState.set_audio_muted(_audio_muted)
 	GameState.set_language(_language)
+	if has_node("/root/AudioManager"):
+		AudioManager.apply_audio_settings()
+
+
+func _t(key: String) -> String:
+	var pt := _language == "pt"
+	match key:
+		"settings_title": return "CONFIGURAÇÕES" if pt else "SETTINGS"
+		"audio": return "ÁUDIO" if pt else "AUDIO"
+		"muted": return "Mudo" if pt else "Muted"
+		"on": return "Ligado" if pt else "On"
+		"language": return "IDIOMA" if pt else "LANGUAGE"
+		"choose_language": return "Escolha o idioma da interface." if pt else "Choose the interface language."
+		"about": return "SOBRE" if pt else "ABOUT"
+		"about_text": return "Versão Godot 4 em migração fiel, mantendo o visual neon, controles mobile e estrutura preparada para Web." if pt else "Godot 4 faithful migration, keeping the neon look, mobile controls and Web-ready structure."
+	return key
 
 
 func _go_back() -> void:

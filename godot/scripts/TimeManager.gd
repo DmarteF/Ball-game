@@ -45,7 +45,6 @@ func can_claim_daily_reward() -> bool:
 
 
 func mark_daily_reward_claimed() -> void:
-	update_daily_streak()
 	GameState.data["last_daily_reward_at"] = get_now_timestamp()
 	GameState.save_game()
 
@@ -54,17 +53,18 @@ func get_daily_streak() -> int:
 	return int(GameState.data.get("daily_streak", 0))
 
 
-func update_daily_streak() -> void:
+func update_daily_streak() -> int:
 	var now := get_now_timestamp()
 	var last_claim := int(GameState.data.get("last_daily_reward_at", 0))
 	if last_claim <= 0:
 		GameState.data["daily_streak"] = 1
-		return
+		return 1
 	var elapsed := now - last_claim
 	if elapsed >= SECONDS_PER_DAY * 2:
 		GameState.data["daily_streak"] = 1
 	elif elapsed >= SECONDS_PER_DAY:
 		GameState.data["daily_streak"] = min(7, int(GameState.data.get("daily_streak", 0)) + 1)
+	return int(GameState.data.get("daily_streak", 0))
 
 
 func calculate_afk_rewards(offline_seconds: int) -> Dictionary:

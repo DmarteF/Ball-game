@@ -86,8 +86,6 @@ void fragment() {
 var _regular_font: Font
 var _bold_font: Font
 var _gradient_shader: Shader
-var _click_player: AudioStreamPlayer
-var _music_player: AudioStreamPlayer
 var _more_overlay: ColorRect
 var _more_panel: PanelContainer
 var _more_items: Array = []
@@ -99,7 +97,8 @@ func _ready() -> void:
 	_gradient_shader = Shader.new()
 	_gradient_shader.code = ROUND_GRADIENT_SHADER
 
-	_build_audio()
+	if has_node("/root/AudioManager"):
+		AudioManager.play_context("menu")
 	_build_background()
 	_build_top_bar()
 	_build_content()
@@ -108,20 +107,6 @@ func _ready() -> void:
 
 	resized.connect(_sync_modal_layout)
 	call_deferred("_sync_modal_layout")
-
-
-func _build_audio() -> void:
-	_music_player = AudioStreamPlayer.new()
-	_music_player.stream = load("res://assets/music/menu.mp3")
-	_music_player.volume_db = linear_to_db(0.38)
-	_music_player.autoplay = true
-	add_child(_music_player)
-	_music_player.play()
-
-	_click_player = AudioStreamPlayer.new()
-	_click_player.stream = load("res://assets/sounds/button_click.mp3")
-	_click_player.volume_db = linear_to_db(0.287)
-	add_child(_click_player)
 
 
 func _build_background() -> void:
@@ -633,7 +618,5 @@ func _open_scene(scene_path: String) -> void:
 
 
 func _play_click() -> void:
-	if _click_player == null:
-		return
-	_click_player.stop()
-	_click_player.play()
+	if has_node("/root/AudioManager"):
+		AudioManager.play_sfx("res://assets/sounds/button_click.mp3", -7.0)
