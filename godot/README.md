@@ -27,9 +27,14 @@ Fonte obrigatoria: branch `main`. A versao Godot nao deve criar layout, texto, v
 Arquivos da branch `main` usados como referencia direta:
 
 - `frontend/app/index.tsx`
+- `frontend/src/components/AdModal.tsx`
 - `frontend/src/components/UiIcon.tsx`
+- `frontend/src/components/ProfileAvatar.tsx`
+- `frontend/src/contexts/GameContext.tsx`
 - `frontend/src/game/uiIcons.ts`
+- `frontend/src/game/retention.ts`
 - `frontend/src/i18n/locales/pt-BR.ts`
+- `frontend/src/utils/audio.ts`
 - `frontend/assets/ui/ui_play.png`
 - `frontend/assets/ui/ui_upgrades.png`
 - `frontend/assets/ui/ui_skins.png`
@@ -38,6 +43,34 @@ Arquivos da branch `main` usados como referencia direta:
 - `frontend/assets/ui/ui_gem.png`
 - `frontend/assets/ui/ui_key.png`
 - `frontend/assets/ui/ui_profile.png`
+- `frontend/assets/ui/ui_store.png`
+- `frontend/assets/ui/ui_inventory.png`
+- `frontend/assets/ui/ui_missions.png`
+- `frontend/assets/ui/ui_event.png`
+- `frontend/assets/ui/ui_wheel.png`
+- `frontend/assets/ui/ui_daily_reward.png`
+- `frontend/assets/ui/ui_boss.png`
+- `frontend/assets/ui/ui_league_neon.png`
+- `frontend/assets/ui/ui_achievements.png`
+- `frontend/assets/ui/ui_settings.png`
+
+Tela Inicial - Comparacao com branch main
+
+| Elemento | Main original | Godot atual | Status |
+|---|---|---|---|
+| Fundo | `LinearGradient` `#0a0a1a`, `#1a0a2e`, `#16003b` | Gradiente vertical com as mesmas cores | ok |
+| Logo NEON | Texto `NEON`, fontSize 60, bold, cor/sombra `#00f0ff`, letterSpacing 6 | Label `NEON`, 60, sombra ciano, centralizado | ok |
+| Subtitulo | Texto `IDLE ESCAPE`, fontSize 18, weight 300, branco, letterSpacing 7 | Label `IDLE ESCAPE`, 18, branco, centralizado | ok |
+| Botao Jogar | 100%, 78px, radius 16, gradiente `#00f0ff` -> `#0088ff`, icone `ui_play` 32, texto 30 | Controle 78px, radius 16, gradiente diagonal, icone e texto reais | ok |
+| Botao Melhorias | Card 92px, radius 14, gradiente `#b000ff66` -> `#6600cc33`, icone `ui_upgrades` 42, texto 13 | Card 92px com gradiente, icone e texto reais | ok |
+| Botao Skins | Card 92px, radius 14, gradiente `#ff008866` -> `#cc006633`, icone `ui_skins` 42, texto 13 | Card 92px com gradiente, icone e texto reais | ok |
+| Botao Mais | Absoluto direita 18, bottom 24, 64x64, radius 18, bg `#00f0ff`, icone `ui_menu` 26, texto 11 | Controle 64x64 na mesma ancora, cor, icone e texto | ok |
+| Icones | `UiIcon` carrega assets reais de `frontend/assets/ui` | Assets reais copiados para `godot/assets/ui` | ok |
+| Fonte | React Native default, weights bold/300 conforme estilos | Fontes/tamanhos espelhados nos Labels Godot | ok |
+| Cores | Valores hex literais do `StyleSheet` | Valores hex literais aplicados | ok |
+| Posicoes | Topbar 50/18, content 20, title marginTop 22 apos topbar, bottom 96 | Posicoes calculadas a partir do layout 420x760 da main | ok |
+| Tamanhos | Alturas 78/92/64, icones 18/26/32/42, textos 11/13/18/30/60 | Mesmos tamanhos configurados | ok |
+| Bordas/sombras/brilho | Radius 10/14/16/18, sombras ciano nos elementos neon | StyleBoxes com radius/sombras equivalentes | ok |
 
 Checklist da tela inicial Godot apos esta correcao:
 
