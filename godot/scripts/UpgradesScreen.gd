@@ -4,12 +4,13 @@ const MENU_SCENE := "res://scenes/MainMenu.tscn"
 
 const ICON_PATHS := {
 	"coin": "res://assets/ui/ui_coin.png",
+	"gem": "res://assets/ui/ui_gem.png",
+	"key": "res://assets/ui/ui_key.png",
 	"locked": "res://assets/ui/ui_locked.png",
 	"damage": "res://assets/ui/ui_damage.png",
 	"speed": "res://assets/ui/ui_speed.png",
 	"crit": "res://assets/ui/ui_crit.png",
 	"xp": "res://assets/ui/ui_xp.png",
-	"gem": "res://assets/ui/ui_gem.png",
 	"freeze": "res://assets/ui/ui_freeze.png",
 	"burn": "res://assets/ui/ui_burn.png",
 	"shock": "res://assets/ui/ui_shock.png",
@@ -69,7 +70,7 @@ func _build_screen() -> void:
 	root.add_child(back)
 
 	root.add_child(_make_label("UPGRADES PERMANENTES", 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	root.add_child(_make_coin_display())
+	root.add_child(_make_resource_display())
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -84,21 +85,32 @@ func _build_screen() -> void:
 		list.add_child(_make_upgrade_card(upgrade))
 
 
-func _make_coin_display() -> PanelContainer:
+func _make_resource_display() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row.add_theme_constant_override("separation", 8)
+	row.add_child(_make_resource_pill("coin", "600", "#ffd70044"))
+	row.add_child(_make_resource_pill("gem", "60", "#00ff8844"))
+	row.add_child(_make_resource_pill("key", "1", "#00f0ff44"))
+	return row
+
+
+func _make_resource_pill(icon_key: String, value: String, border: String) -> PanelContainer:
 	var box := PanelContainer.new()
-	box.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	box.add_theme_stylebox_override("panel", _make_style("#ffffff22", 12, "#ffd70044", 2))
+	box.custom_minimum_size = Vector2(92, 46)
+	box.add_theme_stylebox_override("panel", _make_style("#ffffff22", 12, border, 2))
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_top", 12)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_bottom", 12)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 8)
 	box.add_child(margin)
 	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 8)
 	margin.add_child(row)
-	row.add_child(_make_icon("coin", 24))
-	row.add_child(_make_label("600", 24, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	row.add_child(_make_icon(icon_key, 22))
+	row.add_child(_make_label(value, 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return box
 
 

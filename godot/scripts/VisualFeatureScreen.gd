@@ -11,6 +11,9 @@ const ICON_PATHS := {
 	"event": "res://assets/ui/ui_event.png",
 	"wheel": "res://assets/ui/ui_wheel.png",
 	"daily_reward": "res://assets/ui/ui_daily_reward.png",
+	"boss": "res://assets/ui/ui_boss.png",
+	"league": "res://assets/ui/ui_league_neon.png",
+	"achievements": "res://assets/ui/ui_achievements.png",
 	"coin": "res://assets/ui/ui_coin.png",
 	"gem": "res://assets/ui/ui_gem.png",
 	"key": "res://assets/ui/ui_key.png",
@@ -29,7 +32,6 @@ const SCREEN_DATA := {
 	"shop": {
 		"title": "LOJA",
 		"icon": "shop",
-		"subtitle": "Ofertas visuais preparadas para compras, anúncios e recompensas futuras.",
 		"accent": "#00aaff",
 		"cards": [
 			{ "title": "Pacote inicial", "desc": "Moedas, diamantes e chaves para acelerar o começo.", "icon": "product_starter", "button": "COMPRAR", "tone": "#00f0ff" },
@@ -42,37 +44,30 @@ const SCREEN_DATA := {
 	"inventory": {
 		"title": "INVENTÁRIO",
 		"icon": "inventory",
-		"subtitle": "Área visual para baús, chaves, itens e recompensas guardadas.",
 		"accent": "#ffd700",
-		"empty_title": "Seu inventário está vazio",
-		"empty_desc": "Baús, chaves, skins, efeitos e recompensas aparecerão aqui quando forem obtidos.",
+		"empty_title": "Inventário vazio",
+		"empty_desc": "",
 		"cards": [],
 	},
 	"missions": {
 		"title": "MISSÕES",
 		"icon": "missions",
-		"subtitle": "Lista visual de missões diárias e semanais com progresso mockado.",
 		"accent": "#ff8800",
-		"cards": [
-			{ "title": "Missão diária", "desc": "Quebre 15 anéis. Progresso 6/15.", "icon": "missions", "button": "RESGATAR", "tone": "#00f0ff", "progress": 0.4 },
-			{ "title": "Coletor neon", "desc": "Colete 250 moedas durante partidas. Progresso 90/250.", "icon": "coin", "button": "RESGATAR", "tone": "#ffd700", "progress": 0.36 },
-			{ "title": "Diamante raro", "desc": "Encontre 1 diamante acertando o centro.", "icon": "gem", "button": "RESGATAR", "tone": "#00ff88", "progress": 0.0 },
-			{ "title": "Missão semanal", "desc": "Complete 5 fases nesta semana. Progresso 2/5.", "icon": "missions", "button": "RESGATAR", "tone": "#ff00aa", "progress": 0.4 },
-		],
+		"empty_title": "Nenhuma missão disponível",
+		"empty_desc": "",
+		"cards": [],
 	},
 	"event": {
 		"title": "EVENTO",
 		"icon": "event",
-		"subtitle": "Tela visual preparada para eventos temporários e recompensas especiais.",
 		"accent": "#00ff88",
-		"empty_title": "Nenhum evento ativo no momento",
-		"empty_desc": "Eventos temporários aparecerão aqui com banner, tempo restante e recompensas quando forem ativados.",
+		"empty_title": "Nenhum evento ativo",
+		"empty_desc": "",
 		"cards": [],
 	},
 	"wheel": {
 		"title": "ROLETA",
 		"icon": "wheel",
-		"subtitle": "Roleta visual parada, preparada para giros e prêmios depois.",
 		"accent": "#00ff88",
 		"cards": [
 			{ "title": "Giro grátis", "desc": "1 giro visual disponível hoje.", "icon": "wheel", "button": "GIRAR", "tone": "#00f0ff" },
@@ -82,7 +77,6 @@ const SCREEN_DATA := {
 	"daily_reward": {
 		"title": "RECOMPENSA DIÁRIA",
 		"icon": "daily_reward",
-		"subtitle": "Calendário visual de 7 dias. Lógica real de tempo fica para depois.",
 		"accent": "#ffd700",
 		"cards": [
 			{ "title": "Dia 1", "desc": "100 moedas", "icon": "coin", "button": "COLETAR", "tone": "#ffd700" },
@@ -93,6 +87,30 @@ const SCREEN_DATA := {
 			{ "title": "Dia 6", "desc": "75 diamantes", "icon": "gem", "button": "COLETAR", "tone": "#00ff88" },
 			{ "title": "Dia 7", "desc": "Baú épico", "icon": "chest_epic", "button": "COLETAR", "tone": "#b000ff" },
 		],
+	},
+	"boss": {
+		"title": "BOSS",
+		"icon": "boss",
+		"accent": "#ff0055",
+		"empty_title": "Nenhum boss disponível",
+		"empty_desc": "",
+		"cards": [],
+	},
+	"league": {
+		"title": "LIGA NEON",
+		"icon": "league",
+		"accent": "#00ff88",
+		"empty_title": "Liga indisponível",
+		"empty_desc": "",
+		"cards": [],
+	},
+	"achievements": {
+		"title": "CONQUISTAS",
+		"icon": "achievements",
+		"accent": "#ffd700",
+		"empty_title": "Nenhuma conquista desbloqueada",
+		"empty_desc": "",
+		"cards": [],
 	},
 }
 
@@ -244,16 +262,10 @@ func _make_header(data: Dictionary) -> PanelContainer:
 	row.add_theme_constant_override("separation", 12)
 	body.add_child(row)
 	row.add_child(_make_icon(String(data["icon"]), 42))
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 3)
-	row.add_child(column)
 	var title := _make_label(String(data["title"]), 27, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	title.add_theme_color_override("font_outline_color", Color("#00f0ff66"))
 	title.add_theme_constant_override("outline_size", 4)
-	column.add_child(title)
-	var subtitle := _make_label(String(data["subtitle"]), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
-	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(subtitle)
+	row.add_child(title)
 	return card
 
 
@@ -291,9 +303,12 @@ func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
 	return item
 
 
-func _make_shop_tabs() -> HBoxContainer:
-	var tabs := HBoxContainer.new()
+func _make_shop_tabs() -> GridContainer:
+	var tabs := GridContainer.new()
+	tabs.columns = 3
 	tabs.add_theme_constant_override("separation", 6)
+	tabs.add_theme_constant_override("h_separation", 6)
+	tabs.add_theme_constant_override("v_separation", 6)
 	_shop_tab_buttons.clear()
 	for tab in SHOP_TABS:
 		tabs.add_child(_make_shop_tab_button(tab))
@@ -353,7 +368,8 @@ func _make_empty_state(title: String, desc: String, icon_key: String) -> PanelCo
 	column.add_child(_make_label(title, 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	var label := _make_label(desc, 13, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(label)
+	if not desc.is_empty():
+		column.add_child(label)
 	return card
 
 

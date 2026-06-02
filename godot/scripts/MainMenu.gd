@@ -11,6 +11,9 @@ const MISSIONS_SCENE := "res://scenes/Missions.tscn"
 const EVENT_SCENE := "res://scenes/Event.tscn"
 const WHEEL_SCENE := "res://scenes/Wheel.tscn"
 const DAILY_REWARD_SCENE := "res://scenes/DailyReward.tscn"
+const BOSS_SCENE := "res://scenes/Boss.tscn"
+const LEAGUE_SCENE := "res://scenes/League.tscn"
+const ACHIEVEMENTS_SCENE := "res://scenes/Achievements.tscn"
 
 const ICON_PATHS := {
 	"coin": "res://assets/ui/ui_coin.png",
@@ -39,9 +42,9 @@ const SECONDARY_ITEMS := [
 	{ "label": "Event", "icon": "event", "color": "#00ff8888", "scene": EVENT_SCENE },
 	{ "label": "Wheel", "icon": "wheel", "color": "#00ff8888", "scene": WHEEL_SCENE },
 	{ "label": "Daily Reward", "icon": "daily_reward", "color": "#ffd70088", "scene": DAILY_REWARD_SCENE },
-	{ "label": "Boss", "icon": "boss", "color": "#ff005588" },
-	{ "label": "Neon League", "icon": "league", "color": "#00ff8888" },
-	{ "label": "Achievements", "icon": "achievements", "color": "#ffd70088" },
+	{ "label": "Boss", "icon": "boss", "color": "#ff005588", "scene": BOSS_SCENE },
+	{ "label": "Neon League", "icon": "league", "color": "#00ff8888", "scene": LEAGUE_SCENE },
+	{ "label": "Achievements", "icon": "achievements", "color": "#ffd70088", "scene": ACHIEVEMENTS_SCENE },
 	{ "label": "Settings", "icon": "settings", "color": "#b8f3ff88", "scene": SETTINGS_SCENE },
 ]
 

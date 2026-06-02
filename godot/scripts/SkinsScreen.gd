@@ -179,14 +179,17 @@ func _make_progress_grid() -> GridContainer:
 	return grid
 
 
-func _make_filters() -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+func _make_filters() -> GridContainer:
+	var row := GridContainer.new()
+	row.columns = 3
+	row.add_theme_constant_override("h_separation", 8)
+	row.add_theme_constant_override("v_separation", 8)
 	_filter_buttons.clear()
 	for filter_data in FILTERS:
 		var button := Button.new()
 		button.text = String(filter_data["label"])
-		button.custom_minimum_size = Vector2(84, 34)
+		button.custom_minimum_size = Vector2(96, 34)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.focus_mode = Control.FOCUS_NONE
 		button.add_theme_font_override("font", _bold_font)
 		button.add_theme_font_size_override("font_size", 12)
@@ -222,7 +225,8 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	var hidden := not owned and String(skin["rarity"]) in ["mythic", "ultimate"]
 	var rarity_color := _rarity_color(String(skin["rarity"]))
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(156, 268)
+	card.custom_minimum_size = Vector2(160, 246)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 14, "#00ff88" if selected else rarity_color + "88", 2 if selected else 1))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)
@@ -246,7 +250,7 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	column.add_child(_make_label("???" if hidden else String(skin["name"]), 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var desc := _make_label("???" if hidden else String(skin["desc"]), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.custom_minimum_size.y = 36
+	desc.custom_minimum_size.y = 30
 	column.add_child(desc)
 
 	var effects := HBoxContainer.new()
