@@ -14,6 +14,17 @@ const COMBO_WINDOW_MSEC := 2600
 const PHYSICS_STEPS_PER_SECOND := 60.0
 const TWO_PI := PI * 2.0
 const RING_COLORS := ["#00f0ff", "#b000ff", "#ff0055", "#00ff88", "#ffd700", "#ff8800"]
+const ICON_PATHS := {
+	"coin": "res://assets/ui/ui_coin.png",
+	"gem": "res://assets/ui/ui_gem.png",
+	"key": "res://assets/ui/ui_key.png",
+	"xp": "res://assets/ui/ui_xp.png",
+	"damage": "res://assets/ui/ui_damage.png",
+	"speed": "res://assets/ui/ui_speed.png",
+	"crit": "res://assets/ui/ui_crit.png",
+	"perfect": "res://assets/ui/ui_perfect.png",
+	"upgrade": "res://assets/ui/ui_upgrades.png",
+}
 const SOUND_PATHS := {
 	"hit": "res://assets/sounds/hit_light.mp3",
 	"hit_heavy": "res://assets/sounds/hit_heavy.mp3",
@@ -72,13 +83,15 @@ var _regular_font: Font
 var _bold_font: Font
 var _skin_texture: Texture2D
 var _hud_phase: Label
-var _hud_resources: Label
-var _hud_rings: Label
-var _hud_stats: Label
+var _hud_resources: HBoxContainer
+var _resource_labels: Dictionary = {}
+var _hud_meta: Label
 var _hud_xp: Label
 var _hud_xp_bar: ProgressBar
 var _hud_ring_bar: ProgressBar
-var _hud_upgrade: Label
+var _hud_upgrade: HBoxContainer
+var _hud_upgrade_icon: TextureRect
+var _hud_upgrade_label: Label
 var _run_upgrade_bar: HBoxContainer
 var _run_atk_button: Button
 var _run_gold_button: Button
@@ -87,7 +100,9 @@ var _level_up_overlay: Control
 var _level_up_cards: VBoxContainer
 var _victory_overlay: Control
 var _victory_title: Label
-var _victory_rewards: Label
+var _victory_rewards: VBoxContainer
+var _victory_unlock_label: Label
+var _victory_next_button: Button
 var _defeat_overlay: Control
 var _music_player: AudioStreamPlayer
 var _sfx_players: Dictionary = {}
@@ -96,6 +111,7 @@ var _sfx_players: Dictionary = {}
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
+	phase_id = clampi(int(GameState.data.get("selected_phase", GameState.data.get("current_phase", 1))), 1, 50)
 	phase_config = LevelData.get_phase_config(phase_id)
 	gameplay_config = LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
 	_load_skin_texture()
@@ -128,7 +144,8 @@ func _draw() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton or event is InputEventScreenTouch:
-		_ensure_music_state()
+		if has_node("/root/AudioManager"):
+			AudioManager.ensure_music()
 
 
 func _start_level() -> void:
@@ -367,8 +384,13 @@ func _finish_victory() -> void:
 	GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier)
 	_spawn_particles(arena_center, Color("#00ff88"), 42, 180.0)
 	_play_sfx("victory")
-	_victory_title.text = "FASE 1 CONCLUIDA"
-	_victory_rewards.text = "FASE: 1\nRESULTADO: VITORIA\nMOEDAS DA RODADA: %s\nMOEDAS GERAIS: +%s\nDIAMANTES: %s\nXP DE PERFIL: +%s\nXP GANHO: %s\nQUEBRADOS: %s\nPERFECTS: %s\nMAIOR COMBO: x%s\nCHAVES/BAUS: 0/0\nLEVEL: %s\nSCORE: %s\n\nFASE 2 LIBERADA" % [run_coins, global_coins_reward, run_diamonds * reward_multiplier, profile_xp_reward, total_run_xp, rings_destroyed, perfect_escapes, best_combo, run_level, floori(run_score)]
+	_victory_title.text = "FASE %s CONCLUIDA" % phase_id
+	_rebuild_victory_rewards(global_coins_reward, profile_xp_reward)
+	if _victory_unlock_label:
+		_victory_unlock_label.text = "PROXIMA FASE LIBERADA" if phase_id < 50 else "TODAS AS FASES CONCLUIDAS"
+	if _victory_next_button:
+		_victory_next_button.disabled = phase_id >= 50
+		_victory_next_button.text = "PROXIMA FASE" if phase_id < 50 else "CONCLUIDO"
 	_victory_overlay.visible = true
 	queue_redraw()
 
@@ -455,22 +477,30 @@ func _build_hud() -> void:
 	var pause := _make_button("PAUSAR", 96, 40)
 	pause.pressed.connect(_open_pause)
 	top.add_child(pause)
-	_hud_phase = _make_label("FASE 1", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	_hud_phase = _make_label("FASE %s" % phase_id, 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
 	top.add_child(_hud_phase)
-	_hud_resources = _make_label("", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+
+	_hud_resources = HBoxContainer.new()
+	_hud_resources.add_theme_constant_override("separation", 6)
 	hud.add_child(_hud_resources)
-	_hud_rings = _make_label("", 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
-	hud.add_child(_hud_rings)
-	_hud_stats = _make_label("", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
-	hud.add_child(_hud_stats)
+	_hud_resources.add_child(_make_resource_badge("coin", "0", "coins"))
+	_hud_resources.add_child(_make_resource_badge("gem", "0", "gems"))
+	_hud_resources.add_child(_make_resource_badge("coin", "0", "account"))
+	_hud_resources.add_child(_make_resource_badge("key", "0", "keys"))
+
+	_hud_meta = _make_label("", 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	hud.add_child(_hud_meta)
 	_hud_xp = _make_label("", 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	hud.add_child(_hud_xp)
 	_hud_xp_bar = _make_progress_bar("#00f0ff")
 	hud.add_child(_hud_xp_bar)
-	_hud_ring_bar = _make_progress_bar("#ffd700")
-	hud.add_child(_hud_ring_bar)
-	_hud_upgrade = _make_label("", 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	_hud_upgrade = HBoxContainer.new()
+	_hud_upgrade.add_theme_constant_override("separation", 6)
 	_hud_upgrade.visible = false
+	_hud_upgrade_icon = _make_icon_texture("upgrade", 18)
+	_hud_upgrade.add_child(_hud_upgrade_icon)
+	_hud_upgrade_label = _make_label("", 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	_hud_upgrade.add_child(_hud_upgrade_label)
 	hud.add_child(_hud_upgrade)
 
 	_run_upgrade_bar = HBoxContainer.new()
@@ -521,27 +551,16 @@ func _build_result_overlays() -> void:
 	_victory_overlay = _make_modal()
 	var victory_card := _make_modal_content(_victory_overlay, "VITORIA")
 	_victory_title = _make_label("FASE 1 CONCLUIDA", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
-	_victory_rewards = _make_label("", 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	victory_card.add_child(_victory_title)
-	var reward_panel := PanelContainer.new()
-	reward_panel.custom_minimum_size = Vector2(280, 220)
-	reward_panel.add_theme_stylebox_override("panel", _make_style("#ffffff11", 12, "#ffffff22", 1))
-	var reward_margin := MarginContainer.new()
-	reward_margin.add_theme_constant_override("margin_left", 12)
-	reward_margin.add_theme_constant_override("margin_top", 10)
-	reward_margin.add_theme_constant_override("margin_right", 12)
-	reward_margin.add_theme_constant_override("margin_bottom", 10)
-	reward_panel.add_child(reward_margin)
-	var reward_scroll := ScrollContainer.new()
-	reward_scroll.custom_minimum_size = Vector2(260, 190)
-	reward_margin.add_child(reward_scroll)
-	reward_scroll.add_child(_victory_rewards)
-	victory_card.add_child(reward_panel)
+	_victory_rewards = VBoxContainer.new()
+	_victory_rewards.add_theme_constant_override("separation", 8)
+	victory_card.add_child(_victory_rewards)
+	_victory_unlock_label = _make_label("PROXIMA FASE LIBERADA", 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	victory_card.add_child(_victory_unlock_label)
 	victory_card.add_child(_make_modal_button("VOLTAR AS FASES", _go_to_phase_select))
 	victory_card.add_child(_make_modal_button("JOGAR NOVAMENTE", _restart_level))
-	var next := _make_modal_button("PROXIMA FASE EM BREVE", _go_to_phase_select)
-	next.disabled = true
-	victory_card.add_child(next)
+	_victory_next_button = _make_modal_button("PROXIMA FASE", _go_to_next_phase)
+	victory_card.add_child(_victory_next_button)
 	add_child(_victory_overlay)
 
 	_defeat_overlay = _make_modal()
@@ -589,6 +608,47 @@ func _make_modal_button(text: String, target: Callable) -> Button:
 	return button
 
 
+func _make_resource_badge(icon_key: String, value: String, label_key: String) -> PanelContainer:
+	var badge := PanelContainer.new()
+	badge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	badge.custom_minimum_size = Vector2(0, 38)
+	badge.add_theme_stylebox_override("panel", _make_style("#ffffff11", 10, "#ffffff22", 1, "#00f0ff33", 5))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 7)
+	margin.add_theme_constant_override("margin_right", 7)
+	margin.add_theme_constant_override("margin_top", 5)
+	margin.add_theme_constant_override("margin_bottom", 5)
+	badge.add_child(margin)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 5)
+	margin.add_child(row)
+	row.add_child(_make_icon_texture(icon_key, 20))
+	var label := _make_label(value, 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	_resource_labels[label_key] = label
+	return badge
+
+
+func _set_resource_value(key: String, value: int) -> void:
+	if _resource_labels.has(key):
+		var label: Label = _resource_labels[key]
+		label.text = str(value)
+
+
+func _make_icon_texture(icon_key: String, icon_size: int) -> TextureRect:
+	var icon := TextureRect.new()
+	var path := String(ICON_PATHS.get(icon_key, ICON_PATHS["upgrade"]))
+	if ResourceLoader.exists(path):
+		icon.texture = load(path)
+	icon.custom_minimum_size = Vector2(icon_size, icon_size)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return icon
+
+
 func _make_button(text: String, width: int, height: int) -> Button:
 	var button := Button.new()
 	button.text = text
@@ -615,18 +675,22 @@ func _make_progress_bar(fill_color: String) -> ProgressBar:
 func _update_hud() -> void:
 	var active: int = _active_ring_count()
 	_hud_phase.text = "FASE %s" % phase_id
-	_hud_resources.text = "MOEDAS %s   DIAMANTES %s   CONTA %s   CHAVES %s" % [run_coins, run_diamonds, int(GameState.data.get("coins", 0)), int(GameState.data.get("keys", 0))]
-	_hud_rings.text = "ANEIS RESTANTES: %s/%s   DIFICULDADE: %s" % [active, rings.size(), String(phase_config["difficulty"]).to_upper()]
-	_hud_stats.text = "ATK %s   DPS %s%s   SKIN %s" % [_base_damage(), run_dps, "   COMBO x%s" % combo if combo >= 2 else "", String(GameState.data.get("equipped_skin", "neon_blue")).replace("_", " ").to_upper()]
+	_set_resource_value("coins", run_coins)
+	_set_resource_value("gems", run_diamonds)
+	_set_resource_value("account", int(GameState.data.get("coins", 0)))
+	_set_resource_value("keys", int(GameState.data.get("keys", 0)))
+	_hud_meta.text = "DIFICULDADE: %s%s" % [String(phase_config["difficulty"]).to_upper(), "   COMBO x%s" % combo if combo >= 2 else ""]
 	var xp_needed := _run_xp_needed_for_level(run_level)
 	_hud_xp.text = "LV.%s   XP %s/%s   +%s XP" % [run_level, run_xp, xp_needed, run_xp]
 	_hud_xp_bar.max_value = xp_needed
 	_hud_xp_bar.value = run_xp
-	_hud_ring_bar.max_value = max(1, rings.size())
-	_hud_ring_bar.value = active
 	_hud_upgrade.visible = not temporary_upgrade.is_empty()
 	if _hud_upgrade.visible:
-		_hud_upgrade.text = "UPGRADE TEMP: %s Lv.%s • %s" % [temporary_upgrade["name"], temporary_upgrade["level"], temporary_upgrade["effect"]]
+		var upgrade_icon_key := String(temporary_upgrade.get("icon_key", "upgrade"))
+		var icon_path := String(ICON_PATHS.get(upgrade_icon_key, ICON_PATHS["upgrade"]))
+		if ResourceLoader.exists(icon_path):
+			_hud_upgrade_icon.texture = load(icon_path)
+		_hud_upgrade_label.text = String(temporary_upgrade.get("short", temporary_upgrade.get("effect", "")))
 	_update_run_upgrade_buttons()
 
 
@@ -874,10 +938,20 @@ func _rebuild_level_up_cards() -> void:
 func _make_level_up_button(upgrade: Dictionary) -> Button:
 	var id := String(upgrade["id"])
 	var current_level := int(current_upgrades.get(id, 0))
-	var button := _make_button("%s\n%s\nLv.%s > Lv.%s\nSELECIONAR" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 270, 92)
+	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s\n      SELECIONAR" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 280, 96)
 	button.add_theme_color_override("font_color", Color("#ffffff"))
 	button.add_theme_font_size_override("font_size", 12)
 	_apply_button_style(button, _make_style("#16003bdd", 12, String(upgrade["color"]), 2, String(upgrade["color"]), 8))
+	var icon := _make_icon_texture(_upgrade_icon_key(id), 36)
+	icon.anchor_left = 0.0
+	icon.anchor_top = 0.5
+	icon.anchor_right = 0.0
+	icon.anchor_bottom = 0.5
+	icon.offset_left = 14.0
+	icon.offset_top = -18.0
+	icon.offset_right = 50.0
+	icon.offset_bottom = 18.0
+	button.add_child(icon)
 	button.pressed.connect(_select_level_up_upgrade.bind(id))
 	return button
 
@@ -896,6 +970,7 @@ func _describe_current_upgrades() -> Dictionary:
 	if current_upgrades.is_empty():
 		return {}
 	var labels: Array[String] = []
+	var last_key := ""
 	var names := {
 		"damage": "Dano+",
 		"speed": "Velocidade+",
@@ -905,8 +980,30 @@ func _describe_current_upgrades() -> Dictionary:
 		"perfectChance": "Perfect Chance",
 	}
 	for key in current_upgrades.keys():
+		last_key = String(key)
 		labels.append("%s Lv.%s" % [String(names.get(key, key)), int(current_upgrades[key])])
-	return { "name": "Upgrades da run", "level": current_upgrades.size(), "effect": ", ".join(labels) }
+	var short := labels[labels.size() - 1] if labels.size() > 0 else ""
+	return { "name": "Upgrades da run", "level": current_upgrades.size(), "effect": ", ".join(labels), "short": short, "icon_key": _upgrade_icon_key(last_key) }
+
+
+func _upgrade_icon_key(id: String) -> String:
+	match id:
+		"damage":
+			return "damage"
+		"speed":
+			return "speed"
+		"critical":
+			return "crit"
+		"xpBoost":
+			return "xp"
+		"perfectChance":
+			return "perfect"
+		"coinBoost":
+			return "coin"
+		_:
+			return "upgrade"
+
+
 
 
 func _get_run_upgrade_cost(type: String) -> int:
@@ -965,7 +1062,19 @@ func _restart_level() -> void:
 
 func _go_to_phase_select() -> void:
 	_play_sfx("click")
+	if has_node("/root/AudioManager"):
+		AudioManager.play_music("res://assets/music/menu.mp3", -16.0)
 	get_tree().change_scene_to_file(PHASE_SELECT_SCENE)
+
+
+func _go_to_next_phase() -> void:
+	_play_sfx("click")
+	var next_phase: int = min(50, phase_id + 1)
+	if GameState.select_phase(next_phase):
+		phase_id = next_phase
+		phase_config = LevelData.get_phase_config(phase_id)
+		gameplay_config = LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
+		_start_level()
 
 
 func _hide_all_overlays() -> void:
@@ -973,6 +1082,36 @@ func _hide_all_overlays() -> void:
 	_level_up_overlay.visible = false
 	_victory_overlay.visible = false
 	_defeat_overlay.visible = false
+
+
+func _rebuild_victory_rewards(global_coins_reward: int, profile_xp_reward: int) -> void:
+	for child in _victory_rewards.get_children():
+		child.queue_free()
+	_victory_rewards.add_child(_make_victory_line("coin", "Moedas", "+%s" % global_coins_reward))
+	_victory_rewards.add_child(_make_victory_line("xp", "XP", "+%s" % profile_xp_reward))
+	if run_diamonds * reward_multiplier > 0:
+		_victory_rewards.add_child(_make_victory_line("gem", "Diamantes", "+%s" % (run_diamonds * reward_multiplier)))
+	_victory_rewards.add_child(_make_victory_line("perfect", "Perfects", str(perfect_escapes)))
+	_victory_rewards.add_child(_make_victory_line("upgrade", "Level da rodada", str(run_level)))
+
+
+func _make_victory_line(icon_key: String, label_text: String, value_text: String) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(280, 42)
+	panel.add_theme_stylebox_override("panel", _make_style("#06162a", 11, "#00f0ff55", 1, "#00f0ff33", 5))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	margin.add_child(row)
+	row.add_child(_make_icon_texture(icon_key, 22))
+	row.add_child(_make_label(label_text, 14, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	row.add_child(_make_label(value_text, 16, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT))
+	return panel
 
 
 func _bounce_arena_edge() -> void:
@@ -1080,40 +1219,20 @@ func _spawn_floating(text: String, position: Vector2, color: Color) -> void:
 
 
 func _setup_audio() -> void:
-	_music_player = AudioStreamPlayer.new()
-	if ResourceLoader.exists(MUSIC_PATH):
-		_music_player.stream = load(MUSIC_PATH)
-		_music_player.volume_db = -13.0
-		add_child(_music_player)
-		if not _audio_muted():
-			_music_player.play()
-	for key in SOUND_PATHS.keys():
-		var player := AudioStreamPlayer.new()
-		if ResourceLoader.exists(SOUND_PATHS[key]):
-			player.stream = load(SOUND_PATHS[key])
-			player.volume_db = -5.0
-			add_child(player)
-			_sfx_players[key] = player
+	if has_node("/root/AudioManager"):
+		AudioManager.play_music(MUSIC_PATH, -13.0)
 
 
 func _play_sfx(key: String) -> void:
-	_ensure_music_state()
-	if _audio_muted() or not _sfx_players.has(key):
+	if not SOUND_PATHS.has(key):
 		return
-	var player: AudioStreamPlayer = _sfx_players[key]
-	player.stop()
-	player.play()
+	if has_node("/root/AudioManager"):
+		AudioManager.play_sfx(String(SOUND_PATHS[key]), -5.0)
 
 
 func _ensure_music_state() -> void:
-	if not _music_player:
-		return
-	if _audio_muted():
-		if _music_player.playing:
-			_music_player.stop()
-		return
-	if not _music_player.playing:
-		_music_player.play()
+	if has_node("/root/AudioManager"):
+		AudioManager.ensure_music()
 
 
 func _audio_muted() -> bool:

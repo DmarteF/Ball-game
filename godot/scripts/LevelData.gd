@@ -7,7 +7,7 @@ static func get_phase_config(phase_id: int) -> Dictionary:
 	var id := clampi(phase_id, 1, 50)
 	var tier := _tier_for_phase(id)
 	var tier_start: int = 1 if id <= 5 else 6 if id <= 10 else 11 if id <= 20 else 21 if id <= 30 else 31 if id <= 40 else 41
-	var tier_end: int = 5 if id <= 5 else 10 if id <= 10 else 20 if id <= 20 else 30 if id <= 40 else 50
+	var tier_end: int = 5 if id <= 5 else 10 if id <= 10 else 20 if id <= 20 else 30 if id <= 30 else 40 if id <= 40 else 50
 	var phase_t: float = float(id - tier_start) / max(1.0, float(tier_end - tier_start))
 	var ring_min := roundi(float(tier["min"]) + (float(tier["max"]) - float(tier["min"])) * phase_t * 0.72)
 	var ring_max := roundi(float(tier["min"]) + (float(tier["max"]) - float(tier["min"])) * min(1.0, phase_t + 0.22))

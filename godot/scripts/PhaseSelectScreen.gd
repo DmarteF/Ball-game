@@ -1,5 +1,7 @@
 extends Control
 
+const LevelData := preload("res://scripts/LevelData.gd")
+
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const PLACEHOLDER_SCENE := "res://scenes/Placeholder.tscn"
 const GAME_SCENE := "res://scenes/GameScene.tscn"
@@ -19,6 +21,8 @@ var _bold_font: Font
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
+	if has_node("/root/AudioManager"):
+		AudioManager.play_music("res://assets/music/menu.mp3", -16.0)
 	_build_background()
 	_build_screen()
 
@@ -61,7 +65,7 @@ func _build_screen() -> void:
 
 	list.add_child(_make_infinite_card())
 	for phase_id in range(1, 51):
-		list.add_child(_make_phase_card(_phase_data(phase_id)))
+		list.add_child(_make_phase_card(LevelData.get_phase_config(phase_id)))
 	list.add_child(_spacer(18))
 
 
@@ -86,10 +90,7 @@ func _make_phase_card(phase: Dictionary) -> Button:
 	button.disabled = not unlocked
 	button.modulate.a = 1.0 if unlocked else 0.92
 	if unlocked:
-		if int(phase["id"]) == 1:
-			button.pressed.connect(_open_phase_one)
-		else:
-			button.pressed.connect(_open_placeholder)
+		button.pressed.connect(_open_phase.bind(int(phase["id"])))
 	var color := String(phase["color"])
 	var body := _make_card_body(button, color + "88" if unlocked else "#333333", color + "44" if unlocked else "#222222")
 	body.add_child(_make_circle_icon("", str(phase["id"]), "#ffffff22"))
@@ -175,39 +176,6 @@ func _make_lock_overlay(text: String) -> PanelContainer:
 	column.add_child(_make_icon("locked", 22))
 	column.add_child(_make_label(text, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return overlay
-
-
-func _phase_data(id: int) -> Dictionary:
-	var tier := _tier_for_phase(id)
-	var tier_start: int = 1 if id <= 5 else 6 if id <= 10 else 11 if id <= 20 else 21 if id <= 30 else 31 if id <= 40 else 41
-	var tier_end: int = 5 if id <= 5 else 10 if id <= 10 else 20 if id <= 20 else 30 if id <= 30 else 40 if id <= 40 else 50
-	var phase_t: float = float(id - tier_start) / max(1.0, float(tier_end - tier_start))
-	var ring_min := roundi(float(tier["min"]) + (float(tier["max"]) - float(tier["min"])) * phase_t * 0.72)
-	var ring_max := roundi(float(tier["min"]) + (float(tier["max"]) - float(tier["min"])) * min(1.0, phase_t + 0.22))
-	return {
-		"id": id,
-		"name": "Fase %s" % id,
-		"description": "Primeira arena neon com aberturas grandes." if id == 1 else String(tier["desc"]),
-		"difficulty": String(tier["name"]),
-		"ring_min": ring_min,
-		"ring_max": max(ring_min + 2, ring_max),
-		"base_hp": roundi(float(tier["hp"]) + id * 6 + pow(id, 1.32) * 5.2),
-		"color": PHASE_COLORS[(id - 1) % PHASE_COLORS.size()],
-	}
-
-
-func _tier_for_phase(id: int) -> Dictionary:
-	if id <= 5:
-		return { "min": 8, "max": 16, "hp": 12, "name": "Normal", "desc": "Arena inicial com aberturas grandes e pressão baixa." }
-	if id <= 10:
-		return { "min": 16, "max": 24, "hp": 34, "name": "Difícil", "desc": "Rotação alternada e anéis um pouco mais resistentes." }
-	if id <= 20:
-		return { "min": 24, "max": 36, "hp": 68, "name": "Avançado", "desc": "Mais padrões, aberturas menores e anéis resistentes." }
-	if id <= 30:
-		return { "min": 36, "max": 50, "hp": 128, "name": "Extremo", "desc": "Arena exigente para skins e upgrades mais fortes." }
-	if id <= 40:
-		return { "min": 50, "max": 65, "hp": 220, "name": "Insano", "desc": "Padrões complexos, fechamento perigoso e melhores baús." }
-	return { "min": 65, "max": 80, "hp": 340, "name": "Ultimate", "desc": "Arena premium com rotação intensa, justa e recompensas altas." }
 
 
 func _make_icon(key: String, icon_size: int) -> TextureRect:
@@ -306,5 +274,7 @@ func _open_placeholder() -> void:
 	get_tree().change_scene_to_file(PLACEHOLDER_SCENE)
 
 
-func _open_phase_one() -> void:
+func _open_phase(level: int) -> void:
+	if not GameState.select_phase(level):
+		return
 	get_tree().change_scene_to_file(GAME_SCENE)

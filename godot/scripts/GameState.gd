@@ -29,6 +29,7 @@ func default_save() -> Dictionary:
 		"level": 1,
 		"profile_xp": 0,
 		"current_phase": 1,
+		"selected_phase": 1,
 		"max_unlocked_phase": 1,
 		"unlocked_phases": [1],
 		"unlocked_skins": ["neon_blue"],
@@ -149,6 +150,7 @@ func upgrade_permanent(id: String) -> void:
 
 
 func unlock_level(level: int) -> void:
+	level = clampi(level, 1, 50)
 	var phases: Array = data.get("unlocked_phases", [])
 	for phase in range(1, level + 1):
 		if not phases.has(phase):
@@ -157,6 +159,16 @@ func unlock_level(level: int) -> void:
 	data["max_unlocked_phase"] = max(int(data.get("max_unlocked_phase", 1)), level)
 	data["stats"]["highest_phase"] = max(int(data["stats"].get("highest_phase", 1)), level)
 	save_game()
+
+
+func select_phase(level: int) -> bool:
+	var unlocked := int(data.get("max_unlocked_phase", 1))
+	if level < 1 or level > 50 or level > unlocked:
+		return false
+	data["selected_phase"] = level
+	data["current_phase"] = max(int(data.get("current_phase", 1)), level)
+	save_game()
+	return true
 
 
 func add_profile_xp(amount: int) -> void:
@@ -176,14 +188,14 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
 		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
 		data["level"] = int(data.get("level", 1)) + 1
-	unlock_level(phase + 1)
+	unlock_level(min(50, phase + 1))
 	var stats: Dictionary = data.get("stats", {})
 	stats["runs_played"] = int(stats.get("runs_played", 0)) + 1
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_destroyed
 	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + perfect_escapes
 	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
-	stats["highest_phase"] = max(int(stats.get("highest_phase", 1)), phase + 1)
-	data["current_phase"] = max(int(data.get("current_phase", 1)), phase + 1)
+	stats["highest_phase"] = max(int(stats.get("highest_phase", 1)), min(50, phase + 1))
+	data["current_phase"] = max(int(data.get("current_phase", 1)), min(50, phase + 1))
 	data["stats"] = stats
 	save_game()
 

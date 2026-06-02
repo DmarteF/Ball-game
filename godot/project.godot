@@ -15,6 +15,7 @@ config/icon="res://assets/icons/neon_idle_escape_app_icon_1024.png"
 SaveManager="*res://scripts/SaveManager.gd"
 TimeManager="*res://scripts/TimeManager.gd"
 GameState="*res://scripts/GameState.gd"
+AudioManager="*res://scripts/AudioManager.gd"
 
 [display]
 

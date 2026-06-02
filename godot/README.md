@@ -175,22 +175,24 @@ Checklist da etapa:
 | Card da Fase 1 sem HP | Sim | HP removido dos cards de fase. |
 | Card da Fase 1 sem descricao longa | Sim | Cards mostram somente nome, dificuldade e aneis. |
 | Cards mostram fase/dificuldade/aneis | Sim | Aplicado para as fases visuais 1-50. |
-| Fase 1 jogavel | Sim | `PhaseSelect` abre `GameScene` apenas na Fase 1. |
+| Fases jogaveis | Sim | `PhaseSelect` abre qualquer fase desbloqueada e `GameScene` usa `selected_phase`. |
 | Bolinha com sprite real | Sim | Usa `equipped_skin` do `GameState`; fallback `neon_blue.png`. |
 | Aneis visuais | Sim | Aneis neon desenhados por `_draw`, com gaps e anel solido final seguindo a base de `rings.ts`. |
 | HP visual removido | Sim | HUD e aneis nao exibem HP; o HP segue interno para colisao/quebra. |
 | Visual tecnico removido | Sim | Circulo/base extra de arena e circulo central foram removidos. |
 | Colisao funcionando | Sim | Porta a checagem de gap/parte solida, reflexao e separacao da bolinha. |
-| HUD de partida | Em progresso | Agora mostra moedas/diamantes da run, moedas da conta, chaves, aneis, dificuldade, ATK, DPS, combo, nivel, XP e barras de XP/progresso. |
+| HUD de partida | Sim | HUD limpo com pausa, fase, dificuldade, recursos com icones, nivel, XP, barra de XP e upgrade temporario ativo. |
+| ResourceBadge | Sim | Badges com assets reais para moedas, diamantes, conta e chaves foram adicionados ao HUD. |
 | Upgrades de rodada | Sim | Barra inferior com ATK e GOLD, custos e compra com moedas da run como na `main`. |
-| Upgrade temporario no HUD | Sim | Level-up abre modal neon com 3 upgrades iniciais reais; HUD mostra upgrades ativos da run. |
+| Upgrade temporario no HUD | Sim | Level-up abre modal neon com 3 upgrades iniciais reais e icones; HUD mostra upgrade ativo com asset. |
 | Efeitos visuais | Sim | Brilho/trilha da bolinha, impacto, quebra de anel, textos de moeda/XP/level-up e efeito de vitoria. |
-| Audio de gameplay | Sim | Musica, clique, hit, hit critico, quebra, perfect, XP, level-up, diamante, derrota e vitoria foram conectados respeitando audio mudo. |
+| Audio de gameplay | Sim | `AudioManager.gd` centraliza musica, clique, hit, hit critico, quebra, perfect, XP, level-up, diamante, derrota e vitoria respeitando audio mudo. |
 | Vitoria funcionando | Sim | Ao limpar todos os aneis, mostra tela de vitoria/recompensa. |
-| Tela de vitoria polida | Sim | Modal neon com resumo rolavel: fase, resultado, moedas da run, moedas gerais, XP de perfil, XP ganho, diamantes, aneis, perfects, combo e Fase 2 liberada. |
+| Tela de vitoria polida | Sim | Modal neon limpo, sem scroll apertado, com recompensas em linhas com icones/assets e botoes grandes. |
 | Recompensas salvando | Sim | Moedas gerais e XP de perfil usam conversao baseada em `economy.ts`; diamantes, aneis e perfects entram no `GameState`. |
 | Combo/DPS/score | Sim | Combo de 2600ms, melhor combo, DPS recente e score foram portados para a Fase 1. |
 | Fase 2 liberada ao vencer | Sim | `record_phase_complete` chama `unlock_level(2)`. |
+| 50 fases jogaveis | Sim | Desbloqueio sequencial ate a Fase 50 usando os dados de `LevelData.gd`. |
 | Pausa funcionando | Sim | Menu com Continuar, Reiniciar e Sair para fases. |
 | Analise da main | Sim | Ver `godot/GAMEPLAY_MAIN_ANALYSIS.md`. |
 
@@ -199,7 +201,8 @@ Pendencias da gameplay:
 - Comparacao visual pixel a pixel com a `main` ainda pendente.
 - Efeitos de skins avancados, revive/anuncio, dobrar recompensa por anuncio e reroll de upgrades temporarios ainda nao foram portados.
 - Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
-- Modo infinito e Fases 2-50 ainda nao sao jogaveis nesta etapa.
+- Modo infinito ainda nao e jogavel nesta etapa.
+- Fases 2-50 usam a estrutura da main e desbloqueio sequencial, mas ainda precisam de verificacao visual fase a fase.
 
 ## 8. HTML/Web
 

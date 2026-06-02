@@ -93,21 +93,23 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 
 ## Implementado agora no Godot
 
-- Fase 1 mantida como unica fase jogavel nesta etapa.
+- Fases 1-50 usam `LevelData.gd` com dados derivados da branch `main`; a selecao abre qualquer fase desbloqueada.
 - Geracao/rotacao/gaps/colisao seguem `rings.ts` e `game.tsx`.
 - HUD sem HP visivel e sem debug.
 - Arena sem circulo central decorativo e sem base extra.
 - Bolinha com skin real, brilho e trail.
 - Recompensas de hit, break e perfect usam multiplicadores de moedas/XP.
-- Combo, maior combo, score e DPS foram adicionados.
+- Combo, maior combo, score e DPS existem internamente, mas DPS/ATK/skin/aneis restantes foram removidos do HUD conforme pedido.
 - Upgrades de rodada `ATK` e `Gold` foram adicionados no rodape.
 - Modal de level-up com 3 upgrades temporarios reais foi adicionado para a Fase 1.
-- HUD agora possui barra de XP e barra de progresso dos aneis, seguindo a estrutura visual da main.
+- HUD agora usa ResourceBadge com assets reais para moedas, diamantes, conta e chaves.
+- HUD mantem pausa, fase, dificuldade, XP/nivel, barra de XP e upgrade temporario ativo.
+- Cards e HUD de upgrades temporarios usam icones reais de `assets/ui`.
 - Feedbacks de moeda, XP, diamante e level-up foram reforcados com texto flutuante, particulas e SFX.
 - Upgrades permanentes basicos afetam dano, velocidade, moedas, XP, critico e slow rings.
 - Vitoria salva moedas globais e XP de perfil convertidos como na main.
-- Tela de vitoria mostra as mesmas linhas principais da main em area rolavel para manter botoes acessiveis.
-- Musica e SFX usam assets reaproveitados, respeitam audio mudo e tentam retomar musica apos toque/clique no Web sem duplicar faixa.
+- Tela de vitoria foi refeita como resumo limpo com icones/assets, sem scroll interno apertado.
+- `AudioManager.gd` centraliza musica/SFX, respeita audio mudo e evita duplicar musica.
 
 ## Pendencias conhecidas
 
@@ -117,7 +119,8 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Efeitos especiais completos de todas as skins ainda nao foram portados.
 - Revive por anuncio, dobrar recompensa por anuncio e coleta/sair separada ainda estao preparados apenas como estrutura.
 - Chaves e baus aparecem no resumo como `0/0`, igual ao estado atual observado da gameplay base, mas drops reais ainda nao foram conectados.
-- Barras visuais de XP/progresso foram adicionadas, mas ainda nao estao pixel-perfect em relacao ao React Native.
+- Barras visuais de XP foram adicionadas, mas ainda nao estao pixel-perfect em relacao ao React Native.
+- As 50 fases usam a mesma formula/dados da branch `main`, mas ainda precisam de comparacao visual fase a fase.
 
 ## Checklist obrigatoria
 
@@ -134,6 +137,27 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | XP documentado | Sim |
 | HUD original documentado | Sim |
 | Tela de vitoria original documentada | Sim |
+| ResourceBadge com assets criado | Sim |
+| Moedas com icone no HUD | Sim |
+| Diamantes com icone no HUD | Sim |
+| Conta com icone no HUD | Sim |
+| Chaves com icone no HUD | Sim |
+| ANEIS RESTANTES removido do HUD | Sim |
+| DPS removido do HUD | Sim |
+| Skin atual removida do HUD | Sim |
+| ATK removido do HUD | Sim |
+| Upgrades temporarios com icones/assets | Sim |
+| Level Up visual polido | Sim |
+| AudioManager criado/ajustado | Sim |
+| Musica de gameplay tocando | Sim |
+| SFX funcionando | Sim |
+| Audio mudo/ligado respeitado | Sim |
+| Tela de vitoria refeita e legivel | Sim |
+| Tela de vitoria com icones/assets | Sim |
+| Tela de vitoria sem texto ilegivel | Sim |
+| 50 fases criadas em LevelData | Sim |
+| Selecao de fases usa progresso real | Sim |
+| Desbloqueio sequencial funcionando | Sim |
 | Fase 1 ajustada conforme main | Sim |
 | HP removido do HUD | Sim |
 | Circulo central removido | Sim |
@@ -151,6 +175,6 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | Upgrades temporarios funcionam | Sim |
 | Upgrades permanentes aplicados | Sim |
 | Vitoria fiel a main | Em progresso |
-| Tela de vitoria refeita/fiel | Em progresso |
+| Tela de vitoria refeita/fiel | Sim |
 | Recompensas salvam | Sim |
 | Fase 2 libera | Sim |
