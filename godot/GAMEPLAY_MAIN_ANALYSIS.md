@@ -102,10 +102,12 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Combo, maior combo, score e DPS foram adicionados.
 - Upgrades de rodada `ATK` e `Gold` foram adicionados no rodape.
 - Modal de level-up com 3 upgrades temporarios reais foi adicionado para a Fase 1.
+- HUD agora possui barra de XP e barra de progresso dos aneis, seguindo a estrutura visual da main.
+- Feedbacks de moeda, XP, diamante e level-up foram reforcados com texto flutuante, particulas e SFX.
 - Upgrades permanentes basicos afetam dano, velocidade, moedas, XP, critico e slow rings.
 - Vitoria salva moedas globais e XP de perfil convertidos como na main.
-- Tela de vitoria mostra as mesmas linhas principais da main.
-- Musica e SFX usam assets reaproveitados e respeitam audio mudo.
+- Tela de vitoria mostra as mesmas linhas principais da main em area rolavel para manter botoes acessiveis.
+- Musica e SFX usam assets reaproveitados, respeitam audio mudo e tentam retomar musica apos toque/clique no Web sem duplicar faixa.
 
 ## Pendencias conhecidas
 
@@ -115,7 +117,7 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Efeitos especiais completos de todas as skins ainda nao foram portados.
 - Revive por anuncio, dobrar recompensa por anuncio e coleta/sair separada ainda estao preparados apenas como estrutura.
 - Chaves e baus aparecem no resumo como `0/0`, igual ao estado atual observado da gameplay base, mas drops reais ainda nao foram conectados.
-- Barras visuais exatas de XP/progresso da main ainda podem ser refinadas em Godot.
+- Barras visuais de XP/progresso foram adicionadas, mas ainda nao estao pixel-perfect em relacao ao React Native.
 
 ## Checklist obrigatoria
 
@@ -139,7 +141,16 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | Debug removido | Sim |
 | Bolinha com sprite real | Sim |
 | Efeitos visuais adicionados | Sim |
+| Musica integrada | Sim |
+| SFX integrados | Sim |
+| Audio mudo/ligado respeitado | Sim |
 | Audio integrado | Sim |
 | XP aparecendo corretamente | Sim |
+| Level up funcionando | Sim |
 | Upgrade temporario aparecendo corretamente | Sim |
+| Upgrades temporarios funcionam | Sim |
+| Upgrades permanentes aplicados | Sim |
 | Vitoria fiel a main | Em progresso |
+| Tela de vitoria refeita/fiel | Em progresso |
+| Recompensas salvam | Sim |
+| Fase 2 libera | Sim |

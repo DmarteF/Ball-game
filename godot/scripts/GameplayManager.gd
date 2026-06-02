@@ -20,6 +20,9 @@ const SOUND_PATHS := {
 	"break": "res://assets/sounds/ring_break.mp3",
 	"perfect": "res://assets/sounds/perfect.mp3",
 	"coin": "res://assets/sounds/coin_gain.mp3",
+	"xp": "res://assets/sounds/xp_gain.mp3",
+	"level_up": "res://assets/sounds/level_up.mp3",
+	"diamond": "res://assets/sounds/diamond_gain.mp3",
 	"victory": "res://assets/sounds/victory.mp3",
 	"defeat": "res://assets/sounds/defeat.mp3",
 	"click": "res://assets/sounds/button_click.mp3",
@@ -73,6 +76,8 @@ var _hud_resources: Label
 var _hud_rings: Label
 var _hud_stats: Label
 var _hud_xp: Label
+var _hud_xp_bar: ProgressBar
+var _hud_ring_bar: ProgressBar
 var _hud_upgrade: Label
 var _run_upgrade_bar: HBoxContainer
 var _run_atk_button: Button
@@ -119,6 +124,11 @@ func _draw() -> void:
 	_draw_effects()
 	_draw_ball()
 	_draw_floating_feedback()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton or event is InputEventScreenTouch:
+		_ensure_music_state()
 
 
 func _start_level() -> void:
@@ -251,7 +261,7 @@ func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
 			rings[i] = ring
 			perfect_escapes += 1
 			var perfect_coins: int = max(2, floori(5.0 * _gold_multiplier()))
-			var perfect_xp: int = floori((10.0 + randf() * 8.0) * _xp_multiplier())
+			var perfect_xp: int = floori((16.0 + randf() * 10.0) * _xp_multiplier())
 			_award_coins(perfect_coins)
 			_award_xp(perfect_xp)
 			_register_combo("Perfect", Color("#00f0ff"))
@@ -260,7 +270,7 @@ func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
 			_play_sfx("perfect")
 			if randf() < min(0.18, 0.03 + _perfect_diamond_bonus()):
 				run_diamonds += 1
-				_play_sfx("coin")
+				_play_sfx("diamond")
 				_spawn_floating("+1 DIAMANTE", ball_position + Vector2(16, 12), Color("#c084fc"))
 			return
 
@@ -455,6 +465,10 @@ func _build_hud() -> void:
 	hud.add_child(_hud_stats)
 	_hud_xp = _make_label("", 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	hud.add_child(_hud_xp)
+	_hud_xp_bar = _make_progress_bar("#00f0ff")
+	hud.add_child(_hud_xp_bar)
+	_hud_ring_bar = _make_progress_bar("#ffd700")
+	hud.add_child(_hud_ring_bar)
 	_hud_upgrade = _make_label("", 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	_hud_upgrade.visible = false
 	hud.add_child(_hud_upgrade)
@@ -509,7 +523,20 @@ func _build_result_overlays() -> void:
 	_victory_title = _make_label("FASE 1 CONCLUIDA", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_victory_rewards = _make_label("", 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	victory_card.add_child(_victory_title)
-	victory_card.add_child(_victory_rewards)
+	var reward_panel := PanelContainer.new()
+	reward_panel.custom_minimum_size = Vector2(280, 220)
+	reward_panel.add_theme_stylebox_override("panel", _make_style("#ffffff11", 12, "#ffffff22", 1))
+	var reward_margin := MarginContainer.new()
+	reward_margin.add_theme_constant_override("margin_left", 12)
+	reward_margin.add_theme_constant_override("margin_top", 10)
+	reward_margin.add_theme_constant_override("margin_right", 12)
+	reward_margin.add_theme_constant_override("margin_bottom", 10)
+	reward_panel.add_child(reward_margin)
+	var reward_scroll := ScrollContainer.new()
+	reward_scroll.custom_minimum_size = Vector2(260, 190)
+	reward_margin.add_child(reward_scroll)
+	reward_scroll.add_child(_victory_rewards)
+	victory_card.add_child(reward_panel)
 	victory_card.add_child(_make_modal_button("VOLTAR AS FASES", _go_to_phase_select))
 	victory_card.add_child(_make_modal_button("JOGAR NOVAMENTE", _restart_level))
 	var next := _make_modal_button("PROXIMA FASE EM BREVE", _go_to_phase_select)
@@ -574,6 +601,17 @@ func _make_button(text: String, width: int, height: int) -> Button:
 	return button
 
 
+func _make_progress_bar(fill_color: String) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.custom_minimum_size = Vector2(0, 14)
+	bar.show_percentage = false
+	bar.max_value = 100
+	bar.value = 0
+	bar.add_theme_stylebox_override("background", _make_style("#ffffff11", 7, "#ffffff22", 1))
+	bar.add_theme_stylebox_override("fill", _make_style(fill_color, 7, "#ffffff22", 0, fill_color, 6))
+	return bar
+
+
 func _update_hud() -> void:
 	var active: int = _active_ring_count()
 	_hud_phase.text = "FASE %s" % phase_id
@@ -582,6 +620,10 @@ func _update_hud() -> void:
 	_hud_stats.text = "ATK %s   DPS %s%s   SKIN %s" % [_base_damage(), run_dps, "   COMBO x%s" % combo if combo >= 2 else "", String(GameState.data.get("equipped_skin", "neon_blue")).replace("_", " ").to_upper()]
 	var xp_needed := _run_xp_needed_for_level(run_level)
 	_hud_xp.text = "LV.%s   XP %s/%s   +%s XP" % [run_level, run_xp, xp_needed, run_xp]
+	_hud_xp_bar.max_value = xp_needed
+	_hud_xp_bar.value = run_xp
+	_hud_ring_bar.max_value = max(1, rings.size())
+	_hud_ring_bar.value = active
 	_hud_upgrade.visible = not temporary_upgrade.is_empty()
 	if _hud_upgrade.visible:
 		_hud_upgrade.text = "UPGRADE TEMP: %s Lv.%s • %s" % [temporary_upgrade["name"], temporary_upgrade["level"], temporary_upgrade["effect"]]
@@ -689,6 +731,8 @@ func _award_coins(amount: int) -> void:
 		return
 	var balanced: int = max(1, floori(float(amount) * _combo_coin_multiplier() * RUN_COIN_MULTIPLIER))
 	run_coins += balanced
+	if balanced >= 5:
+		_spawn_floating("+%s MOEDAS" % balanced, ball_position + Vector2(12, 18), Color("#ffd700"))
 
 
 func _award_xp(amount: int) -> void:
@@ -697,11 +741,14 @@ func _award_xp(amount: int) -> void:
 	var balanced: int = max(1, floori(float(amount) * _combo_xp_multiplier()))
 	run_xp += balanced
 	total_run_xp += balanced
+	_spawn_floating("+%s XP" % balanced, ball_position + Vector2(-28, 18), Color("#00f0ff"))
 	var needed: int = _run_xp_needed_for_level(run_level)
 	if run_xp >= needed:
 		run_xp -= needed
 		run_level += 1
 		_open_level_up()
+	elif balanced >= 8:
+		_play_sfx("xp")
 
 
 func _register_combo(label: String, color: Color) -> void:
@@ -783,7 +830,9 @@ func _open_level_up() -> void:
 	_rebuild_level_up_cards()
 	level_up_active = true
 	_level_up_overlay.visible = true
-	_play_sfx("coin")
+	_spawn_particles(arena_center, Color("#00f0ff"), 34, 150.0)
+	_spawn_floating("LEVEL %s" % run_level, arena_center + Vector2(-24, -46), Color("#ffd700"))
+	_play_sfx("level_up")
 
 
 func _get_safe_upgrade_options() -> Array[Dictionary]:
@@ -1048,11 +1097,23 @@ func _setup_audio() -> void:
 
 
 func _play_sfx(key: String) -> void:
+	_ensure_music_state()
 	if _audio_muted() or not _sfx_players.has(key):
 		return
 	var player: AudioStreamPlayer = _sfx_players[key]
 	player.stop()
 	player.play()
+
+
+func _ensure_music_state() -> void:
+	if not _music_player:
+		return
+	if _audio_muted():
+		if _music_player.playing:
+			_music_player.stop()
+		return
+	if not _music_player.playing:
+		_music_player.play()
 
 
 func _audio_muted() -> bool:
