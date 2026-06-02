@@ -161,6 +161,7 @@ Referencias analisadas na branch `main`:
 
 Arquivos Godot criados/alterados:
 
+- `GAMEPLAY_MAIN_ANALYSIS.md`
 - `scenes/GameScene.tscn`
 - `scripts/GameplayManager.gd`
 - `scripts/LevelData.gd`
@@ -180,20 +181,23 @@ Checklist da etapa:
 | HP visual removido | Sim | HUD e aneis nao exibem HP; o HP segue interno para colisao/quebra. |
 | Visual tecnico removido | Sim | Circulo/base extra de arena e circulo central foram removidos. |
 | Colisao funcionando | Sim | Porta a checagem de gap/parte solida, reflexao e separacao da bolinha. |
-| HUD de partida | Sim | Mostra fase, dificuldade, recursos, aneis restantes, ATK, skin equipada, nivel e XP. |
-| Upgrade temporario no HUD | Sim | Area aparece apenas quando existe upgrade temporario visual ativo. |
+| HUD de partida | Em progresso | Agora mostra moedas/diamantes da run, moedas da conta, chaves, aneis, dificuldade, ATK, DPS, combo, nivel e XP. |
+| Upgrades de rodada | Sim | Barra inferior com ATK e GOLD, custos e compra com moedas da run como na `main`. |
+| Upgrade temporario no HUD | Parcial | Level-up completo com escolha de 3 upgrades ainda pendente; estrutura aparece quando ha upgrade temporario. |
 | Efeitos visuais | Sim | Brilho/trilha da bolinha, impacto, quebra de anel, texto flutuante e efeito de vitoria. |
 | Audio de gameplay | Sim | Musica, clique, hit, quebra, perfect, derrota e vitoria foram conectados respeitando audio mudo. |
 | Vitoria funcionando | Sim | Ao limpar todos os aneis, mostra tela de vitoria/recompensa. |
-| Tela de vitoria polida | Sim | Modal neon com fase completa, moedas, XP, diamantes, aneis, perfects e Fase 2 liberada. |
-| Recompensas salvando | Sim | Moedas, XP, diamantes encontrados, aneis e perfects entram no `GameState`. |
+| Tela de vitoria polida | Sim | Modal neon com fase, resultado, moedas da run, moedas gerais, XP de perfil, XP ganho, diamantes, aneis, perfects, combo e Fase 2 liberada. |
+| Recompensas salvando | Sim | Moedas gerais e XP de perfil usam conversao baseada em `economy.ts`; diamantes, aneis e perfects entram no `GameState`. |
+| Combo/DPS/score | Sim | Combo de 2600ms, melhor combo, DPS recente e score foram portados para a Fase 1. |
 | Fase 2 liberada ao vencer | Sim | `record_phase_complete` chama `unlock_level(2)`. |
 | Pausa funcionando | Sim | Menu com Continuar, Reiniciar e Sair para fases. |
+| Analise da main | Sim | Ver `godot/GAMEPLAY_MAIN_ANALYSIS.md`. |
 
 Pendencias da gameplay:
 
 - Comparacao visual pixel a pixel com a `main` ainda pendente.
-- Efeitos de skins avancados, loja de upgrades da run, revive/anuncio e level-up dentro da partida ainda nao foram portados.
+- Efeitos de skins avancados, revive/anuncio, dobrar recompensa por anuncio e level-up completo dentro da partida ainda nao foram portados.
 - Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
 - Modo infinito e Fases 2-50 ainda nao sao jogaveis nesta etapa.
 

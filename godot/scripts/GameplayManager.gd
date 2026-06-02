@@ -6,11 +6,17 @@ const PHASE_SELECT_SCENE := "res://scenes/PhaseSelect.tscn"
 const BALL_RADIUS := 10.0
 const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
+const XP_BASE_REQUIREMENT := 150.0
+const RUN_COIN_MULTIPLIER := 0.92
+const GLOBAL_COIN_CONVERSION_RATE := 0.72
+const PROFILE_XP_MULTIPLIER := 0.95
+const COMBO_WINDOW_MSEC := 2600
 const PHYSICS_STEPS_PER_SECOND := 60.0
 const TWO_PI := PI * 2.0
 const RING_COLORS := ["#00f0ff", "#b000ff", "#ff0055", "#00ff88", "#ffd700", "#ff8800"]
 const SOUND_PATHS := {
 	"hit": "res://assets/sounds/hit_light.mp3",
+	"hit_heavy": "res://assets/sounds/hit_heavy.mp3",
 	"break": "res://assets/sounds/ring_break.mp3",
 	"perfect": "res://assets/sounds/perfect.mp3",
 	"coin": "res://assets/sounds/coin_gain.mp3",
@@ -33,7 +39,20 @@ var previous_distance := 0.0
 var last_hit_msec := 0
 var run_coins := 0
 var run_xp := 0
+var total_run_xp := 0
 var run_diamonds := 0
+var run_level := 1
+var run_score := 0.0
+var run_dps := 0
+var best_combo := 0
+var combo := 0
+var last_combo_msec := 0
+var reward_multiplier := 1
+var run_upgrades := 0
+var criticals := 0
+var skin_effects := 0
+var run_shop_upgrades := { "atk": 0, "gold": 0 }
+var recent_hit_damage: Array[float] = []
 var rings_destroyed := 0
 var perfect_escapes := 0
 var is_paused := false
@@ -52,6 +71,9 @@ var _hud_rings: Label
 var _hud_stats: Label
 var _hud_xp: Label
 var _hud_upgrade: Label
+var _run_upgrade_bar: HBoxContainer
+var _run_atk_button: Button
+var _run_gold_button: Button
 var _pause_overlay: Control
 var _victory_overlay: Control
 var _victory_title: Label
@@ -98,7 +120,20 @@ func _start_level() -> void:
 	is_paused = false
 	run_coins = 0
 	run_xp = 0
+	total_run_xp = 0
 	run_diamonds = 0
+	run_level = 1
+	run_score = 0.0
+	run_dps = 0
+	best_combo = 0
+	combo = 0
+	last_combo_msec = 0
+	reward_multiplier = 1
+	run_upgrades = 0
+	criticals = 0
+	skin_effects = 0
+	run_shop_upgrades = { "atk": 0, "gold": 0 }
+	recent_hit_damage.clear()
 	rings_destroyed = 0
 	perfect_escapes = 0
 	particles.clear()
@@ -119,7 +154,7 @@ func _start_level() -> void:
 
 func _update_game(delta_steps: float) -> void:
 	_update_arena_metrics()
-	var target_speed: float = BASE_BALL_SPEED + min(0.62, float(phase_id - 1) * 0.08)
+	var target_speed: float = _target_ball_speed()
 	ball_velocity = _clamp_vector_speed(ball_velocity, target_speed * 0.78, target_speed * 1.42)
 	var previous_vector := ball_position - arena_center
 	var prev_dist := previous_vector.length()
@@ -127,6 +162,7 @@ func _update_game(delta_steps: float) -> void:
 	_bounce_arena_edge()
 	var next_dist := (ball_position - arena_center).length()
 	_add_trail_point()
+	_update_combo_timeout()
 	_update_rings(delta_steps)
 	_check_perfect_escape(prev_dist, next_dist)
 	_check_ring_hit(prev_dist)
@@ -205,13 +241,17 @@ func _check_perfect_escape(prev_dist: float, next_dist: float) -> void:
 			ring["hp"] = 0
 			rings[i] = ring
 			perfect_escapes += 1
-			run_coins += 5
-			run_xp += 10
+			var perfect_coins: int = max(2, floori(5.0 * _gold_multiplier()))
+			var perfect_xp: int = floori((10.0 + randf() * 8.0) * _xp_multiplier())
+			_award_coins(perfect_coins)
+			_award_xp(perfect_xp)
+			_register_combo("Perfect", Color("#00f0ff"))
 			_spawn_particles(ball_position, Color("#b8f3ff"), 12, 110.0)
 			_spawn_floating("Perfect", ball_position + Vector2(10, -20), Color("#b8f3ff"))
 			_play_sfx("perfect")
-			if randf() < 0.03:
+			if randf() < min(0.18, 0.03 + _perfect_diamond_bonus()):
 				run_diamonds += 1
+				_play_sfx("coin")
 				_spawn_floating("+1 DIAMANTE", ball_position + Vector2(16, 12), Color("#c084fc"))
 			return
 
@@ -236,25 +276,29 @@ func _check_ring_hit(prev_dist: float) -> void:
 	if now - last_hit_msec <= 90:
 		return
 	last_hit_msec = now
-	var damage := _base_damage()
+	var is_crit := randf() * 100.0 < _crit_chance()
+	var damage := floori(float(_base_damage()) * (_crit_damage() if is_crit else 1.0))
 	var new_hp: int = max(0, int(ring["hp"]) - damage)
 	ring["hp"] = new_hp
 	ring["status"] = "broken" if new_hp <= 0 else "active"
 	rings[closest_index] = ring
-	run_coins += max(1, floori(damage * 0.5))
-	run_xp += 1
+	_award_coins(floori(damage * 0.5 * _gold_multiplier()))
+	_award_xp(floori((2 if is_crit else 1) * _xp_multiplier()))
+	run_score += damage
+	_track_dps(float(damage))
 	_spawn_particles(ball_position, Color(String(ring["color"])), 6, 70.0)
-	_spawn_floating("+%s" % damage, ball_position + Vector2(8, -12), Color("#ffffff"))
-	_play_sfx("hit")
+	_spawn_floating("+%s%s" % [damage, " CRIT" if is_crit else ""], ball_position + Vector2(8, -12), Color("#ffd700") if is_crit else Color("#ffffff"))
+	_play_sfx("hit_heavy" if is_crit else "hit")
+	if is_crit:
+		criticals += 1
 	if new_hp <= 0:
 		rings_destroyed += 1
-		run_coins += 18 if String(ring.get("type", "normal")) == "solid" else 12
-		run_xp += 16 if String(ring.get("type", "normal")) == "solid" else 8
+		_register_combo("Break", Color("#ffd700"))
+		_award_coins(max(6, floori((18.0 if String(ring.get("type", "normal")) == "solid" else 12.0) * _gold_multiplier())))
+		_award_xp(floori(((16.0 if String(ring.get("type", "normal")) == "solid" else 8.0) + randf() * (12.0 if String(ring.get("type", "normal")) == "solid" else 7.0)) * _xp_multiplier()))
 		_spawn_particles(ball_position, Color("#ffd700"), 18, 130.0)
 		_spawn_floating("Break!", ball_position + Vector2(-18, -28), Color("#ffd700"))
 		_play_sfx("break")
-		if temporary_upgrade.is_empty():
-			temporary_upgrade = { "name": "Impacto Neon", "level": 1, "effect": "+ATK visual" }
 
 
 func _check_ring_collision(ring: Dictionary) -> Dictionary:
@@ -279,7 +323,8 @@ func _separate_and_reflect(ring: Dictionary, prev_dist: float) -> void:
 	var dot := ball_velocity.dot(normal)
 	if dot < 0.0:
 		ball_velocity -= 2.0 * dot * normal
-		ball_velocity = _clamp_vector_speed(ball_velocity * 1.04, BASE_BALL_SPEED * 0.88, BASE_BALL_SPEED * 1.55)
+		var target_speed := _target_ball_speed()
+		ball_velocity = _clamp_vector_speed(ball_velocity * 1.04, target_speed * 0.88, target_speed * 1.55)
 
 
 func _is_ball_crushed() -> bool:
@@ -298,15 +343,13 @@ func _is_ball_crushed() -> bool:
 
 func _finish_victory() -> void:
 	finished = true
-	var phase_reward_coins: int = int(phase_config["reward_coins"])
-	var phase_reward_xp: int = int(phase_config["reward_xp"])
-	var total_coins: int = phase_reward_coins + run_coins
-	var total_xp: int = phase_reward_xp + run_xp
-	GameState.record_phase_complete(phase_id, total_coins, total_xp, rings_destroyed, perfect_escapes, run_diamonds)
+	var profile_xp_reward := _run_profile_xp() * reward_multiplier
+	var global_coins_reward := _global_coins_from_run(run_coins * reward_multiplier, best_combo, true)
+	GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier)
 	_spawn_particles(arena_center, Color("#00ff88"), 42, 180.0)
 	_play_sfx("victory")
 	_victory_title.text = "FASE 1 CONCLUIDA"
-	_victory_rewards.text = "FASE: 1\nMOEDAS DA RODADA: +%s\nXP GANHO: +%s\nDIAMANTES: +%s\nANEIS QUEBRADOS: %s\nPERFECTS: %s\n\nFASE 2 LIBERADA" % [total_coins, total_xp, run_diamonds, rings_destroyed, perfect_escapes]
+	_victory_rewards.text = "FASE: 1\nRESULTADO: VITORIA\nMOEDAS DA RODADA: %s\nMOEDAS GERAIS: +%s\nDIAMANTES: %s\nXP DE PERFIL: +%s\nXP GANHO: %s\nQUEBRADOS: %s\nPERFECTS: %s\nMAIOR COMBO: x%s\nCHAVES/BAUS: 0/0\nLEVEL: %s\nSCORE: %s\n\nFASE 2 LIBERADA" % [run_coins, global_coins_reward, run_diamonds * reward_multiplier, profile_xp_reward, total_run_xp, rings_destroyed, perfect_escapes, best_combo, run_level, floori(run_score)]
 	_victory_overlay.visible = true
 	queue_redraw()
 
@@ -407,6 +450,30 @@ func _build_hud() -> void:
 	_hud_upgrade.visible = false
 	hud.add_child(_hud_upgrade)
 
+	_run_upgrade_bar = HBoxContainer.new()
+	_run_upgrade_bar.anchor_left = 0.0
+	_run_upgrade_bar.anchor_top = 1.0
+	_run_upgrade_bar.anchor_right = 1.0
+	_run_upgrade_bar.anchor_bottom = 1.0
+	_run_upgrade_bar.offset_left = 12.0
+	_run_upgrade_bar.offset_top = -78.0
+	_run_upgrade_bar.offset_right = -12.0
+	_run_upgrade_bar.offset_bottom = -14.0
+	_run_upgrade_bar.add_theme_constant_override("separation", 8)
+	add_child(_run_upgrade_bar)
+	_run_atk_button = _make_button("", 0, 58)
+	_run_atk_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_run_atk_button.add_theme_color_override("font_color", Color("#ffffff"))
+	_apply_button_style(_run_atk_button, _make_style("#06162a", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
+	_run_atk_button.pressed.connect(_buy_run_atk_upgrade)
+	_run_upgrade_bar.add_child(_run_atk_button)
+	_run_gold_button = _make_button("", 0, 58)
+	_run_gold_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_run_gold_button.add_theme_color_override("font_color", Color("#ffffff"))
+	_apply_button_style(_run_gold_button, _make_style("#06162a", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
+	_run_gold_button.pressed.connect(_buy_run_gold_upgrade)
+	_run_upgrade_bar.add_child(_run_gold_button)
+
 
 func _build_pause_overlay() -> void:
 	_pause_overlay = _make_modal()
@@ -491,15 +558,15 @@ func _make_button(text: String, width: int, height: int) -> Button:
 func _update_hud() -> void:
 	var active: int = _active_ring_count()
 	_hud_phase.text = "FASE %s" % phase_id
-	_hud_resources.text = "MOEDAS %s   DIAMANTES %s   CHAVES %s" % [int(GameState.data.get("coins", 0)) + run_coins, int(GameState.data.get("diamonds", 0)) + run_diamonds, int(GameState.data.get("keys", 0))]
+	_hud_resources.text = "MOEDAS %s   DIAMANTES %s   CONTA %s   CHAVES %s" % [run_coins, run_diamonds, int(GameState.data.get("coins", 0)), int(GameState.data.get("keys", 0))]
 	_hud_rings.text = "ANEIS RESTANTES: %s/%s   DIFICULDADE: %s" % [active, rings.size(), String(phase_config["difficulty"]).to_upper()]
-	_hud_stats.text = "ATK %s   SKIN %s" % [_base_damage(), String(GameState.data.get("equipped_skin", "neon_blue")).replace("_", " ").to_upper()]
-	var level := int(GameState.data.get("level", 1))
-	var profile_xp := int(GameState.data.get("profile_xp", 0)) + run_xp
-	_hud_xp.text = "LV.%s   XP %s/%s   +%s XP" % [level, profile_xp, _xp_needed_for_level(level), run_xp]
+	_hud_stats.text = "ATK %s   DPS %s%s   SKIN %s" % [_base_damage(), run_dps, "   COMBO x%s" % combo if combo >= 2 else "", String(GameState.data.get("equipped_skin", "neon_blue")).replace("_", " ").to_upper()]
+	var xp_needed := _run_xp_needed_for_level(run_level)
+	_hud_xp.text = "LV.%s   XP %s/%s   +%s XP" % [run_level, run_xp, xp_needed, run_xp]
 	_hud_upgrade.visible = not temporary_upgrade.is_empty()
 	if _hud_upgrade.visible:
 		_hud_upgrade.text = "UPGRADE TEMP: %s Lv.%s • %s" % [temporary_upgrade["name"], temporary_upgrade["level"], temporary_upgrade["effect"]]
+	_update_run_upgrade_buttons()
 
 
 func _active_ring_count() -> int:
@@ -512,7 +579,217 @@ func _active_ring_count() -> int:
 
 func _base_damage() -> int:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	return 14 + int(upgrades.get("baseDamage", 0)) * 3
+	var base_damage := 10.0 * pow(1.1, int(upgrades.get("baseDamage", 0)))
+	var skin_bonus := _skin_damage_bonus()
+	var arena_bonus := int(run_shop_upgrades.get("atk", 0)) * 0.12
+	return max(1, roundi(base_damage * (1.0 + skin_bonus + arena_bonus)))
+
+
+func _target_ball_speed() -> float:
+	return (BASE_BALL_SPEED + min(0.62, float(phase_id - 1) * 0.08)) * _speed_multiplier()
+
+
+func _speed_multiplier() -> float:
+	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
+	var base_speed := 100.0 * pow(1.08, int(upgrades.get("baseSpeed", 0)))
+	return 1.0 + base_speed / 1200.0 + _skin_speed_bonus()
+
+
+func _gold_multiplier() -> float:
+	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
+	var base := 1.0 + int(upgrades.get("coinMultiplier", 0)) * 0.15
+	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.12 + _skin_coin_bonus())
+
+
+func _xp_multiplier() -> float:
+	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
+	var base := 1.0 + int(upgrades.get("xpBoost", 0)) * 0.2
+	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.05 + _skin_xp_bonus())
+
+
+func _crit_chance() -> float:
+	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
+	return 5.0 + int(upgrades.get("critChance", 0)) * 2.0 + _skin_crit_bonus()
+
+
+func _crit_damage() -> float:
+	return 2.0
+
+
+func _perfect_diamond_bonus() -> float:
+	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	if skin_id == "neon_blue":
+		return 0.005
+	if skin_id in ["star_rare", "planet", "crystal", "alien_rare", "purple_crystal", "cosmic_eye", "astral_eye"]:
+		return 0.02
+	return 0.0
+
+
+func _skin_damage_bonus() -> float:
+	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	if skin_id in ["bear_common", "moon", "meteor_rare", "astral_dragon", "wolf_rare"]:
+		return 0.08
+	return 0.0
+
+
+func _skin_coin_bonus() -> float:
+	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	if skin_id in ["piggy", "cow_common", "ladybug_common", "cosmic_emperor"]:
+		return 0.08
+	return 0.0
+
+
+func _skin_xp_bonus() -> float:
+	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	if skin_id in ["monkey", "panda", "neon_heart"]:
+		return 0.08
+	return 0.0
+
+
+func _skin_speed_bonus() -> float:
+	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	if skin_id in ["bunny", "fox_common", "fish_common", "comet", "ninja_rare", "blue_comet"]:
+		return 0.08
+	return 0.0
+
+
+func _skin_crit_bonus() -> float:
+	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
+	if skin_id in ["kitty", "tiger_common", "bee_common"]:
+		return 3.0
+	return 0.0
+
+
+func _award_coins(amount: int) -> void:
+	if amount <= 0:
+		return
+	var balanced: int = max(1, floori(float(amount) * _combo_coin_multiplier() * RUN_COIN_MULTIPLIER))
+	run_coins += balanced
+
+
+func _award_xp(amount: int) -> void:
+	if amount <= 0:
+		return
+	var balanced: int = max(1, floori(float(amount) * _combo_xp_multiplier()))
+	run_xp += balanced
+	total_run_xp += balanced
+	var needed: int = _run_xp_needed_for_level(run_level)
+	if run_xp >= needed:
+		run_xp -= needed
+		run_level += 1
+		temporary_upgrade = { "name": "Level %s" % run_level, "level": run_level, "effect": "Escolha de upgrade pendente" }
+		_play_sfx("coin")
+
+
+func _register_combo(label: String, color: Color) -> void:
+	var now := Time.get_ticks_msec()
+	combo = combo + 1 if now - last_combo_msec <= COMBO_WINDOW_MSEC else 1
+	last_combo_msec = now
+	best_combo = max(best_combo, combo)
+	if combo >= 2:
+		_spawn_floating("%s x%s" % [_combo_label(), combo], ball_position + Vector2(-22, -34), color)
+	elif not label.is_empty():
+		_spawn_floating(label, ball_position + Vector2(-8, -24), color)
+
+
+func _update_combo_timeout() -> void:
+	if combo > 0 and Time.get_ticks_msec() - last_combo_msec > COMBO_WINDOW_MSEC:
+		combo = 0
+
+
+func _combo_coin_multiplier() -> float:
+	if combo >= 20:
+		return 1.28
+	if combo >= 10:
+		return 1.2
+	if combo >= 5:
+		return 1.1
+	if combo >= 2:
+		return 1.05
+	return 1.0
+
+
+func _combo_xp_multiplier() -> float:
+	if combo >= 20:
+		return 1.24
+	if combo >= 10:
+		return 1.2
+	if combo >= 5:
+		return 1.1
+	if combo >= 2:
+		return 1.03
+	return 1.0
+
+
+func _combo_label() -> String:
+	if combo >= 20:
+		return "Ring Rush!"
+	if combo >= 10:
+		return "Perfect Chain!"
+	if combo >= 5:
+		return "Great!"
+	return "Combo!"
+
+
+func _track_dps(damage: float) -> void:
+	recent_hit_damage.append(damage)
+	if recent_hit_damage.size() > 60:
+		recent_hit_damage.pop_front()
+	var total := 0.0
+	for value in recent_hit_damage:
+		total += value
+	run_dps = floori(total)
+
+
+func _run_profile_xp() -> int:
+	return max(8, floori((total_run_xp * 0.42 + rings_destroyed * 3.6 + perfect_escapes * 5.0 + best_combo * 1.2) * PROFILE_XP_MULTIPLIER))
+
+
+func _global_coins_from_run(coins_value: int, combo_value: int, won: bool) -> int:
+	var combo_bonus := 1.18 if combo_value >= 20 else 1.1 if combo_value >= 10 else 1.05 if combo_value >= 5 else 1.0
+	var win_bonus := 1.08 if won else 1.0
+	return max(0, floori(float(coins_value) * GLOBAL_COIN_CONVERSION_RATE * combo_bonus * win_bonus))
+
+
+func _run_xp_needed_for_level(level_value: int) -> int:
+	return floori(XP_BASE_REQUIREMENT * pow(max(1, level_value), 1.55))
+
+
+func _get_run_upgrade_cost(type: String) -> int:
+	var base := 20 if type == "atk" else 18
+	return floori(base * pow(1.35, int(run_shop_upgrades.get(type, 0))))
+
+
+func _buy_run_atk_upgrade() -> void:
+	_buy_run_upgrade("atk")
+
+
+func _buy_run_gold_upgrade() -> void:
+	_buy_run_upgrade("gold")
+
+
+func _buy_run_upgrade(type: String) -> void:
+	var cost := _get_run_upgrade_cost(type)
+	if run_coins < cost:
+		_play_sfx("click")
+		return
+	_play_sfx("coin")
+	run_coins -= cost
+	run_shop_upgrades[type] = int(run_shop_upgrades.get(type, 0)) + 1
+	run_upgrades += 1
+	_spawn_floating("ATK+" if type == "atk" else "Gold+", arena_center + Vector2(-36, -30), Color("#ffd700"))
+	_update_hud()
+
+
+func _update_run_upgrade_buttons() -> void:
+	if not _run_atk_button or not _run_gold_button:
+		return
+	var atk_cost := _get_run_upgrade_cost("atk")
+	var gold_cost := _get_run_upgrade_cost("gold")
+	_run_atk_button.text = "ATK Lv.%s\n%s MOEDAS" % [int(run_shop_upgrades.get("atk", 0)), atk_cost]
+	_run_gold_button.text = "GOLD Lv.%s\n%s MOEDAS" % [int(run_shop_upgrades.get("gold", 0)), gold_cost]
+	_run_atk_button.disabled = run_coins < atk_cost
+	_run_gold_button.disabled = run_coins < gold_cost
 
 
 func _open_pause() -> void:
