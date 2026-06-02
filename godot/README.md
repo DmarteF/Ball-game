@@ -177,8 +177,15 @@ Checklist da etapa:
 | Fase 1 jogavel | Sim | `PhaseSelect` abre `GameScene` apenas na Fase 1. |
 | Bolinha com sprite real | Sim | Usa `equipped_skin` do `GameState`; fallback `neon_blue.png`. |
 | Aneis visuais | Sim | Aneis neon desenhados por `_draw`, com gaps e anel solido final seguindo a base de `rings.ts`. |
+| HP visual removido | Sim | HUD e aneis nao exibem HP; o HP segue interno para colisao/quebra. |
+| Visual tecnico removido | Sim | Circulo/base extra de arena e circulo central foram removidos. |
 | Colisao funcionando | Sim | Porta a checagem de gap/parte solida, reflexao e separacao da bolinha. |
+| HUD de partida | Sim | Mostra fase, dificuldade, recursos, aneis restantes, ATK, skin equipada, nivel e XP. |
+| Upgrade temporario no HUD | Sim | Area aparece apenas quando existe upgrade temporario visual ativo. |
+| Efeitos visuais | Sim | Brilho/trilha da bolinha, impacto, quebra de anel, texto flutuante e efeito de vitoria. |
+| Audio de gameplay | Sim | Musica, clique, hit, quebra, perfect, derrota e vitoria foram conectados respeitando audio mudo. |
 | Vitoria funcionando | Sim | Ao limpar todos os aneis, mostra tela de vitoria/recompensa. |
+| Tela de vitoria polida | Sim | Modal neon com fase completa, moedas, XP, diamantes, aneis, perfects e Fase 2 liberada. |
 | Recompensas salvando | Sim | Moedas, XP, diamantes encontrados, aneis e perfects entram no `GameState`. |
 | Fase 2 liberada ao vencer | Sim | `record_phase_complete` chama `unlock_level(2)`. |
 | Pausa funcionando | Sim | Menu com Continuar, Reiniciar e Sair para fases. |
@@ -186,7 +193,7 @@ Checklist da etapa:
 Pendencias da gameplay:
 
 - Comparacao visual pixel a pixel com a `main` ainda pendente.
-- Efeitos de skins avancados, upgrades temporarios, loja de upgrades da run, revive/anuncio e level-up dentro da partida ainda nao foram portados.
+- Efeitos de skins avancados, loja de upgrades da run, revive/anuncio e level-up dentro da partida ainda nao foram portados.
 - Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
 - Modo infinito e Fases 2-50 ainda nao sao jogaveis nesta etapa.
 
