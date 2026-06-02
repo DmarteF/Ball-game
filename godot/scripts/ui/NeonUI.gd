@@ -48,6 +48,27 @@ static func add_main_background(parent):
 	parent.add_child(background)
 	return background
 
+static func gradient_rect(parent, colors, offsets = PackedFloat32Array(), from = Vector2.ZERO, to = Vector2(1, 1)):
+	var gradient = Gradient.new()
+	if offsets.is_empty():
+		var generated_offsets = PackedFloat32Array()
+		for i in range(colors.size()):
+			generated_offsets.append(0.0 if colors.size() == 1 else float(i) / float(colors.size() - 1))
+		gradient.offsets = generated_offsets
+	else:
+		gradient.offsets = offsets
+	gradient.colors = PackedColorArray(colors)
+	var texture = GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = from
+	texture.fill_to = to
+	var rect = TextureRect.new()
+	rect.texture = texture
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	parent.add_child(rect)
+	return rect
+
 static func add_screen_margin(parent, left = 16, top = 0, right = 16, bottom = 0):
 	var margin = MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)

@@ -22,6 +22,40 @@ O jogo usa GDScript, cenas `.tscn`, autoloads e assets nativos do Godot. Nao usa
 
 Fonte obrigatoria: branch `main`. A versao Godot nao deve criar layout, texto, valores ou comportamento novo quando ja existir referencia na `main`.
 
+### Tela inicial - correcao focal
+
+Arquivos da branch `main` usados como referencia direta:
+
+- `frontend/app/index.tsx`
+- `frontend/src/components/UiIcon.tsx`
+- `frontend/src/game/uiIcons.ts`
+- `frontend/src/i18n/locales/pt-BR.ts`
+- `frontend/assets/ui/ui_play.png`
+- `frontend/assets/ui/ui_upgrades.png`
+- `frontend/assets/ui/ui_skins.png`
+- `frontend/assets/ui/ui_menu.png`
+- `frontend/assets/ui/ui_coin.png`
+- `frontend/assets/ui/ui_gem.png`
+- `frontend/assets/ui/ui_key.png`
+- `frontend/assets/ui/ui_profile.png`
+
+Checklist da tela inicial Godot apos esta correcao:
+
+- Fundo igual: sim
+- Logo igual: sim
+- Posicao do logo igual: sim
+- Botao JOGAR igual: sim
+- Botao MELHORIAS igual: sim
+- Botao SKINS igual: sim
+- Botao MAIS igual: sim
+- Icones iguais: sim
+- Fontes iguais: sim
+- Cores iguais: sim
+- Bordas/brilho/sombras iguais: sim
+- Espacamentos iguais: sim
+- Navegacao dos botoes funcionando: sim
+- Sem debug/placeholders/rebuild: sim
+
 | Tela / sistema | Arquivo/fonte na branch main | Arquivo equivalente no Godot | Status | Diferencas pendentes |
 |---|---|---|---|---|
 | Tela inicial | `frontend/app/index.tsx`, `ProfileAvatar`, `UiIcon`, `retention.ts` | `scenes/MainMenu.tscn`, `scripts/screens/MainMenu.gd` | Portado em UI/logica base | Layout de topbar, recursos, titulo, botao Jogar, cards Melhorias/Skins, botao Mais, menu modal e AFK foram reajustados. Falta comparacao visual pixel a pixel e toast de conquista. |

@@ -89,23 +89,7 @@ func _build_ui():
 	_add_primary_card(primary_row, "MELHORIAS", "upgrades", "res://assets/ui/ui_upgrades.png", Color("#b000ff"), Color("#6600cc"))
 	_add_primary_card(primary_row, "SKINS", "skins", "res://assets/ui/ui_skins.png", Color("#ff0088"), Color("#cc0066"))
 
-	var more_button = Button.new()
-	more_button.custom_minimum_size = Vector2(64, 64)
-	more_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	more_button.offset_left = -82
-	more_button.offset_top = -88
-	more_button.offset_right = -18
-	more_button.offset_bottom = -24
-	more_button.text = "MAIS"
-	more_button.icon = load("res://assets/ui/ui_menu.png") if ResourceLoader.exists("res://assets/ui/ui_menu.png") else null
-	more_button.expand_icon = true
-	more_button.add_theme_font_size_override("font_size", 11)
-	more_button.add_theme_color_override("font_color", Color("#001018"))
-	more_button.add_theme_stylebox_override("normal", NeonUI.neon_box(Color("#00f0ff"), Color("#00f0ff"), 1, 18, 0.9))
-	more_button.add_theme_stylebox_override("hover", NeonUI.neon_box(Color("#28f5ff"), Color("#00f0ff"), 1, 18, 0.95))
-	more_button.add_theme_stylebox_override("pressed", NeonUI.neon_box(Color("#00bfe6"), Color("#00f0ff"), 1, 18, 0.6))
-	more_button.pressed.connect(_open_menu)
-	add_child(more_button)
+	_add_more_button()
 
 	_build_menu_overlay()
 	_build_offline_overlay()
@@ -116,10 +100,11 @@ func _add_play_button(parent):
 	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(root)
 
-	var panel = PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.add_theme_stylebox_override("panel", NeonUI.neon_box(Color("#00f0ff"), Color("#00f0ff"), 1, 16, 0.82))
-	root.add_child(panel)
+	NeonUI.gradient_rect(root, [Color("#00f0ff"), Color("#0088ff")], PackedFloat32Array([0.0, 1.0]), Vector2(0, 0), Vector2(1, 1))
+	var border = PanelContainer.new()
+	border.set_anchors_preset(Control.PRESET_FULL_RECT)
+	border.add_theme_stylebox_override("panel", NeonUI.neon_box(Color.TRANSPARENT, Color("#00f0ff"), 1, 16, 0.82))
+	root.add_child(border)
 
 	var center = CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -149,10 +134,11 @@ func _add_primary_card(parent, text, route, icon_path, color_a, color_b):
 	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(root)
 
-	var panel = PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.add_theme_stylebox_override("panel", NeonUI.neon_box(Color(color_a, 0.40), Color("#ffffff24"), 1, 14, 0.22))
-	root.add_child(panel)
+	NeonUI.gradient_rect(root, [Color(color_a, 0.40), Color(color_b, 0.20)], PackedFloat32Array([0.0, 1.0]), Vector2(0, 0), Vector2(0, 1))
+	var border = PanelContainer.new()
+	border.set_anchors_preset(Control.PRESET_FULL_RECT)
+	border.add_theme_stylebox_override("panel", NeonUI.neon_box(Color.TRANSPARENT, Color("#ffffff24"), 1, 14, 0.22))
+	root.add_child(border)
 
 	var center = CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -173,6 +159,44 @@ func _add_primary_card(parent, text, route, icon_path, color_a, color_b):
 	button.add_theme_stylebox_override("hover", NeonUI.neon_box(Color(color_a, 0.16), Color(color_a, 0.92), 1, 14, 0.36))
 	button.add_theme_stylebox_override("pressed", NeonUI.neon_box(Color(color_b, 0.24), Color(color_a), 1, 14, 0.18))
 	button.pressed.connect(func(): _go(route))
+	root.add_child(button)
+
+func _add_more_button():
+	var root = Control.new()
+	root.custom_minimum_size = Vector2(64, 64)
+	root.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	root.offset_left = -82
+	root.offset_top = -88
+	root.offset_right = -18
+	root.offset_bottom = -24
+	add_child(root)
+
+	var panel = PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	panel.add_theme_stylebox_override("panel", NeonUI.neon_box(Color("#00f0ff"), Color("#00f0ff"), 1, 18, 0.9))
+	root.add_child(panel)
+
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(center)
+	var box = VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 0)
+	center.add_child(box)
+	var icon = NeonUI.icon("res://assets/ui/ui_menu.png", 26)
+	icon.modulate = Color("#001018")
+	box.add_child(icon)
+	var text = NeonUI.label("MAIS", 11, Color("#001018"), HORIZONTAL_ALIGNMENT_CENTER)
+	text.add_theme_color_override("font_color", Color("#001018"))
+	box.add_child(text)
+
+	var button = Button.new()
+	button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	button.text = ""
+	button.add_theme_stylebox_override("normal", NeonUI.flat(Color.TRANSPARENT, Color.TRANSPARENT, 0, 18))
+	button.add_theme_stylebox_override("hover", NeonUI.flat(Color("#ffffff24"), Color.TRANSPARENT, 0, 18))
+	button.add_theme_stylebox_override("pressed", NeonUI.flat(Color("#00000022"), Color.TRANSPARENT, 0, 18))
+	button.pressed.connect(_open_menu)
 	root.add_child(button)
 
 func _build_menu_overlay():
