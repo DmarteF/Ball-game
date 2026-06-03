@@ -44,14 +44,31 @@ const ACHIEVEMENTS := [
 	{ "id": "first_steps", "name": "First Steps", "name_pt": "Primeiros Passos", "desc": "Play your first run.", "desc_pt": "Jogue a primeira partida.", "metric": "runsPlayed", "required": 1, "reward": { "type": "coins", "amount": 250 }, "rarity": "common" },
 	{ "id": "first_perfect", "name": "First Perfect", "name_pt": "Primeiro Escape", "desc": "Make 1 Perfect Escape.", "desc_pt": "Faça 1 escape perfeito.", "metric": "perfectEscapes", "required": 1, "reward": { "type": "diamonds", "amount": 8 }, "rarity": "rare" },
 	{ "id": "ring_breaker_1", "name": "Ring Breaker I", "name_pt": "Quebrador de Aneis I", "desc": "Destroy 50 rings.", "desc_pt": "Destrua 50 aneis.", "metric": "ringsDestroyed", "required": 50, "reward": { "type": "coins", "amount": 500 }, "rarity": "common" },
+	{ "id": "ring_breaker_2", "name": "Ring Breaker II", "name_pt": "Quebrador de Aneis II", "desc": "Destroy 250 rings.", "desc_pt": "Destrua 250 aneis.", "metric": "ringsDestroyed", "required": 250, "reward": { "type": "keys", "amount": 1 }, "rarity": "rare" },
+	{ "id": "ring_breaker_3", "name": "Ring Breaker III", "name_pt": "Quebrador de Aneis III", "desc": "Destroy 1000 rings.", "desc_pt": "Destrua 1000 aneis.", "metric": "ringsDestroyed", "required": 1000, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+	{ "id": "perfect_hunter", "name": "Perfect Hunter", "name_pt": "Cacador de Perfect", "desc": "Make 25 Perfect Escapes.", "desc_pt": "Faca 25 Perfect Escapes.", "metric": "perfectEscapes", "required": 25, "reward": { "type": "diamonds", "amount": 35 }, "rarity": "epic" },
+	{ "id": "diamond_miner", "name": "Diamond Miner", "name_pt": "Garimpeiro de Diamantes", "desc": "Find 10 diamonds.", "desc_pt": "Ganhe 10 diamantes.", "metric": "diamondsFound", "required": 10, "reward": { "type": "diamonds", "amount": 40 }, "rarity": "rare" },
 	{ "id": "infinite_first", "name": "Endless Glow", "name_pt": "Brilho Infinito", "desc": "Play Infinite Mode once.", "desc_pt": "Jogue o Modo Infinito uma vez.", "metric": "infiniteRuns", "required": 1, "reward": { "type": "coins", "amount": 400 }, "rarity": "common" },
 	{ "id": "infinite_survivor", "name": "Neon Survivor", "name_pt": "Sobrevivente Neon", "desc": "Survive 60 seconds in Infinite Mode.", "desc_pt": "Sobreviva 60 segundos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 60, "reward": { "type": "diamonds", "amount": 18 }, "rarity": "rare" },
-	{ "id": "infinite_breaker", "name": "Endless Breaker", "name_pt": "Quebrador Infinito", "desc": "Destroy 25 rings in one Infinite Mode run.", "desc_pt": "Destrua 25 aneis em uma partida infinita.", "metric": "bestInfiniteRings", "required": 25, "reward": { "type": "skin", "skin_id": "comet" }, "rarity": "epic" },
+	{ "id": "inf_survive_3", "name": "Stable Loop", "name_pt": "Loop Estavel", "desc": "Survive 3 minutes in Infinite Mode.", "desc_pt": "Sobreviva 3 minutos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 180, "reward": { "type": "skin", "skin_id": "loop_flame" }, "rarity": "rare" },
+	{ "id": "inf_survive_5", "name": "Neon Eclipse", "name_pt": "Eclipse Neon", "desc": "Survive 5 minutes in Infinite Mode.", "desc_pt": "Sobreviva 5 minutos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 300, "reward": { "type": "skin", "skin_id": "neon_eclipse" }, "rarity": "epic" },
+	{ "id": "infinite_breaker", "name": "Endless Breaker", "name_pt": "Quebrador Infinito", "desc": "Destroy 25 rings in one Infinite Mode run.", "desc_pt": "Destrua 25 aneis em uma partida infinita.", "metric": "bestInfiniteRings", "required": 25, "reward": { "type": "skin", "skin_id": "blue_vortex" }, "rarity": "epic" },
+	{ "id": "inf_rings_50", "name": "Red Comet", "name_pt": "Cometa Rubro", "desc": "Destroy 50 rings in one Infinite Mode run.", "desc_pt": "Destrua 50 aneis em uma partida infinita.", "metric": "bestInfiniteRings", "required": 50, "reward": { "type": "skin", "skin_id": "red_comet" }, "rarity": "rare" },
+	{ "id": "inf_rings_100", "name": "Endless Prism", "name_pt": "Prisma Sem Fim", "desc": "Destroy 100 rings in one Infinite Mode run.", "desc_pt": "Destrua 100 aneis em uma partida infinita.", "metric": "bestInfiniteRings", "required": 100, "reward": { "type": "skin", "skin_id": "endless_prism" }, "rarity": "epic" },
+	{ "id": "inf_level_5", "name": "Neon Roguelike I", "name_pt": "Roguelike Neon I", "desc": "Reach run level 5 in Infinite Mode.", "desc_pt": "Alcance nivel 5 em uma run infinita.", "metric": "infiniteBestLevel", "required": 5, "reward": { "type": "coins", "amount": 1200 }, "rarity": "epic" },
+	{ "id": "inf_level_10", "name": "Neon Roguelike II", "name_pt": "Roguelike Neon II", "desc": "Reach run level 10 in Infinite Mode.", "desc_pt": "Alcance nivel 10 em uma run infinita.", "metric": "infiniteBestLevel", "required": 10, "reward": { "type": "diamonds", "amount": 100 }, "rarity": "legendary" },
 	{ "id": "combo_starter", "name": "Combo Starter", "name_pt": "Inicio de Combo", "desc": "Reach combo 5.", "desc_pt": "Alcance combo 5.", "metric": "bestCombo", "required": 5, "reward": { "type": "coins", "amount": 350 }, "rarity": "common" },
+	{ "id": "combo_10", "name": "Neon Combo", "name_pt": "Combo Neon", "desc": "Reach combo 10.", "desc_pt": "Alcance combo 10.", "metric": "bestCombo", "required": 10, "reward": { "type": "keys", "amount": 1 }, "rarity": "rare" },
+	{ "id": "skin_effect_10", "name": "Skin Spark", "name_pt": "Centelha de Skin", "desc": "Trigger 10 skin effects.", "desc_pt": "Ative 10 efeitos de skin.", "metric": "skinEffects", "required": 10, "reward": { "type": "diamonds", "amount": 12 }, "rarity": "rare" },
+	{ "id": "critical_5", "name": "Critical Glow", "name_pt": "Brilho Critico", "desc": "Make 5 critical hits.", "desc_pt": "Faca 5 criticos.", "metric": "criticals", "required": 5, "reward": { "type": "xp", "amount": 90 }, "rarity": "common" },
 	{ "id": "skin_equipped", "name": "Fresh Glow", "name_pt": "Brilho Novo", "desc": "Equip a skin.", "desc_pt": "Equipe uma skin.", "metric": "skinEquips", "required": 1, "reward": { "type": "diamonds", "amount": 5 }, "rarity": "common" },
 	{ "id": "upgrade_stack", "name": "Power Stack", "name_pt": "Pilha de Poder", "desc": "Buy 5 permanent upgrades.", "desc_pt": "Compre 5 melhorias permanentes.", "metric": "upgradesBought", "required": 5, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "rare" },
 	{ "id": "stage_champion", "name": "Neon Champion", "name_pt": "Campeao Neon", "desc": "Unlock all 50 phases.", "desc_pt": "Libere todas as 50 fases.", "metric": "highestPhase", "required": 50, "reward": { "type": "skin", "skin_id": "cosmic_champion" }, "rarity": "special" },
 	{ "id": "collector", "name": "Starter Collector", "name_pt": "Colecionador Inicial", "desc": "Unlock 5 skins.", "desc_pt": "Desbloqueie 5 skins.", "metric": "skinsUnlocked", "required": 5, "reward": { "type": "chest", "chest_type": "common", "amount": 1 }, "rarity": "rare" },
+	{ "id": "rare_collector", "name": "Rare Collector", "name_pt": "Colecionador Raro", "desc": "Unlock 5 rare skins.", "desc_pt": "Desbloqueie 5 skins raras.", "metric": "rareSkinsUnlocked", "required": 5, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+	{ "id": "epic_luck", "name": "Epic Luck", "name_pt": "Sorte Epica", "desc": "Unlock 1 epic skin.", "desc_pt": "Obtenha 1 skin epica.", "metric": "epicSkinsUnlocked", "required": 1, "reward": { "type": "diamonds", "amount": 30 }, "rarity": "epic" },
+	{ "id": "legend_awake", "name": "Legend Awake", "name_pt": "Lenda Desperta", "desc": "Unlock 1 legendary skin.", "desc_pt": "Obtenha 1 skin lendaria.", "metric": "legendarySkinsUnlocked", "required": 1, "reward": { "type": "chest", "chest_type": "epic", "amount": 1 }, "rarity": "legendary" },
+	{ "id": "chest_opener_1", "name": "Chest Opener I", "name_pt": "Abridor de Baus I", "desc": "Open 5 chests.", "desc_pt": "Abra 5 baus.", "metric": "chestsOpened", "required": 5, "reward": { "type": "coins", "amount": 600 }, "rarity": "common" },
 	{ "id": "daily_claim", "name": "Daily Glow", "name_pt": "Brilho Diario", "desc": "Claim a daily reward.", "desc_pt": "Colete uma recompensa diaria.", "metric": "dailyRewardsCollected", "required": 1, "reward": { "type": "diamonds", "amount": 10 }, "rarity": "rare" },
 	{ "id": "wheel_spin", "name": "Lucky Spin", "name_pt": "Giro da Sorte", "desc": "Spin the wheel once.", "desc_pt": "Gire a roleta uma vez.", "metric": "wheelSpins", "required": 1, "reward": { "type": "coins", "amount": 300 }, "rarity": "common" },
 	{ "id": "upgrade_buyer", "name": "Power Buyer", "name_pt": "Comprador de Poder", "desc": "Buy one permanent upgrade.", "desc_pt": "Compre uma melhoria permanente.", "metric": "upgradesBought", "required": 1, "reward": { "type": "diamonds", "amount": 6 }, "rarity": "common" },
@@ -153,6 +170,9 @@ func default_save() -> Dictionary:
 			"diamonds_found": 0,
 			"chests_opened": 0,
 			"skins_unlocked": 1,
+			"rareSkinsUnlocked": 0,
+			"epicSkinsUnlocked": 0,
+			"legendarySkinsUnlocked": 0,
 			"highest_phase": 1,
 			"highest_run_level": 1,
 			"infinite_runs": 0,
@@ -163,8 +183,13 @@ func default_save() -> Dictionary:
 			"bestInfiniteRings": 0,
 			"best_infinite_score": 0,
 			"bestInfiniteScore": 0,
+			"infiniteBestLevel": 0,
 			"bestCombo": 0,
 			"runCoins": 0,
+			"runUpgrades": 0,
+			"criticals": 0,
+			"skinEffects": 0,
+			"noReviveWins": 0,
 			"boss_runs": 0,
 			"boss_wins": 0,
 			"boss_losses": 0,
@@ -217,6 +242,7 @@ func refresh_unlocks(emit_signal := true) -> void:
 			skins.append(id)
 	data["unlocked_skins"] = skins
 	data["stats"]["skins_unlocked"] = skins.size()
+	_update_skin_collection_stats()
 	if not skins.has(String(data.get("equipped_skin", "neon_blue"))):
 		data["equipped_skin"] = "neon_blue"
 	if emit_signal:
@@ -316,11 +342,20 @@ func apply_reward(reward: Dictionary, save_after := false) -> String:
 		"xp":
 			add_profile_xp(amount)
 			return "+%s XP" % amount
+		"profileXp", "profile_xp":
+			add_profile_xp(amount)
+			return "+%s profile XP" % amount
+		"fragments":
+			var skin_id := String(reward.get("skin_id", reward.get("skinId", "generic")))
+			var fragments: Dictionary = data.get("skin_fragments", {})
+			fragments[skin_id] = int(fragments.get(skin_id, 0)) + amount
+			data["skin_fragments"] = fragments
+			return "+%s fragments" % amount
 		"skin":
-			unlock_skin(String(reward.get("skin_id", "")))
+			unlock_skin(String(reward.get("skin_id", reward.get("skinId", ""))))
 			return "Skin unlocked"
 		"chest":
-			var chest_type := String(reward.get("chest_type", "common"))
+			var chest_type := String(reward.get("chest_type", reward.get("chestType", "common")))
 			add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, amount)
 			return "+%s %s chest" % [amount, chest_type]
 	if save_after:
@@ -519,10 +554,47 @@ func _achievement_def(id: String) -> Dictionary:
 	return {}
 
 
+func _update_skin_collection_stats() -> void:
+	var stats: Dictionary = data.get("stats", {})
+	var rare_count := 0
+	var epic_count := 0
+	var legendary_count := 0
+	for skin_id in Array(data.get("unlocked_skins", [])):
+		match _skin_rarity_from_id(String(skin_id)):
+			"rare":
+				rare_count += 1
+			"epic":
+				epic_count += 1
+			"legendary", "mythic", "ultimate":
+				legendary_count += 1
+	stats["skinsUnlocked"] = Array(data.get("unlocked_skins", [])).size()
+	stats["skins_unlocked"] = Array(data.get("unlocked_skins", [])).size()
+	stats["rareSkinsUnlocked"] = rare_count
+	stats["epicSkinsUnlocked"] = epic_count
+	stats["legendarySkinsUnlocked"] = legendary_count
+	data["stats"] = stats
+
+
+func _skin_rarity_from_id(id: String) -> String:
+	if id.contains("ultimate") or id in ["omega_infinity", "singularity_crown", "divine_core", "cosmic_champion", "league_king_neon", "initial_neon_champion"]:
+		return "ultimate"
+	if id.contains("mythic") or id.contains("chrono_loop"):
+		return "mythic"
+	if id.contains("legendary") or id.contains("king") or id.contains("emperor") or id.contains("guardian") or id.contains("phoenix") or id.contains("dragon") or id.contains("singularity") or id.contains("devourer") or id.contains("crown") or id.contains("champion"):
+		return "legendary"
+	if id.contains("epic") or id.contains("core") or id.contains("eye") or id.contains("orb") or id.contains("plasma") or id.contains("spiral") or id.contains("eclipse") or id.contains("prism"):
+		return "epic"
+	if id.contains("rare") or id.contains("comet") or id.contains("crystal") or id.contains("meteor") or id.contains("wizard") or id.contains("ninja") or id.contains("flame"):
+		return "rare"
+	return "common"
+
+
 func _update_achievements(save_after := true) -> void:
 	var achievements: Dictionary = data.get("achievements", {})
 	var stats: Dictionary = data.get("stats", {})
 	stats["skinsUnlocked"] = Array(data.get("unlocked_skins", [])).size()
+	_update_skin_collection_stats()
+	stats = data.get("stats", {})
 	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), int(data.get("max_unlocked_phase", 1)))
 	stats["runsPlayed"] = max(int(stats.get("runsPlayed", 0)), int(stats.get("runs_played", 0)))
 	stats["ringsDestroyed"] = max(int(stats.get("ringsDestroyed", 0)), int(stats.get("rings_destroyed", 0)))
@@ -611,12 +683,15 @@ func spend_keys(amount: int) -> bool:
 
 
 func unlock_skin(id: String) -> void:
+	if id.is_empty():
+		return
 	var skins: Array = data.get("unlocked_skins", [])
 	if not skins.has(id):
 		skins.append(id)
 	data["unlocked_skins"] = skins
 	data["stats"]["skins_unlocked"] = skins.size()
 	data["stats"]["skinsUnlocked"] = skins.size()
+	_update_skin_collection_stats()
 	_update_achievements(false)
 	save_game()
 
@@ -681,7 +756,7 @@ func add_profile_xp(amount: int) -> void:
 	save_game()
 
 
-func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int, perfect_escapes: int, diamonds: int = 0, best_combo: int = 0) -> void:
+func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int, perfect_escapes: int, diamonds: int = 0, best_combo: int = 0, criticals: int = 0, skin_effects: int = 0, run_upgrades: int = 0) -> void:
 	data["coins"] = max(0, int(data.get("coins", 0)) + coins)
 	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
 	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
@@ -702,6 +777,10 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
 	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), best_combo)
+	stats["criticals"] = int(stats.get("criticals", 0)) + criticals
+	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + skin_effects
+	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + run_upgrades
+	stats["noReviveWins"] = int(stats.get("noReviveWins", 0)) + 1
 	stats["highest_phase"] = max(int(stats.get("highest_phase", 1)), min(50, phase + 1))
 	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), min(50, phase + 1))
 	data["current_phase"] = max(int(data.get("current_phase", 1)), min(50, phase + 1))
@@ -712,6 +791,10 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	_progress_missions("perfectEscapes", perfect_escapes)
 	_progress_missions("runCoins", coins)
 	_progress_missions("bestCombo", best_combo)
+	_progress_missions("criticals", criticals)
+	_progress_missions("skinEffects", skin_effects)
+	_progress_missions("runUpgrades", run_upgrades)
+	_progress_missions("noReviveWins", 1)
 	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
@@ -725,6 +808,10 @@ func record_infinite_run(summary: Dictionary) -> void:
 	var seconds := int(summary.get("seconds", 0))
 	var score := int(summary.get("score", 0))
 	var combo_value := int(summary.get("best_combo", 0))
+	var critical_value := int(summary.get("criticals", 0))
+	var skin_effect_value := int(summary.get("skin_effects", 0))
+	var run_upgrade_value := int(summary.get("run_upgrades", 0))
+	var run_level_value := int(summary.get("run_level", 1))
 	data["coins"] = max(0, int(data.get("coins", 0)) + coins)
 	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
 	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
@@ -749,11 +836,18 @@ func record_infinite_run(summary: Dictionary) -> void:
 	stats["bestInfiniteRings"] = max(int(stats.get("bestInfiniteRings", 0)), rings_value)
 	stats["best_infinite_score"] = max(int(stats.get("best_infinite_score", 0)), score)
 	stats["bestInfiniteScore"] = max(int(stats.get("bestInfiniteScore", 0)), score)
+	stats["infiniteBestLevel"] = max(int(stats.get("infiniteBestLevel", 0)), run_level_value)
+	stats["criticals"] = int(stats.get("criticals", 0)) + critical_value
+	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + skin_effect_value
+	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + run_upgrade_value
 	data["stats"] = stats
 	_progress_missions("runsPlayed", 1)
 	_progress_missions("ringsDestroyed", rings_value)
 	_progress_missions("runCoins", coins)
 	_progress_missions("bestCombo", combo_value)
+	_progress_missions("criticals", critical_value)
+	_progress_missions("skinEffects", skin_effect_value)
+	_progress_missions("runUpgrades", run_upgrade_value)
 	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
@@ -763,6 +857,69 @@ func on_ring_destroyed(amount := 1) -> void:
 	_increment_stat("ringsDestroyed", amount, false)
 	_increment_stat("rings_destroyed", amount, false)
 	_progress_missions("ringsDestroyed", amount)
+	_update_achievements(false)
+
+
+func on_level_completed(level_id: int, summary: Dictionary = {}) -> void:
+	record_phase_complete(
+		level_id,
+		int(summary.get("coins", 0)),
+		int(summary.get("xp", 0)),
+		int(summary.get("rings", 0)),
+		int(summary.get("perfects", 0)),
+		int(summary.get("diamonds", 0)),
+		int(summary.get("best_combo", 0)),
+		int(summary.get("criticals", 0)),
+		int(summary.get("skin_effects", 0)),
+		int(summary.get("run_upgrades", 0))
+	)
+
+
+func on_infinite_run_finished(summary: Dictionary) -> void:
+	record_infinite_run(summary)
+
+
+func on_coins_earned(amount: int) -> void:
+	_increment_stat("runCoins", amount, false)
+	_progress_missions("runCoins", amount)
+	_update_achievements(false)
+
+
+func on_skin_equipped(skin_id: String) -> void:
+	equip_skin(skin_id)
+
+
+func on_skin_unlocked(skin_id: String) -> void:
+	unlock_skin(skin_id)
+
+
+func on_upgrade_bought(upgrade_id: String) -> void:
+	_increment_stat("upgradesBought", 1, false)
+	_progress_missions("upgradesBought", 1)
+	_update_achievements(false)
+
+
+func on_daily_reward_claimed() -> void:
+	_increment_stat("dailyRewardsCollected", 1, false)
+	_progress_missions("dailyRewardsCollected", 1)
+	_update_achievements(false)
+
+
+func on_wheel_spun() -> void:
+	_increment_stat("wheelSpins", 1, false)
+	_progress_missions("wheelSpins", 1)
+	_update_achievements(false)
+
+
+func on_chest_opened() -> void:
+	_increment_stat("chestsOpened", 1, false)
+	_increment_stat("chests_opened", 1, false)
+	_progress_missions("chestsOpened", 1)
+	_update_achievements(false)
+
+
+func on_mission_completed() -> void:
+	_increment_stat("missionsCompleted", 1, false)
 	_update_achievements(false)
 
 

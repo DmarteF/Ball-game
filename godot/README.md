@@ -249,6 +249,8 @@ Upgrades de gameplay implementados:
 - Permanentes: dano, velocidade, moedas, XP, critico, perfect chance e slow rings.
 - Temporarios: dano, velocidade, moedas, critico, XP, perfect chance, burn, frost, ring repulse e chain lightning.
 - Temporarios aparecem apenas quando desbloqueados no `GameState.unlocked_upgrades`.
+- Os 92 sprites de skins importados da branch `main` estao em `godot/assets/skins`.
+- `SkinsScreen.gd` varre essa pasta e cria metadados/efeitos por familia visual para qualquer skin que ainda nao tenha uma entrada manual, evitando skins importadas sem comportamento basico.
 
 Fisica/aneis:
 
@@ -275,6 +277,7 @@ Modo infinito:
 - Gera aneis continuamente enquanto o jogador estiver vivo.
 - A dificuldade escala por tempo sobrevivido e aneis quebrados.
 - Escala HP, velocidade de fechamento, rotacao, tamanho do gap, densidade e padroes solidos.
+- Quando o jogador limpa aneis rapido demais, `infinite_clear_pressure` aumenta e acelera fechamento/rotacao, reduz gaps e eleva densidade dentro de limites seguros; a pressao decai com o tempo.
 - Salva `infiniteRuns`, `bestInfiniteSeconds`, `bestInfiniteRings`, `bestInfiniteScore`, `bestCombo` e recursos ganhos.
 - Tela de resultado mostra tempo, aneis quebrados, moedas, XP, diamantes e novo recorde.
 
@@ -282,6 +285,8 @@ Conquistas/missoes/desbloqueios:
 
 - Fases concluidas, aneis quebrados, perfects, moedas, compras de upgrade, skins equipadas, diaria, roleta e modo infinito atualizam estatisticas reais.
 - Conquistas novas: `infinite_first`, `infinite_survivor`, `infinite_breaker`, `combo_starter`, `skin_equipped`, `upgrade_stack`.
+- Marcos adicionais da branch `main` foram portados para anel, perfect, diamantes, infinito por tempo/aneis/nivel de run, combo, criticos, efeitos de skin, colecao por raridade e abertura de baus.
+- `GameState.gd` expoe hooks publicos para fases, modo infinito, moedas, skins, upgrades, diaria, roleta, baus e missoes, mantendo conquistas/missoes/desbloqueios conectaveis aos sistemas reais.
 - Recompensas de conquistas continuam coletaveis pela tela de conquistas existente.
 - Hooks de baus, roleta, loja, diaria e missoes ja chamam `GameState` e alimentam progresso.
 
@@ -291,6 +296,8 @@ Checklist desta etapa:
 | --- | --- |
 | Efeitos basicos de skins implementados | Sim |
 | Todas as skins disponiveis equipaveis | Sim |
+| 92 sprites de skins da main importados | Sim |
+| Skins importadas recebem efeito basico automaticamente | Sim |
 | Skins bloqueadas respeitam desbloqueio | Sim |
 | Skin equipada aparece na gameplay | Sim |
 | Efeitos de upgrades implementados | Sim |
@@ -309,10 +316,12 @@ Checklist desta etapa:
 | SFX sincronizados com eventos | Sim |
 | Modo infinito funcional | Sim |
 | Modo infinito escala dificuldade | Sim |
+| Modo infinito reage a limpeza rapida de aneis | Sim |
 | Modo infinito salva recorde | Sim |
 | Conquistas vinculadas as fases | Sim |
 | Conquistas vinculadas ao modo infinito | Sim |
 | Conquistas vinculadas a jogatina real | Sim |
+| Hooks de eventos internos criados em GameState | Sim |
 | Conquistas desbloqueiam upgrades/skins quando aplicavel | Parcial: recompensas coletaveis, unlocks diretos ja funcionam para skins por recompensa. |
 | Missoes recebem progresso da jogatina real | Sim |
 | Save atualizado corretamente | Sim |

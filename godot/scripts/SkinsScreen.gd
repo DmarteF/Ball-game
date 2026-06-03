@@ -292,14 +292,15 @@ func _build_all_skin_data() -> Array:
 		if not directory.current_is_dir() and file_name.ends_with(".png"):
 			var id := file_name.trim_suffix(".png")
 			if not seen.has(id):
+				var rarity := _rarity_from_id(id)
 				result.append({
 					"id": id,
 					"name": _name_from_id(id),
-					"rarity": _rarity_from_id(id),
-					"desc": "Skin importada da branch main, aguardando descrição completa.",
-					"primary": _rarity_color(_rarity_from_id(id)),
-					"secondary": "#00f0ff",
-					"effects": ["Trilha"],
+					"rarity": rarity,
+					"desc": _description_from_id(id),
+					"primary": _primary_from_id(id, rarity),
+					"secondary": _secondary_from_id(id),
+					"effects": _effects_from_id(id),
 					"owned": false,
 				})
 		file_name = directory.get_next()
@@ -326,6 +327,96 @@ func _rarity_from_id(id: String) -> String:
 	if id.contains("rare") or id.contains("comet") or id.contains("crystal") or id.contains("meteor") or id.contains("wizard") or id.contains("ninja"):
 		return "rare"
 	return "common"
+
+
+func _description_from_id(id: String) -> String:
+	var effects := _effects_from_id(id)
+	if effects.has("Congela") or effects.has("Lentidão"):
+		return "Reduz temporariamente a rotação dos anéis durante a gameplay."
+	if effects.has("Queima"):
+		return "Aplica dano extra e efeito quente nos impactos."
+	if effects.has("Corrente"):
+		return "Pode atingir outro anel próximo com energia elétrica."
+	if effects.has("Área") or effects.has("Gravidade"):
+		return "Causa dano em área ou pulso gravitacional nos anéis próximos."
+	if effects.has("Fase"):
+		return "Pode atravessar parte sólida por chance."
+	if effects.has("Repulsão"):
+		return "Pode empurrar anéis perigosos para fora."
+	if effects.has("Moedas"):
+		return "Aumenta ganhos de moedas durante ou ao fim da rodada."
+	if effects.has("XP"):
+		return "Aumenta ganhos de XP."
+	if effects.has("Velocidade"):
+		return "Deixa a bolinha mais rápida e ativa."
+	if effects.has("Crítico"):
+		return "Melhora chance ou dano crítico."
+	return "Skin importada da branch main com brilho/trilha próprios."
+
+
+func _effects_from_id(id: String) -> Array[String]:
+	var lower := id.to_lower()
+	var effects: Array[String] = []
+	if _contains_any(lower, ["ice", "frost", "penguin", "wizard", "red_eye", "neon_spiral", "chrono", "celestial"]):
+		effects.append("Congela" if lower.contains("ice") or lower.contains("frost") else "Lentidão")
+	if _contains_any(lower, ["fire", "flame", "dragon", "phoenix", "solar", "meteor", "radioactive"]):
+		effects.append("Queima")
+	if _contains_any(lower, ["electric", "lightning", "plasma", "satellite", "orbital", "blade"]):
+		effects.append("Corrente")
+	if _contains_any(lower, ["ghost", "shadow", "void"]):
+		effects.append("Fase")
+	if _contains_any(lower, ["ripple", "guardian", "king", "repulse", "robot"]):
+		effects.append("Repulsão")
+	if _contains_any(lower, ["black_hole", "singularity", "cosmic", "collapsed", "eclipse", "prism"]):
+		effects.append("Área")
+	if _contains_any(lower, ["piggy", "cow", "ladybug", "chick", "hamster", "puppy", "emperor", "eternal", "pulse"]):
+		effects.append("Moedas")
+	if _contains_any(lower, ["monkey", "panda", "heart", "star", "astral", "endless"]):
+		effects.append("XP")
+	if _contains_any(lower, ["bunny", "fox", "fish", "comet", "ninja", "vortex"]):
+		effects.append("Velocidade")
+	if _contains_any(lower, ["kitty", "tiger", "bee", "skull", "crown", "omega", "champion"]):
+		effects.append("Crítico")
+	if effects.is_empty():
+		effects.append("Trilha")
+	if _rarity_from_id(id) in ["legendary", "mythic", "ultimate"]:
+		effects.append("Top")
+	return effects
+
+
+func _primary_from_id(id: String, rarity: String) -> String:
+	var lower := id.to_lower()
+	if _contains_any(lower, ["ice", "frost", "blue", "fish", "penguin"]):
+		return "#9be8ff"
+	if _contains_any(lower, ["fire", "flame", "meteor", "solar", "phoenix"]):
+		return "#ff8800"
+	if _contains_any(lower, ["electric", "lightning", "plasma"]):
+		return "#38bdf8"
+	if _contains_any(lower, ["shadow", "void", "ghost", "black", "singularity"]):
+		return "#a855f7"
+	if _contains_any(lower, ["gold", "king", "crown", "star", "divine", "champion"]):
+		return "#ffd700"
+	return _rarity_color(rarity)
+
+
+func _secondary_from_id(id: String) -> String:
+	var lower := id.to_lower()
+	if _contains_any(lower, ["ice", "frost", "blue"]):
+		return "#3b82f6"
+	if _contains_any(lower, ["fire", "flame", "solar"]):
+		return "#ff0055"
+	if _contains_any(lower, ["electric", "lightning"]):
+		return "#00f0ff"
+	if _contains_any(lower, ["shadow", "void", "ghost", "black"]):
+		return "#16003b"
+	return "#00f0ff"
+
+
+func _contains_any(id: String, needles: Array) -> bool:
+	for needle in needles:
+		if id.contains(String(needle)):
+			return true
+	return false
 
 
 func _make_skin_icon(skin_id: String, hidden: bool, tint: Color) -> PanelContainer:

@@ -119,13 +119,16 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Desbloqueios reais estao centralizados em `GameState.refresh_unlocks`, usando fase maxima e nivel do perfil; baus/eventos/missoes/conquistas ficaram como fontes futuras documentadas.
 - Upgrades temporarios de level-up so entram no sorteio se estiverem desbloqueados no save. O fallback que completava a lista com upgrades bloqueados foi removido.
 - Efeitos basicos de skins foram portados para a gameplay: freeze, burn, chain, area, phase, repulse, coin, XP, speed e crit.
+- Os 92 sprites de skins existentes em `frontend/assets/skins` estao importados em `godot/assets/skins`; skins sem entrada manual recebem metadados e efeito basico por familia visual em `SkinsScreen.gd`.
 - Efeitos de upgrades temporarios foram conectados a calculos reais: frost desacelera e colore o anel, burn soma dano, ringRepulse empurra o raio e chainLightning danifica um anel vizinho.
 - Colisao agora usa substeps e checagem de segmento entre posicao anterior/nova para reduzir tunneling em alta velocidade.
 - Movimento da bolinha foi estabilizado com angulo minimo e pequena variacao controlada em reflexoes, evitando trajetorias longas quase horizontais.
 - Espacamento de aneis usa `MIN_RING_SPACING`, `MAX_VISIBLE_RINGS` e clamp de raios para permitir arena mais cheia sem sobreposicao confusa.
 - SFX foi remapeado por evento: `ring_hit`, `ring_crit`, `ring_break`, `ring_clear`, `reward_coin`, `xp`, `diamond`, `click`, `victory` e `defeat`.
 - Modo infinito foi conectado ao card `Modo Infinito`: gera aneis sem fim, escala dificuldade, salva recordes e mostra resumo de resultado.
+- O infinito tambem usa pressao dinamica: limpezas rapidas aumentam `infinite_clear_pressure`, que fecha gaps, acelera rotacao/fechamento e aumenta densidade de aneis com clamp para nao sobrepor nem ficar injusto cedo demais.
 - Conquistas/missoes recebem eventos reais de fase, infinito, aneis, perfects, compras, skins, diaria, roleta e recursos.
+- Conquistas adicionais da main foram vinculadas a perfects, diamantes, infinito por tempo/aneis/nivel, combo, criticos, efeitos de skin, colecao por raridade e abertura de baus. `GameState.gd` agora tem hooks publicos para conectar futuros sistemas sem duplicar logica.
 - Ritmo adaptativo dos aneis adicionado: `ring_spawn_delay`, streak de limpeza rapida e bonus por muitos aneis restantes aumentam o ritmo com clamp, e o estado reseta em restart/vitoria/proxima fase.
 - Fundos variaveis por partida/fase adicionados com paletas escuras em roxo, azul, vinho e preto arroxeado. As paletas dos aneis tambem variam em neon.
 - Gaps/aberturas foram reduzidos para evitar fases faceis demais. `LevelData.gd` agora usa clamp menor e `GameplayManager.gd` evita reabrir gaps grandes no desenho/colisao.
@@ -224,6 +227,8 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | Skins equipaveis e persistentes | Sim |
 | Skin equipada usada na gameplay | Sim |
 | Efeitos basicos de skins implementados | Sim |
+| 92 sprites de skins da main importados | Sim |
+| Skins importadas recebem efeitos basicos | Sim |
 | Efeito de gelo reduz velocidade do anel | Sim |
 | Efeito de gelo aplica visual azul/congelado | Sim |
 | Bolinha rapida protegida por substeps/segmento | Sim |
@@ -231,7 +236,9 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | SFX de bater/limpar anel corrigido | Sim |
 | Modo infinito funcional | Sim |
 | Modo infinito salva recordes | Sim |
+| Modo infinito aumenta pressao ao limpar aneis rapido | Sim |
 | Conquistas vinculadas ao modo infinito | Sim |
+| Hooks internos de progresso/criacao de eventos | Sim |
 | Missoes recebem progresso da jogatina real | Sim |
 | Ritmo adaptativo dos aneis | Sim |
 | Fundos escuros variaveis por fase/partida | Sim |

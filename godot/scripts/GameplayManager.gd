@@ -108,6 +108,7 @@ var ring_palette_index := 0
 var infinite_elapsed := 0.0
 var infinite_level := 1
 var infinite_score := 0
+var infinite_clear_pressure := 0.0
 var last_direction_shift_msec := 0
 var skin_profile: Dictionary = {}
 
@@ -221,6 +222,7 @@ func _start_level() -> void:
 	infinite_elapsed = 0.0
 	infinite_level = 1
 	infinite_score = 0
+	infinite_clear_pressure = 0.0
 	if is_infinite:
 		gameplay_config = _make_infinite_gameplay_config()
 	_update_arena_metrics()
@@ -320,24 +322,26 @@ func _create_rings() -> Array[Dictionary]:
 func _make_infinite_gameplay_config() -> Dictionary:
 	var level_factor: int = max(1, infinite_level)
 	var player_level := int(GameState.data.get("level", 1))
+	var pressure := clampf(infinite_clear_pressure, 0.0, 8.0)
 	return {
-		"ring_count": clampi(10 + floori(float(level_factor) * 0.45), 10, 18),
-		"base_hp": 18 + floori(float(level_factor) * 2.8) + floori(float(player_level) * 0.25),
-		"closing_speed": 0.010 + min(0.028, float(level_factor) * 0.0009),
-		"rotation_speed": 0.0044 + min(0.011, float(level_factor) * 0.00038),
-		"gap_size": max(PI / 14.0, PI / (3.8 + float(level_factor) * 0.08)),
+		"ring_count": clampi(10 + floori(float(level_factor) * 0.45 + pressure * 0.5), 10, 19),
+		"base_hp": 18 + floori(float(level_factor) * 2.8 + pressure * 1.4) + floori(float(player_level) * 0.25),
+		"closing_speed": 0.010 + min(0.034, float(level_factor) * 0.0009 + pressure * 0.0012),
+		"rotation_speed": 0.0044 + min(0.014, float(level_factor) * 0.00038 + pressure * 0.00045),
+		"gap_size": max(PI / 15.5, PI / (3.8 + float(level_factor) * 0.08 + pressure * 0.12)),
 	}
 
 
 func _update_infinite_mode(delta_seconds: float) -> void:
 	infinite_elapsed += delta_seconds
-	var next_level := 1 + floori(infinite_elapsed / 22.0) + floori(float(rings_destroyed) / 10.0)
+	infinite_clear_pressure = max(0.0, infinite_clear_pressure - delta_seconds * 0.18)
+	var next_level := 1 + floori(infinite_elapsed / 22.0) + floori(float(rings_destroyed) / 10.0) + floori(infinite_clear_pressure * 0.45)
 	if next_level != infinite_level:
 		infinite_level = next_level
 		gameplay_config = _make_infinite_gameplay_config()
 	if rings.size() >= MAX_VISIBLE_RINGS:
 		_prune_inactive_rings()
-	var target_count := clampi(8 + floori(float(infinite_level) * 0.24), 8, 17)
+	var target_count := clampi(8 + floori(float(infinite_level) * 0.24 + infinite_clear_pressure * 0.28), 8, 18)
 	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6:
 		_append_infinite_ring()
 	_clamp_ring_spacing()
@@ -594,7 +598,7 @@ func _finish_victory() -> void:
 	finished = true
 	var profile_xp_reward := _run_profile_xp() * reward_multiplier
 	var global_coins_reward := _global_coins_from_run(run_coins * reward_multiplier, best_combo, true)
-	GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier, best_combo)
+	GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier, best_combo, criticals, skin_effects, run_upgrades)
 	_spawn_particles(arena_center, Color("#00ff88"), 42, 180.0)
 	_play_sfx("victory")
 	_victory_title.text = "FASE %s CONCLUIDA" % phase_id
@@ -623,6 +627,10 @@ func _finish_defeat() -> void:
 			"diamonds": run_diamonds,
 			"score": infinite_score,
 			"best_combo": best_combo,
+			"criticals": criticals,
+			"skin_effects": skin_effects,
+			"run_upgrades": run_upgrades,
+			"run_level": run_level,
 			"new_record": floori(infinite_elapsed) > previous_best_seconds,
 		}
 		GameState.record_infinite_run(summary)
@@ -1235,10 +1243,16 @@ func _effective_ring_pacing() -> float:
 
 func _register_ring_clear() -> void:
 	var now := Time.get_ticks_msec()
-	rapid_clear_streak = rapid_clear_streak + 1 if now - last_ring_clear_msec <= 1800 else 1
+	var elapsed_since_clear := now - last_ring_clear_msec
+	rapid_clear_streak = rapid_clear_streak + 1 if elapsed_since_clear <= 1800 else 1
 	last_ring_clear_msec = now
 	ring_spawn_delay = clampf(ring_spawn_delay - 0.075 - float(max(0, _active_ring_count() - 10)) * 0.004, 0.32, _base_ring_spawn_delay())
-	ring_pacing_multiplier = clampf(1.0 + rapid_clear_streak * 0.07, 1.0, 1.55)
+	if is_infinite:
+		var quick_bonus := 0.32 if elapsed_since_clear <= 1150 else 0.16
+		infinite_clear_pressure = clampf(infinite_clear_pressure + quick_bonus + float(max(0, rapid_clear_streak - 3)) * 0.035, 0.0, 8.0)
+		ring_pacing_multiplier = clampf(1.0 + rapid_clear_streak * 0.085 + infinite_clear_pressure * 0.035, 1.0, 1.95)
+	else:
+		ring_pacing_multiplier = clampf(1.0 + rapid_clear_streak * 0.07, 1.0, 1.55)
 
 
 func _combo_coin_multiplier() -> float:
