@@ -64,7 +64,7 @@ func _build_screen() -> void:
 	scroll.add_child(list)
 
 	list.add_child(_make_infinite_card())
-	for phase_id in range(1, 51):
+	for phase_id in range(1, LevelData.MAX_PHASE + 1):
 		list.add_child(_make_phase_card(LevelData.get_phase_config(phase_id)))
 	list.add_child(_spacer(18))
 

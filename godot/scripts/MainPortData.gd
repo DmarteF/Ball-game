@@ -141,6 +141,7 @@ const AUTO_RUN_UPGRADE_IDS := [
 	"critical",
 	"xpBoost",
 	"perfectChance",
+	"bounce",
 ]
 
 const LEAGUE_RANKS := [

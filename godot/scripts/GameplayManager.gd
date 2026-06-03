@@ -8,8 +8,8 @@ const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
 const MIN_RING_SPACING := 8.4
 const MAX_VISIBLE_RINGS := 26
-const MIN_TARGET_ACTIVE_RINGS := 5
-const TARGET_ACTIVE_RINGS := 6
+const MIN_TARGET_ACTIVE_RINGS := 8
+const TARGET_ACTIVE_RINGS := 8
 const MAX_TARGET_ACTIVE_RINGS := 8
 const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
 const MAX_SPAWN_DISTANCE_FROM_BALL := 170.0
@@ -197,7 +197,7 @@ func _ready() -> void:
 	_bold_font = _make_system_font(700)
 	game_mode = String(GameState.data.get("selected_mode", "phase"))
 	is_infinite = game_mode == "infinite"
-	phase_id = 1 if is_infinite else clampi(int(GameState.data.get("selected_phase", GameState.data.get("current_phase", 1))), 1, 50)
+	phase_id = 1 if is_infinite else clampi(int(GameState.data.get("selected_phase", GameState.data.get("current_phase", 1))), 1, LevelData.MAX_PHASE)
 	phase_config = LevelData.get_phase_config(phase_id)
 	gameplay_config = _make_infinite_gameplay_config() if is_infinite else LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
 	_select_visual_palettes()
@@ -501,12 +501,12 @@ func _append_infinite_ring() -> bool:
 
 
 func _infinite_ring_spacing() -> float:
-	return max(MIN_RING_SPACING + 4.6, 13.0)
+	return max(MIN_RING_SPACING + 1.2, 9.6)
 
 
 func _infinite_ring_capacity() -> int:
 	var available: float = _playable_ring_max_radius() - _playable_ring_min_radius()
-	return clampi(floori(available / _infinite_ring_spacing()) + 1, 4, 12)
+	return clampi(floori(available / _infinite_ring_spacing()) + 1, TARGET_ACTIVE_RINGS, 12)
 
 
 func _active_ring_indices_by_radius() -> Array[int]:
@@ -882,10 +882,10 @@ func _finish_victory() -> void:
 	_victory_title.text = "FASE %s CONCLUIDA" % phase_id
 	_rebuild_victory_rewards(global_coins_reward, profile_xp_reward)
 	if _victory_unlock_label:
-		_victory_unlock_label.text = "PROXIMA FASE LIBERADA" if phase_id < 50 else "TODAS AS FASES CONCLUIDAS"
+		_victory_unlock_label.text = "PROXIMA FASE LIBERADA" if phase_id < LevelData.MAX_PHASE else "TODAS AS FASES CONCLUIDAS"
 	if _victory_next_button:
-		_victory_next_button.disabled = phase_id >= 50
-		_victory_next_button.text = "PROXIMA FASE" if phase_id < 50 else "CONCLUIDO"
+		_victory_next_button.disabled = phase_id >= LevelData.MAX_PHASE
+		_victory_next_button.text = "PROXIMA FASE" if phase_id < LevelData.MAX_PHASE else "CONCLUIDO"
 	if _victory_double_button:
 		_victory_double_button.visible = _can_double_result_reward()
 		_victory_double_button.disabled = false
@@ -2303,7 +2303,7 @@ func _finish_quit_reward() -> void:
 
 func _go_to_next_phase() -> void:
 	_play_sfx("click")
-	var next_phase: int = min(50, phase_id + 1)
+	var next_phase: int = min(LevelData.MAX_PHASE, phase_id + 1)
 	if GameState.select_phase(next_phase):
 		phase_id = next_phase
 		phase_config = LevelData.get_phase_config(phase_id)

@@ -2,14 +2,17 @@ extends Node
 
 signal changed
 
+const MAX_PHASE := 100
+const TARGET_ACHIEVEMENT_COUNT := 100
+
 const PERMANENT_UPGRADE_DEFS := {
-	"baseDamage": { "base_cost": 100, "max": 30, "phase": 1, "level": 1 },
-	"baseSpeed": { "base_cost": 120, "max": 18, "phase": 1, "level": 1 },
-	"coinMultiplier": { "base_cost": 200, "max": 25, "phase": 1, "level": 1 },
-	"critChance": { "base_cost": 150, "max": 20, "phase": 1, "level": 1 },
-	"xpBoost": { "base_cost": 180, "max": 25, "phase": 3, "level": 3 },
-	"perfectChance": { "base_cost": 450, "max": 12, "phase": 5, "level": 5 },
-	"slowRings": { "base_cost": 600, "max": 10, "phase": 8, "level": 9 },
+	"baseDamage": { "base_cost": 90, "max": 36, "phase": 1, "level": 1 },
+	"baseSpeed": { "base_cost": 115, "max": 24, "phase": 1, "level": 1 },
+	"coinMultiplier": { "base_cost": 180, "max": 30, "phase": 1, "level": 1 },
+	"critChance": { "base_cost": 145, "max": 24, "phase": 1, "level": 1 },
+	"xpBoost": { "base_cost": 175, "max": 30, "phase": 3, "level": 3 },
+	"perfectChance": { "base_cost": 420, "max": 15, "phase": 5, "level": 5 },
+	"slowRings": { "base_cost": 560, "max": 14, "phase": 8, "level": 9 },
 }
 
 const TEMP_UPGRADE_UNLOCKS := {
@@ -63,7 +66,7 @@ const ACHIEVEMENTS := [
 	{ "id": "critical_5", "name": "Critical Glow", "name_pt": "Brilho Critico", "desc": "Make 5 critical hits.", "desc_pt": "Faca 5 criticos.", "metric": "criticals", "required": 5, "reward": { "type": "xp", "amount": 90 }, "rarity": "common" },
 	{ "id": "skin_equipped", "name": "Fresh Glow", "name_pt": "Brilho Novo", "desc": "Equip a skin.", "desc_pt": "Equipe uma skin.", "metric": "skinEquips", "required": 1, "reward": { "type": "diamonds", "amount": 5 }, "rarity": "common" },
 	{ "id": "upgrade_stack", "name": "Power Stack", "name_pt": "Pilha de Poder", "desc": "Buy 5 permanent upgrades.", "desc_pt": "Compre 5 melhorias permanentes.", "metric": "upgradesBought", "required": 5, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "rare" },
-	{ "id": "stage_champion", "name": "Neon Champion", "name_pt": "Campeao Neon", "desc": "Unlock all 50 phases.", "desc_pt": "Libere todas as 50 fases.", "metric": "highestPhase", "required": 50, "reward": { "type": "skin", "skin_id": "cosmic_champion" }, "rarity": "special" },
+	{ "id": "stage_champion", "name": "Neon Champion", "name_pt": "Campeao Neon", "desc": "Unlock 50 phases.", "desc_pt": "Libere 50 fases.", "metric": "highestPhase", "required": 50, "reward": { "type": "skin", "skin_id": "cosmic_champion" }, "rarity": "special" },
 	{ "id": "collector", "name": "Starter Collector", "name_pt": "Colecionador Inicial", "desc": "Unlock 5 skins.", "desc_pt": "Desbloqueie 5 skins.", "metric": "skinsUnlocked", "required": 5, "reward": { "type": "chest", "chest_type": "common", "amount": 1 }, "rarity": "rare" },
 	{ "id": "rare_collector", "name": "Rare Collector", "name_pt": "Colecionador Raro", "desc": "Unlock 5 rare skins.", "desc_pt": "Desbloqueie 5 skins raras.", "metric": "rareSkinsUnlocked", "required": 5, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
 	{ "id": "epic_luck", "name": "Epic Luck", "name_pt": "Sorte Epica", "desc": "Unlock 1 epic skin.", "desc_pt": "Obtenha 1 skin epica.", "metric": "epicSkinsUnlocked", "required": 1, "reward": { "type": "diamonds", "amount": 30 }, "rarity": "epic" },
@@ -74,6 +77,146 @@ const ACHIEVEMENTS := [
 	{ "id": "upgrade_buyer", "name": "Power Buyer", "name_pt": "Comprador de Poder", "desc": "Buy one permanent upgrade.", "desc_pt": "Compre uma melhoria permanente.", "metric": "upgradesBought", "required": 1, "reward": { "type": "diamonds", "amount": 6 }, "rarity": "common" },
 	{ "id": "store_buyer", "name": "Neon Shopper", "name_pt": "Comprador Neon", "desc": "Buy or claim something in the shop.", "desc_pt": "Compre ou resgate algo na loja.", "metric": "storePurchases", "required": 1, "reward": { "type": "diamonds", "amount": 6 }, "rarity": "common" },
 ]
+
+
+func get_achievements() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for achievement in ACHIEVEMENTS:
+		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
+	_append_phase_achievements(result)
+	_append_infinite_achievements(result)
+	_append_progress_achievements(result)
+	return result.slice(0, min(TARGET_ACHIEVEMENT_COUNT, result.size()))
+
+
+func _append_phase_achievements(result: Array[Dictionary]) -> void:
+	for milestone in [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]:
+		_append_unique_achievement(result, {
+			"id": "phase_unlock_%s" % milestone,
+			"name": "Phase %s Glow" % milestone,
+			"name_pt": "Brilho da Fase %s" % milestone,
+			"desc": "Unlock phase %s." % milestone,
+			"desc_pt": "Libere a fase %s." % milestone,
+			"metric": "highestPhase",
+			"required": milestone,
+			"reward": _milestone_reward(milestone, "phase"),
+			"rarity": _milestone_rarity(milestone),
+		})
+	for wins in [3, 5, 10, 20, 35, 50, 75, 100]:
+		_append_unique_achievement(result, {
+			"id": "phase_wins_%s" % wins,
+			"name": "%s Phase Wins" % wins,
+			"name_pt": "%s Vitorias de Fase" % wins,
+			"desc": "Complete %s phase runs." % wins,
+			"desc_pt": "Conclua %s partidas de fase." % wins,
+			"metric": "phaseWins",
+			"required": wins,
+			"reward": _milestone_reward(wins, "wins"),
+			"rarity": _milestone_rarity(wins),
+		})
+
+
+func _append_infinite_achievements(result: Array[Dictionary]) -> void:
+	for seconds in [30, 60, 120, 180, 300, 480, 600, 900, 1200, 1800, 2400, 3600]:
+		_append_unique_achievement(result, {
+			"id": "infinite_survive_%s" % seconds,
+			"name": "Survive %ss" % seconds,
+			"name_pt": "Sobreviver %ss" % seconds,
+			"desc": "Reach %s seconds in Infinite Mode." % seconds,
+			"desc_pt": "Alcance %s segundos no Modo Infinito." % seconds,
+			"metric": "bestInfiniteSeconds",
+			"required": seconds,
+			"reward": _milestone_reward(seconds, "time"),
+			"rarity": _milestone_rarity(floori(float(seconds) / 12.0)),
+		})
+	for rings in [10, 25, 50, 75, 100, 150, 250, 400, 600, 900, 1200]:
+		_append_unique_achievement(result, {
+			"id": "infinite_rings_%s" % rings,
+			"name": "%s Endless Rings" % rings,
+			"name_pt": "%s Aneis Infinitos" % rings,
+			"desc": "Break %s rings in one Infinite Mode run." % rings,
+			"desc_pt": "Quebre %s aneis em uma partida infinita." % rings,
+			"metric": "bestInfiniteRings",
+			"required": rings,
+			"reward": _milestone_reward(rings, "infinite_rings"),
+			"rarity": _milestone_rarity(rings),
+		})
+	for level in [3, 5, 8, 10, 14, 18, 24, 30]:
+		_append_unique_achievement(result, {
+			"id": "infinite_level_%s" % level,
+			"name": "Infinite Level %s" % level,
+			"name_pt": "Nivel Infinito %s" % level,
+			"desc": "Reach run level %s in Infinite Mode." % level,
+			"desc_pt": "Alcance nivel %s em uma run infinita." % level,
+			"metric": "infiniteBestLevel",
+			"required": level,
+			"reward": _milestone_reward(level * 30, "level"),
+			"rarity": _milestone_rarity(level * 8),
+		})
+
+
+func _append_progress_achievements(result: Array[Dictionary]) -> void:
+	for rings in [100, 250, 500, 1000, 2000, 3500, 5000, 7500, 10000, 15000]:
+		_append_unique_achievement(result, _metric_achievement("rings_total_%s" % rings, "%s Total Rings" % rings, "%s Aneis Totais" % rings, "Break %s rings total." % rings, "Quebre %s aneis no total." % rings, "ringsDestroyed", rings, _milestone_reward(rings, "rings"), _milestone_rarity(floori(float(rings) / 8.0))))
+	for perfects in [5, 10, 25, 50, 100, 200, 350]:
+		_append_unique_achievement(result, _metric_achievement("perfect_total_%s" % perfects, "%s Perfects" % perfects, "%s Perfects" % perfects, "Make %s Perfect Escapes." % perfects, "Faça %s Perfect Escapes." % perfects, "perfectEscapes", perfects, _milestone_reward(perfects, "perfect"), _milestone_rarity(perfects)))
+	for coins in [500, 1500, 5000, 15000, 50000, 100000]:
+		_append_unique_achievement(result, _metric_achievement("coins_total_%s" % coins, "%s Run Coins" % coins, "%s Moedas de Run" % coins, "Earn %s run coins." % coins, "Ganhe %s moedas em runs." % coins, "runCoins", coins, _milestone_reward(floori(float(coins) / 10.0), "coins"), _milestone_rarity(floori(float(coins) / 500.0))))
+	for upgrades in [1, 5, 10, 20, 35, 50]:
+		_append_unique_achievement(result, _metric_achievement("upgrades_total_%s" % upgrades, "%s Upgrades" % upgrades, "%s Melhorias" % upgrades, "Buy %s permanent upgrades." % upgrades, "Compre %s melhorias permanentes." % upgrades, "upgradesBought", upgrades, _milestone_reward(upgrades * 30, "upgrades"), _milestone_rarity(upgrades * 3)))
+	for skins in [3, 5, 10, 20, 35, 50]:
+		_append_unique_achievement(result, _metric_achievement("skins_total_%s" % skins, "%s Skins" % skins, "%s Skins" % skins, "Unlock %s skins." % skins, "Desbloqueie %s skins." % skins, "skinsUnlocked", skins, _milestone_reward(skins * 40, "skins"), _milestone_rarity(skins * 4)))
+	for chests in [1, 5, 15, 30, 60]:
+		_append_unique_achievement(result, _metric_achievement("chests_total_%s" % chests, "%s Chests" % chests, "%s Baus" % chests, "Open %s chests." % chests, "Abra %s baus." % chests, "chestsOpened", chests, _milestone_reward(chests * 35, "chests"), _milestone_rarity(chests * 5)))
+	for daily in [1, 3, 7, 14, 30]:
+		_append_unique_achievement(result, _metric_achievement("daily_total_%s" % daily, "%s Daily Rewards" % daily, "%s Recompensas Diarias" % daily, "Claim %s daily rewards." % daily, "Colete %s recompensas diarias." % daily, "dailyRewardsCollected", daily, _milestone_reward(daily * 25, "daily"), _milestone_rarity(daily * 4)))
+	for spins in [1, 5, 15, 35]:
+		_append_unique_achievement(result, _metric_achievement("wheel_total_%s" % spins, "%s Wheel Spins" % spins, "%s Giros da Roleta" % spins, "Spin the wheel %s times." % spins, "Gire a roleta %s vezes." % spins, "wheelSpins", spins, _milestone_reward(spins * 30, "wheel"), _milestone_rarity(spins * 4)))
+	for wins in [1, 5, 10, 25]:
+		_append_unique_achievement(result, _metric_achievement("league_wins_%s" % wins, "%s League Wins" % wins, "%s Vitorias na Liga" % wins, "Win %s Neon League matches." % wins, "Venca %s partidas da Liga Neon." % wins, "leagueWins", wins, _milestone_reward(wins * 50, "league"), _milestone_rarity(wins * 6)))
+
+
+func _metric_achievement(id: String, name: String, name_pt: String, desc: String, desc_pt: String, metric: String, required: int, reward: Dictionary, rarity: String) -> Dictionary:
+	return { "id": id, "name": name, "name_pt": name_pt, "desc": desc, "desc_pt": desc_pt, "metric": metric, "required": required, "reward": reward, "rarity": rarity }
+
+
+func _append_unique_achievement(result: Array[Dictionary], achievement: Dictionary) -> void:
+	var id := String(achievement.get("id", ""))
+	if id.is_empty():
+		return
+	for existing in result:
+		if String(existing.get("id", "")) == id:
+			return
+	result.append(achievement)
+
+
+func _milestone_rarity(value: int) -> String:
+	if value >= 180:
+		return "legendary"
+	if value >= 80:
+		return "epic"
+	if value >= 25:
+		return "rare"
+	return "common"
+
+
+func _milestone_reward(value: int, category: String) -> Dictionary:
+	if category == "phase" and value >= 100:
+		return { "type": "chest", "chest_type": "epic", "amount": 1 }
+	if value >= 600 and category in ["phase", "time", "infinite_rings", "skins"]:
+		return { "type": "chest", "chest_type": "epic", "amount": 1 }
+	if value >= 250 and category in ["phase", "rings", "chests", "league"]:
+		return { "type": "chest", "chest_type": "rare", "amount": 1 }
+	if value >= 180 and category in ["perfect", "time", "level", "wheel"]:
+		return { "type": "diamonds", "amount": min(180, 24 + floori(float(value) / 5.0)) }
+	if category in ["chests", "daily", "league"] and value >= 120:
+		return { "type": "keys", "amount": 1 }
+	if category in ["phase", "wins", "rings", "coins", "upgrades"]:
+		return { "type": "coins", "amount": max(220, value * 12) }
+	if category in ["perfect", "time", "skins", "wheel"]:
+		return { "type": "diamonds", "amount": max(8, floori(float(value) / 4.0)) }
+	return { "type": "xp", "amount": max(70, value * 4) }
+
 
 const DAILY_REWARDS := [
 	{ "type": "coins", "amount": 120 },
@@ -144,7 +287,7 @@ func default_save() -> Dictionary:
 		"favorite_skin": "neon_blue",
 		"skin_levels": { "neon_blue": 1 },
 		"skin_fragments": {},
-		"unlocked_upgrades": ["baseDamage", "baseSpeed", "coinMultiplier", "critChance", "damage", "speed", "coinBoost", "critical"],
+		"unlocked_upgrades": ["baseDamage", "baseSpeed", "coinMultiplier", "critChance", "damage", "speed", "coinBoost", "critical", "xpBoost", "perfectChance", "bounce"],
 		"explicit_unlocked_run_upgrades": [],
 		"permanent_upgrades": {},
 		"settings": {
@@ -256,8 +399,8 @@ func refresh_unlocks(emit_signal := true) -> void:
 		if _meets_unlock(PERMANENT_UPGRADE_DEFS[id], max_phase, profile_level) and not unlocked.has(id):
 			unlocked.append(id)
 	var explicit_temp_ids: Array = data.get("explicit_unlocked_run_upgrades", [])
-	for id in TEMP_UPGRADE_UNLOCKS.keys():
-		if _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level) and MainPortData.is_released_run_upgrade(String(id)) and not unlocked.has(id):
+	for id in MainPortData.auto_run_upgrade_ids():
+		if MainPortData.is_released_run_upgrade(String(id)) and not unlocked.has(id):
 			unlocked.append(id)
 	for id in explicit_temp_ids:
 		if MainPortData.is_released_run_upgrade(String(id)) and not unlocked.has(id):
@@ -279,9 +422,8 @@ func refresh_unlocks(emit_signal := true) -> void:
 
 func _clean_released_upgrade_unlocks(unlocked: Array) -> Array:
 	var released_temp_ids := MainPortData.released_run_upgrade_ids()
+	var auto_temp_ids := MainPortData.auto_run_upgrade_ids()
 	var explicit_temp_ids: Array = data.get("explicit_unlocked_run_upgrades", [])
-	var max_phase := int(data.get("max_unlocked_phase", data.get("current_phase", 1)))
-	var profile_level := int(data.get("level", 1))
 	var cleaned: Array = []
 	for value in unlocked:
 		var id := String(value)
@@ -291,7 +433,7 @@ func _clean_released_upgrade_unlocks(unlocked: Array) -> Array:
 			cleaned.append(id)
 		elif released_temp_ids.has(id) and explicit_temp_ids.has(id):
 			cleaned.append(id)
-		elif released_temp_ids.has(id) and TEMP_UPGRADE_UNLOCKS.has(id) and _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level):
+		elif released_temp_ids.has(id) and auto_temp_ids.has(id):
 			cleaned.append(id)
 	return cleaned
 
@@ -303,7 +445,7 @@ func _ensure_live_systems() -> void:
 	if String(data.get("daily_missions", {}).get("day_key", "")) != day_key:
 		data["daily_missions"] = _create_daily_missions(day_key)
 	var achievements: Dictionary = data.get("achievements", {})
-	for achievement in ACHIEVEMENTS:
+	for achievement in get_achievements():
 		var id := String(achievement["id"])
 		if not achievements.has(id):
 			achievements[id] = { "progress": 0, "completed": false, "claimed": false }
@@ -688,7 +830,7 @@ func claim_achievement(id: String) -> Dictionary:
 
 
 func _achievement_def(id: String) -> Dictionary:
-	for achievement in ACHIEVEMENTS:
+	for achievement in get_achievements():
 		if String(achievement["id"]) == id:
 			return achievement
 	return {}
@@ -744,7 +886,7 @@ func _update_achievements(save_after := true) -> void:
 	stats["bestInfiniteSeconds"] = max(int(stats.get("bestInfiniteSeconds", 0)), int(stats.get("best_infinite_seconds", 0)))
 	stats["bestInfiniteRings"] = max(int(stats.get("bestInfiniteRings", 0)), int(stats.get("best_infinite_rings", 0)))
 	stats["bestInfiniteScore"] = max(int(stats.get("bestInfiniteScore", 0)), int(stats.get("best_infinite_score", 0)))
-	for achievement in ACHIEVEMENTS:
+	for achievement in get_achievements():
 		var id := String(achievement["id"])
 		var state: Dictionary = achievements.get(id, { "progress": 0, "completed": false, "claimed": false })
 		var progress := int(stats.get(String(achievement["metric"]), 0))
@@ -854,7 +996,7 @@ func upgrade_permanent(id: String) -> void:
 
 
 func unlock_level(level: int) -> void:
-	level = clampi(level, 1, 50)
+	level = clampi(level, 1, MAX_PHASE)
 	var phases: Array = data.get("unlocked_phases", [])
 	for phase in range(1, level + 1):
 		if not phases.has(phase):
@@ -868,7 +1010,7 @@ func unlock_level(level: int) -> void:
 
 func select_phase(level: int) -> bool:
 	var unlocked := int(data.get("max_unlocked_phase", 1))
-	if level < 1 or level > 50 or level > unlocked:
+	if level < 1 or level > MAX_PHASE or level > unlocked:
 		return false
 	data["selected_phase"] = level
 	data["selected_mode"] = "phase"
@@ -904,7 +1046,7 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
 		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
 		data["level"] = int(data.get("level", 1)) + 1
-	unlock_level(min(50, phase + 1))
+	unlock_level(min(MAX_PHASE, phase + 1))
 	var stats: Dictionary = data.get("stats", {})
 	stats["runs_played"] = int(stats.get("runs_played", 0)) + 1
 	stats["runsPlayed"] = int(stats.get("runsPlayed", 0)) + 1
@@ -921,9 +1063,9 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + skin_effects
 	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + run_upgrades
 	stats["noReviveWins"] = int(stats.get("noReviveWins", 0)) + 1
-	stats["highest_phase"] = max(int(stats.get("highest_phase", 1)), min(50, phase + 1))
-	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), min(50, phase + 1))
-	data["current_phase"] = max(int(data.get("current_phase", 1)), min(50, phase + 1))
+	stats["highest_phase"] = max(int(stats.get("highest_phase", 1)), min(MAX_PHASE, phase + 1))
+	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), min(MAX_PHASE, phase + 1))
+	data["current_phase"] = max(int(data.get("current_phase", 1)), min(MAX_PHASE, phase + 1))
 	data["stats"] = stats
 	_progress_missions("runsPlayed", 1)
 	_progress_missions("phaseWins", 1)

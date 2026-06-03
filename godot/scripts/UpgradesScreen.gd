@@ -152,12 +152,7 @@ func _visible_run_upgrade_list() -> Array[Dictionary]:
 func _is_run_upgrade_available_for_player(id: String) -> bool:
 	if Array(GameState.data.get("explicit_unlocked_run_upgrades", [])).has(id):
 		return true
-	if not GameState.TEMP_UPGRADE_UNLOCKS.has(id):
-		return GameState.is_upgrade_unlocked(id)
-	var rule: Dictionary = GameState.TEMP_UPGRADE_UNLOCKS[id]
-	var max_phase := int(GameState.data.get("max_unlocked_phase", GameState.data.get("current_phase", 1)))
-	var profile_level := int(GameState.data.get("level", 1))
-	return max_phase >= int(rule.get("phase", 999)) or profile_level >= int(rule.get("level", 999))
+	return GameState.is_upgrade_unlocked(id)
 
 
 func _locked_upgrade_list() -> Array[Dictionary]:

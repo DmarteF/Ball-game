@@ -759,3 +759,29 @@ Checklist:
 | Gaps iniciais do infinito aleatórios | Sim |
 | Anéis novos não matam imediatamente | Sim |
 | Clamp de anéis por raio real | Sim |
+
+## 7.14 Progressão longa, 8 anéis e 100 conquistas
+
+Atualizado nesta etapa:
+
+- A progressão de fases foi expandida de 50 para 100 fases em `LevelData.gd`, `PhaseSelectScreen.gd`, `GameState.gd` e `GameplayManager.gd`.
+- O alvo de anéis ativos foi fixado em 8 para fases e modo infinito, mantendo reposição imediata quando um anel quebra ou é limpo pelo gap.
+- A curva de dificuldade das fases foi rebalanceada para 100 fases, com tiers Normal, Difícil, Avançado, Extremo, Insano, Ultimate, Mítico e Ômega.
+- Upgrades permanentes receberam limites maiores e custos iniciais ajustados para sustentar a progressão longa.
+- A tela de Upgrades e o level-up contam temporários apenas quando estão realmente no save: 7 temporárias base auto-liberadas ou extras explicitamente liberadas por recompensa/sistema.
+- A lista de conquistas agora é gerada por `GameState.get_achievements()` e entrega 100 conquistas, preservando as especiais já existentes.
+- As novas conquistas cobrem fases, vitórias, sobrevivência no infinito, anéis no infinito, nível de run infinita, anéis totais, perfects, moedas, upgrades, skins, baús, diárias, roleta e Liga Neon.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| 100 fases disponíveis na seleção | Sim |
+| Gameplay aceita fases 1-100 | Sim |
+| Próxima fase avança até 100 | Sim |
+| 8 anéis ativos como alvo fixo | Sim |
+| Temporários bloqueados não entram na contagem | Sim |
+| 7 temporárias iniciais liberadas | Sim |
+| Temporários extras só aparecem se explicitamente liberados | Sim |
+| 100 conquistas geradas e exibidas | Sim |
+| Recompensas variadas nas conquistas | Sim |

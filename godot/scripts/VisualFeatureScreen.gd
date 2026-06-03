@@ -523,7 +523,7 @@ func _populate_missions() -> void:
 
 func _populate_achievements() -> void:
 	GameState._update_achievements(false)
-	for achievement in GameState.ACHIEVEMENTS:
+	for achievement in GameState.get_achievements():
 		var id := String(achievement["id"])
 		var state: Dictionary = GameState.data.get("achievements", {}).get(id, {})
 		var progress := int(state.get("progress", 0))
