@@ -392,3 +392,23 @@ Checklist:
 | Todas as Ultimate tem Controle | Sim |
 | Ultimates mantem efeitos existentes | Sim |
 | Controle funciona em fase normal/infinito/Liga | Sim |
+
+## 7.7 Correcoes de resultado, roleta e spawn ativo
+
+Nesta etapa foram reforcados pontos observados no teste:
+
+- Gameplay normal, infinito e Liga Neon agora miram 8 aneis ativos quando a fase/modo permite.
+- A roleta escolhe a recompensa real antes da animacao e calcula a rotacao final para parar na fatia do tipo de premio sorteado.
+- Resultado de fase, infinito/derrota e saida manual ganharam botao de dobrar recompensa por anuncio mockado.
+- O dobro aplica somente o adicional de moedas/XP/diamantes e desativa o botao depois do uso.
+- Saida manual exibe recompensa proporcional, salva progresso e nao mostra revive por anuncio.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Spawn usa alvo minimo de 8 aneis | Sim |
+| Roleta para no premio sorteado | Sim |
+| Resultado pode dobrar recompensa | Sim |
+| Dobro limitado a uma vez | Sim |
+| Saida manual sem revive | Sim |

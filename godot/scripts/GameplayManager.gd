@@ -8,7 +8,7 @@ const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
 const MIN_RING_SPACING := 8.4
 const MAX_VISIBLE_RINGS := 26
-const TARGET_ACTIVE_RINGS := 5
+const TARGET_ACTIVE_RINGS := 8
 const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
 const MAX_SPAWN_DISTANCE_FROM_BALL := 175.0
 const MAX_PHYSICS_SUBSTEPS := 6
@@ -139,6 +139,8 @@ var control_input := 0.0
 var control_left_down := false
 var control_right_down := false
 var last_control_sfx_msec := 0
+var result_rewards_doubled := false
+var pending_result_reward: Dictionary = {}
 var skin_profile: Dictionary = {}
 
 var _regular_font: Font
@@ -166,9 +168,12 @@ var _victory_title: Label
 var _victory_rewards: VBoxContainer
 var _victory_unlock_label: Label
 var _victory_next_button: Button
+var _victory_double_button: Button
 var _defeat_overlay: Control
 var _defeat_title: Label
 var _defeat_summary: VBoxContainer
+var _defeat_revive_button: Button
+var _defeat_double_button: Button
 var _control_overlay: Control
 var _control_indicator: Label
 var _music_player: AudioStreamPlayer
@@ -243,6 +248,8 @@ func _start_level() -> void:
 	available_upgrades = []
 	rerolls_used = 0
 	revive_used = false
+	result_rewards_doubled = false
+	pending_result_reward = {}
 	control_input = 0.0
 	control_left_down = false
 	control_right_down = false
@@ -713,7 +720,9 @@ func _finish_victory() -> void:
 	finished = true
 	var profile_xp_reward := _run_profile_xp() * reward_multiplier
 	var global_coins_reward := _global_coins_from_run(run_coins * reward_multiplier, best_combo, true)
+	var diamond_reward := run_diamonds * reward_multiplier
 	GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier, best_combo, criticals, skin_effects, run_upgrades)
+	pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": diamond_reward, "manual_quit": false, "victory": true }
 	_spawn_particles(arena_center, Color("#00ff88"), 42, 180.0)
 	_play_sfx("victory")
 	_victory_title.text = "FASE %s CONCLUIDA" % phase_id
@@ -723,6 +732,9 @@ func _finish_victory() -> void:
 	if _victory_next_button:
 		_victory_next_button.disabled = phase_id >= 50
 		_victory_next_button.text = "PROXIMA FASE" if phase_id < 50 else "CONCLUIDO"
+	if _victory_double_button:
+		_victory_double_button.visible = _can_double_result_reward()
+		_victory_double_button.disabled = false
 	_victory_overlay.visible = true
 	queue_redraw()
 
@@ -749,9 +761,16 @@ func _finish_defeat() -> void:
 			"new_record": floori(infinite_elapsed) > previous_best_seconds,
 		}
 		GameState.record_infinite_run(summary)
+		pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": run_diamonds, "manual_quit": false, "victory": false }
 		_rebuild_defeat_summary(summary)
 	elif _defeat_summary:
+		pending_result_reward = {}
 		_rebuild_defeat_summary({})
+	if _defeat_revive_button:
+		_defeat_revive_button.visible = not bool(pending_result_reward.get("manual_quit", false))
+	if _defeat_double_button:
+		_defeat_double_button.visible = _can_double_result_reward()
+		_defeat_double_button.disabled = false
 	_defeat_overlay.visible = true
 	queue_redraw()
 
@@ -1028,6 +1047,8 @@ func _build_result_overlays() -> void:
 	victory_card.add_child(_victory_rewards)
 	_victory_unlock_label = _make_label("PROXIMA FASE LIBERADA", 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	victory_card.add_child(_victory_unlock_label)
+	_victory_double_button = _make_modal_button("DOBRAR RECOMPENSA - AD", _double_result_reward)
+	victory_card.add_child(_victory_double_button)
 	victory_card.add_child(_make_modal_button("VOLTAR AS FASES", _go_to_phase_select))
 	victory_card.add_child(_make_modal_button("JOGAR NOVAMENTE", _restart_level))
 	_victory_next_button = _make_modal_button("PROXIMA FASE", _go_to_next_phase)
@@ -1041,7 +1062,10 @@ func _build_result_overlays() -> void:
 	_defeat_summary = VBoxContainer.new()
 	_defeat_summary.add_theme_constant_override("separation", 8)
 	defeat_card.add_child(_defeat_summary)
-	defeat_card.add_child(_make_modal_button("REVIVER COM ANUNCIO", _revive_with_ad))
+	_defeat_double_button = _make_modal_button("DOBRAR RECOMPENSA - AD", _double_result_reward)
+	defeat_card.add_child(_defeat_double_button)
+	_defeat_revive_button = _make_modal_button("REVIVER COM ANUNCIO", _revive_with_ad)
+	defeat_card.add_child(_defeat_revive_button)
 	defeat_card.add_child(_make_modal_button("TENTAR DE NOVO", _restart_level))
 	defeat_card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
 	add_child(_defeat_overlay)
@@ -1908,12 +1932,18 @@ func _finish_quit_reward() -> void:
 		"new_record": false,
 		"quit": true,
 	}
+	pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": diamonds, "manual_quit": true, "victory": false }
 	if is_infinite:
 		GameState.record_mode_quit("infinite", summary)
 	else:
 		GameState.record_mode_quit("phase", summary)
 	_rebuild_defeat_summary(summary)
 	_defeat_title.text = "RECOMPENSA DE SAIDA"
+	if _defeat_revive_button:
+		_defeat_revive_button.visible = false
+	if _defeat_double_button:
+		_defeat_double_button.visible = _can_double_result_reward()
+		_defeat_double_button.disabled = false
 	_defeat_overlay.visible = true
 	queue_redraw()
 
@@ -1942,8 +1972,9 @@ func _rebuild_victory_rewards(global_coins_reward: int, profile_xp_reward: int) 
 		child.queue_free()
 	_victory_rewards.add_child(_make_victory_line("coin", "Moedas", "+%s" % global_coins_reward))
 	_victory_rewards.add_child(_make_victory_line("xp", "XP", "+%s" % profile_xp_reward))
-	if run_diamonds * reward_multiplier > 0:
-		_victory_rewards.add_child(_make_victory_line("gem", "Diamantes", "+%s" % (run_diamonds * reward_multiplier)))
+	var diamond_total := int(pending_result_reward.get("diamonds", run_diamonds * reward_multiplier))
+	if diamond_total > 0:
+		_victory_rewards.add_child(_make_victory_line("gem", "Diamantes", "+%s" % diamond_total))
 	_victory_rewards.add_child(_make_victory_line("perfect", "Perfects", str(perfect_escapes)))
 	_victory_rewards.add_child(_make_victory_line("upgrade", "Level da rodada", str(run_level)))
 
@@ -1968,6 +1999,56 @@ func _rebuild_defeat_summary(summary: Dictionary) -> void:
 			_defeat_summary.add_child(_make_label("NOVO RECORDE!", 15, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
 		_defeat_title.text = "A bolinha foi presa pelos aneis."
+
+
+func _can_double_result_reward() -> bool:
+	if result_rewards_doubled or pending_result_reward.is_empty():
+		return false
+	return int(pending_result_reward.get("coins", 0)) > 0 or int(pending_result_reward.get("xp", 0)) > 0 or int(pending_result_reward.get("diamonds", 0)) > 0
+
+
+func _double_result_reward() -> void:
+	if not _can_double_result_reward():
+		_spawn_floating("Recompensa ja dobrada", arena_center + Vector2(-54, -60), Color("#ff6b9a"))
+		return
+	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+		if not ok:
+			return
+		result_rewards_doubled = true
+		var coins := int(pending_result_reward.get("coins", 0))
+		var xp := int(pending_result_reward.get("xp", 0))
+		var diamonds := int(pending_result_reward.get("diamonds", 0))
+		if coins > 0:
+			GameState.add_coins(coins)
+		if xp > 0:
+			GameState.add_profile_xp(xp)
+		if diamonds > 0:
+			GameState.add_diamonds(diamonds)
+		pending_result_reward["coins"] = coins * 2
+		pending_result_reward["xp"] = xp * 2
+		pending_result_reward["diamonds"] = diamonds * 2
+		_spawn_particles(arena_center, Color("#ffd700"), 30, 170.0)
+		_spawn_floating("Recompensa x2", arena_center + Vector2(-46, -52), Color("#ffd700"))
+		_play_sfx("reward_coin")
+		if _victory_overlay and _victory_overlay.visible:
+			_rebuild_victory_rewards(int(pending_result_reward["coins"]), int(pending_result_reward["xp"]))
+			if _victory_double_button:
+				_victory_double_button.disabled = true
+				_victory_double_button.text = "RECOMPENSA DOBRADA"
+		elif _defeat_overlay and _defeat_overlay.visible:
+			var summary := {
+				"seconds": floori(infinite_elapsed),
+				"rings": rings_destroyed,
+				"coins": int(pending_result_reward["coins"]),
+				"xp": int(pending_result_reward["xp"]),
+				"diamonds": int(pending_result_reward["diamonds"]),
+				"new_record": false,
+			}
+			_rebuild_defeat_summary(summary)
+			if _defeat_double_button:
+				_defeat_double_button.disabled = true
+				_defeat_double_button.text = "RECOMPENSA DOBRADA"
+	)
 
 
 func _format_seconds(seconds: int) -> String:

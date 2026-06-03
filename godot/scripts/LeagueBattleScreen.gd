@@ -4,7 +4,7 @@ const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const TWO_PI := PI * 2.0
-const TARGET_ACTIVE_RINGS := 5
+const TARGET_ACTIVE_RINGS := 8
 const MIN_RING_SPACING := 7.0
 const BALL_RADIUS := 7.0
 const CONTROL_SKIN_IDS := [

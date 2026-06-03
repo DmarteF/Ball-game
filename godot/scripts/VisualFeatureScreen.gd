@@ -181,6 +181,7 @@ var _shop_tab_buttons: Array[Button] = []
 var _feedback_label: Label
 var _reward_overlay: Control
 var _wheel_prize_ring: Control
+var _wheel_prizes := ["coin", "gem", "key", "chest_common", "skins", "chest_rare", "skins", "chest_epic", "gem", "skins"]
 
 
 func _ready() -> void:
@@ -566,13 +567,15 @@ func _handle_action(action: String) -> void:
 	elif action == "daily_claim":
 		result = GameState.claim_daily_reward()
 	elif action == "wheel_free":
-		_animate_wheel()
-		await get_tree().create_timer(2.25).timeout
 		result = GameState.spin_wheel("free")
+		if bool(result.get("ok", false)):
+			_animate_wheel(Dictionary(result.get("reward", {})))
+			await get_tree().create_timer(2.25).timeout
 	elif action == "wheel_ad":
-		_animate_wheel()
-		await get_tree().create_timer(2.25).timeout
 		result = GameState.spin_wheel("ad")
+		if bool(result.get("ok", false)):
+			_animate_wheel(Dictionary(result.get("reward", {})))
+			await get_tree().create_timer(2.25).timeout
 	else:
 		result = GameState.shop_claim(action)
 	_play_sfx("res://assets/sounds/button_confirm.mp3" if bool(result.get("ok", false)) else "res://assets/sounds/button_error.mp3")
@@ -773,9 +776,8 @@ func _make_wheel_visual(data: Dictionary) -> PanelContainer:
 	_wheel_prize_ring = Control.new()
 	_wheel_prize_ring.position = Vector2(124, 124)
 	holder.add_child(_wheel_prize_ring)
-	var prizes := ["coin", "gem", "key", "chest_common", "skins", "chest_rare", "skins", "chest_epic", "gem", "skins"]
-	for i in range(prizes.size()):
-		var angle := -PI / 2.0 + i * TAU / float(prizes.size())
+	for i in range(_wheel_prizes.size()):
+		var angle := -PI / 2.0 + i * TAU / float(_wheel_prizes.size())
 		var segment := PanelContainer.new()
 		segment.custom_minimum_size = Vector2(58, 58)
 		segment.position = Vector2(cos(angle), sin(angle)) * 84.0 - Vector2(29, 29)
@@ -783,7 +785,7 @@ func _make_wheel_visual(data: Dictionary) -> PanelContainer:
 		_wheel_prize_ring.add_child(segment)
 		var segment_center := CenterContainer.new()
 		segment.add_child(segment_center)
-		segment_center.add_child(_make_icon(prizes[i], 30))
+		segment_center.add_child(_make_icon(_wheel_prizes[i], 30))
 	var hub := PanelContainer.new()
 	hub.custom_minimum_size = Vector2(98, 98)
 	hub.position = Vector2(75, 75)
@@ -803,12 +805,33 @@ func _make_wheel_visual(data: Dictionary) -> PanelContainer:
 	return card
 
 
-func _animate_wheel() -> void:
+func _animate_wheel(reward: Dictionary = {}) -> void:
 	if not _wheel_prize_ring:
 		return
 	var tween := create_tween()
-	var target_rotation := _wheel_prize_ring.rotation + TAU * 7.0 + randf_range(0.0, TAU)
+	var prize_key := _wheel_prize_key(reward)
+	var slot_index: int = max(0, _wheel_prizes.find(prize_key))
+	var slot_angle: float = -PI / 2.0 + float(slot_index) * TAU / float(_wheel_prizes.size())
+	var target_mod: float = fposmod(-PI / 2.0 - slot_angle, TAU)
+	var current_mod: float = fposmod(_wheel_prize_ring.rotation, TAU)
+	var delta: float = fposmod(target_mod - current_mod, TAU)
+	var target_rotation := _wheel_prize_ring.rotation + TAU * 7.0 + delta
 	tween.tween_property(_wheel_prize_ring, "rotation", target_rotation, 2.2).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
+
+
+func _wheel_prize_key(reward: Dictionary) -> String:
+	match String(reward.get("type", "")):
+		"coins":
+			return "coin"
+		"diamonds", "gems":
+			return "gem"
+		"keys", "legendary_key", "legendaryKeys":
+			return "key"
+		"chest":
+			return "chest_%s" % String(reward.get("chest_type", "common"))
+		"skin":
+			return "skins"
+	return "coin"
 
 
 func _make_price_badge(price: String, icon_key: String) -> Control:

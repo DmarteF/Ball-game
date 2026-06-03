@@ -250,3 +250,22 @@ Checklist:
 | Controle passa por colisao segura existente | Sim |
 | Todas as Ultimate incluem Controle | Sim |
 | Controle documentado no README e analises | Sim |
+
+## 7.7 Ajustes de paridade em recompensas e roleta
+
+Atualizado no port Godot:
+
+- `GameplayManager.gd` agora usa alvo de 8 aneis ativos quando possivel, mantendo a validacao de raio/gap/espacamento.
+- `LeagueBattleScreen.gd` tambem usa alvo de 8 aneis para evitar arenas vazias.
+- `VisualFeatureScreen.gd` faz a roleta parar visualmente no tipo de premio sorteado, com recompensa real vinda de `GameState.spin_wheel`.
+- Resultados de fase/infinito/saida manual podem dobrar moedas, XP e diamantes com anuncio mockado, uma vez por resultado.
+- Saida manual nao exibe revive por anuncio.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Roleta visual ligada ao premio real | Sim |
+| Dobro de recompensa mockado | Sim |
+| Revive oculto em quit manual | Sim |
+| 8 aneis ativos quando possivel | Sim |

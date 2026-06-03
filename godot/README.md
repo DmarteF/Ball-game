@@ -590,3 +590,29 @@ Checklist:
 | Controle funciona no modo infinito | Sim |
 | Controle funciona na Liga Neon | Sim |
 | Setas somem/pausam em menus e modais quando necessario | Sim |
+
+## 7.8 Correcoes de resultado, roleta e spawn ativo
+
+Atualizado nesta etapa:
+
+- O alvo minimo de aneis ativos passou para 8 na gameplay normal/infinita e na Liga Neon, respeitando o total disponivel da fase e o limite de seguranca.
+- A roleta agora sorteia a recompensa real antes do giro e anima ate a fatia correspondente ao premio sorteado, com easing de aceleracao/desaceleracao e modal depois do giro.
+- Resultados de vitoria, derrota/infinito e saida manual agora podem exibir `DOBRAR RECOMPENSA - AD` usando anuncio mockado, apenas uma vez por resultado.
+- Dobrar recompensa adiciona somente o extra equivalente de moedas/XP/diamantes ao save, evitando duplicar a recompensa base.
+- Saida manual continua mostrando recompensa proporcional, mas esconde `REVIVER COM ANUNCIO`.
+- O botao de revive permanece disponivel apenas para derrota real, limitado pelo controle ja existente de uma vez por partida.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Mínimo de 8 anéis ativos quando possível | Sim |
+| Roleta para visualmente no prêmio sorteado | Sim |
+| Roleta entrega recompensa real | Sim |
+| Dobrar recompensa com anúncio mockado em resultados | Sim |
+| Dobrar recompensa apenas uma vez | Sim |
+| Dobro não duplica recompensa base no save | Sim |
+| Recompensa ao sair de fase normal | Sim |
+| Recompensa ao sair do modo infinito | Sim |
+| Reviver com anúncio não aparece ao sair manualmente | Sim |
+| Liga Neon usa alvo de 8 anéis ativos | Sim |
