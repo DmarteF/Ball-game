@@ -86,9 +86,6 @@ func _build_screen() -> void:
 	list.add_child(_make_label("PERMANENTES", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	for upgrade in UPGRADES:
 		list.add_child(_make_upgrade_card(upgrade))
-	list.add_child(_make_label("TEMPORÁRIOS DE RODADA", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	for upgrade in MainPortData.RUN_UPGRADES:
-		list.add_child(_make_temp_upgrade_card(upgrade))
 
 
 func _make_resource_display() -> HBoxContainer:

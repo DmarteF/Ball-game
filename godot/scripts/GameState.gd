@@ -382,7 +382,19 @@ func apply_reward(reward: Dictionary, save_after := false) -> String:
 			data["skin_fragments"] = fragments
 			return "+%s fragments" % amount
 		"skin":
-			unlock_skin(String(reward.get("skin_id", reward.get("skinId", ""))))
+			var skin_id := String(reward.get("skin_id", reward.get("skinId", "")))
+			if Array(data.get("unlocked_skins", [])).has(skin_id):
+				var compensation := _duplicate_skin_compensation(skin_id)
+				data["diamonds"] = max(0, int(data.get("diamonds", 0)) + compensation)
+				_increment_stat("diamondsFound", compensation, false)
+				reward["converted_from_skin"] = skin_id
+				reward["type"] = "diamonds"
+				reward["amount"] = compensation
+				reward["duplicate_skin"] = true
+				return "Duplicate skin converted to +%s diamonds" % compensation
+			unlock_skin(skin_id)
+			reward["new_skin"] = true
+			reward["rarity"] = _skin_rarity_from_id(skin_id)
 			return "Skin unlocked"
 		"chest":
 			var chest_type := String(reward.get("chest_type", reward.get("chestType", "common")))
@@ -425,12 +437,12 @@ func open_chest(chest_id: String) -> Dictionary:
 
 func _random_chest_reward(chest_id: String) -> Dictionary:
 	if chest_id.contains("legendary"):
-		return { "type": "diamonds", "amount": 95 }
+		return { "type": "skin", "skin_id": _rotating_skin("legendary") } if randf() < 0.35 else { "type": "diamonds", "amount": 95 }
 	if chest_id.contains("epic"):
-		return { "type": "diamonds", "amount": 45 }
+		return { "type": "skin", "skin_id": _rotating_skin("rare") } if randf() < 0.22 else { "type": "diamonds", "amount": 45 }
 	if chest_id.contains("rare"):
-		return { "type": "keys", "amount": 1 }
-	return { "type": "coins", "amount": 220 }
+		return { "type": "skin", "skin_id": _rotating_skin("rare") } if randf() < 0.14 else { "type": "keys", "amount": 1 }
+	return { "type": "skin", "skin_id": _rotating_skin("common") } if randf() < 0.10 else { "type": "coins", "amount": 220 }
 
 
 func claim_daily_reward() -> Dictionary:
@@ -459,7 +471,8 @@ func spin_wheel(source := "free") -> Dictionary:
 		return { "ok": false, "reason": "free_used" }
 	if source == "ad" and int(wheel.get("ad_spins_used", 0)) >= 2:
 		return { "ok": false, "reason": "ad_limit" }
-	var reward: Dictionary = WHEEL_REWARDS[randi() % WHEEL_REWARDS.size()]
+	var rewards := _current_wheel_rewards()
+	var reward: Dictionary = rewards[randi() % rewards.size()].duplicate(true)
 	var text := apply_reward(reward)
 	wheel["free_used"] = true if source == "free" else bool(wheel.get("free_used", false))
 	wheel["ad_spins_used"] = int(wheel.get("ad_spins_used", 0)) + (1 if source == "ad" else 0)
@@ -471,6 +484,50 @@ func spin_wheel(source := "free") -> Dictionary:
 	data["last_reward_text"] = text
 	save_game()
 	return { "ok": true, "reward": reward, "text": text }
+
+
+func _current_wheel_rewards() -> Array:
+	var rewards := WHEEL_REWARDS.duplicate(true)
+	rewards.append({ "type": "skin", "skin_id": _rotating_skin("common"), "wheel_slot": "weekly_common" })
+	rewards.append({ "type": "skin", "skin_id": _rotating_skin("rare"), "wheel_slot": "weekly_rare" })
+	rewards.append({ "type": "skin", "skin_id": _rotating_skin("legendary"), "wheel_slot": "monthly_legendary" })
+	return rewards
+
+
+func _rotating_skin(rarity: String) -> String:
+	var candidates: Array = []
+	for skin in MainPortData.SKINS:
+		if String(skin.get("rarity", "common")) == rarity:
+			candidates.append(String(skin.get("id", "")))
+	if candidates.is_empty():
+		return "neon_blue"
+	var key: String = TimeManager.get_month_key() if rarity == "legendary" else TimeManager.get_week_key()
+	var index: int = abs(hash("%s_%s" % [rarity, key])) % candidates.size()
+	return String(candidates[index])
+
+
+func _duplicate_skin_compensation(skin_id: String) -> int:
+	match _skin_rarity_from_id(skin_id):
+		"rare":
+			return 18
+		"epic":
+			return 40
+		"legendary":
+			return 85
+		"mythic":
+			return 130
+		"ultimate":
+			return 180
+	return 8
+
+
+func show_mock_rewarded_ad(callback: Callable) -> void:
+	call_deferred("_complete_mock_rewarded_ad", callback)
+
+
+func _complete_mock_rewarded_ad(callback: Callable) -> void:
+	if callback.is_valid():
+		callback.call(true)
 
 
 func shop_claim(action_id: String) -> Dictionary:

@@ -60,7 +60,8 @@ func _draw() -> void:
 	_draw_arena(_rival)
 	_draw_arena(_player)
 	if _battle_finished:
-		var rect := Rect2(Vector2(28, size.y * 0.36), Vector2(size.x - 56, 180))
+		var view_size := _view_size()
+		var rect := Rect2(Vector2(28, view_size.y * 0.36), Vector2(view_size.x - 56, 180))
 		draw_rect(rect, Color("#12052add"), true)
 		draw_rect(rect, Color("#00f0ff88"), false, 2.0)
 		draw_string(_bold_font, rect.position + Vector2(rect.size.x / 2.0 - 75, 48), _result_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("#ffffff"))
@@ -128,8 +129,9 @@ func _finish_match(result: String) -> void:
 
 
 func _make_arena(id: String, label: String, skin_id: String, top_ratio: float, height_ratio: float, quality: float) -> Dictionary:
-	var arena_size: float = min(size.x - 48.0, size.y * height_ratio)
-	var center := Vector2(size.x / 2.0, size.y * top_ratio + arena_size / 2.0)
+	var view_size := _view_size()
+	var arena_size: float = min(view_size.x - 48.0, view_size.y * height_ratio)
+	var center := Vector2(view_size.x / 2.0, view_size.y * top_ratio + arena_size / 2.0)
 	var radius := arena_size / 2.0 - 8.0
 	var speed := 2.05 + quality * 0.7
 	var state := {
@@ -156,6 +158,12 @@ func _make_arena(id: String, label: String, skin_id: String, top_ratio: float, h
 	for i in range(TARGET_ACTIVE_RINGS):
 		_add_ring(state)
 	return state
+
+
+func _view_size() -> Vector2:
+	if size.x > 10.0 and size.y > 10.0:
+		return size
+	return get_viewport_rect().size
 
 
 func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:

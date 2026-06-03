@@ -15,6 +15,7 @@ const ICON_PATHS := {
 	"boss": "res://assets/ui/ui_boss.png",
 	"league": "res://assets/ui/ui_league_neon.png",
 	"achievements": "res://assets/ui/ui_achievements.png",
+	"skins": "res://assets/ui/ui_skins.png",
 	"coin": "res://assets/ui/ui_coin.png",
 	"gem": "res://assets/ui/ui_gem.png",
 	"key": "res://assets/ui/ui_key.png",
@@ -617,8 +618,11 @@ func _show_reward_modal(result: Dictionary) -> void:
 	var body := _card_body(card, 18)
 	body.alignment = BoxContainer.ALIGNMENT_CENTER
 	body.add_child(_make_label(_tr("reward_obtained").to_upper(), 22, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	body.add_child(_make_icon(_reward_icon(reward), 72))
+	var reward_icon := _make_reward_visual(reward)
+	body.add_child(reward_icon)
 	body.add_child(_make_label(_reward_label(reward), 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	if String(reward.get("type", "")) == "skin" or reward.has("converted_from_skin"):
+		body.add_child(_make_label(_skin_reward_status(reward), 13, _skin_reward_color(reward), _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	var detail := _make_label(String(result.get("text", "")), 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(detail)
@@ -630,6 +634,9 @@ func _show_reward_modal(result: Dictionary) -> void:
 			_reward_overlay = null
 	)
 	body.add_child(close)
+	if _is_diamond_reward(reward):
+		_play_sfx("res://assets/sounds/diamond_gain.mp3")
+		_flash_reward_diamonds(card)
 
 
 func _play_sfx(path: String) -> void:
@@ -766,7 +773,7 @@ func _make_wheel_visual(data: Dictionary) -> PanelContainer:
 	_wheel_prize_ring = Control.new()
 	_wheel_prize_ring.position = Vector2(124, 124)
 	holder.add_child(_wheel_prize_ring)
-	var prizes := ["coin", "gem", "key", "chest_common", "coin", "chest_rare", "gem", "chest_epic"]
+	var prizes := ["coin", "gem", "key", "chest_common", "skins", "chest_rare", "skins", "chest_epic", "gem", "skins"]
 	for i in range(prizes.size()):
 		var angle := -PI / 2.0 + i * TAU / float(prizes.size())
 		var segment := PanelContainer.new()
@@ -830,6 +837,20 @@ func _reward_icon(reward: Dictionary) -> String:
 	return "coin"
 
 
+func _make_reward_visual(reward: Dictionary) -> Control:
+	if String(reward.get("type", "")) == "skin":
+		var skin_id := String(reward.get("skin_id", reward.get("skinId", "")))
+		var path := "res://assets/skins/%s.png" % skin_id
+		if ResourceLoader.exists(path):
+			var icon := TextureRect.new()
+			icon.texture = load(path)
+			icon.custom_minimum_size = Vector2(90, 90)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			return icon
+	return _make_icon(_reward_icon(reward), 72)
+
+
 func _reward_label(reward: Dictionary) -> String:
 	var amount := int(reward.get("amount", 1))
 	match String(reward.get("type", "")):
@@ -851,6 +872,51 @@ func _reward_label(reward: Dictionary) -> String:
 			var skin := MainPortData.skin_by_id(skin_id) if has_node("/root/MainPortData") else {}
 			return String(skin.get("name", skin_id))
 	return String(reward.get("type", "Reward"))
+
+
+func _skin_reward_status(reward: Dictionary) -> String:
+	if reward.has("converted_from_skin"):
+		return "Duplicate skin • Converted to diamonds" if _language() == "en" else "Skin repetida • Convertida em diamantes"
+	var rarity := String(reward.get("rarity", "common")).capitalize()
+	return "%s • %s" % ["New skin unlocked" if _language() == "en" else "Nova skin desbloqueada", rarity]
+
+
+func _skin_reward_color(reward: Dictionary) -> String:
+	var rarity := String(reward.get("rarity", "common"))
+	if reward.has("converted_from_skin"):
+		rarity = "rare"
+	match rarity:
+		"rare":
+			return "#00aaff"
+		"epic":
+			return "#b000ff"
+		"legendary":
+			return "#ffd700"
+		"mythic", "ultimate":
+			return "#ff00aa"
+	return "#ffffffaa"
+
+
+func _is_diamond_reward(reward: Dictionary) -> bool:
+	if reward.has("converted_from_skin"):
+		return true
+	if String(reward.get("type", "")) in ["diamonds", "gems"]:
+		return true
+	if String(reward.get("type", "")) == "skin":
+		return String(reward.get("rarity", "common")) != "common"
+	return false
+
+
+func _flash_reward_diamonds(card: Control) -> void:
+	for i in range(9):
+		var sparkle := _make_icon("gem", 18)
+		sparkle.modulate = Color("#c084fc")
+		sparkle.position = Vector2(randf_range(30.0, 250.0), randf_range(40.0, 210.0))
+		card.add_child(sparkle)
+		var tween := create_tween()
+		tween.tween_property(sparkle, "modulate:a", 0.0, 0.75)
+		tween.parallel().tween_property(sparkle, "position", sparkle.position + Vector2(randf_range(-14.0, 14.0), randf_range(-38.0, -16.0)), 0.75)
+		tween.tween_callback(sparkle.queue_free)
 
 
 func _make_progress_bar(progress: float, tone: String) -> PanelContainer:

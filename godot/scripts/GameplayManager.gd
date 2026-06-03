@@ -113,6 +113,8 @@ var infinite_level := 1
 var infinite_score := 0
 var infinite_clear_pressure := 0.0
 var last_direction_shift_msec := 0
+var rerolls_used := 0
+var revive_used := false
 var skin_profile: Dictionary = {}
 
 var _regular_font: Font
@@ -211,6 +213,8 @@ func _start_level() -> void:
 	run_shop_upgrades = { "atk": 0, "gold": 0 }
 	current_upgrades = {}
 	available_upgrades = []
+	rerolls_used = 0
+	revive_used = false
 	recent_hit_damage.clear()
 	rings_destroyed = 0
 	perfect_escapes = 0
@@ -692,6 +696,30 @@ func _finish_defeat() -> void:
 	queue_redraw()
 
 
+func _revive_with_ad() -> void:
+	if revive_used or not finished:
+		return
+	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+		if not ok:
+			return
+		revive_used = true
+		finished = false
+		is_paused = false
+		_defeat_overlay.visible = false
+		ball_position = arena_center
+		ball_velocity = Vector2(_target_ball_speed(), -_target_ball_speed() * 0.72)
+		last_hit_msec = 0
+		for i in range(rings.size()):
+			var ring := rings[i]
+			if String(ring.get("status", "")) == "active":
+				ring["radius"] = max(float(ring.get("radius", INNER_RADIUS)), (ball_position - arena_center).length() + MIN_SPAWN_DISTANCE_FROM_BALL)
+				rings[i] = ring
+		_spawn_particles(ball_position, Color("#00f0ff"), 28, 150.0)
+		_spawn_floating("Revive", ball_position + Vector2(-20, -34), Color("#00f0ff"))
+		_play_sfx("level_up")
+	)
+
+
 func _draw_arena() -> void:
 	pass
 
@@ -837,6 +865,11 @@ func _build_level_up_overlay() -> void:
 	_level_up_cards = VBoxContainer.new()
 	_level_up_cards.add_theme_constant_override("separation", 10)
 	card.add_child(_level_up_cards)
+	var reroll_row := HBoxContainer.new()
+	reroll_row.add_theme_constant_override("separation", 8)
+	card.add_child(reroll_row)
+	reroll_row.add_child(_make_modal_button("REROLL AD", _reroll_upgrades_ad))
+	reroll_row.add_child(_make_modal_button("REROLL 10♦", _reroll_upgrades_diamond))
 	add_child(_level_up_overlay)
 
 
@@ -863,6 +896,7 @@ func _build_result_overlays() -> void:
 	_defeat_summary = VBoxContainer.new()
 	_defeat_summary.add_theme_constant_override("separation", 8)
 	defeat_card.add_child(_defeat_summary)
+	defeat_card.add_child(_make_modal_button("REVIVER COM ANUNCIO", _revive_with_ad))
 	defeat_card.add_child(_make_modal_button("TENTAR DE NOVO", _restart_level))
 	defeat_card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
 	add_child(_defeat_overlay)
@@ -1422,6 +1456,7 @@ func _run_xp_needed_for_level(level_value: int) -> int:
 
 
 func _open_level_up() -> void:
+	rerolls_used = 0
 	available_upgrades = _get_safe_upgrade_options()
 	_rebuild_level_up_cards()
 	level_up_active = true
@@ -1460,9 +1495,37 @@ func _rarity_upgrade_color(rarity: String) -> String:
 func _rebuild_level_up_cards() -> void:
 	for child in _level_up_cards.get_children():
 		child.queue_free()
+	_level_up_cards.add_child(_make_label("Rerolls %s/3" % rerolls_used, 12, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	for upgrade in available_upgrades:
 		var button := _make_level_up_button(upgrade)
 		_level_up_cards.add_child(button)
+
+
+func _reroll_upgrades_ad() -> void:
+	if rerolls_used >= 3:
+		_spawn_floating("Reroll limit", arena_center + Vector2(-34, -62), Color("#ff6b9a"))
+		return
+	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+		if ok:
+			_do_upgrade_reroll()
+	)
+
+
+func _reroll_upgrades_diamond() -> void:
+	if rerolls_used >= 3:
+		_spawn_floating("Reroll limit", arena_center + Vector2(-34, -62), Color("#ff6b9a"))
+		return
+	if not GameState.spend_diamonds(10):
+		_spawn_floating("No diamonds", arena_center + Vector2(-34, -62), Color("#ff6b9a"))
+		return
+	_do_upgrade_reroll()
+
+
+func _do_upgrade_reroll() -> void:
+	rerolls_used += 1
+	available_upgrades = _get_safe_upgrade_options()
+	_rebuild_level_up_cards()
+	_play_sfx("upgrade_select")
 
 
 func _make_level_up_button(upgrade: Dictionary) -> Button:

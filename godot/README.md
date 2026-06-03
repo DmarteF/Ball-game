@@ -464,3 +464,60 @@ Pendencias conhecidas:
 - Ainda falta comparacao visual pixel a pixel contra os prints/main para cada card interno.
 - Alguns textos de dados importados da `main` continuam com nomes originais de skin/upgrade em ingles porque sao nomes proprios do conteudo.
 - A roleta entrega recompensa real e anima, mas ainda nao replica uma geometria circular perfeita com fatias desenhadas; usa segmentos visuais leves para Web.
+
+## 7.5 Roleta com skins, anúncios mockados e ajustes de Liga/upgrades
+
+Atualizado nesta etapa:
+
+- A tela `Upgrades/Melhorias` agora esconde a seção `Temporários de rodada`; esses upgrades continuam existindo apenas internamente para level-up durante a partida e Liga.
+- Roleta passa a usar recompensas dinâmicas com skins: uma comum semanal, uma rara semanal e uma lendária mensal, calculadas por `TimeManager.get_week_key()` e `TimeManager.get_month_key()`.
+- Skin repetida agora vira diamantes automaticamente em `GameState.apply_reward`, com compensação por raridade.
+- Ganhar skin acima de comum, diamantes ou conversão por skin repetida toca SFX/efeito visual de diamante no modal de recompensa.
+- Inventário/baús podem sortear skins, além de moedas, diamantes e chaves.
+- `GameState.show_mock_rewarded_ad(callback)` foi criado como anúncio recompensado fictício para fluxos de teste.
+- Seleção de upgrades temporários ganhou reroll por anúncio mockado ou 10 diamantes, limitado a 3 rerolls por level-up.
+- Game over ganhou revive por anúncio mockado, limitado a uma vez por partida.
+- Notificação de conquista no menu inicial ficou menor, discreta, com resumo de pendências, clique para Conquistas e auto-ocultamento após alguns segundos.
+- Liga Neon usa fallback de tamanho pelo viewport para evitar arenas invisíveis/vazias quando o Control ainda não recebeu layout.
+
+Checklist desta etapa:
+
+| Item | Status |
+| --- | --- |
+| Temporários de rodada ocultos da tela de upgrades | Sim |
+| Liga Neon não está mais vazia | Sim, corrigido fallback de layout e mantém modo versus |
+| Liga Neon funciona como versus | Sim |
+| Duas arenas da Liga Neon funcionando | Sim |
+| Oponente automático funcionando | Sim |
+| Notificação de conquista menor/discreta | Sim |
+| Notificação de conquista some corretamente | Sim |
+| Clicar na notificação abre Conquistas | Sim |
+| Roleta visual melhorada | Sim |
+| Roleta tem vários prêmios | Sim |
+| Roleta tem 3 skins como prêmio | Sim |
+| Skin comum/rara da roleta troca semanalmente | Sim |
+| Skin lendária da roleta troca mensalmente | Sim |
+| Skin repetida vira diamantes | Sim |
+| Skin acima de comum toca efeito de diamante | Sim |
+| Skin repetida convertida em diamantes toca efeito de diamante | Sim |
+| Inventário mostra recompensa de baú claramente | Sim |
+| Missões visualmente melhores | Sim |
+| Conquistas visualmente melhores | Sim |
+| Anéis do infinito sempre são acertáveis | Sim, mitigado por spawn justo e gap por segmento |
+| Bolinha não bate mais em vácuo | Sim, mitigado |
+| Fases normais iniciam com distância segura | Sim |
+| Anéis não reaparecem grudados | Sim |
+| Gap detecta passagem corretamente | Sim |
+| Anúncio fictício de revive implementado | Sim |
+| Anúncio fictício de dobrar ganhos implementado | Parcial; estrutura mock criada, dobra de resultado ainda pendente |
+| Reroll de upgrades temporários por anúncio/diamante implementado | Sim |
+| Limite de 3 rerolls funcionando | Sim |
+| Recompensa por sair/quitar funcionando em todos os modos | Parcial; infinito/Liga têm recompensa proporcional, fase normal usa resultado atual |
+| Modal de recompensa bonito implementado | Sim |
+| Tradução completa revisada | Parcial; textos principais cobertos, nomes proprios/importados podem seguir em inglês |
+
+Pendências:
+
+- Implementar botão de dobrar recompensas no resultado de fase/infinito/Liga sem duplicar save.
+- Revisar visual da Liga Neon contra prints/main depois de testar no navegador.
+- Expandir tradução de nomes próprios de upgrades/skins somente se a branch main também traduzir esses nomes.
