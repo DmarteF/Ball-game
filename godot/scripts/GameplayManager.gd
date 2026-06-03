@@ -10,15 +10,15 @@ const MIN_RING_SPACING := 8.4
 const MAX_VISIBLE_RINGS := 26
 const TARGET_ACTIVE_RINGS := 8
 const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
-const MAX_SPAWN_DISTANCE_FROM_BALL := 110.0
-const INFINITE_RING_REACH_DISTANCE := 112.0
-const PLAYABLE_RING_RADIUS_FACTOR := 0.88
-const PLAYABLE_RING_MARGIN := 12.0
+const MAX_SPAWN_DISTANCE_FROM_BALL := 170.0
+const INFINITE_RING_REACH_DISTANCE := 132.0
+const PLAYABLE_RING_RADIUS_FACTOR := 0.94
+const PLAYABLE_RING_MARGIN := 7.0
 const SPAWN_LOOKAHEAD_DISTANCE := 110.0
 const MAX_PHYSICS_SUBSTEPS := 6
 const SAFE_STEP_DISTANCE := 8.0
 const MIN_DIRECTION_COMPONENT := 0.24
-const RING_SPAWN_GRACE_MSEC := 850
+const RING_SPAWN_GRACE_MSEC := 1050
 const RING_REPOSITION_GRACE_MSEC := 520
 const CRUSH_CONFIRM_MSEC := 150
 const XP_BASE_REQUIREMENT := 150.0
@@ -345,8 +345,9 @@ func _update_game(delta_steps: float) -> void:
 func _create_rings() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var count: int = int(gameplay_config["ring_count"])
-	var inner_radius: float = INNER_RADIUS + MIN_SPAWN_DISTANCE_FROM_BALL * 0.55
-	var available_radius: float = max(1.0, _playable_ring_max_radius() - inner_radius)
+	var min_radius: float = _playable_ring_min_radius()
+	var max_radius: float = _playable_ring_max_radius()
+	var available_radius: float = max(1.0, max_radius - min_radius)
 	var adaptive_min_spacing: float = MIN_RING_SPACING
 	var max_count_by_spacing: int = max(1, floori(available_radius / adaptive_min_spacing) + 1)
 	count = max(1, min(count, min(MAX_VISIBLE_RINGS, max_count_by_spacing)))
@@ -355,8 +356,9 @@ func _create_rings() -> Array[Dictionary]:
 	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
 	var palette: Array = RING_PALETTES[ring_palette_index]
 	var solid_indexes: Dictionary = {} if is_infinite else { count - 1: true }
+	var initial_active_count: int = min(count, 6)
 	for i in range(count):
-		var progress := 0.0 if count == 1 else float(i) / float(count - 1)
+		var progress := 0.0 if count == 1 else 1.0 - float(i) / float(count - 1)
 		var direction := 1.0 if i % 2 == 0 else -1.0
 		var pattern_shift := sin(i * 0.9) * 0.18 if phase_id % 3 == 0 else 0.0
 		var inner_speed_bias := 1.35 - progress * 0.55
@@ -364,12 +366,15 @@ func _create_rings() -> Array[Dictionary]:
 		var is_solid: bool = solid_indexes.has(i)
 		var hp: int = floori(float(gameplay_config["base_hp"]) * difficulty * (0.9 + progress * 1.55) * (1.45 if is_solid else 1.0))
 		var gap_size: float = max(PI / 13.0, phase_gap * (1.02 - progress * 0.14))
-		var status := "active" if is_infinite or i < TARGET_ACTIVE_RINGS else "queued"
+		var status := "active" if i < initial_active_count else "queued"
+		var spawn_radius := max_radius - spacing * float(i)
+		if status != "active":
+			spawn_radius = max_radius
 		var ring := {
 			"id": "ring_%s_%s" % [phase_id, i],
 			"type": "solid" if is_solid else "normal",
-			"radius": inner_radius + i * spacing,
-			"initial_radius": inner_radius + i * spacing,
+			"radius": spawn_radius,
+			"initial_radius": spawn_radius,
 			"closing_speed": float(gameplay_config["closing_speed"]) * difficulty * (0.66 + progress * 0.34),
 			"rotation": _normalize_angle(i * 0.61 + phase_id * 0.37 + pattern_shift),
 			"rotation_speed": float(gameplay_config["rotation_speed"]) * difficulty * inner_speed_bias * speed_variation * direction,
@@ -389,12 +394,7 @@ func _create_rings() -> Array[Dictionary]:
 			"closing_multiplier": 1.0,
 		}
 		if status == "active":
-			var safe_spawn := _find_safe_ring_spawn_radius(float(ring["radius"]), result)
-			if bool(safe_spawn.get("ok", false)):
-				ring["radius"] = float(safe_spawn["radius"])
-				ring = _randomize_ring_gap(ring) if is_infinite else _align_ring_gap_to_ball(ring)
-			else:
-				ring["status"] = "queued"
+			ring = _randomize_ring_gap(ring) if is_infinite else _align_ring_gap_to_ball(ring)
 		result.append(ring)
 	return result
 
@@ -430,7 +430,6 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 			continue
 		if not _append_infinite_ring():
 			break
-	_keep_infinite_rings_in_reach()
 	_clamp_ring_spacing()
 
 
@@ -455,7 +454,7 @@ func _activate_next_queued_ring() -> bool:
 		var ring := rings[i]
 		if String(ring.get("status", "")) != "queued":
 			continue
-		var safe_spawn := _find_safe_ring_spawn_radius(float(ring.get("radius", outer_radius - 2.0)), rings)
+		var safe_spawn := _find_outer_spawn_radius(rings)
 		if not bool(safe_spawn.get("ok", false)):
 			return false
 		ring["status"] = "active"
@@ -560,7 +559,7 @@ func _make_infinite_ring(index: int) -> Dictionary:
 	var is_solid := infinite_level >= 4 and index % solid_every == 0
 	var base_hp := int(gameplay_config.get("base_hp", 20))
 	var hp := floori(float(base_hp) * (1.0 + progress * 0.75) * (1.42 if is_solid else 1.0))
-	var safe_spawn := _find_safe_ring_spawn_radius(_playable_ring_max_radius(), rings)
+	var safe_spawn := _find_outer_spawn_radius(rings)
 	if not bool(safe_spawn.get("ok", false)):
 		return {}
 	var radius := float(safe_spawn["radius"])
@@ -1349,6 +1348,24 @@ func _safe_spawn_radius(preferred_radius: float, active_rings: Array = []) -> fl
 func _find_safe_ring_spawn_radius(preferred_radius: float, active_rings: Array = []) -> Dictionary:
 	var references: Array = active_rings if not active_rings.is_empty() else rings
 	return get_safe_ring_spawn_radius(_ball_spawn_state(), references, preferred_radius)
+
+
+func _find_outer_spawn_radius(active_rings: Array = []) -> Dictionary:
+	var max_radius := _playable_ring_max_radius()
+	var ball_dist := (ball_position - arena_center).length()
+	var ball_clearance: float = maxf(BALL_RADIUS * 2.2, MIN_RING_SPACING * 2.2)
+	if abs(max_radius - ball_dist) < ball_clearance:
+		return { "ok": false, "radius": max_radius }
+	var references: Array = active_rings if not active_rings.is_empty() else rings
+	var required_spacing: float = maxf(_infinite_ring_spacing(), MIN_RING_SPACING + 5.0)
+	for ring in references:
+		if String(ring.get("status", "")) != "active" or int(ring.get("hp", 0)) <= 0:
+			continue
+		var radius := float(ring.get("radius", 0.0))
+		var thickness := float(ring.get("thickness", 5.0))
+		if max_radius - radius < required_spacing + thickness * 0.45:
+			return { "ok": false, "radius": max_radius }
+	return { "ok": true, "radius": max_radius }
 
 
 func _ball_spawn_state() -> Dictionary:

@@ -164,6 +164,12 @@ func upgrade_by_id(id: String) -> Dictionary:
 			return upgrade
 	return {}
 
+func run_upgrades() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for upgrade in RUN_UPGRADES:
+		result.append(Dictionary(upgrade).duplicate(true))
+	return result
+
 func released_run_upgrade_ids() -> Array[String]:
 	var result: Array[String] = []
 	for upgrade in RUN_UPGRADES:

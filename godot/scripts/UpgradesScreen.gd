@@ -100,6 +100,21 @@ func _build_screen() -> void:
 		list.add_child(_make_empty_upgrade_message())
 	for upgrade in visible_upgrades:
 		list.add_child(_make_upgrade_card(upgrade))
+
+	var visible_run_upgrades := _visible_run_upgrade_list()
+	if not visible_run_upgrades.is_empty():
+		list.add_child(_make_label("MELHORIAS DE PARTIDA LIBERADAS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		for upgrade in visible_run_upgrades:
+			list.add_child(_make_temp_upgrade_card(upgrade))
+
+	var locked_upgrades := _locked_upgrade_list()
+	if not locked_upgrades.is_empty():
+		list.add_child(_make_label("MELHORIAS BLOQUEADAS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		for upgrade in locked_upgrades:
+			if String(upgrade.get("kind", "permanent")) == "run":
+				list.add_child(_make_temp_upgrade_card(upgrade))
+			else:
+				list.add_child(_make_upgrade_card(upgrade, true))
 	list.add_child(_make_upgrade_summary())
 
 
@@ -120,8 +135,48 @@ func _ensure_available_permanent_unlocks() -> void:
 func _visible_permanent_upgrade_list() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for upgrade in _permanent_upgrade_list():
-		if GameState.is_upgrade_unlocked(String(upgrade["id"])):
+		if _is_permanent_upgrade_available(String(upgrade["id"])):
 			result.append(upgrade)
+	return result
+
+
+func _is_permanent_upgrade_available(id: String) -> bool:
+	if not GameState.PERMANENT_UPGRADE_DEFS.has(id):
+		return GameState.is_upgrade_unlocked(id)
+	var definition: Dictionary = GameState.PERMANENT_UPGRADE_DEFS[id]
+	var max_phase := int(GameState.data.get("max_unlocked_phase", GameState.data.get("current_phase", 1)))
+	var profile_level := int(GameState.data.get("level", 1))
+	return max_phase >= int(definition.get("phase", 999)) or profile_level >= int(definition.get("level", 999))
+
+
+func _visible_run_upgrade_list() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for upgrade in MainPortData.run_upgrades():
+		var id := String(upgrade.get("id", ""))
+		if id.is_empty():
+			continue
+		if not GameState.is_upgrade_unlocked(id):
+			continue
+		var copy: Dictionary = upgrade.duplicate(true)
+		copy["kind"] = "run"
+		result.append(copy)
+	return result
+
+
+func _locked_upgrade_list() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for upgrade in _permanent_upgrade_list():
+		if not _is_permanent_upgrade_available(String(upgrade["id"])):
+			var copy: Dictionary = upgrade.duplicate(true)
+			copy["kind"] = "permanent"
+			result.append(copy)
+	for upgrade in MainPortData.run_upgrades():
+		var id := String(upgrade.get("id", ""))
+		if id.is_empty() or GameState.is_upgrade_unlocked(id):
+			continue
+		var copy: Dictionary = upgrade.duplicate(true)
+		copy["kind"] = "run"
+		result.append(copy)
 	return result
 
 
@@ -143,7 +198,7 @@ func _make_upgrade_summary() -> PanelContainer:
 	var locked_count := 0
 	var permanent_upgrades := _permanent_upgrade_list()
 	for upgrade in permanent_upgrades:
-		if GameState.is_upgrade_unlocked(String(upgrade["id"])):
+		if _is_permanent_upgrade_available(String(upgrade["id"])):
 			unlocked_count += 1
 		else:
 			locked_count += 1
@@ -236,16 +291,16 @@ func _make_resource_pill(icon_key: String, value: String, border: String) -> Pan
 	return box
 
 
-func _make_upgrade_card(upgrade: Dictionary) -> PanelContainer:
+func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelContainer:
 	var id := String(upgrade["id"])
-	var unlocked := GameState.is_upgrade_unlocked(id)
+	var unlocked := _is_permanent_upgrade_available(id)
 	var level := int(GameState.data.get("permanent_upgrades", {}).get(id, 0))
 	var max_level := GameState.get_upgrade_max_level(id)
 	var cost := GameState.get_upgrade_cost(id)
 	var is_maxed := level >= max_level
 	var can_afford := int(GameState.data.get("coins", 0)) >= cost
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 16, "#ffffff22", 2))
+	card.add_theme_stylebox_override("panel", _make_style("#ffffff12" if unlocked else "#ffffff0c", 16, "#ffffff22" if unlocked else "#55557755", 2))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 16)
 	margin.add_theme_constant_override("margin_top", 16)
@@ -268,10 +323,12 @@ func _make_upgrade_card(upgrade: Dictionary) -> PanelContainer:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 4)
 	row.add_child(info)
-	info.add_child(_make_label(String(upgrade["name"]) if unlocked else "???", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label(String(upgrade["name"]), 18, "#ffffff" if unlocked else "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
 		info.add_child(_make_label(String(upgrade["desc"]), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	else:
+		if locked_preview:
+			info.add_child(_make_label(String(upgrade["desc"]), 13, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		var locked := HBoxContainer.new()
 		locked.add_theme_constant_override("separation", 5)
 		locked.add_child(_make_icon("locked", 14))
@@ -280,15 +337,22 @@ func _make_upgrade_card(upgrade: Dictionary) -> PanelContainer:
 	info.add_child(_make_label("Nível: %s/%s" % [level, max_level], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
 		info.add_child(_make_label(_upgrade_value_text(id, level, max_level), 11, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+		if not is_maxed:
+			info.add_child(_make_label("Custo para upar: %s moedas" % cost, 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	var buy := Button.new()
-	buy.custom_minimum_size = Vector2(76, 50)
+	buy.custom_minimum_size = Vector2(86, 58)
 	buy.focus_mode = Control.FOCUS_NONE
 	buy.disabled = not unlocked or is_maxed
-	buy.text = "MAX" if is_maxed else str(cost) if unlocked else ""
+	if is_maxed:
+		buy.text = "MAX"
+	elif unlocked:
+		buy.text = "UPAR\n%s" % cost
+	else:
+		buy.text = "LOCK"
 	buy.modulate.a = 1.0 if unlocked and not is_maxed else 0.5
 	buy.add_theme_font_override("font", _bold_font)
-	buy.add_theme_font_size_override("font_size", 16)
+	buy.add_theme_font_size_override("font_size", 13)
 	buy.add_theme_color_override("font_color", Color("#ffffff"))
 	_apply_button_style(buy, _make_style("#00aa77" if is_maxed else "#0088ff" if can_afford and unlocked else "#555555", 12, "#00000000", 0, "#00f0ff88" if unlocked and not is_maxed else "#00000000", 8))
 	if unlocked and not is_maxed:
@@ -316,8 +380,10 @@ func _make_temp_upgrade_card(upgrade: Dictionary) -> PanelContainer:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 3)
 	row.add_child(info)
-	info.add_child(_make_label(String(upgrade.get("name", id)) if unlocked else "???", 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	info.add_child(_make_label(String(upgrade.get("description", "")) if unlocked else String(upgrade.get("unlockRequirement", "Bloqueado")), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label(String(upgrade.get("name", id)), 16, "#ffffff" if unlocked else "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label(String(upgrade.get("description", "")), 12, "#ffffffaa" if unlocked else "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	if not unlocked:
+		info.add_child(_make_label(String(upgrade.get("unlockRequirement", "Bloqueado")), 11, "#ffcc66", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	info.add_child(_make_label("%s • max Lv.%s" % [String(upgrade.get("rarity", "common")).to_upper(), int(upgrade.get("maxLevel", 1))], 11, _rarity_color(String(upgrade.get("rarity", "common"))), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var status := _make_label("LIBERADO" if unlocked else "BLOQUEADO", 12, "#00ff88" if unlocked else "#ff6b9a", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
 	status.custom_minimum_size.x = 84

@@ -155,9 +155,9 @@ func _build_achievement_notice_overlay() -> void:
 		notice.anchor_right = 0.0
 		notice.anchor_bottom = 0.0
 		notice.offset_left = 18.0
-		notice.offset_top = 132.0
+		notice.offset_top = 158.0
 		notice.offset_right = 254.0
-		notice.offset_bottom = 172.0
+		notice.offset_bottom = 198.0
 		notice.z_index = 30
 		add_child(notice)
 
