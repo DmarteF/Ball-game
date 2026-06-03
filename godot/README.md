@@ -616,3 +616,43 @@ Checklist:
 | Recompensa ao sair do modo infinito | Sim |
 | Reviver com anúncio não aparece ao sair manualmente | Sim |
 | Liga Neon usa alvo de 8 anéis ativos | Sim |
+
+## 7.9 Correções focadas de spawn, skins e upgrades
+
+Atualizado nesta etapa:
+
+- `GameplayManager.gd` agora usa uma validação real de spawn com `is_ring_reachable_by_ball`, `can_spawn_ring_safely`, `get_safe_ring_spawn_radius` e `clamp_ring_to_playable_area`.
+- Fases normais e modo infinito só ativam/spawnam anéis quando existe raio seguro; se não houver posição válida, o anel fica em fila ou o spawn infinito aguarda outro tick.
+- A área útil dos anéis foi reduzida para a parte central jogável, respeitando HUD/arena, distância da bolinha, velocidade, posição anterior, espaçamento mínimo e limite máximo de alcance.
+- `LeagueBattleScreen.gd` passou a usar validação parecida para a Liga Neon, sem forçar anel fora de alcance quando não encontra candidato seguro.
+- A tela `Skins` removeu filtros duplicados; agora mantém apenas Obtidas, Comuns, Raras, Épicas, Lendárias, Míticas, Ultimate e Bloqueadas.
+- Todas as skins bloqueadas aparecem mascaradas com `???`, ícone `?`, status bloqueado e sem asset/efeito/nome real.
+- A tela `Melhorias` foi religada aos dados permanentes de `GameState.PERMANENT_UPGRADE_DEFS` e aos temporários internos de `MainPortData.RUN_UPGRADES`.
+- Upgrades temporários continuam existindo internamente para level-up, mas a tela permanente mostra só melhorias permanentes desbloqueadas e contadores.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Anéis nascem mais ao centro da arena útil | Sim |
+| Anéis nascem dentro do alcance de colisão da bolinha | Sim |
+| Anéis não nascem fora da área acertável | Sim |
+| Anéis não fazem a bolinha bater no vazio | Sim |
+| Spawn seguro aplicado no modo infinito | Sim |
+| Spawn seguro aplicado nas fases normais | Sim |
+| Spawn seguro preparado para Liga Neon | Sim |
+| Validação de alcance criada/corrigida | Sim |
+| Filtros duplicados removidos da tela Skins | Sim |
+| Skins bloqueadas aparecem com interrogação | Sim |
+| Skins bloqueadas não mostram asset real | Sim |
+| Skins bloqueadas não mostram efeito real | Sim |
+| Todas as melhorias/upgrades restauradas | Sim |
+| Upgrades permanentes existem internamente | Sim |
+| Upgrades temporários existem internamente | Sim |
+| Upgrades bloqueados não foram excluídos | Sim |
+| Tela de Upgrades mostra apenas disponíveis e contador de bloqueados | Sim |
+| Level up mostra apenas upgrades temporários liberados | Sim |
+
+Pendência conhecida:
+
+- A validação é local/offline e foi testada por abertura headless do Godot; a revisão visual fina ainda depende do teste manual no navegador.

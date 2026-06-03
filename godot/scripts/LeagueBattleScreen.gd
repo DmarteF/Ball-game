@@ -183,7 +183,8 @@ func _make_arena(id: String, label: String, skin_id: String, top_ratio: float, h
 		"level_pending": false,
 	}
 	for i in range(TARGET_ACTIVE_RINGS):
-		_add_ring(state)
+		if not _add_ring(state):
+			break
 	return state
 
 
@@ -218,7 +219,8 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 	_check_arena_collisions(state)
 	velocity = Vector2(state.get("velocity", velocity))
 	while _arena_active_count(state) < TARGET_ACTIVE_RINGS:
-		_add_ring(state)
+		if not _add_ring(state):
+			break
 	if int(state.get("rings_destroyed", 0)) > prev_destroyed:
 		state["coins"] = int(state.get("coins", 0)) + 7 + int(state.get("gold", 0)) * 2
 		state["xp"] = int(state.get("xp", 0)) + 10
@@ -296,28 +298,46 @@ func _is_arena_crushed(state: Dictionary) -> bool:
 	return false
 
 
-func _add_ring(state: Dictionary) -> void:
+func _add_ring(state: Dictionary) -> bool:
 	var active := _arena_active_count(state)
 	var center: Vector2 = state["center"]
 	var ball: Vector2 = state["ball"]
-	var arena_radius := float(state["arena_radius"])
-	var ball_dist := (ball - center).length()
-	var max_radius := arena_radius - 3.0
-	var min_radius := clampf(ball_dist + 24.0, 18.0, max_radius - MIN_RING_SPACING)
-	var far_radius := clampf(ball_dist + 120.0, min_radius + MIN_RING_SPACING, max_radius)
-	if ball_dist > max_radius - 24.0:
-		min_radius = max(18.0, ball_dist - 120.0)
-		far_radius = max(18.0 + MIN_RING_SPACING, ball_dist - 24.0)
-	var radius := clampf(arena_radius - 4.0 - active * MIN_RING_SPACING, min_radius, far_radius)
-	for ring in Array(state["rings"]):
-		if String(ring.get("status", "")) == "active" and abs(float(ring.get("radius", 0.0)) - radius) < MIN_RING_SPACING:
-			var outward := float(ring.get("radius", 0.0)) + MIN_RING_SPACING
-			var inward := float(ring.get("radius", 0.0)) - MIN_RING_SPACING
-			radius = outward if outward <= far_radius else inward
-	radius = clampf(radius, 18.0, max_radius)
+	var velocity: Vector2 = state["velocity"]
+	var arena_radius: float = float(state["arena_radius"])
+	var ball_dist: float = (ball - center).length()
+	var max_radius: float = max(22.0, min(arena_radius - 14.0, arena_radius * 0.78))
+	var min_radius: float = 18.0
+	var ball_dir: Vector2 = (ball - center).normalized() if ball_dist > 0.01 else velocity.normalized()
+	if ball_dir.length() <= 0.01:
+		ball_dir = Vector2.RIGHT
+	var inward_first: bool = velocity.dot(ball_dir) < 0.0 or ball_dist > max_radius - 24.0
+	var candidates: Array[float] = []
+	var base_radius: float = clampf(arena_radius * 0.48 + float(active) * MIN_RING_SPACING * 0.35, min_radius, max_radius)
+	_add_league_spawn_candidate(candidates, base_radius, min_radius, max_radius)
+	for offset in [24.0, 38.0, 54.0, 72.0, 92.0]:
+		if inward_first:
+			_add_league_spawn_candidate(candidates, ball_dist - offset, min_radius, max_radius)
+			_add_league_spawn_candidate(candidates, ball_dist + offset, min_radius, max_radius)
+		else:
+			_add_league_spawn_candidate(candidates, ball_dist + offset, min_radius, max_radius)
+			_add_league_spawn_candidate(candidates, ball_dist - offset, min_radius, max_radius)
+	for factor in [0.34, 0.44, 0.54, 0.64, 0.74]:
+		_add_league_spawn_candidate(candidates, arena_radius * factor, min_radius, max_radius)
+	var radius: float = -1.0
+	for candidate in candidates:
+		if _can_spawn_league_ring(float(candidate), state, min_radius, max_radius):
+			radius = float(candidate)
+			break
+	if radius < 0.0:
+		return false
 	var index := int(state.get("spawned", 0))
 	state["spawned"] = index + 1
 	var rings: Array = state["rings"]
+	var rotation: float = randf() * TWO_PI
+	var aim: Vector2 = velocity.normalized()
+	if aim.length() <= 0.01:
+		aim = ball_dir
+	var target_angle: float = fposmod((ball + aim * max(18.0, radius - ball_dist) - center).angle(), TWO_PI)
 	rings.append({
 		"id": "%s_%s" % [String(state.get("id", "arena")), index],
 		"type": "solid" if index % 9 == 8 else "normal",
@@ -325,14 +345,40 @@ func _add_ring(state: Dictionary) -> void:
 		"hp": 14 + floori(float(index) * 0.9 + float(state.get("quality", 0.4)) * 12.0),
 		"status": "active",
 		"thickness": 5.0,
-		"rotation": randf() * TWO_PI,
+		"rotation": rotation,
 		"rotation_speed": (0.004 + float(state.get("quality", 0.4)) * 0.004) * (1.0 if index % 2 == 0 else -1.0),
 		"closing_speed": 0.010 + float(state.get("quality", 0.4)) * 0.010 + _elapsed * 0.00008,
-		"gap_start": randf() * TWO_PI,
+		"gap_start": fposmod(target_angle - rotation + randf_range(-0.15, 0.15), TWO_PI),
 		"gap_size": 0.0 if index % 9 == 8 else max(PI / 7.0, PI / (3.4 + _elapsed * 0.012)),
 		"color": "#ff0055" if index % 9 == 8 else "#00f0ff",
 	})
 	state["rings"] = rings
+	return true
+
+
+func _add_league_spawn_candidate(candidates: Array[float], value: float, min_radius: float, max_radius: float) -> void:
+	var radius: float = clampf(value, min_radius, max_radius)
+	for existing in candidates:
+		if abs(float(existing) - radius) < MIN_RING_SPACING * 0.5:
+			return
+	candidates.append(radius)
+
+
+func _can_spawn_league_ring(radius: float, state: Dictionary, min_radius: float, max_radius: float) -> bool:
+	if radius < min_radius or radius > max_radius:
+		return false
+	var center: Vector2 = state["center"]
+	var ball: Vector2 = state["ball"]
+	var ball_dist: float = (ball - center).length()
+	var distance: float = abs(radius - ball_dist)
+	if distance < 20.0 or distance > 96.0:
+		return false
+	for ring in Array(state["rings"]):
+		if String(ring.get("status", "")) != "active":
+			continue
+		if abs(float(ring.get("radius", 0.0)) - radius) < MIN_RING_SPACING + float(ring.get("thickness", 5.0)) * 0.5:
+			return false
+	return true
 
 
 func _arena_active_count(state: Dictionary) -> int:

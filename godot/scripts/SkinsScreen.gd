@@ -10,14 +10,13 @@ const ICON_PATHS := {
 }
 
 const FILTERS := [
-	{ "id": "all", "label": "Todas" },
+	{ "id": "owned", "label": "Obtidas" },
 	{ "id": "common", "label": "Comuns" },
 	{ "id": "rare", "label": "Raras" },
 	{ "id": "epic", "label": "Épicas" },
 	{ "id": "legendary", "label": "Lendárias" },
 	{ "id": "mythic", "label": "Míticas" },
 	{ "id": "ultimate", "label": "Ultimate" },
-	{ "id": "owned", "label": "Obtidas" },
 	{ "id": "locked", "label": "Bloqueadas" },
 ]
 
@@ -233,13 +232,11 @@ func _populate_skins() -> void:
 		child.queue_free()
 	for skin in _all_skin_data:
 		var owned := _is_owned(String(skin["id"]))
-		if _filter == "all" and not owned:
-			continue
 		if _filter == "owned" and not owned:
 			continue
 		if _filter == "locked" and owned:
 			continue
-		if _filter not in ["all", "owned", "locked"] and skin["rarity"] != _filter:
+		if _filter not in ["owned", "locked"] and skin["rarity"] != _filter:
 			continue
 		_content_grid.add_child(_make_skin_card(skin))
 
@@ -248,7 +245,6 @@ func _filter_label(id: String, fallback: String) -> String:
 	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	if not pt:
 		match id:
-			"all": return "Unlocked"
 			"common": return "Common"
 			"rare": return "Rare"
 			"epic": return "Epic"
@@ -259,7 +255,6 @@ func _filter_label(id: String, fallback: String) -> String:
 			"locked": return "Locked"
 		return fallback
 	match id:
-		"all": return "Obtidas"
 		"common": return "Comuns"
 		"rare": return "Raras"
 		"epic": return "Épicas"
@@ -274,7 +269,7 @@ func _filter_label(id: String, fallback: String) -> String:
 func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	var owned := _is_owned(String(skin["id"]))
 	var selected := String(GameState.data.get("equipped_skin", "neon_blue")) == String(skin["id"])
-	var hidden := not owned and String(skin["rarity"]) in ["mythic", "ultimate"]
+	var hidden := not owned
 	var rarity_color := _rarity_color(String(skin["rarity"]))
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(160, 246)
@@ -312,9 +307,9 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 		for effect in skin.get("effects", []).slice(0, 3):
 			effects.add_child(_make_effect_badge(String(effect), rarity_color))
 	else:
-		effects.add_child(_make_effect_badge("Oculta" if hidden else "Baús", rarity_color))
+		effects.add_child(_make_effect_badge("???", rarity_color))
 
-	column.add_child(_make_label("Lv.1 • 0/10" if owned else ("Oculta" if hidden else "0/10"), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("Lv.1 • 0/10" if owned else "BLOQUEADA", 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	if owned:
 		var row := HBoxContainer.new()
@@ -323,7 +318,7 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 		row.add_child(_make_action("USANDO" if selected else "EQUIPAR", "#00f0ff", selected, _equip_skin.bind(String(skin["id"]))))
 		row.add_child(_make_action("EVOLUIR", "#00ff88", true))
 	else:
-		column.add_child(_make_label("Revele em baús" if hidden else "Disponível em baús", 11, "#ffffff77", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		column.add_child(_make_label("Revele em baús, fases ou conquistas", 11, "#ffffff77", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 

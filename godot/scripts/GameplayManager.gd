@@ -10,7 +10,10 @@ const MIN_RING_SPACING := 8.4
 const MAX_VISIBLE_RINGS := 26
 const TARGET_ACTIVE_RINGS := 8
 const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
-const MAX_SPAWN_DISTANCE_FROM_BALL := 175.0
+const MAX_SPAWN_DISTANCE_FROM_BALL := 112.0
+const PLAYABLE_RING_RADIUS_FACTOR := 0.78
+const PLAYABLE_RING_MARGIN := 22.0
+const SPAWN_LOOKAHEAD_DISTANCE := 96.0
 const MAX_PHYSICS_SUBSTEPS := 6
 const SAFE_STEP_DISTANCE := 8.0
 const MIN_DIRECTION_COMPONENT := 0.24
@@ -92,6 +95,7 @@ var ball_velocity := Vector2.ZERO
 var arena_center := Vector2.ZERO
 var arena_size := 320.0
 var outer_radius := 154.0
+var previous_ball_position := Vector2.ZERO
 var previous_distance := 0.0
 var last_hit_msec := 0
 var run_coins := 0
@@ -276,6 +280,7 @@ func _start_level() -> void:
 	if is_infinite:
 		speed += 0.16
 	ball_position = arena_center
+	previous_ball_position = ball_position
 	ball_velocity = Vector2(cos(start_angle), sin(start_angle)) * speed
 	rings = _create_rings()
 	last_direction_shift_msec = Time.get_ticks_msec()
@@ -297,6 +302,7 @@ func _update_game(delta_steps: float) -> void:
 		var previous_vector := ball_position - arena_center
 		var prev_dist := previous_vector.length()
 		var prev_pos := ball_position
+		previous_ball_position = prev_pos
 		_apply_dynamic_steering(step_delta)
 		_apply_control_influence(step_delta)
 		ball_position += ball_velocity * step_delta
@@ -325,7 +331,7 @@ func _create_rings() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var count: int = int(gameplay_config["ring_count"])
 	var inner_radius: float = INNER_RADIUS + MIN_SPAWN_DISTANCE_FROM_BALL * 0.55
-	var available_radius: float = max(1.0, outer_radius - inner_radius)
+	var available_radius: float = max(1.0, _playable_ring_max_radius() - inner_radius)
 	var adaptive_min_spacing: float = MIN_RING_SPACING
 	var max_count_by_spacing: int = max(1, floori(available_radius / adaptive_min_spacing) + 1)
 	count = max(1, min(count, min(MAX_VISIBLE_RINGS, max_count_by_spacing)))
@@ -366,8 +372,12 @@ func _create_rings() -> Array[Dictionary]:
 			"closing_multiplier": 1.0,
 		}
 		if status == "active":
-			ring["radius"] = _safe_spawn_radius(float(ring["radius"]))
-			ring = _align_ring_gap_to_ball(ring)
+			var safe_spawn := _find_safe_ring_spawn_radius(float(ring["radius"]), result)
+			if bool(safe_spawn.get("ok", false)):
+				ring["radius"] = float(safe_spawn["radius"])
+				ring = _align_ring_gap_to_ball(ring)
+			else:
+				ring["status"] = "queued"
 		result.append(ring)
 	return result
 
@@ -421,8 +431,11 @@ func _activate_next_queued_ring() -> bool:
 		var ring := rings[i]
 		if String(ring.get("status", "")) != "queued":
 			continue
+		var safe_spawn := _find_safe_ring_spawn_radius(float(ring.get("radius", outer_radius - 2.0)), rings)
+		if not bool(safe_spawn.get("ok", false)):
+			return false
 		ring["status"] = "active"
-		ring["radius"] = _safe_spawn_radius(float(ring.get("radius", outer_radius - 2.0)))
+		ring["radius"] = float(safe_spawn["radius"])
 		ring = _align_ring_gap_to_ball(ring)
 		ring["initial_radius"] = max(float(ring.get("initial_radius", ring["radius"])), float(ring["radius"]))
 		rings[i] = ring
@@ -440,7 +453,10 @@ func _prune_inactive_rings() -> void:
 
 func _append_infinite_ring() -> void:
 	var ring_index := rings.size()
-	rings.append(_make_infinite_ring(ring_index))
+	var ring := _make_infinite_ring(ring_index)
+	if ring.is_empty():
+		return
+	rings.append(ring)
 
 
 func _make_infinite_ring(index: int) -> Dictionary:
@@ -451,7 +467,10 @@ func _make_infinite_ring(index: int) -> Dictionary:
 	var is_solid := infinite_level >= 4 and index % solid_every == 0
 	var base_hp := int(gameplay_config.get("base_hp", 20))
 	var hp := floori(float(base_hp) * (1.0 + progress * 0.75) * (1.42 if is_solid else 1.0))
-	var radius := _safe_spawn_radius(outer_radius - 2.0)
+	var safe_spawn := _find_safe_ring_spawn_radius(_playable_ring_max_radius(), rings)
+	if not bool(safe_spawn.get("ok", false)):
+		return {}
+	var radius := float(safe_spawn["radius"])
 	var gap: float = 0.0 if is_solid else max(PI / 15.0, float(gameplay_config.get("gap_size", PI / 4.0)) * randf_range(0.88, 1.08))
 	var rotation := randf() * TWO_PI
 	var ring := {
@@ -1203,26 +1222,101 @@ func _active_ring_count() -> int:
 	return count
 
 
-func _safe_spawn_radius(preferred_radius: float) -> float:
-	var ball_dist: float = (ball_position - arena_center).length()
-	var max_arena_radius := outer_radius - 2.0
-	var min_from_ball: float = clampf(ball_dist + MIN_SPAWN_DISTANCE_FROM_BALL, INNER_RADIUS, max_arena_radius - MIN_RING_SPACING)
-	var max_from_ball: float = clampf(ball_dist + MAX_SPAWN_DISTANCE_FROM_BALL, min_from_ball + MIN_RING_SPACING, max_arena_radius)
-	if ball_dist > max_arena_radius - MIN_SPAWN_DISTANCE_FROM_BALL:
-		min_from_ball = max(INNER_RADIUS, ball_dist - MAX_SPAWN_DISTANCE_FROM_BALL)
-		max_from_ball = max(INNER_RADIUS + MIN_RING_SPACING, ball_dist - MIN_SPAWN_DISTANCE_FROM_BALL)
-	var radius: float = clampf(_projected_reachable_radius(preferred_radius, min_from_ball, max_from_ball), min_from_ball, max_from_ball)
-	for attempt in range(10):
-		if _can_spawn_ring_safely(radius, min_from_ball, max_from_ball):
-			return clampf(radius, INNER_RADIUS, max_arena_radius)
-		var direction := 1.0 if attempt % 2 == 0 else -1.0
-		radius = clampf(radius + direction * (MIN_RING_SPACING + 3.0) * float(1 + attempt / 2), min_from_ball, max_from_ball)
-	return clampf(radius, INNER_RADIUS, max_arena_radius)
+func _safe_spawn_radius(preferred_radius: float, active_rings: Array = []) -> float:
+	var result := _find_safe_ring_spawn_radius(preferred_radius, active_rings)
+	return float(result.get("radius", clampf(preferred_radius, _playable_ring_min_radius(), _playable_ring_max_radius())))
+
+
+func _find_safe_ring_spawn_radius(preferred_radius: float, active_rings: Array = []) -> Dictionary:
+	var references: Array = active_rings if not active_rings.is_empty() else rings
+	return get_safe_ring_spawn_radius(_ball_spawn_state(), references, preferred_radius)
+
+
+func _ball_spawn_state() -> Dictionary:
+	return {
+		"position": ball_position,
+		"previous_position": previous_ball_position,
+		"velocity": ball_velocity,
+		"radius": BALL_RADIUS,
+		"center": arena_center,
+	}
+
+
+func _playable_ring_min_radius() -> float:
+	return INNER_RADIUS
+
+
+func _playable_ring_max_radius() -> float:
+	return max(INNER_RADIUS + MIN_RING_SPACING * 2.0, min(outer_radius - PLAYABLE_RING_MARGIN, outer_radius * PLAYABLE_RING_RADIUS_FACTOR))
+
+
+func get_safe_ring_spawn_radius(ball_state: Dictionary, active_rings: Array, preferred_radius: float) -> Dictionary:
+	var min_radius := _playable_ring_min_radius()
+	var max_radius := _playable_ring_max_radius()
+	var position: Vector2 = ball_state.get("position", arena_center)
+	var velocity: Vector2 = ball_state.get("velocity", Vector2.RIGHT)
+	var ball_dist: float = (position - arena_center).length()
+	var radial_dir := (position - arena_center).normalized() if ball_dist > 0.01 else velocity.normalized()
+	var radial_speed := velocity.dot(radial_dir)
+	var inward_first := radial_speed < 0.0 or ball_dist > max_radius - MIN_SPAWN_DISTANCE_FROM_BALL
+	var candidates: Array[float] = []
+	_add_spawn_candidate(candidates, preferred_radius, min_radius, max_radius)
+	_add_spawn_candidate(candidates, _projected_reachable_radius(preferred_radius, min_radius, max_radius), min_radius, max_radius)
+	var offsets := [MIN_SPAWN_DISTANCE_FROM_BALL + 4.0, 48.0, 68.0, 88.0, MAX_SPAWN_DISTANCE_FROM_BALL]
+	for offset in offsets:
+		if inward_first:
+			_add_spawn_candidate(candidates, ball_dist - offset, min_radius, max_radius)
+			_add_spawn_candidate(candidates, ball_dist + offset, min_radius, max_radius)
+		else:
+			_add_spawn_candidate(candidates, ball_dist + offset, min_radius, max_radius)
+			_add_spawn_candidate(candidates, ball_dist - offset, min_radius, max_radius)
+	for factor in [0.32, 0.42, 0.52, 0.62, 0.72]:
+		_add_spawn_candidate(candidates, outer_radius * factor, min_radius, max_radius)
+	for radius in candidates:
+		var ring_data := clamp_ring_to_playable_area({ "radius": radius, "thickness": 5.0 })
+		if can_spawn_ring_safely(ring_data, active_rings, ball_state):
+			return { "ok": true, "radius": float(ring_data["radius"]) }
+	for i in range(18):
+		var radius := randf_range(min_radius, max_radius)
+		var ring_data := clamp_ring_to_playable_area({ "radius": radius, "thickness": 5.0 })
+		if can_spawn_ring_safely(ring_data, active_rings, ball_state):
+			return { "ok": true, "radius": float(ring_data["radius"]) }
+	var sweep_offsets: Array[float] = []
+	var step: float = max(4.0, MIN_RING_SPACING * 0.55)
+	var search_limit: float = max_radius - min_radius
+	var steps: int = ceili(search_limit / step)
+	for i in range(steps + 1):
+		var offset: float = MIN_SPAWN_DISTANCE_FROM_BALL + float(i) * step
+		sweep_offsets.append(offset)
+	for offset in sweep_offsets:
+		var first_radius: float = ball_dist - offset if inward_first else ball_dist + offset
+		var second_radius: float = ball_dist + offset if inward_first else ball_dist - offset
+		for value in [first_radius, second_radius]:
+			var ring_data := clamp_ring_to_playable_area({ "radius": value, "thickness": 5.0 })
+			if can_spawn_ring_safely(ring_data, active_rings, ball_state):
+				return { "ok": true, "radius": float(ring_data["radius"]) }
+	return {
+		"ok": false,
+		"radius": clampf(ball_dist + (-MIN_SPAWN_DISTANCE_FROM_BALL if inward_first else MIN_SPAWN_DISTANCE_FROM_BALL), min_radius, max_radius),
+	}
+
+
+func _add_spawn_candidate(candidates: Array[float], value: float, min_radius: float, max_radius: float) -> void:
+	var radius := clampf(value, min_radius, max_radius)
+	for existing in candidates:
+		if abs(float(existing) - radius) < MIN_RING_SPACING * 0.5:
+			return
+	candidates.append(radius)
+
+
+func clamp_ring_to_playable_area(ring_data: Dictionary) -> Dictionary:
+	ring_data["radius"] = clampf(float(ring_data.get("radius", INNER_RADIUS)), _playable_ring_min_radius(), _playable_ring_max_radius())
+	return ring_data
 
 
 func _projected_reachable_radius(preferred_radius: float, min_radius: float, max_radius: float) -> float:
 	var from_center: Vector2 = ball_position - arena_center
-	var future: Vector2 = ball_position + ball_velocity.normalized() * min(MAX_SPAWN_DISTANCE_FROM_BALL, outer_radius * 0.62)
+	var future: Vector2 = ball_position + ball_velocity.normalized() * min(SPAWN_LOOKAHEAD_DISTANCE, outer_radius * 0.52)
 	var future_dist: float = (future - arena_center).length()
 	var low: float = min(from_center.length(), future_dist) - BALL_RADIUS * 1.5
 	var high: float = max(from_center.length(), future_dist) + BALL_RADIUS * 4.0
@@ -1231,19 +1325,48 @@ func _projected_reachable_radius(preferred_radius: float, min_radius: float, max
 	return clampf(preferred_radius, max(min_radius, low), min(max_radius, high))
 
 
-func _can_spawn_ring_safely(radius: float, min_radius: float, max_radius: float) -> bool:
-	if radius < min_radius or radius > max_radius:
+func can_spawn_ring_safely(ring_data: Dictionary, active_rings: Array, ball_state: Dictionary) -> bool:
+	var radius := float(ring_data.get("radius", INNER_RADIUS))
+	if radius < _playable_ring_min_radius() or radius > _playable_ring_max_radius():
 		return false
-	var ball_dist: float = (ball_position - arena_center).length()
+	var position: Vector2 = ball_state.get("position", ball_position)
+	var ball_dist: float = (position - arena_center).length()
 	var distance: float = abs(radius - ball_dist)
-	if distance < MIN_SPAWN_DISTANCE_FROM_BALL * 0.72 or distance > MAX_SPAWN_DISTANCE_FROM_BALL + BALL_RADIUS * 2.0:
+	if distance < MIN_SPAWN_DISTANCE_FROM_BALL * 0.86 or distance > MAX_SPAWN_DISTANCE_FROM_BALL:
 		return false
-	for ring in rings:
+	if not is_ring_reachable_by_ball(ring_data, ball_state):
+		return false
+	for ring in active_rings:
 		if String(ring.get("status", "")) != "active":
 			continue
 		if abs(float(ring.get("radius", 0.0)) - radius) < MIN_RING_SPACING + float(ring.get("thickness", 5.0)) * 0.5:
 			return false
 	return true
+
+
+func _can_spawn_ring_safely(radius: float, min_radius: float, max_radius: float) -> bool:
+	if radius < min_radius or radius > max_radius:
+		return false
+	return can_spawn_ring_safely({ "radius": radius, "thickness": 5.0 }, rings, _ball_spawn_state())
+
+
+func is_ring_reachable_by_ball(ring_data: Dictionary, ball_state: Dictionary) -> bool:
+	var radius := float(ring_data.get("radius", INNER_RADIUS))
+	var position: Vector2 = ball_state.get("position", ball_position)
+	var previous_position: Vector2 = ball_state.get("previous_position", previous_ball_position)
+	var velocity: Vector2 = ball_state.get("velocity", ball_velocity)
+	var ball_radius := float(ball_state.get("radius", BALL_RADIUS))
+	var current_dist := (position - arena_center).length()
+	var previous_dist := (previous_position - arena_center).length()
+	var future: Vector2 = position + velocity.normalized() * min(SPAWN_LOOKAHEAD_DISTANCE, MAX_SPAWN_DISTANCE_FROM_BALL)
+	var future_dist: float = (future - arena_center).length()
+	var low: float = min(current_dist, min(previous_dist, future_dist)) - ball_radius * 2.0
+	var high: float = max(current_dist, max(previous_dist, future_dist)) + ball_radius * 6.0
+	if radius >= low and radius <= high:
+		return true
+	if current_dist < INNER_RADIUS * 0.75 and radius <= min(_playable_ring_max_radius(), MAX_SPAWN_DISTANCE_FROM_BALL):
+		return true
+	return abs(radius - current_dist) <= MAX_SPAWN_DISTANCE_FROM_BALL * 0.82
 
 
 func _align_ring_gap_to_ball(ring: Dictionary) -> Dictionary:

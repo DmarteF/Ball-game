@@ -412,3 +412,38 @@ Checklist:
 | Resultado pode dobrar recompensa | Sim |
 | Dobro limitado a uma vez | Sim |
 | Saida manual sem revive | Sim |
+
+## 7.8 Spawn seguro e upgrades/skins sem exposição indevida
+
+Correções desta etapa:
+
+- O spawn dos anéis foi reforçado em `GameplayManager.gd` com cálculo de área útil central, distância mínima/máxima real da bolinha e validação de trajetória por posição atual, posição anterior e velocidade.
+- `get_safe_ring_spawn_radius` retorna um estado `ok`; fases normais deixam anéis inseguros em fila e o modo infinito pula o spawn do tick quando não há candidato seguro.
+- A Liga Neon recebeu gerador equivalente em `LeagueBattleScreen.gd`, com candidatos de raio próximos da bolinha, espaçamento mínimo e gap alinhado à direção prevista.
+- A tela `Skins` deixa bloqueadas totalmente mascaradas: `???`, `?`, raridade/status e requisito genérico, sem asset real e sem badges de efeito real.
+- A lista de filtros de Skins foi reduzida para categorias únicas, sem duplicar `Obtidas`.
+- A tela `Melhorias` usa os upgrades permanentes do `GameState` e mantém os upgrades temporários de `MainPortData.RUN_UPGRADES` internos para level-up.
+- A seleção de level-up já consulta `GameState.data.unlocked_upgrades`, requisitos e limite máximo antes de montar opções temporárias.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Anéis nascem mais ao centro da arena útil | Sim |
+| Anéis nascem dentro do alcance de colisão da bolinha | Sim |
+| Anéis não nascem fora da área acertável | Sim |
+| Anéis não fazem a bolinha bater no vazio | Sim |
+| Spawn seguro aplicado no modo infinito | Sim |
+| Spawn seguro aplicado nas fases normais | Sim |
+| Spawn seguro preparado para Liga Neon | Sim |
+| Validação de alcance criada/corrigida | Sim |
+| Filtros duplicados removidos da tela Skins | Sim |
+| Skins bloqueadas aparecem com interrogação | Sim |
+| Skins bloqueadas não mostram asset real | Sim |
+| Skins bloqueadas não mostram efeito real | Sim |
+| Todas as melhorias/upgrades restauradas | Sim |
+| Upgrades permanentes existem internamente | Sim |
+| Upgrades temporários existem internamente | Sim |
+| Upgrades bloqueados não foram excluídos | Sim |
+| Tela de Upgrades mostra apenas disponíveis e contador de bloqueados | Sim |
+| Level up mostra apenas upgrades temporários liberados | Sim |

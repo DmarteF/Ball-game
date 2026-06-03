@@ -19,7 +19,17 @@ const ICON_PATHS := {
 	"repulse": "res://assets/ui/ui_repulse.png",
 }
 
-const UPGRADES := [
+const UPGRADE_METADATA := {
+	"baseDamage": { "name": "Damage", "desc": "+10% dano por nível", "icon": "damage", "unlock": "Disponível desde o início" },
+	"baseSpeed": { "name": "Speed", "desc": "+8% velocidade por nível", "icon": "speed", "unlock": "Disponível desde o início" },
+	"coinMultiplier": { "name": "Cash Gain", "desc": "+15% moedas por nível", "icon": "coin", "unlock": "Disponível desde o início" },
+	"critChance": { "name": "Crit Chance", "desc": "+2% crítico por nível", "icon": "crit", "unlock": "Disponível desde o início" },
+	"xpBoost": { "name": "XP Boost", "desc": "+20% XP por nível", "icon": "xp", "unlock": "Desbloqueia ao alcançar a fase 3 ou perfil nível 3" },
+	"perfectChance": { "name": "Perfect Chance", "desc": "+1% chance de diamante no perfect", "icon": "gem", "unlock": "Desbloqueia por fase 5 ou perfil nível 5" },
+	"slowRings": { "name": "Slow Rings", "desc": "Anéis fecham mais devagar", "icon": "freeze", "unlock": "Desbloqueia por fase 8 ou perfil nível 9" },
+}
+
+const LEGACY_PERMANENT_UPGRADES := [
 	{ "id": "baseDamage", "name": "Damage", "desc": "+10% dano por nível", "icon": "damage", "unlock": "Disponível desde o início" },
 	{ "id": "baseSpeed", "name": "Speed", "desc": "+8% velocidade por nível", "icon": "speed", "unlock": "Disponível desde o início" },
 	{ "id": "coinMultiplier", "name": "Cash Gain", "desc": "+15% moedas por nível", "icon": "coin", "unlock": "Disponível desde o início" },
@@ -85,7 +95,7 @@ func _build_screen() -> void:
 	scroll.add_child(list)
 	list.add_child(_make_upgrade_summary())
 	list.add_child(_make_label("PERMANENTES", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	for upgrade in UPGRADES:
+	for upgrade in _permanent_upgrade_list():
 		if GameState.is_upgrade_unlocked(String(upgrade["id"])):
 			list.add_child(_make_upgrade_card(upgrade))
 
@@ -93,11 +103,16 @@ func _build_screen() -> void:
 func _make_upgrade_summary() -> PanelContainer:
 	var unlocked_count := 0
 	var locked_count := 0
-	for upgrade in UPGRADES:
+	var permanent_upgrades := _permanent_upgrade_list()
+	for upgrade in permanent_upgrades:
 		if GameState.is_upgrade_unlocked(String(upgrade["id"])):
 			unlocked_count += 1
 		else:
 			locked_count += 1
+	var unlocked_temp_count := 0
+	for upgrade in MainPortData.RUN_UPGRADES:
+		if GameState.is_upgrade_unlocked(String(upgrade.get("id", ""))):
+			unlocked_temp_count += 1
 	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
@@ -112,8 +127,38 @@ func _make_upgrade_summary() -> PanelContainer:
 	margin.add_child(column)
 	column.add_child(_make_label(("Melhorias disponíveis: %s" if pt else "Available upgrades: %s") % unlocked_count, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label(("Melhorias bloqueadas: %s" if pt else "Locked upgrades: %s") % locked_count, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("Temporárias internas liberadas: %s/%s" if pt else "Internal run upgrades unlocked: %s/%s") % [unlocked_temp_count, MainPortData.RUN_UPGRADES.size()], 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label("Desbloqueie avançando, abrindo baús e concluindo conquistas." if pt else "Unlocked by progress, chests and achievements.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
+
+
+func _permanent_upgrade_list() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var source: Dictionary = GameState.PERMANENT_UPGRADE_DEFS
+	for id in source.keys():
+		var metadata: Dictionary = UPGRADE_METADATA.get(id, {})
+		var definition: Dictionary = source[id]
+		result.append({
+			"id": String(id),
+			"name": String(metadata.get("name", _title_from_id(String(id)))),
+			"desc": String(metadata.get("desc", "Melhoria permanente")),
+			"icon": String(metadata.get("icon", "key")),
+			"unlock": String(metadata.get("unlock", "Desbloqueia na fase %s ou perfil nível %s" % [int(definition.get("phase", 1)), int(definition.get("level", 1))])),
+		})
+	if result.is_empty():
+		for upgrade in LEGACY_PERMANENT_UPGRADES:
+			result.append(Dictionary(upgrade).duplicate(true))
+	return result
+
+
+func _title_from_id(id: String) -> String:
+	var title := ""
+	for i in range(id.length()):
+		var character := id.substr(i, 1)
+		if i > 0 and character == character.to_upper() and character != character.to_lower():
+			title += " "
+		title += character
+	return title.capitalize()
 
 
 func _make_resource_display() -> HBoxContainer:
