@@ -8,7 +8,9 @@ const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
 const MIN_RING_SPACING := 8.4
 const MAX_VISIBLE_RINGS := 26
-const TARGET_ACTIVE_RINGS := 8
+const MIN_TARGET_ACTIVE_RINGS := 5
+const TARGET_ACTIVE_RINGS := 6
+const MAX_TARGET_ACTIVE_RINGS := 8
 const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
 const MAX_SPAWN_DISTANCE_FROM_BALL := 170.0
 const INFINITE_RING_REACH_DISTANCE := 132.0
@@ -356,7 +358,7 @@ func _create_rings() -> Array[Dictionary]:
 	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
 	var palette: Array = RING_PALETTES[ring_palette_index]
 	var solid_indexes: Dictionary = {} if is_infinite else { count - 1: true }
-	var initial_active_count: int = min(count, 6)
+	var initial_active_count: int = min(count, _target_active_ring_count())
 	for i in range(count):
 		var progress := 0.0 if count == 1 else 1.0 - float(i) / float(count - 1)
 		var direction := 1.0 if i % 2 == 0 else -1.0
@@ -421,8 +423,8 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 		gameplay_config = _make_infinite_gameplay_config()
 	if rings.size() >= MAX_VISIBLE_RINGS:
 		_prune_inactive_rings()
-	var target_count := clampi(6 + floori(float(infinite_level) * 0.16 + infinite_clear_pressure * 0.16), 6, 10)
-	target_count = min(target_count, _infinite_ring_capacity())
+	var target_count: int = _target_active_ring_count()
+	target_count = mini(target_count, _infinite_ring_capacity())
 	var attempts := 0
 	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6 and attempts < 16:
 		attempts += 1
@@ -434,11 +436,19 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 
 
 func _update_phase_ring_queue() -> void:
-	var target_count: int = min(TARGET_ACTIVE_RINGS + floori(float(phase_id) / 14.0), int(gameplay_config.get("ring_count", TARGET_ACTIVE_RINGS)))
+	var target_count: int = min(_target_active_ring_count(), int(gameplay_config.get("ring_count", TARGET_ACTIVE_RINGS)))
 	while _active_ring_count() < target_count and _queued_ring_count() > 0:
 		if not _activate_next_queued_ring():
 			break
 	_clamp_ring_spacing()
+
+
+func _target_active_ring_count() -> int:
+	var pressure: float = clampf(infinite_clear_pressure, 0.0, 8.0) if is_infinite else 0.0
+	var difficulty_step: int = floori(float(maxi(0, phase_id - 1)) / 18.0)
+	if is_infinite:
+		difficulty_step = floori(float(maxi(0, infinite_level - 1)) / 5.0 + pressure * 0.16)
+	return clampi(TARGET_ACTIVE_RINGS + difficulty_step, MIN_TARGET_ACTIVE_RINGS, MAX_TARGET_ACTIVE_RINGS)
 
 
 func _queued_ring_count() -> int:

@@ -103,13 +103,11 @@ func _build_screen() -> void:
 
 	var visible_run_upgrades := _visible_run_upgrade_list()
 	if not visible_run_upgrades.is_empty():
-		list.add_child(_make_label("MELHORIAS DE PARTIDA LIBERADAS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 		for upgrade in visible_run_upgrades:
 			list.add_child(_make_temp_upgrade_card(upgrade))
 
 	var locked_upgrades := _locked_upgrade_list()
 	if not locked_upgrades.is_empty():
-		list.add_child(_make_label("MELHORIAS BLOQUEADAS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 		for upgrade in locked_upgrades:
 			if String(upgrade.get("kind", "permanent")) == "run":
 				list.add_child(_make_temp_upgrade_card(upgrade))
@@ -194,19 +192,12 @@ func _make_empty_upgrade_message() -> PanelContainer:
 
 
 func _make_upgrade_summary() -> PanelContainer:
-	var unlocked_count := 0
-	var locked_count := 0
-	var permanent_upgrades := _permanent_upgrade_list()
-	for upgrade in permanent_upgrades:
-		if _is_permanent_upgrade_available(String(upgrade["id"])):
-			unlocked_count += 1
-		else:
-			locked_count += 1
+	var available_permanent_count := _visible_permanent_upgrade_list().size()
+	var locked_count := _locked_upgrade_list().size()
 	var unlocked_temp_names: Array[String] = []
-	var released_temp_upgrades := MainPortData.released_run_upgrades()
+	var released_temp_upgrades := _visible_run_upgrade_list()
 	for upgrade in released_temp_upgrades:
-		if GameState.is_upgrade_unlocked(String(upgrade.get("id", ""))):
-			unlocked_temp_names.append(String(upgrade.get("name", upgrade.get("id", ""))))
+		unlocked_temp_names.append(String(upgrade.get("name", upgrade.get("id", ""))))
 	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
@@ -219,7 +210,7 @@ func _make_upgrade_summary() -> PanelContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 4)
 	margin.add_child(column)
-	column.add_child(_make_label(("Melhorias disponíveis: %s" if pt else "Available upgrades: %s") % unlocked_count, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("Melhorias disponíveis: %s" if pt else "Available upgrades: %s") % available_permanent_count, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label(("Melhorias bloqueadas: %s" if pt else "Locked upgrades: %s") % locked_count, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label(("Temporárias liberadas: %s" if pt else "Released run upgrades: %s") % unlocked_temp_names.size(), 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if not unlocked_temp_names.is_empty():
