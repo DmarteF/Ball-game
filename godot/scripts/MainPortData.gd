@@ -134,6 +134,15 @@ const RUN_UPGRADES := [
 	{ "id": "rivalCrusher", "name": "Rival Crusher", "description": "Aumenta dano e XP em partidas competitivas.", "icon": "💢", "rarity": "legendary", "maxLevel": 3, "unlockLevel": 1, "unlockRequirement": "Conquista secreta", "secret": true, "effects": [{ "type": "competitiveBoost", "value": 0.24 }] },
 ]
 
+const RELEASED_RUN_UPGRADE_IDS := [
+	"damage",
+	"speed",
+	"coinBoost",
+	"critical",
+	"xpBoost",
+	"perfectChance",
+]
+
 const LEAGUE_RANKS := [
 	{ "id": "bronze", "name": "Bronze", "min": 0, "reward": { "type": "coins", "amount": 300 } },
 	{ "id": "silver", "name": "Silver", "min": 300, "reward": { "type": "diamonds", "amount": 18 } },
@@ -154,6 +163,20 @@ func upgrade_by_id(id: String) -> Dictionary:
 		if String(upgrade.get("id", "")) == id:
 			return upgrade
 	return {}
+
+func released_run_upgrade_ids() -> Array[String]:
+	return RELEASED_RUN_UPGRADE_IDS.duplicate()
+
+func is_released_run_upgrade(id: String) -> bool:
+	return RELEASED_RUN_UPGRADE_IDS.has(id)
+
+func released_run_upgrades() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for id in RELEASED_RUN_UPGRADE_IDS:
+		var upgrade := upgrade_by_id(id)
+		if not upgrade.is_empty():
+			result.append(upgrade)
+	return result
 
 func rank_for_trophies(trophies: int) -> Dictionary:
 	var current := LEAGUE_RANKS[0]

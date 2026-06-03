@@ -680,3 +680,27 @@ Checklist:
 | Ring Repulse com chance | Sim |
 | Ring Repulse com cooldown | Sim |
 | Ring Repulse limitado à área útil | Sim |
+
+## 7.11 Temporárias liberadas e alcance do infinito
+
+Atualizado nesta etapa:
+
+- As temporárias consideradas liberadas/visuais agora são somente 6: `damage`, `speed`, `coinBoost`, `critical`, `xpBoost` e `perfectChance`.
+- `MainPortData.gd` mantém todos os upgrades temporários internos, mas expõe `released_run_upgrades()` para telas e gameplay usarem apenas o conjunto visual pronto.
+- `GameState.refresh_unlocks` limpa desbloqueios temporários antigos fora dessa lista de 6, preservando upgrades permanentes.
+- A tela `Melhorias` passou a mostrar `Temporárias liberadas: X/6` e lista os nomes realmente liberados.
+- O level-up consulta a mesma lista de 6, então upgrades internos/bloqueados não aparecem na seleção.
+- No modo infinito, a distância máxima de spawn dos anéis foi reduzida e os anéis ativos são mantidos dentro de uma faixa radial curta ao redor da bolinha.
+- A quantidade alvo de anéis do infinito agora respeita a capacidade real da área útil, para não forçar anéis fora do alcance quando não cabem com espaçamento seguro.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Temporárias liberadas limitadas a 6 visuais | Sim |
+| Tela mostra somente temporárias liberadas reais | Sim |
+| Level-up usa somente temporárias liberadas reais | Sim |
+| Upgrades internos continuam existindo nos dados | Sim |
+| Infinito reduz spawn distante demais | Sim |
+| Anéis ativos do infinito ficam na faixa de colisão da bolinha | Sim |
+| Quantidade de anéis respeita capacidade da área útil | Sim |

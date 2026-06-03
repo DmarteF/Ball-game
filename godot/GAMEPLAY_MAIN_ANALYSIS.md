@@ -472,3 +472,25 @@ Checklist:
 | Upgrades sem dados válidos não aparecem no level-up | Sim |
 | Ring Repulse com chance/cooldown | Sim |
 | Ring Repulse não empurra além da área útil | Sim |
+
+## 7.10 Temporárias reais e alcance do modo infinito
+
+Correções aplicadas:
+
+- O conjunto visual/liberado de upgrades temporários foi fechado em 6 ids: `damage`, `speed`, `coinBoost`, `critical`, `xpBoost` e `perfectChance`.
+- `GameState.refresh_unlocks` não libera mais upgrades temporários internos só por `unlockLevel`; apenas os 6 ids liberados entram na lista pública de desbloqueios.
+- Saves antigos com temporárias internas extras são limpos durante `refresh_unlocks`, mantendo os permanentes e os 6 temporários visuais.
+- O level-up usa `MainPortData.released_run_upgrades()`, então upgrades como efeitos internos, secretos ou ainda não visuais ficam fora da seleção.
+- O modo infinito reduziu `MAX_SPAWN_DISTANCE_FROM_BALL` e usa `_keep_infinite_rings_in_reach()` para manter anéis ativos perto da distância radial da bolinha.
+- `_infinite_ring_capacity()` limita a quantidade alvo ao que cabe na área útil com espaçamento seguro, evitando empurrar anéis para fora do alcance.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Temporárias públicas limitadas a 6 | Sim |
+| Tela de melhorias conta X/6 | Sim |
+| Level-up mostra só as 6 temporárias liberadas conforme progresso | Sim |
+| Temporárias internas extras continuam no banco de dados | Sim |
+| Infinito mantém anéis ativos no alcance da bolinha | Sim |
+| Infinito respeita capacidade real da arena útil | Sim |

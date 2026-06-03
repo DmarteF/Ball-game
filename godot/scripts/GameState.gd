@@ -248,15 +248,18 @@ func save_game(emit_signal := true) -> void:
 
 func refresh_unlocks(emit_signal := true) -> void:
 	var unlocked: Array = data.get("unlocked_upgrades", [])
+	unlocked = _clean_released_upgrade_unlocks(unlocked)
 	var max_phase := int(data.get("max_unlocked_phase", data.get("current_phase", 1)))
 	var profile_level := int(data.get("level", 1))
 	for id in PERMANENT_UPGRADE_DEFS.keys():
 		if _meets_unlock(PERMANENT_UPGRADE_DEFS[id], max_phase, profile_level) and not unlocked.has(id):
 			unlocked.append(id)
-	for id in TEMP_UPGRADE_UNLOCKS.keys():
+	for id in MainPortData.released_run_upgrade_ids():
+		if not TEMP_UPGRADE_UNLOCKS.has(id):
+			continue
 		if _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level) and not unlocked.has(id):
 			unlocked.append(id)
-	for upgrade in MainPortData.RUN_UPGRADES:
+	for upgrade in MainPortData.released_run_upgrades():
 		var upgrade_id := String(upgrade.get("id", ""))
 		if upgrade_id.is_empty():
 			continue
@@ -277,6 +280,18 @@ func refresh_unlocks(emit_signal := true) -> void:
 		data["equipped_skin"] = "neon_blue"
 	if emit_signal:
 		save_game()
+
+
+func _clean_released_upgrade_unlocks(unlocked: Array) -> Array:
+	var released_temp_ids := MainPortData.released_run_upgrade_ids()
+	var cleaned: Array = []
+	for value in unlocked:
+		var id := String(value)
+		if cleaned.has(id):
+			continue
+		if PERMANENT_UPGRADE_DEFS.has(id) or released_temp_ids.has(id):
+			cleaned.append(id)
+	return cleaned
 
 
 func _ensure_live_systems() -> void:

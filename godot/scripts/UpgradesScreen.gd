@@ -109,10 +109,11 @@ func _make_upgrade_summary() -> PanelContainer:
 			unlocked_count += 1
 		else:
 			locked_count += 1
-	var unlocked_temp_count := 0
-	for upgrade in MainPortData.RUN_UPGRADES:
+	var unlocked_temp_names: Array[String] = []
+	var released_temp_upgrades := MainPortData.released_run_upgrades()
+	for upgrade in released_temp_upgrades:
 		if GameState.is_upgrade_unlocked(String(upgrade.get("id", ""))):
-			unlocked_temp_count += 1
+			unlocked_temp_names.append(String(upgrade.get("name", upgrade.get("id", ""))))
 	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
@@ -127,7 +128,9 @@ func _make_upgrade_summary() -> PanelContainer:
 	margin.add_child(column)
 	column.add_child(_make_label(("Melhorias disponíveis: %s" if pt else "Available upgrades: %s") % unlocked_count, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label(("Melhorias bloqueadas: %s" if pt else "Locked upgrades: %s") % locked_count, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label(("Temporárias internas liberadas: %s/%s" if pt else "Internal run upgrades unlocked: %s/%s") % [unlocked_temp_count, MainPortData.RUN_UPGRADES.size()], 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("Temporárias liberadas: %s/%s" if pt else "Released run upgrades: %s/%s") % [unlocked_temp_names.size(), released_temp_upgrades.size()], 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	if not unlocked_temp_names.is_empty():
+		column.add_child(_make_label(("Liberadas: %s" if pt else "Unlocked: %s") % ", ".join(unlocked_temp_names), 11, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label("Desbloqueie avançando, abrindo baús e concluindo conquistas." if pt else "Unlocked by progress, chests and achievements.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 

@@ -323,3 +323,13 @@ Checklist:
 | Passagem pela abertura às vezes não limpava o anel | Margem do gap reduzida e faixa do anel aceita clear quando alinhada ao gap | Corrigido |
 | Upgrades temporários bloqueados apareciam no level-up | Filtro valida desbloqueio, requisito de perfil/fase, segredo, dados e limite | Corrigido |
 | `Ring Repulse` disparava sem controle | Efeito agora usa chance, cooldown e clamp no raio útil | Corrigido |
+
+## 7.10 Temporárias liberadas e alcance do infinito
+
+| Problema observado | Ajuste no Godot | Status |
+| --- | --- | --- |
+| Contador de temporárias internas mostrava mais que as liberadas reais | `MainPortData.released_run_upgrades()` define os 6 upgrades visuais liberados | Corrigido |
+| Saves podiam manter temporárias internas extras como liberadas | `GameState.refresh_unlocks` limpa temporárias fora da lista pública | Corrigido |
+| Level-up podia consultar upgrades internos demais | `GameplayManager.gd` usa somente os 6 liberados para montar opções | Corrigido |
+| Anéis do infinito ainda ficavam fora do alcance | Spawn máximo reduzido e `_keep_infinite_rings_in_reach()` mantém raios perto da bolinha | Corrigido |
+| Muitos anéis podiam forçar raio fora da área útil | `_infinite_ring_capacity()` limita alvo ao que cabe com espaçamento seguro | Corrigido |

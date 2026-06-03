@@ -10,10 +10,11 @@ const MIN_RING_SPACING := 8.4
 const MAX_VISIBLE_RINGS := 26
 const TARGET_ACTIVE_RINGS := 8
 const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
-const MAX_SPAWN_DISTANCE_FROM_BALL := 112.0
+const MAX_SPAWN_DISTANCE_FROM_BALL := 82.0
+const INFINITE_RING_REACH_DISTANCE := 76.0
 const PLAYABLE_RING_RADIUS_FACTOR := 0.78
 const PLAYABLE_RING_MARGIN := 22.0
-const SPAWN_LOOKAHEAD_DISTANCE := 96.0
+const SPAWN_LOOKAHEAD_DISTANCE := 82.0
 const MAX_PHYSICS_SUBSTEPS := 6
 const SAFE_STEP_DISTANCE := 8.0
 const MIN_DIRECTION_COMPONENT := 0.24
@@ -407,6 +408,7 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 	if rings.size() >= MAX_VISIBLE_RINGS:
 		_prune_inactive_rings()
 	var target_count := clampi(TARGET_ACTIVE_RINGS + floori(float(infinite_level) * 0.18 + infinite_clear_pressure * 0.22), TARGET_ACTIVE_RINGS, 12)
+	target_count = min(target_count, _infinite_ring_capacity())
 	var attempts := 0
 	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6 and attempts < 16:
 		attempts += 1
@@ -414,6 +416,7 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 			continue
 		if not _append_infinite_ring():
 			break
+	_keep_infinite_rings_in_reach()
 	_clamp_ring_spacing()
 
 
@@ -465,6 +468,71 @@ func _append_infinite_ring() -> bool:
 		return false
 	rings.append(ring)
 	return true
+
+
+func _infinite_ring_spacing() -> float:
+	return max(MIN_RING_SPACING + 1.6, 10.0)
+
+
+func _infinite_ring_capacity() -> int:
+	var available: float = _playable_ring_max_radius() - _playable_ring_min_radius()
+	return clampi(floori(available / _infinite_ring_spacing()) + 1, 4, 12)
+
+
+func _active_ring_indices_by_radius() -> Array[int]:
+	var indices: Array[int] = []
+	for i in range(rings.size()):
+		var ring := rings[i]
+		if String(ring.get("status", "")) == "active" and int(ring.get("hp", 0)) > 0:
+			indices.append(i)
+	for i in range(indices.size()):
+		for j in range(i + 1, indices.size()):
+			var a: int = indices[i]
+			var b: int = indices[j]
+			if float(rings[b].get("radius", 0.0)) < float(rings[a].get("radius", 0.0)):
+				indices[i] = b
+				indices[j] = a
+	return indices
+
+
+func _keep_infinite_rings_in_reach() -> void:
+	if not is_infinite:
+		return
+	var indices := _active_ring_indices_by_radius()
+	var count := indices.size()
+	if count <= 0:
+		return
+	var min_radius := _playable_ring_min_radius()
+	var max_radius := _playable_ring_max_radius()
+	var ball_dist := clampf((ball_position - arena_center).length(), min_radius, max_radius)
+	var spacing := _infinite_ring_spacing()
+	var width := spacing * float(max(0, count - 1))
+	var available_width := max_radius - min_radius
+	if width > available_width:
+		spacing = max(MIN_RING_SPACING, available_width / float(max(1, count - 1)))
+		width = spacing * float(max(0, count - 1))
+	var reach: float = min(INFINITE_RING_REACH_DISTANCE, max(width * 0.5 + spacing, 42.0))
+	var low: float = max(min_radius, ball_dist - reach)
+	var high: float = min(max_radius, ball_dist + reach)
+	if high - low < width:
+		var center_radius := clampf(ball_dist, min_radius + width * 0.5, max_radius - width * 0.5)
+		low = clampf(center_radius - width * 0.5, min_radius, max_radius - width)
+		high = low + width
+	else:
+		low = clampf(ball_dist - width * 0.5, low, high - width)
+		high = low + width
+	for order in range(count):
+		var index: int = indices[order]
+		var ring: Dictionary = rings[index]
+		var target_radius: float = clampf(low + spacing * float(order), min_radius, max_radius)
+		var current_radius: float = float(ring.get("radius", target_radius))
+		var too_far: bool = abs(current_radius - ball_dist) > reach or current_radius < min_radius or current_radius > max_radius
+		if too_far or abs(current_radius - target_radius) > MIN_RING_SPACING * 1.25:
+			ring["radius"] = target_radius
+			ring["initial_radius"] = max(float(ring.get("initial_radius", target_radius)), target_radius)
+			if abs(current_radius - target_radius) > 18.0:
+				ring = _align_ring_gap_to_ball(ring)
+			rings[index] = ring
 
 
 func _make_infinite_ring(index: int) -> Dictionary:
@@ -1842,7 +1910,7 @@ func _open_level_up() -> void:
 func _get_safe_upgrade_options(exclude_ids: Array[String] = []) -> Array[Dictionary]:
 	GameState.refresh_unlocks(false)
 	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
-	var pool: Array = MainPortData.RUN_UPGRADES
+	var pool: Array = MainPortData.released_run_upgrades()
 	var filtered: Array[Dictionary] = []
 	var fallback: Array[Dictionary] = []
 	for upgrade in pool:
@@ -1864,6 +1932,8 @@ func _get_safe_upgrade_options(exclude_ids: Array[String] = []) -> Array[Diction
 func _is_run_upgrade_available(upgrade: Dictionary, unlocked: Array) -> bool:
 	var id := String(upgrade.get("id", ""))
 	if id.is_empty():
+		return false
+	if not MainPortData.is_released_run_upgrade(id):
 		return false
 	if int(upgrade.get("maxLevel", 0)) <= 0:
 		return false
@@ -2307,6 +2377,7 @@ func _bounce_arena_edge() -> void:
 
 func _clamp_ring_spacing() -> void:
 	var inner_active: Dictionary = {}
+	var max_radius := _playable_ring_max_radius()
 	for i in range(rings.size()):
 		var ring := rings[i]
 		if String(ring.get("status", "")) != "active":
@@ -2316,7 +2387,9 @@ func _clamp_ring_spacing() -> void:
 			min_radius = max(min_radius, float(inner_active["radius"]) + max(MIN_RING_SPACING, float(inner_active["thickness"]) / 2.0 + float(ring["thickness"]) / 2.0 + 2.5))
 		if float(ring["radius"]) < min_radius:
 			ring["radius"] = min_radius
-			rings[i] = ring
+		if float(ring["radius"]) > max_radius:
+			ring["radius"] = max_radius
+		rings[i] = ring
 		inner_active = ring
 
 
