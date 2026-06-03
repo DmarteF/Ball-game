@@ -114,6 +114,7 @@ var infinite_score := 0
 var infinite_clear_pressure := 0.0
 var last_direction_shift_msec := 0
 var rerolls_used := 0
+var last_upgrade_option_ids: Array[String] = []
 var revive_used := false
 var skin_profile: Dictionary = {}
 
@@ -233,13 +234,13 @@ func _start_level() -> void:
 	if is_infinite:
 		gameplay_config = _make_infinite_gameplay_config()
 	_update_arena_metrics()
-	rings = _create_rings()
 	var start_angle: float = _safe_motion_angle(randf() * TWO_PI)
 	var speed: float = BASE_BALL_SPEED + min(0.62, float(phase_id - 1) * 0.08 + int(GameState.data.get("level", 1)) * 0.006)
 	if is_infinite:
 		speed += 0.16
 	ball_position = arena_center
 	ball_velocity = Vector2(cos(start_angle), sin(start_angle)) * speed
+	rings = _create_rings()
 	last_direction_shift_msec = Time.get_ticks_msec()
 	previous_distance = 0.0
 	_hide_all_overlays()
@@ -285,7 +286,7 @@ func _update_game(delta_steps: float) -> void:
 func _create_rings() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var count: int = int(gameplay_config["ring_count"])
-	var inner_radius: float = INNER_RADIUS
+	var inner_radius: float = INNER_RADIUS + MIN_SPAWN_DISTANCE_FROM_BALL * 0.55
 	var available_radius: float = max(1.0, outer_radius - inner_radius)
 	var adaptive_min_spacing: float = MIN_RING_SPACING
 	var max_count_by_spacing: int = max(1, floori(available_radius / adaptive_min_spacing) + 1)
@@ -305,7 +306,7 @@ func _create_rings() -> Array[Dictionary]:
 		var hp: int = floori(float(gameplay_config["base_hp"]) * difficulty * (0.9 + progress * 1.55) * (1.45 if is_solid else 1.0))
 		var gap_size: float = max(PI / 13.0, phase_gap * (1.02 - progress * 0.14))
 		var status := "active" if is_infinite or i < TARGET_ACTIVE_RINGS else "queued"
-		result.append({
+		var ring := {
 			"id": "ring_%s_%s" % [phase_id, i],
 			"type": "solid" if is_solid else "normal",
 			"radius": inner_radius + i * spacing,
@@ -325,7 +326,11 @@ func _create_rings() -> Array[Dictionary]:
 			"effect_until": 0,
 			"rotation_multiplier": 1.0,
 			"closing_multiplier": 1.0,
-		})
+		}
+		if status == "active":
+			ring["radius"] = _safe_spawn_radius(float(ring["radius"]))
+			ring = _align_ring_gap_to_ball(ring)
+		result.append(ring)
 	return result
 
 
@@ -380,6 +385,7 @@ func _activate_next_queued_ring() -> bool:
 			continue
 		ring["status"] = "active"
 		ring["radius"] = _safe_spawn_radius(float(ring.get("radius", outer_radius - 2.0)))
+		ring = _align_ring_gap_to_ball(ring)
 		ring["initial_radius"] = max(float(ring.get("initial_radius", ring["radius"])), float(ring["radius"]))
 		rings[i] = ring
 		return true
@@ -409,13 +415,14 @@ func _make_infinite_ring(index: int) -> Dictionary:
 	var hp := floori(float(base_hp) * (1.0 + progress * 0.75) * (1.42 if is_solid else 1.0))
 	var radius := _safe_spawn_radius(outer_radius - 2.0)
 	var gap: float = 0.0 if is_solid else max(PI / 15.0, float(gameplay_config.get("gap_size", PI / 4.0)) * randf_range(0.88, 1.08))
-	return {
+	var rotation := randf() * TWO_PI
+	var ring := {
 		"id": "infinite_%s_%s" % [floori(infinite_elapsed), index],
 		"type": "solid" if is_solid else "normal",
 		"radius": radius,
 		"initial_radius": radius,
 		"closing_speed": float(gameplay_config.get("closing_speed", 0.012)) * randf_range(0.86, 1.2),
-		"rotation": randf() * TWO_PI,
+		"rotation": rotation,
 		"rotation_speed": float(gameplay_config.get("rotation_speed", 0.005)) * randf_range(0.86, 1.25) * direction,
 		"gap_start": randf() * TWO_PI,
 		"gap_size": gap,
@@ -430,6 +437,8 @@ func _make_infinite_ring(index: int) -> Dictionary:
 		"rotation_multiplier": 1.0,
 		"closing_multiplier": 1.0,
 	}
+	ring["rotation"] = rotation
+	return _align_ring_gap_to_ball(ring)
 
 
 func _update_rings(delta_steps: float) -> void:
@@ -1042,15 +1051,50 @@ func _safe_spawn_radius(preferred_radius: float) -> float:
 	if ball_dist > max_arena_radius - MIN_SPAWN_DISTANCE_FROM_BALL:
 		min_from_ball = max(INNER_RADIUS, ball_dist - MAX_SPAWN_DISTANCE_FROM_BALL)
 		max_from_ball = max(INNER_RADIUS + MIN_RING_SPACING, ball_dist - MIN_SPAWN_DISTANCE_FROM_BALL)
-	var radius: float = clampf(preferred_radius, min_from_ball, max_from_ball)
+	var radius: float = clampf(_projected_reachable_radius(preferred_radius, min_from_ball, max_from_ball), min_from_ball, max_from_ball)
+	for attempt in range(10):
+		if _can_spawn_ring_safely(radius, min_from_ball, max_from_ball):
+			return clampf(radius, INNER_RADIUS, max_arena_radius)
+		var direction := 1.0 if attempt % 2 == 0 else -1.0
+		radius = clampf(radius + direction * (MIN_RING_SPACING + 3.0) * float(1 + attempt / 2), min_from_ball, max_from_ball)
+	return clampf(radius, INNER_RADIUS, max_arena_radius)
+
+
+func _projected_reachable_radius(preferred_radius: float, min_radius: float, max_radius: float) -> float:
+	var from_center: Vector2 = ball_position - arena_center
+	var future: Vector2 = ball_position + ball_velocity.normalized() * min(MAX_SPAWN_DISTANCE_FROM_BALL, outer_radius * 0.62)
+	var future_dist: float = (future - arena_center).length()
+	var low: float = min(from_center.length(), future_dist) - BALL_RADIUS * 1.5
+	var high: float = max(from_center.length(), future_dist) + BALL_RADIUS * 4.0
+	if high < min_radius or low > max_radius:
+		return clampf(preferred_radius, min_radius, max_radius)
+	return clampf(preferred_radius, max(min_radius, low), min(max_radius, high))
+
+
+func _can_spawn_ring_safely(radius: float, min_radius: float, max_radius: float) -> bool:
+	if radius < min_radius or radius > max_radius:
+		return false
+	var ball_dist: float = (ball_position - arena_center).length()
+	var distance: float = abs(radius - ball_dist)
+	if distance < MIN_SPAWN_DISTANCE_FROM_BALL * 0.72 or distance > MAX_SPAWN_DISTANCE_FROM_BALL + BALL_RADIUS * 2.0:
+		return false
 	for ring in rings:
 		if String(ring.get("status", "")) != "active":
 			continue
-		if abs(float(ring.get("radius", 0.0)) - radius) < MIN_RING_SPACING:
-			var outward := float(ring.get("radius", 0.0)) + MIN_RING_SPACING
-			var inward := float(ring.get("radius", 0.0)) - MIN_RING_SPACING
-			radius = outward if outward <= max_from_ball else inward
-	return clampf(radius, INNER_RADIUS, max_arena_radius)
+		if abs(float(ring.get("radius", 0.0)) - radius) < MIN_RING_SPACING + float(ring.get("thickness", 5.0)) * 0.5:
+			return false
+	return true
+
+
+func _align_ring_gap_to_ball(ring: Dictionary) -> Dictionary:
+	if String(ring.get("type", "normal")) == "solid":
+		return ring
+	var aim := ball_velocity.normalized()
+	if aim.length() <= 0.01:
+		aim = (ball_position - arena_center).normalized()
+	var target_angle := _normalize_angle((ball_position + aim * max(24.0, float(ring.get("radius", INNER_RADIUS)) - (ball_position - arena_center).length()) - arena_center).angle())
+	ring["gap_start"] = _normalize_angle(target_angle - float(ring.get("rotation", 0.0)) + randf_range(-0.18, 0.18))
+	return ring
 
 
 func _base_damage() -> int:
@@ -1458,6 +1502,7 @@ func _run_xp_needed_for_level(level_value: int) -> int:
 func _open_level_up() -> void:
 	rerolls_used = 0
 	available_upgrades = _get_safe_upgrade_options()
+	last_upgrade_option_ids = _upgrade_ids(available_upgrades)
 	_rebuild_level_up_cards()
 	level_up_active = true
 	_level_up_overlay.visible = true
@@ -1466,19 +1511,33 @@ func _open_level_up() -> void:
 	_play_sfx("level_up")
 
 
-func _get_safe_upgrade_options() -> Array[Dictionary]:
+func _get_safe_upgrade_options(exclude_ids: Array[String] = []) -> Array[Dictionary]:
 	GameState.refresh_unlocks(false)
 	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
 	var pool: Array = MainPortData.RUN_UPGRADES
 	var filtered: Array[Dictionary] = []
+	var fallback: Array[Dictionary] = []
 	for upgrade in pool:
 		var id := String(upgrade.get("id", ""))
 		if unlocked.has(id) and int(current_upgrades.get(id, 0)) < int(upgrade.get("maxLevel", 1)):
 			var copy: Dictionary = upgrade.duplicate(true)
 			copy["color"] = _rarity_upgrade_color(String(copy.get("rarity", "common")))
-			filtered.append(copy)
+			if exclude_ids.has(id):
+				fallback.append(copy)
+			else:
+				filtered.append(copy)
 	filtered.shuffle()
+	fallback.shuffle()
+	while filtered.size() < 3 and not fallback.is_empty():
+		filtered.append(fallback.pop_front())
 	return filtered.slice(0, min(3, filtered.size()))
+
+
+func _upgrade_ids(upgrades: Array[Dictionary]) -> Array[String]:
+	var ids: Array[String] = []
+	for upgrade in upgrades:
+		ids.append(String(upgrade.get("id", "")))
+	return ids
 
 
 func _rarity_upgrade_color(rarity: String) -> String:
@@ -1495,7 +1554,10 @@ func _rarity_upgrade_color(rarity: String) -> String:
 func _rebuild_level_up_cards() -> void:
 	for child in _level_up_cards.get_children():
 		child.queue_free()
-	_level_up_cards.add_child(_make_label("Rerolls %s/3" % rerolls_used, 12, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var reroll_text := "Rerolls %s/3" % rerolls_used
+	if String(GameState.data.get("language", "pt")) == "pt":
+		reroll_text = "Rerolls %s/3 - anuncio ou 10 diamantes" % rerolls_used
+	_level_up_cards.add_child(_make_label(reroll_text, 12, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	for upgrade in available_upgrades:
 		var button := _make_level_up_button(upgrade)
 		_level_up_cards.add_child(button)
@@ -1503,7 +1565,7 @@ func _rebuild_level_up_cards() -> void:
 
 func _reroll_upgrades_ad() -> void:
 	if rerolls_used >= 3:
-		_spawn_floating("Reroll limit", arena_center + Vector2(-34, -62), Color("#ff6b9a"))
+		_spawn_floating(_level_up_feedback("Limite de reroll", "Reroll limit"), arena_center + Vector2(-34, -62), Color("#ff6b9a"))
 		return
 	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
 		if ok:
@@ -1513,19 +1575,24 @@ func _reroll_upgrades_ad() -> void:
 
 func _reroll_upgrades_diamond() -> void:
 	if rerolls_used >= 3:
-		_spawn_floating("Reroll limit", arena_center + Vector2(-34, -62), Color("#ff6b9a"))
+		_spawn_floating(_level_up_feedback("Limite de reroll", "Reroll limit"), arena_center + Vector2(-34, -62), Color("#ff6b9a"))
 		return
 	if not GameState.spend_diamonds(10):
-		_spawn_floating("No diamonds", arena_center + Vector2(-34, -62), Color("#ff6b9a"))
+		_spawn_floating(_level_up_feedback("Diamantes insuficientes", "Not enough diamonds"), arena_center + Vector2(-34, -62), Color("#ff6b9a"))
 		return
 	_do_upgrade_reroll()
 
 
 func _do_upgrade_reroll() -> void:
 	rerolls_used += 1
-	available_upgrades = _get_safe_upgrade_options()
+	available_upgrades = _get_safe_upgrade_options(last_upgrade_option_ids)
+	last_upgrade_option_ids = _upgrade_ids(available_upgrades)
 	_rebuild_level_up_cards()
 	_play_sfx("upgrade_select")
+
+
+func _level_up_feedback(pt: String, en: String) -> String:
+	return pt if String(GameState.data.get("language", "pt")) == "pt" else en
 
 
 func _make_level_up_button(upgrade: Dictionary) -> Button:
@@ -1668,9 +1735,51 @@ func _restart_level() -> void:
 
 func _go_to_phase_select() -> void:
 	_play_sfx("click")
+	if not finished and (rings_destroyed > 0 or run_coins > 0 or run_xp > 0 or infinite_elapsed > 2.0):
+		_finish_quit_reward()
+		return
 	if has_node("/root/AudioManager"):
 		AudioManager.play_context("menu")
 	get_tree().change_scene_to_file(PHASE_SELECT_SCENE)
+
+
+func _leave_to_phase_select_now() -> void:
+	if has_node("/root/AudioManager"):
+		AudioManager.play_context("menu")
+	get_tree().change_scene_to_file(PHASE_SELECT_SCENE)
+
+
+func _finish_quit_reward() -> void:
+	finished = true
+	is_paused = false
+	revive_used = true
+	_pause_overlay.visible = false
+	var global_coins_reward: int = max(0, floori(float(_global_coins_from_run(run_coins, best_combo, false)) * (0.48 if is_infinite else 0.35)))
+	var profile_xp_reward: int = max(0, floori(float(_run_profile_xp()) * (0.52 if is_infinite else 0.38)))
+	var diamonds: int = max(0, floori(float(run_diamonds) * 0.5))
+	var summary := {
+		"seconds": floori(infinite_elapsed),
+		"rings": rings_destroyed,
+		"coins": global_coins_reward,
+		"xp": profile_xp_reward,
+		"diamonds": diamonds,
+		"score": infinite_score,
+		"best_combo": best_combo,
+		"criticals": criticals,
+		"skin_effects": skin_effects,
+		"run_upgrades": run_upgrades,
+		"run_level": run_level,
+		"new_record": false,
+		"quit": true,
+	}
+	if is_infinite:
+		GameState.record_mode_quit("infinite", summary)
+	else:
+		GameState.record_mode_quit("phase", summary)
+	_rebuild_defeat_summary(summary)
+	_defeat_title.text = "RECOMPENSA DE SAIDA"
+	_defeat_overlay.visible = true
+	queue_redraw()
 
 
 func _go_to_next_phase() -> void:
@@ -1708,11 +1817,12 @@ func _rebuild_defeat_summary(summary: Dictionary) -> void:
 		return
 	for child in _defeat_summary.get_children():
 		child.queue_free()
-	if is_infinite and not summary.is_empty():
+	if not summary.is_empty():
 		var seconds := int(summary.get("seconds", 0))
 		var new_record := bool(summary.get("new_record", false))
-		_defeat_title.text = "RESULTADO DO MODO INFINITO"
-		_defeat_summary.add_child(_make_victory_line("perfect", "Tempo", _format_seconds(seconds)))
+		_defeat_title.text = "RESULTADO DO MODO INFINITO" if is_infinite else "RECOMPENSA DA PARTIDA"
+		if is_infinite or seconds > 0:
+			_defeat_summary.add_child(_make_victory_line("perfect", "Tempo", _format_seconds(seconds)))
 		_defeat_summary.add_child(_make_victory_line("upgrade", "Aneis quebrados", str(summary.get("rings", 0))))
 		_defeat_summary.add_child(_make_victory_line("coin", "Moedas", "+%s" % int(summary.get("coins", 0))))
 		_defeat_summary.add_child(_make_victory_line("xp", "XP", "+%s" % int(summary.get("xp", 0))))

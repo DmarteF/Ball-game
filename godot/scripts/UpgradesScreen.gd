@@ -83,9 +83,37 @@ func _build_screen() -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 16)
 	scroll.add_child(list)
+	list.add_child(_make_upgrade_summary())
 	list.add_child(_make_label("PERMANENTES", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	for upgrade in UPGRADES:
-		list.add_child(_make_upgrade_card(upgrade))
+		if GameState.is_upgrade_unlocked(String(upgrade["id"])):
+			list.add_child(_make_upgrade_card(upgrade))
+
+
+func _make_upgrade_summary() -> PanelContainer:
+	var unlocked_count := 0
+	var locked_count := 0
+	for upgrade in UPGRADES:
+		if GameState.is_upgrade_unlocked(String(upgrade["id"])):
+			unlocked_count += 1
+		else:
+			locked_count += 1
+	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	card.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	margin.add_child(column)
+	column.add_child(_make_label(("Melhorias disponíveis: %s" if pt else "Available upgrades: %s") % unlocked_count, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("Melhorias bloqueadas: %s" if pt else "Locked upgrades: %s") % locked_count, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("Desbloqueie avançando, abrindo baús e concluindo conquistas." if pt else "Unlocked by progress, chests and achievements.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return card
 
 
 func _make_resource_display() -> HBoxContainer:

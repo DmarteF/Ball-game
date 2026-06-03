@@ -55,7 +55,7 @@ const SKINS := [
 
 var _regular_font: Font
 var _bold_font: Font
-var _filter := "all"
+var _filter := "owned"
 var _content_grid: GridContainer
 var _filter_buttons: Array[Button] = []
 var _all_skin_data: Array = []
@@ -113,6 +113,7 @@ func _build_screen() -> void:
 	scroll.add_child(content)
 
 	content.add_child(_make_progress_grid())
+	content.add_child(_make_skin_summary())
 	content.add_child(_make_filters())
 
 	_content_grid = GridContainer.new()
@@ -180,6 +181,27 @@ func _make_progress_grid() -> GridContainer:
 	return grid
 
 
+func _make_skin_summary() -> PanelContainer:
+	var unlocked: int = Array(GameState.data.get("unlocked_skins", [])).size()
+	var locked: int = max(0, _all_skin_data.size() - unlocked)
+	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	card.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 3)
+	margin.add_child(column)
+	column.add_child(_make_label(("Skins desbloqueadas: %s" if pt else "Unlocked skins: %s") % unlocked, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("Skins bloqueadas: %s" if pt else "Locked skins: %s") % locked, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("Use filtros para ver raridade ou bloqueadas." if pt else "Use filters to view rarity or locked skins.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return card
+
+
 func _make_filters() -> GridContainer:
 	var row := GridContainer.new()
 	row.columns = 3
@@ -188,7 +210,7 @@ func _make_filters() -> GridContainer:
 	_filter_buttons.clear()
 	for filter_data in FILTERS:
 		var button := Button.new()
-		button.text = String(filter_data["label"])
+		button.text = _filter_label(String(filter_data["id"]), String(filter_data["label"]))
 		button.custom_minimum_size = Vector2(96, 34)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.focus_mode = Control.FOCUS_NONE
@@ -211,6 +233,8 @@ func _populate_skins() -> void:
 		child.queue_free()
 	for skin in _all_skin_data:
 		var owned := _is_owned(String(skin["id"]))
+		if _filter == "all" and not owned:
+			continue
 		if _filter == "owned" and not owned:
 			continue
 		if _filter == "locked" and owned:
@@ -218,6 +242,33 @@ func _populate_skins() -> void:
 		if _filter not in ["all", "owned", "locked"] and skin["rarity"] != _filter:
 			continue
 		_content_grid.add_child(_make_skin_card(skin))
+
+
+func _filter_label(id: String, fallback: String) -> String:
+	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
+	if not pt:
+		match id:
+			"all": return "Unlocked"
+			"common": return "Common"
+			"rare": return "Rare"
+			"epic": return "Epic"
+			"legendary": return "Legendary"
+			"mythic": return "Mythic"
+			"ultimate": return "Ultimate"
+			"owned": return "Owned"
+			"locked": return "Locked"
+		return fallback
+	match id:
+		"all": return "Obtidas"
+		"common": return "Comuns"
+		"rare": return "Raras"
+		"epic": return "Épicas"
+		"legendary": return "Lendárias"
+		"mythic": return "Míticas"
+		"ultimate": return "Ultimate"
+		"owned": return "Obtidas"
+		"locked": return "Bloqueadas"
+	return fallback
 
 
 func _make_skin_card(skin: Dictionary) -> PanelContainer:

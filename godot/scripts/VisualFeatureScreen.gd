@@ -567,11 +567,11 @@ func _handle_action(action: String) -> void:
 		result = GameState.claim_daily_reward()
 	elif action == "wheel_free":
 		_animate_wheel()
-		await get_tree().create_timer(0.9).timeout
+		await get_tree().create_timer(2.25).timeout
 		result = GameState.spin_wheel("free")
 	elif action == "wheel_ad":
 		_animate_wheel()
-		await get_tree().create_timer(0.9).timeout
+		await get_tree().create_timer(2.25).timeout
 		result = GameState.spin_wheel("ad")
 	else:
 		result = GameState.shop_claim(action)
@@ -807,7 +807,8 @@ func _animate_wheel() -> void:
 	if not _wheel_prize_ring:
 		return
 	var tween := create_tween()
-	tween.tween_property(_wheel_prize_ring, "rotation", _wheel_prize_ring.rotation + TAU * 4.0 + randf_range(0.0, TAU), 0.9).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	var target_rotation := _wheel_prize_ring.rotation + TAU * 7.0 + randf_range(0.0, TAU)
+	tween.tween_property(_wheel_prize_ring, "rotation", target_rotation, 2.2).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
 
 
 func _make_price_badge(price: String, icon_key: String) -> Control:

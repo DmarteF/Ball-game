@@ -521,3 +521,41 @@ Pendências:
 - Implementar botão de dobrar recompensas no resultado de fase/infinito/Liga sem duplicar save.
 - Revisar visual da Liga Neon contra prints/main depois de testar no navegador.
 - Expandir tradução de nomes próprios de upgrades/skins somente se a branch main também traduzir esses nomes.
+
+## 7.6 Ajustes de visuais bloqueados, reroll, roleta e spawn seguro
+
+Atualizado nesta etapa:
+
+- A notificacao de conquistas do menu inicial ficou mais curta, clicavel e sem overflow; mostra somente o resumo de recompensas pendentes e abre a tela de Conquistas.
+- A tela `Melhorias` agora mostra somente upgrades desbloqueados na lista principal e exibe contador de melhorias disponiveis/bloqueadas sem remover os dados internos.
+- A tela `Skins` abre por padrao apenas com skins obtidas/desbloqueadas, mostra contador de obtidas/bloqueadas e preserva o filtro de bloqueadas para consulta visual.
+- O reroll de upgrades de level-up evita repetir imediatamente as mesmas opcoes quando houver pool suficiente, continua limitado a 3 e valida anuncio mockado/diamantes.
+- A roleta ficou mais lenta e satisfatoria visualmente, com giro de 2.2s antes de aplicar a recompensa real.
+- O spawn de aneis agora considera posicao, velocidade e direcao prevista da bolinha para alinhar melhor o gap e evitar aneis inalcancaveis.
+- Sair de fase ou infinito com progresso concede recompensa proporcional, salva estatisticas, alimenta missoes/conquistas e mostra resumo de moedas/XP/diamantes.
+- O modo infinito atualiza tambem melhores aneis, pontuacao, tempo e nivel ao registrar saida proporcional.
+
+Checklist desta etapa:
+
+| Item | Status |
+| --- | --- |
+| Notificacao de conquistas clicavel e discreta | Sim |
+| Notificacao sem texto vazando | Sim |
+| Upgrades bloqueados escondidos da lista principal | Sim |
+| Contador de upgrades disponiveis/bloqueados | Sim |
+| Skins bloqueadas escondidas por padrao | Sim |
+| Contador de skins obtidas/bloqueadas | Sim |
+| Reroll limitado a 3 | Sim |
+| Reroll por anuncio mockado | Sim |
+| Reroll por diamantes com validacao de saldo | Sim |
+| Reroll evita repeticao imediata quando possivel | Sim |
+| Roleta mais lenta | Sim |
+| Spawn de aneis considera trajetoria da bolinha | Sim |
+| Gap inicial/respawn alinhado de forma mais justa | Sim |
+| Recompensa proporcional ao sair | Sim |
+| Save/estatisticas/conquistas atualizados ao sair | Sim |
+
+Pendencias:
+
+- A roleta ainda sorteia a recompensa no final do giro e nao trava matematicamente o ponteiro em uma fatia exata do premio; visualmente o giro foi melhorado para Web.
+- O botao de dobrar recompensas por anuncio ainda esta pendente para a tela de resultado sem duplicar o save.

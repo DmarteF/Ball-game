@@ -1034,13 +1034,29 @@ func record_mode_quit(mode: String, summary: Dictionary) -> void:
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + int(summary.get("rings", 0))
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + int(summary.get("rings", 0))
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), int(summary.get("best_combo", 0)))
+	stats["criticals"] = int(stats.get("criticals", 0)) + int(summary.get("criticals", 0))
+	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + int(summary.get("skin_effects", 0))
+	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + int(summary.get("run_upgrades", 0))
 	if mode == "infinite":
 		stats["infiniteRuns"] = int(stats.get("infiniteRuns", 0)) + 1
+		stats["infinite_runs"] = int(stats.get("infinite_runs", 0)) + 1
 		stats["bestInfiniteSeconds"] = max(int(stats.get("bestInfiniteSeconds", 0)), int(summary.get("seconds", 0)))
+		stats["best_infinite_seconds"] = max(int(stats.get("best_infinite_seconds", 0)), int(summary.get("seconds", 0)))
+		stats["bestInfiniteRings"] = max(int(stats.get("bestInfiniteRings", 0)), int(summary.get("rings", 0)))
+		stats["best_infinite_rings"] = max(int(stats.get("best_infinite_rings", 0)), int(summary.get("rings", 0)))
+		stats["bestInfiniteScore"] = max(int(stats.get("bestInfiniteScore", 0)), int(summary.get("score", 0)))
+		stats["best_infinite_score"] = max(int(stats.get("best_infinite_score", 0)), int(summary.get("score", 0)))
+		stats["infiniteBestLevel"] = max(int(stats.get("infiniteBestLevel", 0)), int(summary.get("run_level", 1)))
 	data["stats"] = stats
 	_progress_missions("runsPlayed", 1)
 	_progress_missions("ringsDestroyed", int(summary.get("rings", 0)))
 	_progress_missions("runCoins", coins)
+	_progress_missions("bestCombo", int(summary.get("best_combo", 0)))
+	_progress_missions("criticals", int(summary.get("criticals", 0)))
+	_progress_missions("skinEffects", int(summary.get("skin_effects", 0)))
+	_progress_missions("runUpgrades", int(summary.get("run_upgrades", 0)))
+	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
 

@@ -217,9 +217,10 @@ func _pending_achievement_count() -> int:
 func _make_achievement_notice(count: int) -> Button:
 	var button := Button.new()
 	_clear_button_styles(button)
-	button.custom_minimum_size = Vector2(238, 38)
+	button.custom_minimum_size = Vector2(220, 36)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	_apply_button_style(button, _make_style("#ffd70022", 12, "#ffd700aa", 1, "#ffd70077", 10))
 	button.pressed.connect(_open_scene.bind(ACHIEVEMENTS_SCENE))
 	var row := HBoxContainer.new()
@@ -232,9 +233,13 @@ func _make_achievement_notice(count: int) -> Button:
 	button.add_child(row)
 	row.add_child(_make_icon("achievements", 24, Color("#ffd700")))
 	var language := String(GameState.get_setting("language", "en"))
-	var text := "Achievement unlocked" if not language.begins_with("pt") else "Conquista desbloqueada"
 	var detail := "%s rewards pending" % count if not language.begins_with("pt") else "%s recompensas pendentes" % count
-	row.add_child(_make_label("%s • %s" % [text, detail], 11, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var label := _make_label(detail, 11, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.clip_text = true
+	label.custom_minimum_size.x = 168
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(label)
 	return button
 
 
