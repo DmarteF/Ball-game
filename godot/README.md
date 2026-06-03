@@ -2,6 +2,10 @@
 
 Esta pasta foi reiniciada do zero na branch `godot-4-rebuild`. A branch `main` foi usada somente como referencia via `git show`, `git ls-tree` e `git archive`; nao foi feito checkout nem edicao nela.
 
+## Estado atual da branch
+
+Depois da auditoria de 2026-06-03, a branch `godot-4-rebuild` foi limpa para manter o projeto ativo focado em Godot. O runtime, os assets e a exportacao Web ficam dentro de `/godot`; as pastas legadas Expo/React Native/backend/Emergent foram removidas desta branch. A politica de privacidade antiga foi migrada para `docs/privacy-policy.html` dentro desta pasta. O relatorio completo esta em `docs/LEGACY_CLEANUP_AUDIT.md`.
+
 ## 1. O que foi limpo
 
 - Removida completamente a tentativa Godot anterior em `/godot`.
