@@ -12,6 +12,9 @@ const ICON_PATHS := {
 	"skins": "res://assets/ui/ui_skins.png",
 }
 
+const LEAGUE_ROOM_SIZE := 30
+const LEAGUE_BOT_COUNT := LEAGUE_ROOM_SIZE - 1
+
 var _regular_font: Font
 var _bold_font: Font
 var _standings: Array[Dictionary] = []
@@ -59,7 +62,6 @@ func _build_screen() -> void:
 	header.add_theme_constant_override("separation", 4)
 	root.add_child(header)
 	header.add_child(_make_label("LIGA NEON", 31, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	header.add_child(_make_label("Liga local contra rivais fictícios • %s participantes" % _standings.size(), 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -154,8 +156,11 @@ func _make_reward_card(player: Dictionary) -> PanelContainer:
 	body.add_theme_constant_override("separation", 5)
 	_card_margin(card).add_child(body)
 	body.add_child(_make_label("Recompensa estimada", 15, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	var reward_text := "Skin especial + gemas + baú da divisão" if _player_index == 0 else "Gemas e baú raro/épico" if _player_index < 10 else "Moedas, fragmentos e chave comum" if _player_index < 50 else "Participação com moedas/XP"
+	var reward_text := "Skin especial + gemas + baú da divisão" if _player_index == 0 else "Gemas e baú raro/épico" if _player_index < 3 else "Moedas, fragmentos e chave comum" if _player_index < 10 else "Participação com moedas/XP"
 	body.add_child(_make_label(reward_text, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	body.add_child(_make_label("Vitória futura: +36 troféus base • Derrota futura: -18 troféus base.", 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	if String(player.get("division_id", "bronze")) == "bronze":
+		body.add_child(_make_label("Primeira promoção do Bronze libera a skin ultimate Campeão Neon Inicial.", 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if _player_index > 0:
 		var above := _standings[_player_index - 1]
 		body.add_child(_make_label("Faltam %s troféus para subir uma posição." % _format_int(int(above.get("trophies", 0)) - int(player.get("trophies", 0))), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
@@ -165,7 +170,7 @@ func _make_reward_card(player: Dictionary) -> PanelContainer:
 func _make_ranking_list() -> VBoxContainer:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 8)
-	for i in range(min(30, _standings.size())):
+	for i in range(min(LEAGUE_ROOM_SIZE, _standings.size())):
 		list.add_child(_make_ranking_row(_standings[i], i))
 	return list
 
@@ -196,7 +201,7 @@ func _make_ranking_row(entry: Dictionary, index: int) -> PanelContainer:
 func _make_player_dock(player: Dictionary) -> PanelContainer:
 	var card := _make_card("#00f0ff", "#00f0ff")
 	var margin := _card_margin(card, 12)
-	margin.add_child(_make_label("Minha posição #%s • %s troféus • %s" % [_player_index + 1, _format_int(int(player.get("trophies", 0))), String(player.get("division", "Bronze"))], 13, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	margin.add_child(_make_label("Minha posição #%s/%s • %s troféus • %s" % [_player_index + 1, _standings.size(), _format_int(int(player.get("trophies", 0))), String(player.get("division", "Bronze"))], 13, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return card
 
 
@@ -205,30 +210,38 @@ func _make_standings() -> Array[Dictionary]:
 	var league: Dictionary = GameState.data.get("league", {})
 	var player_trophies := int(league.get("trophies", 0))
 	var player_rank := MainPortData.rank_for_trophies(player_trophies)
+	var current_min := int(player_rank.get("min", 0))
+	var next_rank := _next_rank(player_rank)
+	var next_min := int(next_rank.get("min", current_min + 900))
+	var room_span: int = max(120, next_min - current_min - 1)
 	result.append({
 		"id": "player",
 		"name": String(GameState.data.get("nickname", "Player")),
 		"skin": String(GameState.data.get("favorite_skin", GameState.data.get("equipped_skin", "neon_blue"))),
 		"skin_name": _skin_name(String(GameState.data.get("favorite_skin", GameState.data.get("equipped_skin", "neon_blue")))),
 		"trophies": player_trophies,
+		"division_id": String(player_rank.get("id", "bronze")),
 		"division": String(player_rank.get("name", "Bronze")),
 		"max_phase": int(GameState.data.get("max_unlocked_phase", 1)),
 		"wins": int(league.get("wins", 0)),
 		"is_player": true,
 	})
-	var skins: Array[String] = ["neon_blue", "fire", "ghost", "crystal", "lightning", "black_hole", "cosmic_eye", "red_comet", "blue_vortex", "astral_dragon"]
-	for i in range(80):
-		var base: int = max(0, 1280 - i * 27 + int(sin(i * 1.7) * 36.0))
-		var trophies: int = max(0, base + int(TimeManager.get_month_key().hash() % 80))
-		var rank := MainPortData.rank_for_trophies(trophies)
+	var skins: Array[String] = ["neon_blue", "hamster", "panda", "fox_common", "wolf_rare", "robot", "fire", "ice", "lightning", "crystal", "astral_eye", "solar_guardian", "black_sun", "blue_vortex", "red_comet", "cosmic_eye", "astral_dragon", "league_bronze_champion"]
+	var seed_offset: int = abs(("%s_%s" % [TimeManager.get_month_key(), String(player_rank.get("id", "bronze"))]).hash()) % 23
+	for i in range(LEAGUE_BOT_COUNT):
+		var rank_fraction: float = 1.0 - float(i) / float(max(1, LEAGUE_BOT_COUNT - 1))
+		var jitter: int = int(sin(float(i + seed_offset) * 1.77) * 10.0)
+		var trophies: int = current_min + max(1, roundi(float(room_span) * (0.10 + rank_fraction * 0.86)) + jitter)
+		trophies = clampi(trophies, current_min + 1, next_min - 1)
 		var skin_id: String = skins[i % skins.size()]
 		result.append({
 			"id": "bot_%s" % i,
-			"name": MainPortData.opponent_name(i, String(rank.get("id", "bronze"))),
+			"name": MainPortData.opponent_name(i + seed_offset, String(player_rank.get("id", "bronze"))),
 			"skin": skin_id,
 			"skin_name": _skin_name(skin_id),
 			"trophies": trophies,
-			"division": String(rank.get("name", "Bronze")),
+			"division_id": String(player_rank.get("id", "bronze")),
+			"division": String(player_rank.get("name", "Bronze")),
 			"max_phase": clampi(4 + i * 2, 1, 100),
 			"wins": clampi(1 + i % 18, 1, 99),
 			"is_player": false,

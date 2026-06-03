@@ -145,10 +145,10 @@ const AUTO_RUN_UPGRADE_IDS := [
 
 const LEAGUE_RANKS := [
 	{ "id": "bronze", "name": "Bronze", "min": 0, "reward": { "type": "coins", "amount": 300 } },
-	{ "id": "silver", "name": "Silver", "min": 300, "reward": { "type": "diamonds", "amount": 18 } },
-	{ "id": "gold", "name": "Gold", "min": 700, "reward": { "type": "keys", "amount": 1 } },
-	{ "id": "diamond", "name": "Diamond", "min": 1200, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
-	{ "id": "legendary", "name": "Legendary", "min": 1900, "reward": { "type": "legendaryKeys", "amount": 1 } },
+	{ "id": "silver", "name": "Prata", "min": 300, "reward": { "type": "diamonds", "amount": 18 } },
+	{ "id": "gold", "name": "Ouro", "min": 700, "reward": { "type": "keys", "amount": 1 } },
+	{ "id": "diamond", "name": "Diamante", "min": 1200, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
+	{ "id": "legendary", "name": "Lendário", "min": 1900, "reward": { "type": "legendaryKeys", "amount": 1 } },
 	{ "id": "ultimate", "name": "Ultimate", "min": 2800, "reward": { "type": "skin", "skin_id": "league_king_neon" } },
 ]
 

@@ -308,6 +308,10 @@ func default_save() -> Dictionary:
 		"league": {
 			"trophies": 0,
 			"season_key": TimeManager.get_month_key(),
+			"last_season_key": "",
+			"last_season_summary": {},
+			"bronze_promotion_skin_claimed": false,
+			"highest_rank_id": "bronze",
 			"season_reward_claimed": false,
 			"wins": 0,
 			"losses": 0,
@@ -445,6 +449,7 @@ func _ensure_live_systems() -> void:
 		data["wheel"] = { "day_key": day_key, "free_used": false, "ad_spins_used": 0, "last_reward": {} }
 	if String(data.get("daily_missions", {}).get("day_key", "")) != day_key:
 		data["daily_missions"] = _create_daily_missions(day_key)
+	_ensure_league_season()
 	var achievements: Dictionary = data.get("achievements", {})
 	for achievement in get_achievements():
 		var id := String(achievement["id"])
@@ -452,6 +457,59 @@ func _ensure_live_systems() -> void:
 			achievements[id] = { "progress": 0, "completed": false, "claimed": false }
 	data["achievements"] = achievements
 	_update_achievements(false)
+
+
+func _ensure_league_season() -> void:
+	var league: Dictionary = data.get("league", {})
+	var current_key := TimeManager.get_month_key()
+	var season_key := String(league.get("season_key", current_key))
+	if season_key.is_empty():
+		league["season_key"] = current_key
+		data["league"] = league
+		return
+	if season_key == current_key:
+		data["league"] = league
+		return
+	var trophies := int(league.get("trophies", 0))
+	var final_rank := MainPortData.rank_for_trophies(trophies)
+	var demoted_rank := _previous_league_rank(final_rank)
+	league["last_season_key"] = season_key
+	league["last_season_summary"] = {
+		"season_key": season_key,
+		"final_rank_id": String(final_rank.get("id", "bronze")),
+		"final_rank_name": String(final_rank.get("name", "Bronze")),
+		"new_rank_id": String(demoted_rank.get("id", "bronze")),
+		"new_rank_name": String(demoted_rank.get("name", "Bronze")),
+		"final_trophies": trophies,
+		"ended_at": TimeManager.get_now_timestamp(),
+	}
+	league["season_key"] = current_key
+	league["season_reward_claimed"] = false
+	league["trophies"] = int(demoted_rank.get("min", 0))
+	league["wins"] = 0
+	league["losses"] = 0
+	league["quits"] = 0
+	league["matches"] = 0
+	league["win_streak"] = 0
+	data["league"] = league
+
+
+func _previous_league_rank(rank: Dictionary) -> Dictionary:
+	var ranks: Array = MainPortData.LEAGUE_RANKS
+	var index := 0
+	for i in range(ranks.size()):
+		if String(Dictionary(ranks[i]).get("id", "")) == String(rank.get("id", "bronze")):
+			index = i
+			break
+	return Dictionary(ranks[max(0, index - 1)])
+
+
+func _league_rank_index(rank_id: String) -> int:
+	var ranks: Array = MainPortData.LEAGUE_RANKS
+	for i in range(ranks.size()):
+		if String(Dictionary(ranks[i]).get("id", "")) == rank_id:
+			return i
+	return 0
 
 
 func _day_key() -> String:
@@ -1247,14 +1305,16 @@ func record_mode_quit(mode: String, summary: Dictionary) -> void:
 
 
 func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary:
+	_ensure_league_season()
 	var league: Dictionary = data.get("league", {})
 	var trophies := int(league.get("trophies", 0))
-	var base_delta := 28 if result == "win" else -18 if result == "loss" else -24
+	var previous_rank := MainPortData.rank_for_trophies(trophies)
+	var base_delta := 36 if result == "win" else -18 if result == "loss" else -24
 	var rings_value := int(summary.get("rings", 0))
 	var seconds := int(summary.get("seconds", 0))
 	var trophy_delta := base_delta
 	if result == "win":
-		trophy_delta += min(14, rings_value / 3)
+		trophy_delta += min(14, rings_value / 3) + min(6, seconds / 45)
 	else:
 		trophy_delta += min(8, rings_value / 8)
 	trophies = max(0, trophies + trophy_delta)
@@ -1267,6 +1327,16 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	league["win_streak"] = int(league.get("win_streak", 0)) + 1 if result == "win" else 0
 	league["best_streak"] = max(int(league.get("best_streak", 0)), int(league.get("win_streak", 0)))
 	league["last_opponent_id"] = String(summary.get("opponent_id", ""))
+	var rank := MainPortData.rank_for_trophies(trophies)
+	var rank_id := String(rank.get("id", "bronze"))
+	var previous_rank_id := String(previous_rank.get("id", "bronze"))
+	if _league_rank_index(rank_id) > _league_rank_index(String(league.get("highest_rank_id", "bronze"))):
+		league["highest_rank_id"] = rank_id
+	var promotion_skin_id := ""
+	if previous_rank_id == "bronze" and rank_id != "bronze" and not bool(league.get("bronze_promotion_skin_claimed", false)):
+		promotion_skin_id = "initial_neon_champion"
+		league["bronze_promotion_skin_claimed"] = true
+		league["last_reward"] = "initial_neon_champion"
 	data["league"] = league
 
 	var coins: int = max(10, int(summary.get("coins", 0)) + (180 if result == "win" else 65 if result == "loss" else 35))
@@ -1285,8 +1355,16 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_value
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_value
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
-	var rank := MainPortData.rank_for_trophies(trophies)
-	var rank_id := String(rank.get("id", "bronze"))
+	if not promotion_skin_id.is_empty():
+		var skins: Array = data.get("unlocked_skins", [])
+		if not skins.has(promotion_skin_id):
+			skins.append(promotion_skin_id)
+			data["unlocked_skins"] = skins
+			var skin_levels: Dictionary = data.get("skin_levels", {})
+			skin_levels[promotion_skin_id] = max(1, int(skin_levels.get(promotion_skin_id, 1)))
+			data["skin_levels"] = skin_levels
+			stats["skins_unlocked"] = skins.size()
+			stats["skinsUnlocked"] = skins.size()
 	if rank_id in ["silver", "gold", "diamond", "legendary", "ultimate"]:
 		stats["leagueSilverReached"] = 1
 	if rank_id in ["diamond", "legendary", "ultimate"]:
@@ -1296,9 +1374,11 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	data["stats"] = stats
 	_progress_missions("ringsDestroyed", rings_value)
 	_progress_missions("runCoins", coins)
+	if not promotion_skin_id.is_empty():
+		_update_skin_collection_stats()
 	_update_achievements(false)
 	save_game()
-	return { "coins": coins, "xp": xp, "trophy_delta": trophy_delta, "trophies": trophies, "rank": rank }
+	return { "coins": coins, "xp": xp, "trophy_delta": trophy_delta, "trophies": trophies, "rank": rank, "promotion_skin": promotion_skin_id }
 
 
 func set_audio_muted(muted: bool) -> void:

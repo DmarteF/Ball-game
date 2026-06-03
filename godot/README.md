@@ -295,7 +295,7 @@ Conquistas/missoes/desbloqueios:
 
 Arquivos principais adicionados nesta etapa:
 
-- `scripts/MainPortData.gd`: tabela central gerada a partir da `main`, com 92 skins, 34 upgrades temporarios, ranks/recompensas da Liga Neon e geracao de oponente.
+- `scripts/MainPortData.gd`: tabela central gerada a partir da `main`, com skins, upgrades temporarios, ranks/recompensas da Liga Neon e geracao de oponente.
 - `scripts/LocalizationManager.gd`: base EN/PT compartilhada, ligada ao idioma salvo em Configuracoes.
 - `scripts/LeagueScreen.gd`: Liga Neon visual baseada em `frontend/app/league.tsx`, com resumo, divisao, podium e ranking local mockado.
 - `MAIN_PORT_ANALYSIS.md`: inventario da migracao fiel por sistema e pendencias.
@@ -319,6 +319,13 @@ Liga Neon:
 
 - Voltou a ser uma tela de ranking/progresso baseada em `frontend/app/league.tsx`.
 - Mostra resumo do jogador, trofeus, dias de temporada, progresso de divisao, podium, recompensa estimada e lista de rivais ficticios.
+- A sala atual usa 30 competidores por divisao: jogador + 29 bots com nomes e skins.
+- Jogador novo com 0 trofeus aparece em `#30/30` na divisao Bronze.
+- As divisoes atuais sao Bronze, Prata, Ouro, Diamante, Lendario e Ultimate.
+- Vitorias futuras usam base de +36 trofeus; derrotas futuras usam base de -18 trofeus.
+- A temporada usa o mes real/local via `TimeManager.get_month_key()`.
+- Ao virar o mes, a Liga salva um resumo da temporada anterior, zera vitorias/derrotas da temporada e rebaixa uma divisao: Ouro volta para Prata, Prata volta para Bronze, e assim por diante.
+- A primeira promocao saindo do Bronze libera a skin ultimate `initial_neon_champion` / Campeao Neon Inicial.
 - A batalha versus feita no port anterior foi removida para a competicao ser recriada depois com fidelidade ao frontend/main.
 
 Checklist desta etapa:
@@ -782,3 +789,30 @@ Checklist:
 | Temporários extras só aparecem se explicitamente liberados | Sim |
 | 100 conquistas geradas e exibidas | Sim |
 | Recompensas variadas nas conquistas | Sim |
+
+## 7.15 Liga Neon mensal
+
+Atualizado nesta etapa:
+
+- Removido o texto auxiliar abaixo de `LIGA NEON`, deixando a tela mais limpa.
+- Ranking limitado a 30 competidores por divisao, com 29 bots gerados por temporada/mes e rank atual.
+- Jogador com 0 trofeus inicia em `#30/30`, pois todos os bots da sala Bronze entram acima de 0 trofeus.
+- `MainPortData.LEAGUE_RANKS` agora possui 6 ligas: Bronze, Prata, Ouro, Diamante, Lendario e Ultimate.
+- `GameState.record_neon_league_match()` prepara ganho/perda de trofeus: vitoria parte de +36, derrota parte de -18 e saida parte de -24.
+- A primeira promocao do Bronze para qualquer liga superior libera e salva a skin ultimate `initial_neon_champion`.
+- `GameState._ensure_league_season()` usa o mes real/local do `TimeManager`; ao virar o mes, salva `last_season_summary`, reseta estatisticas de temporada e rebaixa uma liga.
+- A partida real da Liga ainda nao foi reativada; esta etapa ajusta tela, save, rank, temporada e recompensa de promocao antes de voltar para gameplay.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Texto "liga local" removido | Sim |
+| 30 competidores por sala/rank | Sim |
+| Jogador novo aparece #30/30 | Sim |
+| 6 ligas configuradas | Sim |
+| Trofeus iniciam em 0 | Sim |
+| Vitoria/perda de trofeus preparada | Sim |
+| Promocao Bronze libera skin ultimate inicial | Sim |
+| Reset mensal usa relogio interno | Sim |
+| Reset mensal rebaixa uma liga | Sim |
