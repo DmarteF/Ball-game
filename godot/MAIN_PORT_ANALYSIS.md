@@ -313,3 +313,13 @@ Checklist:
 | Upgrades bloqueados não foram excluídos | Sim |
 | Tela de Upgrades mostra apenas disponíveis e contador de bloqueados | Sim |
 | Level up mostra apenas upgrades temporários liberados | Sim |
+
+## 7.9 Ajustes pós-teste: infinito, gap, level-up e repulse
+
+| Problema observado | Ajuste no Godot | Status |
+| --- | --- | --- |
+| Modo infinito travava ao iniciar quando não achava spawn seguro | `_append_infinite_ring` retorna falha e o loop do infinito para no frame | Corrigido |
+| Anéis podiam discordar entre abertura visual e colisão | `GameplayManager.gd` usa contato de segmento compartilhado para clear/hit | Corrigido |
+| Passagem pela abertura às vezes não limpava o anel | Margem do gap reduzida e faixa do anel aceita clear quando alinhada ao gap | Corrigido |
+| Upgrades temporários bloqueados apareciam no level-up | Filtro valida desbloqueio, requisito de perfil/fase, segredo, dados e limite | Corrigido |
+| `Ring Repulse` disparava sem controle | Efeito agora usa chance, cooldown e clamp no raio útil | Corrigido |

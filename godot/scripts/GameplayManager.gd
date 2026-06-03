@@ -114,6 +114,7 @@ var criticals := 0
 var skin_effects := 0
 var run_shop_upgrades := { "atk": 0, "gold": 0 }
 var current_upgrades: Dictionary = {}
+var upgrade_effect_cooldowns: Dictionary = {}
 var available_upgrades: Array[Dictionary] = []
 var recent_hit_damage: Array[float] = []
 var rings_destroyed := 0
@@ -249,6 +250,7 @@ func _start_level() -> void:
 	skin_effects = 0
 	run_shop_upgrades = { "atk": 0, "gold": 0 }
 	current_upgrades = {}
+	upgrade_effect_cooldowns = {}
 	available_upgrades = []
 	rerolls_used = 0
 	revive_used = false
@@ -405,8 +407,13 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 	if rings.size() >= MAX_VISIBLE_RINGS:
 		_prune_inactive_rings()
 	var target_count := clampi(TARGET_ACTIVE_RINGS + floori(float(infinite_level) * 0.18 + infinite_clear_pressure * 0.22), TARGET_ACTIVE_RINGS, 12)
-	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6:
-		_append_infinite_ring()
+	var attempts := 0
+	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6 and attempts < 16:
+		attempts += 1
+		if _queued_ring_count() > 0 and _activate_next_queued_ring():
+			continue
+		if not _append_infinite_ring():
+			break
 	_clamp_ring_spacing()
 
 
@@ -451,12 +458,13 @@ func _prune_inactive_rings() -> void:
 	rings = kept
 
 
-func _append_infinite_ring() -> void:
+func _append_infinite_ring() -> bool:
 	var ring_index := rings.size()
 	var ring := _make_infinite_ring(ring_index)
 	if ring.is_empty():
-		return
+		return false
 	rings.append(ring)
+	return true
 
 
 func _make_infinite_ring(index: int) -> Dictionary:
@@ -525,8 +533,14 @@ func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2
 		var radius := float(ring["radius"])
 		var crossed: bool = (prev_dist - radius) * (next_dist - radius) <= 0.0
 		var near: bool = abs(next_dist - radius) <= BALL_RADIUS + abs(next_dist - prev_dist) + float(ring["thickness"])
-		var angle := _segment_angle_for_radius(prev_pos, next_pos, radius)
-		if crossed and near and _is_angle_inside_gap(angle, ring, min(0.06, BALL_RADIUS / max(1.0, radius))):
+		var contact := _segment_contact_for_radius(prev_pos, next_pos, radius)
+		var inside_gap_band: bool = abs(next_dist - radius) <= BALL_RADIUS + float(ring["thickness"]) * 0.75
+		var angle: float = _normalize_angle((next_pos - arena_center).angle())
+		if bool(contact.get("ok", false)):
+			angle = float(contact["angle"])
+		elif not inside_gap_band:
+			continue
+		if (crossed or inside_gap_band) and near and _is_angle_inside_gap(angle, ring, min(0.012, BALL_RADIUS / max(1.0, radius) * 0.18)):
 			_try_apply_skin_effect(i, "perfect")
 			_try_apply_upgrade_effects(i, "perfect", 0)
 			ring = rings[i]
@@ -619,13 +633,24 @@ func _check_ring_collision(ring: Dictionary, prev_dist := -1.0, next_dist := -1.
 		overlapping = overlapping or (crossed and swept_near)
 	var angle: float = _normalize_angle(offset.angle())
 	if prev_pos != Vector2.ZERO or next_pos != Vector2.ZERO:
-		angle = _segment_angle_for_radius(prev_pos, next_pos, radius)
-	var padding: float = min(0.08, BALL_RADIUS / max(1.0, float(ring["radius"])))
+		var contact := _segment_contact_for_radius(prev_pos, next_pos, radius)
+		if bool(contact.get("ok", false)):
+			angle = float(contact["angle"])
+			dist_from_ring = min(dist_from_ring, float(contact.get("distance", dist_from_ring)))
+	var padding: float = min(0.018, BALL_RADIUS / max(1.0, float(ring["radius"])) * 0.22)
 	var in_gap: bool = false if String(ring.get("type", "normal")) == "solid" else _is_angle_inside_gap(angle, ring, padding)
 	return { "overlap": overlapping, "gap": in_gap, "dist": dist_from_ring, "angle": angle }
 
 
 func _segment_angle_for_radius(prev_pos: Vector2, next_pos: Vector2, radius: float) -> float:
+	var contact := _segment_contact_for_radius(prev_pos, next_pos, radius)
+	if bool(contact.get("ok", false)):
+		return float(contact["angle"])
+	var fallback := ball_position - arena_center
+	return _normalize_angle(fallback.angle())
+
+
+func _segment_contact_for_radius(prev_pos: Vector2, next_pos: Vector2, radius: float) -> Dictionary:
 	var start := prev_pos - arena_center
 	var end := next_pos - arena_center
 	var delta := end - start
@@ -645,10 +670,12 @@ func _segment_angle_for_radius(prev_pos: Vector2, next_pos: Vector2, radius: flo
 				t = t2
 			else:
 				t = clampf((radius - start.length()) / max(0.001, end.length() - start.length()), 0.0, 1.0)
+		else:
+			return { "ok": false, "angle": _normalize_angle((ball_position - arena_center).angle()), "distance": abs((ball_position - arena_center).length() - radius) }
 	var point := start.lerp(end, t)
 	if point.length() <= 0.01:
 		point = ball_position - arena_center
-	return _normalize_angle(point.angle())
+	return { "ok": true, "angle": _normalize_angle(point.angle()), "distance": abs(point.length() - radius), "t": t }
 
 
 func _apply_dynamic_steering(delta_steps: float) -> void:
@@ -1500,8 +1527,10 @@ func _try_apply_upgrade_effects(ring_index: int, trigger: String, base_damage_va
 	if int(current_upgrades.get("penetration", 0)) > 0:
 		bonus_damage += floori(max(1, base_damage_value) * (0.18 + int(current_upgrades.get("penetration", 0)) * 0.05))
 		_apply_effect_to_ring(ring_index, "poison", 0.18, Color("#39ff14"), "upgrade")
-	if int(current_upgrades.get("ringRepulse", 0)) > 0 and trigger == "hit":
-		_apply_effect_to_ring(ring_index, "repulse", 10.0 + int(current_upgrades.get("ringRepulse", 0)) * 3.0, Color("#c084fc"), "upgrade")
+	var repulse_level := int(current_upgrades.get("ringRepulse", 0))
+	if repulse_level > 0 and trigger == "hit" and _can_trigger_upgrade_effect("ringRepulse", 0.10 + repulse_level * 0.035, max(720, 1500 - repulse_level * 110)):
+		_mark_upgrade_effect_triggered("ringRepulse")
+		_apply_effect_to_ring(ring_index, "repulse", 8.0 + repulse_level * 2.5, Color("#c084fc"), "upgrade")
 	if int(current_upgrades.get("chainLightning", 0)) > 0 and randf() < 0.16 + int(current_upgrades.get("chainLightning", 0)) * 0.035:
 		_apply_effect_to_ring(ring_index, "chain", 0.30, Color("#38bdf8"), "upgrade")
 	if int(current_upgrades.get("shockwave", 0)) > 0 or int(current_upgrades.get("voidPulse", 0)) > 0:
@@ -1515,6 +1544,22 @@ func _try_apply_upgrade_effects(ring_index: int, trigger: String, base_damage_va
 	if int(current_upgrades.get("chainBreak", 0)) > 0 and trigger == "break":
 		bonus_damage += _apply_effect_to_ring(ring_index, "chain", 0.42 + int(current_upgrades.get("chainBreak", 0)) * 0.06, Color("#ffd700"), "upgrade")
 	return bonus_damage
+
+
+func _can_trigger_upgrade_effect(id: String, chance: float, cooldown_ms: int) -> bool:
+	var now := Time.get_ticks_msec()
+	var ready_at := int(upgrade_effect_cooldowns.get(id, 0))
+	if now < ready_at:
+		return false
+	return randf() < clampf(chance, 0.0, 0.65)
+
+
+func _mark_upgrade_effect_triggered(id: String, cooldown_ms := -1) -> void:
+	var level := int(current_upgrades.get(id, 0))
+	var duration := cooldown_ms
+	if duration < 0:
+		duration = max(720, 1500 - level * 110)
+	upgrade_effect_cooldowns[id] = Time.get_ticks_msec() + duration
 
 
 func _apply_effect_to_ring(ring_index: int, effect: String, value: float, color: Color, source: String) -> int:
@@ -1551,7 +1596,7 @@ func _apply_effect_to_ring(ring_index: int, effect: String, value: float, color:
 			bonus_damage = _damage_area_rings(ring_index, max(1, floori(float(_base_damage()) * max(0.24, value))), color)
 			_spawn_particles(ball_position, color, 18, 125.0)
 		"repulse":
-			ring["radius"] = min(outer_radius - 2.0, float(ring["radius"]) + max(8.0, value))
+			ring["radius"] = min(_playable_ring_max_radius(), float(ring["radius"]) + max(6.0, value))
 			ring["effect_color"] = "#c084fc"
 			ring["effect_until"] = Time.get_ticks_msec() + 900
 			_spawn_particles(ball_position, color, 9, 95.0)
@@ -1802,7 +1847,7 @@ func _get_safe_upgrade_options(exclude_ids: Array[String] = []) -> Array[Diction
 	var fallback: Array[Dictionary] = []
 	for upgrade in pool:
 		var id := String(upgrade.get("id", ""))
-		if unlocked.has(id) and int(current_upgrades.get(id, 0)) < int(upgrade.get("maxLevel", 1)):
+		if _is_run_upgrade_available(upgrade, unlocked):
 			var copy: Dictionary = upgrade.duplicate(true)
 			copy["color"] = _rarity_upgrade_color(String(copy.get("rarity", "common")))
 			if exclude_ids.has(id):
@@ -1814,6 +1859,43 @@ func _get_safe_upgrade_options(exclude_ids: Array[String] = []) -> Array[Diction
 	while filtered.size() < 3 and not fallback.is_empty():
 		filtered.append(fallback.pop_front())
 	return filtered.slice(0, min(3, filtered.size()))
+
+
+func _is_run_upgrade_available(upgrade: Dictionary, unlocked: Array) -> bool:
+	var id := String(upgrade.get("id", ""))
+	if id.is_empty():
+		return false
+	if int(upgrade.get("maxLevel", 0)) <= 0:
+		return false
+	if Array(upgrade.get("effects", [])).is_empty():
+		return false
+	if int(current_upgrades.get(id, 0)) >= int(upgrade.get("maxLevel", 1)):
+		return false
+	if bool(upgrade.get("secret", false)):
+		return unlocked.has(id)
+	if not unlocked.has(id):
+		return false
+	var profile_level: int = int(GameState.data.get("level", 1))
+	var max_phase: int = int(GameState.data.get("max_unlocked_phase", GameState.data.get("current_phase", 1)))
+	var required_profile: int = max(int(upgrade.get("unlockLevel", 1)), _profile_requirement_from_text(String(upgrade.get("unlockRequirement", ""))))
+	if profile_level < required_profile:
+		return false
+	if GameState.TEMP_UPGRADE_UNLOCKS.has(id):
+		var rule: Dictionary = GameState.TEMP_UPGRADE_UNLOCKS[id]
+		var phase_required := int(rule.get("phase", 999))
+		var level_required := int(rule.get("level", 999))
+		if max_phase < phase_required and profile_level < level_required:
+			return false
+	return true
+
+
+func _profile_requirement_from_text(text: String) -> int:
+	var required := 1
+	var normalized := text.replace(".", " ").replace(",", " ").replace(":", " ")
+	for token in normalized.split(" ", false):
+		if token.is_valid_int():
+			required = max(required, int(token))
+	return required
 
 
 func _upgrade_ids(upgrades: Array[Dictionary]) -> Array[String]:
@@ -1900,6 +1982,15 @@ func _make_level_up_button(upgrade: Dictionary) -> Button:
 
 
 func _select_level_up_upgrade(id: String) -> void:
+	var allowed := false
+	for upgrade in available_upgrades:
+		if String(upgrade.get("id", "")) == id:
+			allowed = true
+			break
+	if not allowed:
+		_spawn_floating(_level_up_feedback("Melhoria bloqueada", "Upgrade locked"), arena_center + Vector2(-34, -62), Color("#ff6b9a"))
+		_play_sfx("upgrade_select")
+		return
 	current_upgrades[id] = int(current_upgrades.get(id, 0)) + 1
 	run_upgrades += 1
 	temporary_upgrade = _describe_current_upgrades()

@@ -656,3 +656,27 @@ Checklist:
 Pendência conhecida:
 
 - A validação é local/offline e foi testada por abertura headless do Godot; a revisão visual fina ainda depende do teste manual no navegador.
+
+## 7.10 Correções de gameplay após teste Web
+
+Atualizado nesta etapa:
+
+- Corrigido travamento do modo infinito quando o gerador não encontrava anel seguro: o loop agora para no frame e tenta novamente depois, sem congelar o HTML.
+- O modo infinito também tenta ativar anéis em fila antes de criar novos anéis.
+- A detecção de abertura do anel usa a mesma referência de contato para clear e hit, com margem menor para não encolher visualmente o gap.
+- Quando a bolinha já está na faixa do anel e no centro da abertura, o clear pode disparar mesmo sem cruzamento radial perfeito no frame.
+- A seleção de upgrades temporários ficou mais rígida: valida desbloqueio, requisito de nível/fase, segredo, dados de efeito e limite máximo.
+- `Ring Repulse` agora tem chance real por nível, cooldown por rodada e não empurra o anel para fora da área útil jogável.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Modo infinito não trava quando falta spawn seguro | Sim |
+| Gap/clear usa contato consistente com hit | Sim |
+| Passagem pela abertura ficou menos rígida | Sim |
+| Upgrades temporários bloqueados filtrados | Sim |
+| Seleção manual de upgrade bloqueado recusada | Sim |
+| Ring Repulse com chance | Sim |
+| Ring Repulse com cooldown | Sim |
+| Ring Repulse limitado à área útil | Sim |

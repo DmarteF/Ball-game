@@ -447,3 +447,28 @@ Checklist:
 | Upgrades bloqueados não foram excluídos | Sim |
 | Tela de Upgrades mostra apenas disponíveis e contador de bloqueados | Sim |
 | Level up mostra apenas upgrades temporários liberados | Sim |
+
+## 7.9 Correções de travamento, gap e upgrades temporários
+
+Correções aplicadas:
+
+- `_update_infinite_mode` ganhou limite de tentativas e `_append_infinite_ring` passou a retornar `true/false`; quando não há raio seguro o infinito não entra mais em loop infinito.
+- O infinito tenta ativar anéis em fila antes de anexar novos anéis, mantendo o gerador seguro sem congelar o navegador.
+- `_segment_contact_for_radius` centraliza o contato usado por `_check_perfect_escape` e `_check_ring_collision`, reduzindo casos em que o visual do gap e a colisão discordam.
+- A margem da abertura foi reduzida; o clear agora também aceita a bolinha dentro da faixa do anel quando ela está no centro do gap.
+- `_get_safe_upgrade_options` agora valida requisitos reais dos upgrades temporários e não exibe opções secretas/bloqueadas/sem efeito/fora do nível.
+- `_select_level_up_upgrade` recusa seleção se o id não estiver nas opções válidas atuais.
+- `ringRepulse` deixou de disparar em todo impacto; agora usa chance por nível e cooldown, e o efeito fica dentro da área útil dos anéis.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Infinito inicia sem travar ao falhar spawn seguro | Sim |
+| Loop de spawn do infinito tem limite de tentativas | Sim |
+| Gap e hit usam o mesmo contato de colisão | Sim |
+| Clear pela abertura ficou mais confiável | Sim |
+| Upgrades bloqueados não aparecem no level-up | Sim |
+| Upgrades sem dados válidos não aparecem no level-up | Sim |
+| Ring Repulse com chance/cooldown | Sim |
+| Ring Repulse não empurra além da área útil | Sim |
