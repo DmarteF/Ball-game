@@ -103,6 +103,7 @@ func _ready() -> void:
 	_build_background()
 	_build_top_bar()
 	_build_content()
+	_build_achievement_notice_overlay()
 	_build_more_button()
 	_build_more_modal()
 
@@ -144,14 +145,21 @@ func _build_top_bar() -> void:
 	resources.add_child(_make_resource_pill("gem", str(GameState.data.get("diamonds", 0))))
 	resources.add_child(_make_resource_pill("key", str(GameState.data.get("keys", 0))))
 
+
+func _build_achievement_notice_overlay() -> void:
 	var pending := _pending_achievement_count()
 	if pending > 0:
 		var notice := _make_achievement_notice(pending)
-		top_bar.add_child(notice)
-		get_tree().create_timer(6.0).timeout.connect(func() -> void:
-			if is_instance_valid(notice):
-				notice.visible = false
-		)
+		notice.anchor_left = 0.0
+		notice.anchor_top = 0.0
+		notice.anchor_right = 0.0
+		notice.anchor_bottom = 0.0
+		notice.offset_left = 18.0
+		notice.offset_top = 132.0
+		notice.offset_right = 254.0
+		notice.offset_bottom = 172.0
+		notice.z_index = 30
+		add_child(notice)
 
 
 func _build_content() -> void:
@@ -222,6 +230,8 @@ func _make_achievement_notice(count: int) -> Button:
 	button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_apply_button_style(button, _make_style("#ffd70022", 12, "#ffd700aa", 1, "#ffd70077", 10))
 	button.pressed.connect(_open_achievements_scene)
 	button.button_down.connect(_open_achievements_scene)
@@ -255,6 +265,10 @@ func _open_achievements_scene() -> void:
 	if _opening_achievements:
 		return
 	_opening_achievements = true
+	call_deferred("_deferred_open_achievements_scene")
+
+
+func _deferred_open_achievements_scene() -> void:
 	_open_scene(ACHIEVEMENTS_SCENE)
 
 

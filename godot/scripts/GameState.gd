@@ -256,9 +256,7 @@ func refresh_unlocks(emit_signal := true) -> void:
 		if _meets_unlock(PERMANENT_UPGRADE_DEFS[id], max_phase, profile_level) and not unlocked.has(id):
 			unlocked.append(id)
 	for id in MainPortData.auto_run_upgrade_ids():
-		if not TEMP_UPGRADE_UNLOCKS.has(id):
-			continue
-		if _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level) and not unlocked.has(id):
+		if not unlocked.has(id):
 			unlocked.append(id)
 	data["unlocked_upgrades"] = unlocked
 

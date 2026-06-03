@@ -10,14 +10,17 @@ const MIN_RING_SPACING := 8.4
 const MAX_VISIBLE_RINGS := 26
 const TARGET_ACTIVE_RINGS := 8
 const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
-const MAX_SPAWN_DISTANCE_FROM_BALL := 82.0
-const INFINITE_RING_REACH_DISTANCE := 76.0
-const PLAYABLE_RING_RADIUS_FACTOR := 0.78
-const PLAYABLE_RING_MARGIN := 22.0
-const SPAWN_LOOKAHEAD_DISTANCE := 82.0
+const MAX_SPAWN_DISTANCE_FROM_BALL := 110.0
+const INFINITE_RING_REACH_DISTANCE := 112.0
+const PLAYABLE_RING_RADIUS_FACTOR := 0.88
+const PLAYABLE_RING_MARGIN := 12.0
+const SPAWN_LOOKAHEAD_DISTANCE := 110.0
 const MAX_PHYSICS_SUBSTEPS := 6
 const SAFE_STEP_DISTANCE := 8.0
 const MIN_DIRECTION_COMPONENT := 0.24
+const RING_SPAWN_GRACE_MSEC := 850
+const RING_REPOSITION_GRACE_MSEC := 520
+const CRUSH_CONFIRM_MSEC := 150
 const XP_BASE_REQUIREMENT := 150.0
 const RUN_COIN_MULTIPLIER := 0.92
 const GLOBAL_COIN_CONVERSION_RATE := 0.72
@@ -138,6 +141,7 @@ var infinite_level := 1
 var infinite_score := 0
 var infinite_clear_pressure := 0.0
 var last_direction_shift_msec := 0
+var crush_contact_started_msec := 0
 var rerolls_used := 0
 var last_upgrade_option_ids: Array[String] = []
 var revive_used := false
@@ -275,6 +279,7 @@ func _start_level() -> void:
 	infinite_level = 1
 	infinite_score = 0
 	infinite_clear_pressure = 0.0
+	crush_contact_started_msec = 0
 	if is_infinite:
 		gameplay_config = _make_infinite_gameplay_config()
 	_update_arena_metrics()
@@ -319,8 +324,13 @@ func _update_game(delta_steps: float) -> void:
 		_clamp_ring_spacing()
 		previous_distance = next_dist
 		if _is_ball_crushed():
-			_finish_defeat()
-			return
+			if crush_contact_started_msec <= 0:
+				crush_contact_started_msec = Time.get_ticks_msec()
+			elif Time.get_ticks_msec() - crush_contact_started_msec >= CRUSH_CONFIRM_MSEC:
+				_finish_defeat()
+				return
+		else:
+			crush_contact_started_msec = 0
 	_add_trail_point()
 	_update_combo_timeout()
 	if is_infinite:
@@ -344,7 +354,7 @@ func _create_rings() -> Array[Dictionary]:
 	var difficulty: float = 1.0 + max(0, phase_id - 1) * 0.22
 	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
 	var palette: Array = RING_PALETTES[ring_palette_index]
-	var solid_indexes: Dictionary = { count - 1: true }
+	var solid_indexes: Dictionary = {} if is_infinite else { count - 1: true }
 	for i in range(count):
 		var progress := 0.0 if count == 1 else float(i) / float(count - 1)
 		var direction := 1.0 if i % 2 == 0 else -1.0
@@ -360,7 +370,7 @@ func _create_rings() -> Array[Dictionary]:
 			"type": "solid" if is_solid else "normal",
 			"radius": inner_radius + i * spacing,
 			"initial_radius": inner_radius + i * spacing,
-			"closing_speed": float(gameplay_config["closing_speed"]) * difficulty * (0.75 + progress * 0.42),
+			"closing_speed": float(gameplay_config["closing_speed"]) * difficulty * (0.66 + progress * 0.34),
 			"rotation": _normalize_angle(i * 0.61 + phase_id * 0.37 + pattern_shift),
 			"rotation_speed": float(gameplay_config["rotation_speed"]) * difficulty * inner_speed_bias * speed_variation * direction,
 			"gap_start": _normalize_angle(i * 0.83 + phase_id * 0.49 + pattern_shift),
@@ -373,6 +383,8 @@ func _create_rings() -> Array[Dictionary]:
 			"min_radius": 4.0,
 			"effect_color": "",
 			"effect_until": 0,
+			"spawned_at": Time.get_ticks_msec(),
+			"defeat_grace_until": Time.get_ticks_msec() + RING_SPAWN_GRACE_MSEC,
 			"rotation_multiplier": 1.0,
 			"closing_multiplier": 1.0,
 		}
@@ -380,7 +392,7 @@ func _create_rings() -> Array[Dictionary]:
 			var safe_spawn := _find_safe_ring_spawn_radius(float(ring["radius"]), result)
 			if bool(safe_spawn.get("ok", false)):
 				ring["radius"] = float(safe_spawn["radius"])
-				ring = _align_ring_gap_to_ball(ring)
+				ring = _randomize_ring_gap(ring) if is_infinite else _align_ring_gap_to_ball(ring)
 			else:
 				ring["status"] = "queued"
 		result.append(ring)
@@ -392,11 +404,11 @@ func _make_infinite_gameplay_config() -> Dictionary:
 	var player_level := int(GameState.data.get("level", 1))
 	var pressure := clampf(infinite_clear_pressure, 0.0, 8.0)
 	return {
-		"ring_count": clampi(10 + floori(float(level_factor) * 0.45 + pressure * 0.5), 10, 19),
+		"ring_count": clampi(8 + floori(float(level_factor) * 0.32 + pressure * 0.32), 8, 15),
 		"base_hp": 18 + floori(float(level_factor) * 2.8 + pressure * 1.4) + floori(float(player_level) * 0.25),
-		"closing_speed": 0.010 + min(0.034, float(level_factor) * 0.0009 + pressure * 0.0012),
+		"closing_speed": 0.0068 + min(0.024, float(level_factor) * 0.00062 + pressure * 0.0008),
 		"rotation_speed": 0.0044 + min(0.014, float(level_factor) * 0.00038 + pressure * 0.00045),
-		"gap_size": max(PI / 15.5, PI / (3.8 + float(level_factor) * 0.08 + pressure * 0.12)),
+		"gap_size": max(PI / 13.5, PI / (3.55 + float(level_factor) * 0.065 + pressure * 0.09)),
 	}
 
 
@@ -409,7 +421,7 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 		gameplay_config = _make_infinite_gameplay_config()
 	if rings.size() >= MAX_VISIBLE_RINGS:
 		_prune_inactive_rings()
-	var target_count := clampi(TARGET_ACTIVE_RINGS + floori(float(infinite_level) * 0.18 + infinite_clear_pressure * 0.22), TARGET_ACTIVE_RINGS, 12)
+	var target_count := clampi(6 + floori(float(infinite_level) * 0.16 + infinite_clear_pressure * 0.16), 6, 10)
 	target_count = min(target_count, _infinite_ring_capacity())
 	var attempts := 0
 	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6 and attempts < 16:
@@ -448,8 +460,10 @@ func _activate_next_queued_ring() -> bool:
 			return false
 		ring["status"] = "active"
 		ring["radius"] = float(safe_spawn["radius"])
-		ring = _align_ring_gap_to_ball(ring)
+		ring = _randomize_ring_gap(ring) if is_infinite else _align_ring_gap_to_ball(ring)
 		ring["initial_radius"] = max(float(ring.get("initial_radius", ring["radius"])), float(ring["radius"]))
+		ring["spawned_at"] = Time.get_ticks_msec()
+		ring["defeat_grace_until"] = Time.get_ticks_msec() + RING_SPAWN_GRACE_MSEC
 		rings[i] = ring
 		return true
 	return false
@@ -473,7 +487,7 @@ func _append_infinite_ring() -> bool:
 
 
 func _infinite_ring_spacing() -> float:
-	return max(MIN_RING_SPACING + 1.6, 10.0)
+	return max(MIN_RING_SPACING + 4.6, 13.0)
 
 
 func _infinite_ring_capacity() -> int:
@@ -513,7 +527,7 @@ func _keep_infinite_rings_in_reach() -> void:
 	if width > available_width:
 		spacing = max(MIN_RING_SPACING, available_width / float(max(1, count - 1)))
 		width = spacing * float(max(0, count - 1))
-	var reach: float = min(INFINITE_RING_REACH_DISTANCE, max(width * 0.5 + spacing, 42.0))
+	var reach: float = min(INFINITE_RING_REACH_DISTANCE, max(width * 0.5 + spacing * 2.2, 68.0))
 	var low: float = max(min_radius, ball_dist - reach)
 	var high: float = min(max_radius, ball_dist + reach)
 	if high - low < width:
@@ -530,8 +544,11 @@ func _keep_infinite_rings_in_reach() -> void:
 		var current_radius: float = float(ring.get("radius", target_radius))
 		var too_far: bool = abs(current_radius - ball_dist) > reach or current_radius < min_radius or current_radius > max_radius
 		if too_far or abs(current_radius - target_radius) > MIN_RING_SPACING * 1.25:
-			ring["radius"] = target_radius
+			var next_radius: float = move_toward(current_radius, target_radius, 2.4)
+			ring["radius"] = next_radius
 			ring["initial_radius"] = max(float(ring.get("initial_radius", target_radius)), target_radius)
+			if abs(current_radius - next_radius) > 0.5:
+				ring["defeat_grace_until"] = Time.get_ticks_msec() + RING_REPOSITION_GRACE_MSEC
 			rings[index] = ring
 
 
@@ -554,7 +571,7 @@ func _make_infinite_ring(index: int) -> Dictionary:
 		"type": "solid" if is_solid else "normal",
 		"radius": radius,
 		"initial_radius": radius,
-		"closing_speed": float(gameplay_config.get("closing_speed", 0.012)) * randf_range(0.86, 1.2),
+		"closing_speed": float(gameplay_config.get("closing_speed", 0.012)) * randf_range(0.78, 1.08),
 		"rotation": rotation,
 		"rotation_speed": float(gameplay_config.get("rotation_speed", 0.005)) * randf_range(0.86, 1.25) * direction,
 		"gap_start": randf() * TWO_PI,
@@ -567,6 +584,8 @@ func _make_infinite_ring(index: int) -> Dictionary:
 		"min_radius": 4.0,
 		"effect_color": "",
 		"effect_until": 0,
+		"spawned_at": Time.get_ticks_msec(),
+		"defeat_grace_until": Time.get_ticks_msec() + RING_SPAWN_GRACE_MSEC,
 		"rotation_multiplier": 1.0,
 		"closing_multiplier": 1.0,
 	}
@@ -588,6 +607,8 @@ func _update_rings(delta_steps: float) -> void:
 			ring["closing_multiplier"] = 1.0
 		var rotation_multiplier := float(ring.get("rotation_multiplier", 1.0))
 		var closing_multiplier := float(ring.get("closing_multiplier", 1.0))
+		if now < int(ring.get("defeat_grace_until", 0)):
+			closing_multiplier *= 0.28
 		ring["rotation"] = _normalize_angle(float(ring["rotation"]) + float(ring["rotation_speed"]) * delta_steps * rotation_multiplier)
 		ring["radius"] = max(float(ring["min_radius"]), float(ring["radius"]) - float(ring["closing_speed"]) * delta_steps * pacing * closing_multiplier)
 		rings[i] = ring
@@ -817,8 +838,11 @@ func _separate_and_reflect(ring: Dictionary, prev_dist: float) -> void:
 
 
 func _is_ball_crushed() -> bool:
+	var now := Time.get_ticks_msec()
 	for ring in rings:
 		if String(ring.get("status", "")) != "active" or int(ring.get("hp", 0)) <= 0:
+			continue
+		if now < int(ring.get("defeat_grace_until", 0)):
 			continue
 		var collision := _check_ring_collision(ring)
 		if bool(collision["gap"]) or not bool(collision["overlap"]):
@@ -1825,9 +1849,9 @@ func _base_ring_spawn_delay() -> float:
 
 func _effective_ring_pacing() -> float:
 	var active := _active_ring_count()
-	var many_ring_bonus := clampf(float(max(0, active - 8)) * 0.018, 0.0, 0.22)
-	var delay_bonus := clampf((1.12 - ring_spawn_delay) * 0.2, 0.0, 0.14)
-	return clampf(ring_pacing_multiplier + many_ring_bonus + delay_bonus, 1.0, 1.72)
+	var many_ring_bonus := clampf(float(max(0, active - 8)) * 0.01, 0.0, 0.12)
+	var delay_bonus := clampf((1.12 - ring_spawn_delay) * 0.12, 0.0, 0.08)
+	return clampf(ring_pacing_multiplier + many_ring_bonus + delay_bonus, 0.92, 1.34 if is_infinite else 1.42)
 
 
 func _register_ring_clear() -> void:
@@ -1835,13 +1859,13 @@ func _register_ring_clear() -> void:
 	var elapsed_since_clear := now - last_ring_clear_msec
 	rapid_clear_streak = rapid_clear_streak + 1 if elapsed_since_clear <= 1800 else 1
 	last_ring_clear_msec = now
-	ring_spawn_delay = clampf(ring_spawn_delay - 0.075 - float(max(0, _active_ring_count() - 10)) * 0.004, 0.32, _base_ring_spawn_delay())
+	ring_spawn_delay = clampf(ring_spawn_delay - 0.052 - float(max(0, _active_ring_count() - 10)) * 0.002, 0.42, _base_ring_spawn_delay())
 	if is_infinite:
-		var quick_bonus := 0.32 if elapsed_since_clear <= 1150 else 0.16
-		infinite_clear_pressure = clampf(infinite_clear_pressure + quick_bonus + float(max(0, rapid_clear_streak - 3)) * 0.035, 0.0, 8.0)
-		ring_pacing_multiplier = clampf(1.0 + rapid_clear_streak * 0.085 + infinite_clear_pressure * 0.035, 1.0, 1.95)
+		var quick_bonus := 0.20 if elapsed_since_clear <= 1150 else 0.10
+		infinite_clear_pressure = clampf(infinite_clear_pressure + quick_bonus + float(max(0, rapid_clear_streak - 3)) * 0.018, 0.0, 8.0)
+		ring_pacing_multiplier = clampf(0.96 + rapid_clear_streak * 0.045 + infinite_clear_pressure * 0.018, 0.96, 1.42)
 	else:
-		ring_pacing_multiplier = clampf(1.0 + rapid_clear_streak * 0.07, 1.0, 1.55)
+		ring_pacing_multiplier = clampf(0.96 + rapid_clear_streak * 0.048, 0.96, 1.36)
 
 
 func _combo_coin_multiplier() -> float:
@@ -1958,6 +1982,8 @@ func _is_run_upgrade_available(upgrade: Dictionary, unlocked: Array) -> bool:
 		return unlocked.has(id)
 	if not unlocked.has(id):
 		return false
+	if MainPortData.auto_run_upgrade_ids().has(id):
+		return true
 	var explicit_unlocks: Array = GameState.data.get("explicit_unlocked_run_upgrades", [])
 	if explicit_unlocks.has(id):
 		return true
@@ -2404,21 +2430,23 @@ func _bounce_arena_edge() -> void:
 
 
 func _clamp_ring_spacing() -> void:
-	var inner_active: Dictionary = {}
+	var active_indices := _active_ring_indices_by_radius()
+	if active_indices.is_empty():
+		return
 	var max_radius := _playable_ring_max_radius()
-	for i in range(rings.size()):
-		var ring := rings[i]
-		if String(ring.get("status", "")) != "active":
-			continue
-		var min_radius := float(ring["min_radius"])
-		if not inner_active.is_empty():
-			min_radius = max(min_radius, float(inner_active["radius"]) + max(MIN_RING_SPACING, float(inner_active["thickness"]) / 2.0 + float(ring["thickness"]) / 2.0 + 2.5))
-		if float(ring["radius"]) < min_radius:
-			ring["radius"] = min_radius
-		if float(ring["radius"]) > max_radius:
-			ring["radius"] = max_radius
-		rings[i] = ring
-		inner_active = ring
+	var playable_width := max_radius - _playable_ring_min_radius()
+	var spacing := MIN_RING_SPACING
+	if active_indices.size() > 1:
+		spacing = min(spacing, playable_width / float(active_indices.size() - 1))
+	var previous_radius: float = -INF
+	for index in active_indices:
+		var ring: Dictionary = rings[index]
+		var min_radius: float = maxf(float(ring.get("min_radius", INNER_RADIUS)), previous_radius + maxf(spacing, float(ring.get("thickness", 5.0)) + 2.0))
+		if min_radius > max_radius:
+			min_radius = max_radius
+		ring["radius"] = clampf(float(ring.get("radius", min_radius)), min_radius, max_radius)
+		rings[index] = ring
+		previous_radius = float(ring["radius"])
 
 
 func _is_angle_inside_gap(angle: float, ring: Dictionary, padding := 0.0) -> bool:
@@ -2444,10 +2472,10 @@ func _clamp_vector_speed(value: Vector2, min_speed: float, max_speed: float) -> 
 
 
 func _update_arena_metrics() -> void:
-	var gameplay_top := 228.0
-	var gameplay_bottom := 104.0
-	arena_size = min(size.x - 26.0, size.y - gameplay_top - gameplay_bottom)
-	arena_size = clampf(arena_size, 230.0, 500.0)
+	var gameplay_top := 206.0
+	var gameplay_bottom := 94.0
+	arena_size = min(size.x - 18.0, size.y - gameplay_top - gameplay_bottom)
+	arena_size = clampf(arena_size, 250.0, 540.0)
 	arena_center = Vector2(size.x / 2.0, gameplay_top + arena_size / 2.0)
 	outer_radius = arena_size / 2.0 - 8.0
 

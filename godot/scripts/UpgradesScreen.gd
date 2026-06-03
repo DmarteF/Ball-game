@@ -65,6 +65,7 @@ func _build_background() -> void:
 
 
 func _build_screen() -> void:
+	_ensure_available_permanent_unlocks()
 	var root := VBoxContainer.new()
 	root.anchor_left = 0.0
 	root.anchor_top = 0.0
@@ -93,11 +94,48 @@ func _build_screen() -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 16)
 	scroll.add_child(list)
+	list.add_child(_make_label("PERMANENTES DISPONIVEIS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var visible_upgrades := _visible_permanent_upgrade_list()
+	if visible_upgrades.is_empty():
+		list.add_child(_make_empty_upgrade_message())
+	for upgrade in visible_upgrades:
+		list.add_child(_make_upgrade_card(upgrade))
 	list.add_child(_make_upgrade_summary())
-	list.add_child(_make_label("PERMANENTES", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+
+
+func _ensure_available_permanent_unlocks() -> void:
+	var changed := false
+	var max_phase := int(GameState.data.get("max_unlocked_phase", GameState.data.get("current_phase", 1)))
+	var profile_level := int(GameState.data.get("level", 1))
+	for id in GameState.PERMANENT_UPGRADE_DEFS.keys():
+		var definition: Dictionary = GameState.PERMANENT_UPGRADE_DEFS[id]
+		var available := max_phase >= int(definition.get("phase", 999)) or profile_level >= int(definition.get("level", 999))
+		if available and not GameState.is_upgrade_unlocked(String(id)):
+			GameState.unlock_upgrade(String(id))
+			changed = true
+	if changed:
+		GameState.refresh_unlocks(false)
+
+
+func _visible_permanent_upgrade_list() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
 	for upgrade in _permanent_upgrade_list():
 		if GameState.is_upgrade_unlocked(String(upgrade["id"])):
-			list.add_child(_make_upgrade_card(upgrade))
+			result.append(upgrade)
+	return result
+
+
+func _make_empty_upgrade_message() -> PanelContainer:
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _make_style("#ffffff10", 14, "#ffffff22", 1))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 16)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 16)
+	margin.add_theme_constant_override("margin_bottom", 18)
+	card.add_child(margin)
+	margin.add_child(_make_label("Nenhuma melhoria permanente disponivel ainda.", 14, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	return card
 
 
 func _make_upgrade_summary() -> PanelContainer:

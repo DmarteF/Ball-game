@@ -518,3 +518,30 @@ Checklist:
 | Level-up permite repetição aleatória | Sim |
 | Infinito não alinha vários gaps no mesmo lado | Sim |
 | Bolinha é mantida dentro da arena após colisão | Sim |
+
+## 7.12 Ajustes de justiça de gameplay
+
+Correções aplicadas:
+
+- O botão/aviso de recompensas pendentes do menu principal foi convertido em overlay persistente e clicável, direcionando para a tela de conquistas.
+- `UpgradesScreen.gd` repara os desbloqueios permanentes disponíveis antes de renderizar, então os cards de upgrade permanente não desaparecem por save antigo.
+- `GameState.refresh_unlocks` libera sempre os 6 temporários-base usados no level-up; temporários extras continuam dependendo de desbloqueio explícito.
+- A área jogável foi ampliada reduzindo margem, aumentando o fator de raio útil e baixando um pouco o topo reservado ao HUD.
+- O infinito começa sem anel sólido obrigatório e a leva inicial também usa gaps aleatórios.
+- O gerador infinito passa a usar menos anéis simultâneos no começo, maior espaçamento e fechamento mais gradual.
+- Reposicionamento de anéis do infinito agora é gradual, com graça temporária de derrota quando o raio é ajustado.
+- `_clamp_ring_spacing` foi refeito para ordenar por raio real antes de aplicar espaçamento, evitando que um anel novo empurre outro de forma injusta.
+- A derrota por esmagamento agora exige contato contínuo por uma pequena janela, reduzindo perdas instantâneas por spawn/fechamento.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Recompensas pendentes abrem conquistas | Sim |
+| Permanentes disponíveis aparecem para compra/upgrade | Sim |
+| Level-up sorteia os 6 temporários-base desbloqueados | Sim |
+| Infinito com mais espaço útil | Sim |
+| Infinito sem sólido inicial obrigatório | Sim |
+| Anéis novos têm janela de segurança | Sim |
+| Perda por esmagamento exige confirmação curta | Sim |
+| Espaçamento corrigido por raio | Sim |

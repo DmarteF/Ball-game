@@ -173,7 +173,10 @@ func released_run_upgrade_ids() -> Array[String]:
 	return result
 
 func auto_run_upgrade_ids() -> Array[String]:
-	return AUTO_RUN_UPGRADE_IDS.duplicate()
+	var result: Array[String] = []
+	for id in AUTO_RUN_UPGRADE_IDS:
+		result.append(String(id))
+	return result
 
 func is_released_run_upgrade(id: String) -> bool:
 	return released_run_upgrade_ids().has(id)

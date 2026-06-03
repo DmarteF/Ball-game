@@ -344,3 +344,15 @@ Checklist:
 | Level-up podia parecer vazio até rolar | Modal maior, cards menores e preenchimento com repetição aleatória quando necessário | Corrigido |
 | Anéis do infinito começavam com vários gaps no mesmo lado | `_make_infinite_ring` usa gap aleatório e `_keep_infinite_rings_in_reach` não realinha abertura | Corrigido |
 | Bolinha podia escapar da arena em colisões rápidas | `_bounce_arena_edge` revalida posição após colisão e estabiliza velocidade | Corrigido |
+
+## 7.12 Correções de teste: menu, upgrades e física
+
+| Problema observado | Ajuste no Godot | Status |
+| --- | --- | --- |
+| Clicar no aviso de recompensas da tela inicial não abria conquistas | Aviso virou overlay persistente com handler diferido para `Achievements.tscn` | Corrigido |
+| Upgrades permanentes disponíveis sumiam da tela | `UpgradesScreen.gd` repara desbloqueios permanentes disponíveis antes de montar cards | Corrigido |
+| Level-up mostrava poucas opções apesar de haver upgrades base disponíveis | `GameState.refresh_unlocks` libera os 6 temporários-base e o filtro do level-up aceita esses ids | Corrigido |
+| Infinito parecia curto/apertado | Área útil e alcance radial foram ampliados; anéis simultâneos iniciais reduzidos | Ajustado |
+| Perda acontecia do nada por spawn/fechamento | Anéis novos/reposicionados têm graça de derrota e esmagamento precisa persistir brevemente | Corrigido |
+| Anéis podiam empurrar outros pela ordem interna da lista | `_clamp_ring_spacing` agora ordena por raio antes de aplicar espaçamento | Corrigido |
+| Infinito começava com possível anel sólido/armadilha | Lote inicial do infinito não cria sólido obrigatório e randomiza gaps | Corrigido |

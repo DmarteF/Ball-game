@@ -730,3 +730,32 @@ Checklist:
 | Level-up permite repetição aleatória de upgrades | Sim |
 | Gaps do modo infinito são aleatórios | Sim |
 | Bolinha não deve escapar da arena | Sim |
+
+## 7.13 Correções de recompensas, upgrades e morte injusta
+
+Atualizado nesta etapa:
+
+- O aviso de recompensas/conquistas pendentes saiu do `VBox` apertado do topo e virou um overlay clicável fixo na tela inicial.
+- O aviso não some automaticamente depois de alguns segundos; tocar/clicar nele abre `Achievements.tscn`.
+- A tela `Upgrades` repara saves antigos antes de renderizar e mostra cards permanentes disponíveis/desbloqueados no topo da lista.
+- Upgrades permanentes bloqueados continuam escondidos como cards, mas entram no contador de bloqueados/disponíveis para desbloqueio futuro.
+- Os 6 upgrades temporários-base ficam realmente liberados para sorteio de level-up: `damage`, `speed`, `coinBoost`, `critical`, `xpBoost` e `perfectChance`.
+- O modo infinito recebeu área útil maior, menos anéis simultâneos no começo e gaps aleatórios também na leva inicial.
+- Anéis novos ou reposicionados têm uma janela curta de segurança antes de poder causar derrota.
+- A derrota por esmagamento precisa persistir por alguns frames/milissegundos, evitando game over instantâneo por spawn/rearranjo.
+- O espaçamento dos anéis agora é corrigido por ordem real de raio, não pela ordem interna da lista.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Aviso de recompensas abre Conquistas | Sim |
+| Aviso de recompensas não some sozinho | Sim |
+| Upgrades permanentes disponíveis aparecem no topo | Sim |
+| Upgrades permanentes bloqueados ficam sem card | Sim |
+| Seis temporários-base entram no sorteio de level-up | Sim |
+| Infinito com área útil maior | Sim |
+| Infinito começa sem anel sólido obrigatório | Sim |
+| Gaps iniciais do infinito aleatórios | Sim |
+| Anéis novos não matam imediatamente | Sim |
+| Clamp de anéis por raio real | Sim |
