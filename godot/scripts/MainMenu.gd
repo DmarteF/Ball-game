@@ -143,6 +143,10 @@ func _build_top_bar() -> void:
 	resources.add_child(_make_resource_pill("gem", str(GameState.data.get("diamonds", 0))))
 	resources.add_child(_make_resource_pill("key", str(GameState.data.get("keys", 0))))
 
+	var pending := _pending_achievement_count()
+	if pending > 0:
+		top_bar.add_child(_make_achievement_notice(pending))
+
 
 func _build_content() -> void:
 	var content := VBoxContainer.new()
@@ -195,6 +199,39 @@ func _build_content() -> void:
 	primary_row.add_child(skins)
 
 
+func _pending_achievement_count() -> int:
+	GameState._update_achievements(false)
+	var count := 0
+	for id in Dictionary(GameState.data.get("achievements", {})).keys():
+		var state: Dictionary = GameState.data["achievements"][id]
+		if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
+			count += 1
+	return count
+
+
+func _make_achievement_notice(count: int) -> Button:
+	var button := Button.new()
+	_clear_button_styles(button)
+	button.custom_minimum_size.y = 44
+	button.focus_mode = Control.FOCUS_NONE
+	_apply_button_style(button, _make_style("#ffd70022", 12, "#ffd700aa", 1, "#ffd70077", 10))
+	button.pressed.connect(_open_scene.bind(ACHIEVEMENTS_SCENE))
+	var row := HBoxContainer.new()
+	_fill(row)
+	row.offset_left = 10
+	row.offset_right = -10
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(row)
+	row.add_child(_make_icon("achievements", 24, Color("#ffd700")))
+	var language := String(GameState.get_setting("language", "en"))
+	var text := "Achievement unlocked" if not language.begins_with("pt") else "Conquista desbloqueada"
+	var detail := "Claim your reward" if not language.begins_with("pt") else "Colete sua recompensa"
+	row.add_child(_make_label("%s • %s (%s)" % [text, detail, count], 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return button
+
+
 func _build_more_button() -> void:
 	var more_button := Button.new()
 	_clear_button_styles(more_button)
@@ -221,7 +258,7 @@ func _build_more_button() -> void:
 	var icon := _make_icon("menu", 26, Color("#001018"))
 	content.add_child(icon)
 
-	var label := _make_label("More", 11, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var label := _make_label(_menu_label("more"), 11, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	label.custom_minimum_size.x = 64.0
 	content.add_child(label)
 
@@ -262,14 +299,14 @@ func _build_more_modal() -> void:
 	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel_content.add_child(header)
 
-	var title := _make_label("Menu", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var title := _make_label(_menu_label("menu"), 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 
 	var close := Button.new()
 	close.focus_mode = Control.FOCUS_NONE
 	_clear_button_styles(close)
-	close.text = "Close"
+	close.text = _menu_label("close")
 	close.add_theme_color_override("font_color", Color("#ffffffaa"))
 	close.add_theme_font_override("font", _bold_font)
 	close.pressed.connect(_hide_more_modal)
@@ -376,7 +413,7 @@ func _make_play_button() -> Button:
 
 	content.add_child(_make_icon("play", 32, Color("#ffffff")))
 
-	var label := _make_label("PLAY", 30, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var label := _make_label(_menu_label("play").to_upper(), 30, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	label.add_theme_constant_override("letter_spacing", 3)
 	content.add_child(label)
 	return button
@@ -395,7 +432,7 @@ func _make_primary_card(icon_key: String, text: String, color_a: String, color_b
 
 	content.add_child(_make_icon(icon_key, 42))
 
-	var label := _make_label(text, 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var label := _make_label(_menu_label(icon_key).to_upper(), 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	label.add_theme_constant_override("letter_spacing", 1)
 	label.custom_minimum_size.x = 150.0
 	content.add_child(label)
@@ -422,11 +459,50 @@ func _make_more_item(item: Dictionary) -> Button:
 
 	content.add_child(_make_icon(item["icon"], 34))
 
-	var label := _make_label(item["label"], 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var label := _make_label(_menu_label(String(item["icon"])), 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size.x = 132.0
 	content.add_child(label)
 	return button
+
+
+func _menu_label(key: String) -> String:
+	var language := String(GameState.get_setting("language", "en"))
+	var pt := language.begins_with("pt")
+	match key:
+		"more":
+			return "Mais" if pt else "More"
+		"menu":
+			return "Menu"
+		"close":
+			return "Fechar" if pt else "Close"
+		"play":
+			return "Jogar" if pt else "Play"
+		"upgrades":
+			return "Melhorias" if pt else "Upgrades"
+		"skins":
+			return "Skins"
+		"shop":
+			return "Loja" if pt else "Shop"
+		"inventory":
+			return "Inventário" if pt else "Inventory"
+		"missions":
+			return "Missões" if pt else "Missions"
+		"event":
+			return "Evento" if pt else "Event"
+		"wheel":
+			return "Roleta" if pt else "Wheel"
+		"daily_reward":
+			return "Recompensa diária" if pt else "Daily Reward"
+		"boss":
+			return "Boss"
+		"league":
+			return "Liga Neon" if pt else "Neon League"
+		"achievements":
+			return "Conquistas" if pt else "Achievements"
+		"settings":
+			return "Configurações" if pt else "Settings"
+	return key
 
 
 func _make_gradient_button(

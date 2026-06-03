@@ -247,10 +247,19 @@ func _add_ring(state: Dictionary) -> void:
 	var ball: Vector2 = state["ball"]
 	var arena_radius := float(state["arena_radius"])
 	var ball_dist := (ball - center).length()
-	var radius := clampf(arena_radius - 4.0 - active * MIN_RING_SPACING, ball_dist + 26.0, arena_radius - 3.0)
+	var max_radius := arena_radius - 3.0
+	var min_radius := clampf(ball_dist + 24.0, 18.0, max_radius - MIN_RING_SPACING)
+	var far_radius := clampf(ball_dist + 120.0, min_radius + MIN_RING_SPACING, max_radius)
+	if ball_dist > max_radius - 24.0:
+		min_radius = max(18.0, ball_dist - 120.0)
+		far_radius = max(18.0 + MIN_RING_SPACING, ball_dist - 24.0)
+	var radius := clampf(arena_radius - 4.0 - active * MIN_RING_SPACING, min_radius, far_radius)
 	for ring in Array(state["rings"]):
 		if String(ring.get("status", "")) == "active" and abs(float(ring.get("radius", 0.0)) - radius) < MIN_RING_SPACING:
-			radius = min(arena_radius - 3.0, float(ring.get("radius", 0.0)) + MIN_RING_SPACING)
+			var outward := float(ring.get("radius", 0.0)) + MIN_RING_SPACING
+			var inward := float(ring.get("radius", 0.0)) - MIN_RING_SPACING
+			radius = outward if outward <= far_radius else inward
+	radius = clampf(radius, 18.0, max_radius)
 	var index := int(state.get("spawned", 0))
 	state["spawned"] = index + 1
 	var rings: Array = state["rings"]

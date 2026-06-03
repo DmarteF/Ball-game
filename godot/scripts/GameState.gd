@@ -480,47 +480,58 @@ func shop_claim(action_id: String) -> Dictionary:
 			if not spend_coins(100):
 				return { "ok": false, "reason": "coins" }
 			add_inventory_item("chest_common", "chest", "Common Chest", "common", 1)
+			result["reward"] = { "type": "chest", "chest_type": "common", "amount": 1 }
 			result["text"] = "+1 common chest"
 		"rare_chest":
 			if not spend_diamonds(40):
 				return { "ok": false, "reason": "diamonds" }
 			add_inventory_item("chest_rare", "chest", "Rare Chest", "rare", 1)
+			result["reward"] = { "type": "chest", "chest_type": "rare", "amount": 1 }
 			result["text"] = "+1 rare chest"
 		"epic_chest":
 			if not spend_diamonds(120):
 				return { "ok": false, "reason": "diamonds" }
 			add_inventory_item("chest_epic", "chest", "Epic Chest", "epic", 1)
+			result["reward"] = { "type": "chest", "chest_type": "epic", "amount": 1 }
 			result["text"] = "+1 epic chest"
 		"legendary_chest":
 			if int(data.get("legendary_keys", 0)) < 1:
 				return { "ok": false, "reason": "legendary_key" }
 			data["legendary_keys"] = int(data.get("legendary_keys", 0)) - 1
 			add_inventory_item("chest_legendary", "chest", "Legendary Chest", "legendary", 1)
+			result["reward"] = { "type": "chest", "chest_type": "legendary", "amount": 1 }
 			result["text"] = "+1 legendary chest"
 		"keys_pack":
 			if not spend_diamonds(80):
 				return { "ok": false, "reason": "diamonds" }
 			data["keys"] = int(data.get("keys", 0)) + 6
+			result["reward"] = { "type": "keys", "amount": 6 }
 			result["text"] = "+6 keys"
 		"legendary_keys_pack":
 			if not spend_diamonds(180):
 				return { "ok": false, "reason": "diamonds" }
 			data["legendary_keys"] = int(data.get("legendary_keys", 0)) + 2
+			result["reward"] = { "type": "legendary_keys", "amount": 2 }
 			result["text"] = "+2 legendary keys"
 		"ad_gems":
 			data["diamonds"] = int(data.get("diamonds", 0)) + 12
+			result["reward"] = { "type": "diamonds", "amount": 12 }
 			result["text"] = "+12 diamonds"
 		"ad_coins":
 			data["coins"] = int(data.get("coins", 0)) + 300
+			result["reward"] = { "type": "coins", "amount": 300 }
 			result["text"] = "+300 coins"
 		"ad_key":
 			data["keys"] = int(data.get("keys", 0)) + 1
+			result["reward"] = { "type": "keys", "amount": 1 }
 			result["text"] = "+1 key"
 		"ad_chest":
 			add_inventory_item("chest_common", "chest", "Common Chest", "common", 1)
+			result["reward"] = { "type": "chest", "chest_type": "common", "amount": 1 }
 			result["text"] = "+1 common chest"
 		_:
 			data["diamonds"] = int(data.get("diamonds", 0)) + 10
+			result["reward"] = { "type": "diamonds", "amount": 10 }
 			result["text"] = "Mock purchase +10 diamonds"
 	_increment_stat("storePurchases", 1, false)
 	_progress_missions("storePurchases", 1)
@@ -555,7 +566,7 @@ func claim_daily_mission(id: String) -> Dictionary:
 		data["daily_missions"] = daily
 		data["last_reward_text"] = text
 		save_game()
-		return { "ok": true, "text": text }
+		return { "ok": true, "reward": definition["reward"], "text": text }
 	return { "ok": false, "reason": "missing" }
 
 
@@ -574,7 +585,7 @@ func claim_achievement(id: String) -> Dictionary:
 	data["achievements"] = achievements
 	data["last_reward_text"] = text
 	save_game()
-	return { "ok": true, "text": text }
+	return { "ok": true, "reward": definition.get("reward", {}), "text": text }
 
 
 func _achievement_def(id: String) -> Dictionary:

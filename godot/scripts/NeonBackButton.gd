@@ -8,7 +8,7 @@ const CONTENT_BOTTOM_PADDING := 92.0
 
 static func add_to(parent: Control, target: Callable) -> Button:
 	var button := Button.new()
-	button.text = "Back"
+	button.text = _label()
 	button.custom_minimum_size = Vector2(WIDTH, HEIGHT)
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -32,6 +32,14 @@ static func add_to(parent: Control, target: Callable) -> Button:
 	button.pressed.connect(target)
 	parent.add_child(button)
 	return button
+
+
+static func _label() -> String:
+	if Engine.has_singleton("LocalizationManager"):
+		return LocalizationManager.tr_key("back")
+	if Engine.get_main_loop() and Engine.get_main_loop().root.has_node("LocalizationManager"):
+		return Engine.get_main_loop().root.get_node("LocalizationManager").tr_key("back")
+	return "Back"
 
 
 static func reserve_footer_space(control: Control) -> void:

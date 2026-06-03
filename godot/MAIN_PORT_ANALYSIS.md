@@ -119,3 +119,52 @@ No Godot:
 | Spawn seguro no infinito | Sim |
 | Spawn seguro na Liga Neon | Sim |
 | Recompensa pequena ao sair/quitar | Sim para Liga e estrutura criada para modos |
+
+## 7.4 Polimento de localizacao, recompensas e aneis
+
+Atualizado nesta etapa:
+
+- `LocalizationManager.gd` recebeu termos compartilhados para Back/Voltar, Close/Fechar, loja, inventario, missoes, roleta, conquistas, botoes de compra/coleta/abrir/anuncio e estados vazios.
+- `NeonBackButton.gd` agora usa a traducao ativa em vez de texto fixo `Back`.
+- `MainMenu.gd` traduz o modal `More/Menu`, itens internos e adiciona uma barra discreta de conquista pendente quando existe recompensa de conquista para coletar. Clicar nela abre `Achievements.tscn`.
+- `VisualFeatureScreen.gd` recebeu loja com custo visual por icone de recurso, botoes diferenciados entre comprar, abrir, coletar, ver anuncio e usado, estados vazios traduzidos e modal de recompensa obtida.
+- A roleta visual agora mostra premios ao redor, anima giro antes de entregar a recompensa e abre modal de resultado.
+- Inventario, missoes e conquistas mostram recompensa/progresso de forma mais clara e usam o modal de recompensa ao coletar/abrir.
+- `GameplayManager.gd` calcula o angulo de colisao no ponto real em que o segmento da bolinha cruza o raio do anel. Isso reduz falhas ao passar pelo gap em alta velocidade.
+- Spawn de aneis foi ajustado para manter raios em distancia minima/maxima atingivel pela bolinha, inclusive quando ela esta perto da borda.
+- `LeagueBattleScreen.gd` recebeu spawn mais justo nas duas arenas menores.
+
+Checklist desta etapa:
+
+| Item | Status |
+| --- | --- |
+| Back traduzido para Voltar | Sim |
+| Todas as abas da loja traduzidas | Sim |
+| Loja mostra custo com icone correto | Sim |
+| Loja diferencia Comprar/Abrir/Gratis/Ver anuncio | Sim |
+| Roleta tem varios premios visiveis | Sim |
+| Roleta gira com animacao real | Sim |
+| Roleta mostra resultado bonito | Sim |
+| Inventario traduzido | Sim |
+| Inventario mostra recompensas obtidas claramente | Sim |
+| Bau mostra modal bonito com itens ganhos | Sim |
+| Missoes traduzidas e polidas | Sim |
+| Missoes mostram recompensa claramente | Sim |
+| Conquistas traduzidas e polidas | Sim |
+| Conquista aparece como barra/notificacao na tela inicial | Sim |
+| Clicar na barra leva para Conquistas | Sim |
+| Gap dos aneis detecta passagem corretamente | Sim |
+| Bolinha nao bate mais no vacuo por spawn fora de alcance | Sim, mitigado com spawn atingivel e colisao por segmento |
+| Aneis do infinito sempre nascem acertaveis | Sim, mitigado por raio minimo/maximo em relacao a bolinha |
+| Modo infinito mostra tempo de sobrevivencia | Sim |
+| Modo infinito recompensa ao morrer/sair | Sim |
+| Spawn justo implementado no normal | Sim |
+| Spawn justo implementado no infinito | Sim |
+| Spawn justo implementado na Liga Neon | Sim |
+| Recompensas sempre tem feedback visual claro | Sim para loja, bau, roleta, diaria, missoes e conquistas; resultados de fase/Liga ja tinham modal/resumo proprio. |
+
+Pendencias conhecidas:
+
+- Ainda falta comparacao visual pixel a pixel contra os prints/main para cada card interno.
+- Alguns textos de dados importados da `main` continuam com nomes originais de skin/upgrade em ingles porque sao nomes proprios do conteudo.
+- A roleta entrega recompensa real e anima, mas ainda nao replica uma geometria circular perfeita com fatias desenhadas; usa segmentos visuais leves para Web.

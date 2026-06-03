@@ -448,7 +448,6 @@ func _update_rings(delta_steps: float) -> void:
 
 
 func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2, next_pos: Vector2) -> void:
-	var angle := _segment_angle_at_crossing(prev_pos, next_pos, 0.5)
 	for i in range(rings.size()):
 		var ring := rings[i]
 		if String(ring.get("status", "")) != "active" or String(ring.get("type", "normal")) == "solid":
@@ -456,6 +455,7 @@ func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2
 		var radius := float(ring["radius"])
 		var crossed: bool = (prev_dist - radius) * (next_dist - radius) <= 0.0
 		var near: bool = abs(next_dist - radius) <= BALL_RADIUS + abs(next_dist - prev_dist) + float(ring["thickness"])
+		var angle := _segment_angle_for_radius(prev_pos, next_pos, radius)
 		if crossed and near and _is_angle_inside_gap(angle, ring, min(0.06, BALL_RADIUS / max(1.0, radius))):
 			_try_apply_skin_effect(i, "perfect")
 			_try_apply_upgrade_effects(i, "perfect", 0)
@@ -542,23 +542,39 @@ func _check_ring_collision(ring: Dictionary, prev_dist := -1.0, next_dist := -1.
 	var dist_from_center := offset.length()
 	var dist_from_ring: float = abs(dist_from_center - float(ring["radius"]))
 	var overlapping: bool = dist_from_ring <= float(ring["thickness"]) / 2.0 + BALL_RADIUS
+	var radius := float(ring["radius"])
 	if prev_dist >= 0.0 and next_dist >= 0.0:
-		var radius := float(ring["radius"])
 		var crossed: bool = (prev_dist - radius) * (next_dist - radius) <= 0.0
 		var swept_near: bool = abs(next_dist - prev_dist) + BALL_RADIUS + float(ring["thickness"]) >= min(abs(prev_dist - radius), abs(next_dist - radius))
 		overlapping = overlapping or (crossed and swept_near)
 	var angle: float = _normalize_angle(offset.angle())
 	if prev_pos != Vector2.ZERO or next_pos != Vector2.ZERO:
-		angle = _segment_angle_at_crossing(prev_pos, next_pos, 0.5)
+		angle = _segment_angle_for_radius(prev_pos, next_pos, radius)
 	var padding: float = min(0.08, BALL_RADIUS / max(1.0, float(ring["radius"])))
 	var in_gap: bool = false if String(ring.get("type", "normal")) == "solid" else _is_angle_inside_gap(angle, ring, padding)
 	return { "overlap": overlapping, "gap": in_gap, "dist": dist_from_ring, "angle": angle }
 
 
-func _segment_angle_at_crossing(prev_pos: Vector2, next_pos: Vector2, fallback_t: float) -> float:
+func _segment_angle_for_radius(prev_pos: Vector2, next_pos: Vector2, radius: float) -> float:
 	var start := prev_pos - arena_center
 	var end := next_pos - arena_center
-	var t := clampf(fallback_t, 0.0, 1.0)
+	var delta := end - start
+	var t := 0.5
+	var a := delta.dot(delta)
+	var b := 2.0 * start.dot(delta)
+	var c := start.dot(start) - radius * radius
+	if a > 0.0001:
+		var disc := b * b - 4.0 * a * c
+		if disc >= 0.0:
+			var root := sqrt(disc)
+			var t1 := (-b - root) / (2.0 * a)
+			var t2 := (-b + root) / (2.0 * a)
+			if t1 >= 0.0 and t1 <= 1.0:
+				t = t1
+			elif t2 >= 0.0 and t2 <= 1.0:
+				t = t2
+			else:
+				t = clampf((radius - start.length()) / max(0.001, end.length() - start.length()), 0.0, 1.0)
 	var point := start.lerp(end, t)
 	if point.length() <= 0.01:
 		point = ball_position - arena_center
@@ -986,15 +1002,21 @@ func _active_ring_count() -> int:
 
 func _safe_spawn_radius(preferred_radius: float) -> float:
 	var ball_dist: float = (ball_position - arena_center).length()
-	var min_from_ball: float = max(INNER_RADIUS, ball_dist + MIN_SPAWN_DISTANCE_FROM_BALL)
-	var max_from_ball: float = min(outer_radius - 2.0, max(min_from_ball + MIN_RING_SPACING, ball_dist + MAX_SPAWN_DISTANCE_FROM_BALL))
+	var max_arena_radius := outer_radius - 2.0
+	var min_from_ball: float = clampf(ball_dist + MIN_SPAWN_DISTANCE_FROM_BALL, INNER_RADIUS, max_arena_radius - MIN_RING_SPACING)
+	var max_from_ball: float = clampf(ball_dist + MAX_SPAWN_DISTANCE_FROM_BALL, min_from_ball + MIN_RING_SPACING, max_arena_radius)
+	if ball_dist > max_arena_radius - MIN_SPAWN_DISTANCE_FROM_BALL:
+		min_from_ball = max(INNER_RADIUS, ball_dist - MAX_SPAWN_DISTANCE_FROM_BALL)
+		max_from_ball = max(INNER_RADIUS + MIN_RING_SPACING, ball_dist - MIN_SPAWN_DISTANCE_FROM_BALL)
 	var radius: float = clampf(preferred_radius, min_from_ball, max_from_ball)
 	for ring in rings:
 		if String(ring.get("status", "")) != "active":
 			continue
 		if abs(float(ring.get("radius", 0.0)) - radius) < MIN_RING_SPACING:
-			radius = min(outer_radius - 2.0, float(ring.get("radius", 0.0)) + MIN_RING_SPACING)
-	return clampf(radius, INNER_RADIUS, outer_radius - 2.0)
+			var outward := float(ring.get("radius", 0.0)) + MIN_RING_SPACING
+			var inward := float(ring.get("radius", 0.0)) - MIN_RING_SPACING
+			radius = outward if outward <= max_from_ball else inward
+	return clampf(radius, INNER_RADIUS, max_arena_radius)
 
 
 func _base_damage() -> int:

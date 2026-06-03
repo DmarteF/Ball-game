@@ -121,10 +121,10 @@ const SHOP_TABS := [
 		"label": "Baús",
 		"section": "COMPRAR E ABRIR",
 		"cards": [
-			{ "title": "Baú Comum", "desc": "Recompensas básicas, moedas e chance de skin comum.", "icon": "chest_common", "button": "ABRIR", "tone": "#9ca3af", "price": "100", "action": "common_chest" },
-			{ "title": "Baú Raro", "desc": "Chance maior de diamantes, itens raros e efeitos.", "icon": "chest_rare", "button": "ABRIR", "tone": "#00aaff", "price": "40", "action": "rare_chest" },
-			{ "title": "Baú Épico", "desc": "Recompensas melhores e chance de skins épicas.", "icon": "chest_epic", "button": "ABRIR", "tone": "#b000ff", "price": "120", "action": "epic_chest" },
-			{ "title": "Baú Lendário", "desc": "Skins lendárias, diamantes e itens especiais.", "icon": "chest_legendary", "button": "ABRIR", "tone": "#ffd700", "price": "1", "action": "legendary_chest" },
+			{ "title": "Baú Comum", "desc": "Recompensas básicas, moedas e chance de skin comum.", "icon": "chest_common", "button": "buy", "tone": "#9ca3af", "price": "100", "cost_icon": "coin", "action": "common_chest" },
+			{ "title": "Baú Raro", "desc": "Chance maior de diamantes, itens raros e efeitos.", "icon": "chest_rare", "button": "buy", "tone": "#00aaff", "price": "40", "cost_icon": "gem", "action": "rare_chest" },
+			{ "title": "Baú Épico", "desc": "Recompensas melhores e chance de skins épicas.", "icon": "chest_epic", "button": "buy", "tone": "#b000ff", "price": "120", "cost_icon": "gem", "action": "epic_chest" },
+			{ "title": "Baú Lendário", "desc": "Skins lendárias, diamantes e itens especiais.", "icon": "chest_legendary", "button": "buy", "tone": "#ffd700", "price": "1", "cost_icon": "chest_legendary", "action": "legendary_chest" },
 		],
 	},
 	{
@@ -132,10 +132,10 @@ const SHOP_TABS := [
 		"label": "Diamantes",
 		"section": "PACOTES DE DIAMANTES",
 		"cards": [
-			{ "title": "Pacote pequeno de diamantes", "desc": "Diamantes para baús, skins e ofertas.", "icon": "product_diamonds", "button": "COMPRAR", "tone": "#00ff88", "price": "R$ 4,90" },
-			{ "title": "Pacote médio de diamantes", "desc": "Mais valor para evoluir sua coleção.", "icon": "product_diamonds", "button": "COMPRAR", "tone": "#00ff88", "price": "R$ 9,90" },
-			{ "title": "Oferta diária", "desc": "Pacote visual diário com diamantes e bônus.", "icon": "product_daily", "button": "COMPRAR", "tone": "#ffd700", "price": "R$ 6,90" },
-			{ "title": "Diamantes grátis", "desc": "Recompensa mockada por anúncio.", "icon": "gem", "button": "VER ANÚNCIO", "tone": "#00f0ff", "price": "+12", "action": "ad_gems" },
+			{ "title": "Pacote pequeno de diamantes", "desc": "Diamantes para baús, skins e ofertas.", "icon": "product_diamonds", "button": "buy", "tone": "#00ff88", "price": "R$ 4,90" },
+			{ "title": "Pacote médio de diamantes", "desc": "Mais valor para evoluir sua coleção.", "icon": "product_diamonds", "button": "buy", "tone": "#00ff88", "price": "R$ 9,90" },
+			{ "title": "Oferta diária", "desc": "Pacote visual diário com diamantes e bônus.", "icon": "product_daily", "button": "buy", "tone": "#ffd700", "price": "R$ 6,90" },
+			{ "title": "Diamantes grátis", "desc": "Recompensa mockada por anúncio.", "icon": "gem", "button": "watch_ad", "tone": "#00f0ff", "price": "+12", "cost_icon": "gem", "action": "ad_gems" },
 		],
 	},
 	{
@@ -143,9 +143,9 @@ const SHOP_TABS := [
 		"label": "Chaves",
 		"section": "CHAVES",
 		"cards": [
-			{ "title": "Pacote de chaves", "desc": "+6 chaves raras para abrir recompensas.", "icon": "key", "button": "COMPRAR", "tone": "#00f0ff", "price": "80", "action": "keys_pack" },
-			{ "title": "Chaves lendárias", "desc": "+2 chaves lendárias para baús premium.", "icon": "chest_legendary", "button": "COMPRAR", "tone": "#ffd700", "price": "180", "action": "legendary_keys_pack" },
-			{ "title": "Chave grátis", "desc": "Recompensa mockada por anúncio.", "icon": "key", "button": "VER ANÚNCIO", "tone": "#00ff88", "price": "+1", "action": "ad_key" },
+			{ "title": "Pacote de chaves", "desc": "+6 chaves raras para abrir recompensas.", "icon": "key", "button": "buy", "tone": "#00f0ff", "price": "80", "cost_icon": "gem", "action": "keys_pack" },
+			{ "title": "Chaves lendárias", "desc": "+2 chaves lendárias para baús premium.", "icon": "chest_legendary", "button": "buy", "tone": "#ffd700", "price": "180", "cost_icon": "gem", "action": "legendary_keys_pack" },
+			{ "title": "Chave grátis", "desc": "Recompensa mockada por anúncio.", "icon": "key", "button": "watch_ad", "tone": "#00ff88", "price": "+1", "cost_icon": "key", "action": "ad_key" },
 		],
 	},
 	{
@@ -153,10 +153,10 @@ const SHOP_TABS := [
 		"label": "Recompensas",
 		"section": "OFERTAS ESPECIAIS",
 		"cards": [
-			{ "title": "Pacote inicial", "desc": "Moedas, diamantes e chaves para acelerar o começo.", "icon": "product_starter", "button": "COMPRAR", "tone": "#00f0ff", "price": "R$ 7,90", "action": "mock_paid" },
-			{ "title": "Pacote de skins", "desc": "Visual preparado para liberar skins futuras.", "icon": "product_chests", "button": "COMPRAR", "tone": "#ff00aa", "price": "R$ 12,90", "action": "mock_paid" },
-			{ "title": "Pacote de evento", "desc": "Bundle visual temporário preparado para eventos.", "icon": "product_event", "button": "COMPRAR", "tone": "#00ff88", "price": "R$ 14,90", "action": "mock_paid" },
-			{ "title": "Pacote de baús", "desc": "Baús variados para recompensas futuras.", "icon": "product_chests", "button": "COMPRAR", "tone": "#ffd700", "price": "R$ 9,90", "action": "mock_paid" },
+			{ "title": "Pacote inicial", "desc": "Moedas, diamantes e chaves para acelerar o começo.", "icon": "product_starter", "button": "buy", "tone": "#00f0ff", "price": "R$ 7,90", "action": "mock_paid" },
+			{ "title": "Pacote de skins", "desc": "Visual preparado para liberar skins futuras.", "icon": "product_chests", "button": "buy", "tone": "#ff00aa", "price": "R$ 12,90", "action": "mock_paid" },
+			{ "title": "Pacote de evento", "desc": "Bundle visual temporário preparado para eventos.", "icon": "product_event", "button": "buy", "tone": "#00ff88", "price": "R$ 14,90", "action": "mock_paid" },
+			{ "title": "Pacote de baús", "desc": "Baús variados para recompensas futuras.", "icon": "product_chests", "button": "buy", "tone": "#ffd700", "price": "R$ 9,90", "action": "mock_paid" },
 		],
 	},
 	{
@@ -164,10 +164,10 @@ const SHOP_TABS := [
 		"label": "Baú grátis",
 		"section": "RECOMPENSAS GRÁTIS",
 		"cards": [
-			{ "title": "Diamantes grátis", "desc": "Assista um anúncio mockado para receber diamantes.", "icon": "gem", "button": "VER ANÚNCIO", "tone": "#00ff88", "price": "+12", "action": "ad_gems" },
-			{ "title": "Moedas grátis", "desc": "Assista um anúncio mockado para receber moedas.", "icon": "coin", "button": "VER ANÚNCIO", "tone": "#ffd700", "price": "+300", "action": "ad_coins" },
-			{ "title": "Baú comum grátis", "desc": "Recompensa visual por anúncio.", "icon": "chest_common", "button": "VER ANÚNCIO", "tone": "#00f0ff", "price": "1x", "action": "ad_chest" },
-			{ "title": "Dobrar offline", "desc": "Preparado para dobrar recompensas AFK.", "icon": "product_daily", "button": "VER ANÚNCIO", "tone": "#ff8800", "price": "2x", "action": "ad_coins" },
+			{ "title": "Diamantes grátis", "desc": "Assista um anúncio mockado para receber diamantes.", "icon": "gem", "button": "watch_ad", "tone": "#00ff88", "price": "+12", "cost_icon": "gem", "action": "ad_gems" },
+			{ "title": "Moedas grátis", "desc": "Assista um anúncio mockado para receber moedas.", "icon": "coin", "button": "watch_ad", "tone": "#ffd700", "price": "+300", "cost_icon": "coin", "action": "ad_coins" },
+			{ "title": "Baú comum grátis", "desc": "Recompensa visual por anúncio.", "icon": "chest_common", "button": "watch_ad", "tone": "#00f0ff", "price": "1x", "cost_icon": "chest_common", "action": "ad_chest" },
+			{ "title": "Dobrar offline", "desc": "Preparado para dobrar recompensas AFK.", "icon": "product_daily", "button": "watch_ad", "tone": "#ff8800", "price": "2x", "cost_icon": "coin", "action": "ad_coins" },
 		],
 	},
 ]
@@ -178,6 +178,8 @@ var _shop_tab := "chests"
 var _content: VBoxContainer
 var _shop_tab_buttons: Array[Button] = []
 var _feedback_label: Label
+var _reward_overlay: Control
+var _wheel_prize_ring: Control
 
 
 func _ready() -> void:
@@ -245,10 +247,10 @@ func _populate_content(data: Dictionary) -> void:
 		child.queue_free()
 
 	if screen_id == "shop":
-		_content.add_child(_make_section_title(_current_shop_tab()["section"]))
+		_content.add_child(_make_section_title(_shop_section_label(String(_current_shop_tab()["id"]), String(_current_shop_tab()["section"]))))
 		for card_data in _current_shop_tab()["cards"]:
 			_content.add_child(_make_feature_card(card_data))
-		_content.add_child(_make_section_title("BAÚS GUARDADOS"))
+		_content.add_child(_make_section_title("STORED CHESTS" if _language() == "en" else "BAÚS GUARDADOS"))
 		_content.add_child(_make_inventory_summary())
 	elif screen_id == "inventory":
 		_populate_inventory()
@@ -388,9 +390,13 @@ func _make_empty_state(title: String, desc: String, icon_key: String) -> PanelCo
 
 func _dynamic_empty_title(data: Dictionary) -> String:
 	if screen_id == "boss":
-		return "Boss disponível" if TimeManager.is_boss_available() else "Nenhum boss disponível"
+		return ("Boss available" if _language() == "en" else "Boss disponível") if TimeManager.is_boss_available() else ("No boss available" if _language() == "en" else "Nenhum boss disponível")
 	if screen_id == "daily_reward":
-		return "Recompensa disponível" if TimeManager.can_claim_daily_reward() else "Recompensa diária já coletada"
+		return ("Reward available" if _language() == "en" else "Recompensa disponível") if TimeManager.can_claim_daily_reward() else ("Daily reward already claimed" if _language() == "en" else "Recompensa diária já coletada")
+	if screen_id == "event":
+		return "No active event" if _language() == "en" else "Nenhum evento ativo"
+	if screen_id == "achievements":
+		return "No achievements unlocked" if _language() == "en" else "Nenhuma conquista desbloqueada"
 	return String(data["empty_title"])
 
 
@@ -423,8 +429,8 @@ func _make_feature_card(data: Dictionary) -> PanelContainer:
 	right.add_theme_constant_override("separation", 5)
 	row.add_child(right)
 	if data.has("price"):
-		right.add_child(_make_label(String(data["price"]), 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	var button := _make_action_button(String(data.get("button", "VER")), tone)
+		right.add_child(_make_price_badge(String(data["price"]), String(data.get("cost_icon", ""))))
+	var button := _make_action_button(_button_text(String(data.get("button", "view"))), tone)
 	if data.has("action"):
 		button.pressed.connect(_handle_action.bind(String(data["action"])))
 	right.add_child(button)
@@ -434,15 +440,15 @@ func _make_feature_card(data: Dictionary) -> PanelContainer:
 func _populate_inventory() -> void:
 	var inventory: Dictionary = GameState.data.get("inventory", {})
 	if inventory.is_empty():
-		_content.add_child(_make_empty_state("Inventory is empty", "Chests, keys and saved rewards will appear here.", "inventory"))
+		_content.add_child(_make_empty_state(_tr("inventory_empty"), _tr("inventory_empty_desc"), "inventory"))
 		return
 	for id in inventory.keys():
 		var item: Dictionary = inventory[id]
 		var card := {
 			"title": "%s x%s" % [String(item.get("label", id)), int(item.get("amount", 0))],
-			"desc": "Stored reward. Open when ready." if String(item.get("type", "")) == "chest" else "Stored item.",
+			"desc": _tr("stored_reward") if String(item.get("type", "")) == "chest" else _tr("stored_item"),
 			"icon": "chest_%s" % String(item.get("icon", "common")) if String(item.get("type", "")) == "chest" else "key",
-			"button": "OPEN" if String(item.get("type", "")) == "chest" else "OK",
+			"button": "open" if String(item.get("type", "")) == "chest" else "done",
 			"tone": "#ffd700",
 			"action": "open:%s" % id,
 		}
@@ -452,21 +458,21 @@ func _populate_inventory() -> void:
 func _make_inventory_summary() -> Control:
 	var inventory: Dictionary = GameState.data.get("inventory", {})
 	if inventory.is_empty():
-		return _make_empty_state("No stored chests", "Purchased or earned chests will appear in Inventory.", "chest_common")
+		return _make_empty_state(_tr("no_chests"), _tr("stored_chests_desc"), "chest_common")
 	var count := 0
 	for id in inventory.keys():
 		count += int(inventory[id].get("amount", 0))
-	return _make_empty_state("%s stored item(s)" % count, "Open them from Inventory.", "chest_common")
+	return _make_empty_state("%s item(s)" % count, _tr("stored_chests_desc"), "chest_common")
 
 
 func _populate_daily_reward(data: Dictionary) -> void:
 	var can_claim := TimeManager.can_claim_daily_reward()
 	var streak := int(GameState.data.get("daily_streak", TimeManager.get_daily_streak()))
-	_content.add_child(_make_section_title("7 DAY STREAK"))
+	_content.add_child(_make_section_title("7 DAY STREAK" if _language() == "en" else "SEQUÊNCIA DE 7 DIAS"))
 	for i in range(data["cards"].size()):
 		var card: Dictionary = data["cards"][i].duplicate()
-		card["title"] = "Day %s" % (i + 1)
-		card["button"] = "CLAIM" if can_claim and i == clampi(streak, 0, 6) else "DONE" if i < streak else "WAIT"
+		card["title"] = "Day %s" % (i + 1) if _language() == "en" else "Dia %s" % (i + 1)
+		card["button"] = "claim" if can_claim and i == clampi(streak, 0, 6) else "done" if i < streak else "wait"
 		card["action"] = "daily_claim" if can_claim and i == clampi(streak, 0, 6) else ""
 		_content.add_child(_make_feature_card(card))
 
@@ -475,18 +481,18 @@ func _populate_wheel(data: Dictionary) -> void:
 	var wheel: Dictionary = GameState.data.get("wheel", {})
 	var free_used := bool(wheel.get("free_used", false))
 	_content.add_child(_make_feature_card({
-		"title": "Free Spin",
-		"desc": "Spin once per day for coins, diamonds, keys or chests.",
+		"title": _tr("free_spin"),
+		"desc": _tr("spin_desc"),
 		"icon": "wheel",
-		"button": "USED" if free_used else "SPIN",
+		"button": "used" if free_used else "spin",
 		"tone": "#00f0ff",
 		"action": "" if free_used else "wheel_free",
 	}))
 	_content.add_child(_make_feature_card({
-		"title": "Mock Ad Spin",
-		"desc": "Prepared rewarded-ad flow. Uses a mock reward for now.",
+		"title": _tr("mock_ad_spin"),
+		"desc": _tr("ad_spin_desc"),
 		"icon": "gem",
-		"button": "WATCH AD",
+		"button": "watch_ad",
 		"tone": "#ffd700",
 		"action": "wheel_ad",
 	}))
@@ -501,11 +507,12 @@ func _populate_missions() -> void:
 			continue
 		var progress := int(mission.get("progress", 0))
 		var target := int(definition.get("target", 1))
+		var reward_text := _reward_label(Dictionary(definition.get("reward", {})))
 		_content.add_child(_make_feature_card({
 			"title": _localized_definition_title(definition),
-			"desc": "%s/%s" % [progress, target],
+			"desc": "%s: %s/%s • %s: %s" % [_tr("progress"), progress, target, _tr("missions_reward"), reward_text],
 			"icon": "missions",
-			"button": "CLAIM" if progress >= target and not bool(mission.get("claimed", false)) else "DONE" if bool(mission.get("claimed", false)) else "GO",
+			"button": "claim" if progress >= target and not bool(mission.get("claimed", false)) else "done" if bool(mission.get("claimed", false)) else "go",
 			"tone": "#ff8800",
 			"progress": float(progress) / max(1.0, float(target)),
 			"action": "mission:%s" % String(mission.get("id", "")) if progress >= target and not bool(mission.get("claimed", false)) else "",
@@ -521,11 +528,12 @@ func _populate_achievements() -> void:
 		var required := int(achievement.get("required", 1))
 		var completed := bool(state.get("completed", false))
 		var claimed := bool(state.get("claimed", false))
+		var reward_text := _reward_label(Dictionary(achievement.get("reward", {})))
 		_content.add_child(_make_feature_card({
 			"title": _localized_achievement_name(achievement),
-			"desc": "%s • %s/%s" % [_localized_achievement_desc(achievement), progress, required],
+			"desc": "%s • %s: %s/%s • %s: %s" % [_localized_achievement_desc(achievement), _tr("progress"), progress, required, _tr("missions_reward"), reward_text],
 			"icon": "achievements",
-			"button": "CLAIM" if completed and not claimed else "DONE" if claimed else "LOCKED",
+			"button": "claim" if completed and not claimed else "done" if claimed else "locked",
 			"tone": "#ffd700",
 			"progress": float(progress) / max(1.0, float(required)),
 			"action": "achievement:%s" % id if completed and not claimed else "",
@@ -557,14 +565,20 @@ func _handle_action(action: String) -> void:
 	elif action == "daily_claim":
 		result = GameState.claim_daily_reward()
 	elif action == "wheel_free":
+		_animate_wheel()
+		await get_tree().create_timer(0.9).timeout
 		result = GameState.spin_wheel("free")
 	elif action == "wheel_ad":
+		_animate_wheel()
+		await get_tree().create_timer(0.9).timeout
 		result = GameState.spin_wheel("ad")
 	else:
 		result = GameState.shop_claim(action)
 	_play_sfx("res://assets/sounds/button_confirm.mp3" if bool(result.get("ok", false)) else "res://assets/sounds/button_error.mp3")
 	_rebuild_current()
-	_show_feedback(String(result.get("text", result.get("reason", "Not ready"))), bool(result.get("ok", false)))
+	if bool(result.get("ok", false)):
+		_show_reward_modal(result)
+	_show_feedback(_failure_label(String(result.get("reason", result.get("text", "not_ready")))) if not bool(result.get("ok", false)) else String(result.get("text", "")), bool(result.get("ok", false)))
 
 
 func _rebuild_current() -> void:
@@ -580,6 +594,44 @@ func _show_feedback(text: String, ok: bool) -> void:
 		_feedback_label.add_theme_color_override("font_color", Color("#00ff88") if ok else Color("#ff6b9a"))
 
 
+func _show_reward_modal(result: Dictionary) -> void:
+	if _reward_overlay:
+		_reward_overlay.queue_free()
+	var reward: Dictionary = result.get("reward", {})
+	_reward_overlay = Control.new()
+	_fill(_reward_overlay)
+	_reward_overlay.z_index = 140
+	add_child(_reward_overlay)
+	var dim := ColorRect.new()
+	_fill(dim)
+	dim.color = Color("#02010acc")
+	_reward_overlay.add_child(dim)
+	var center := CenterContainer.new()
+	_fill(center)
+	center.offset_left = 20
+	center.offset_right = -20
+	_reward_overlay.add_child(center)
+	var card := _make_card("#16003bee", "#00f0ffaa")
+	card.custom_minimum_size = Vector2(300, 260)
+	center.add_child(card)
+	var body := _card_body(card, 18)
+	body.alignment = BoxContainer.ALIGNMENT_CENTER
+	body.add_child(_make_label(_tr("reward_obtained").to_upper(), 22, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	body.add_child(_make_icon(_reward_icon(reward), 72))
+	body.add_child(_make_label(_reward_label(reward), 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var detail := _make_label(String(result.get("text", "")), 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(detail)
+	var close := _make_action_button(_tr("continue"), "#00f0ff")
+	close.custom_minimum_size = Vector2(180, 46)
+	close.pressed.connect(func() -> void:
+		if _reward_overlay:
+			_reward_overlay.queue_free()
+			_reward_overlay = null
+	)
+	body.add_child(close)
+
+
 func _play_sfx(path: String) -> void:
 	if has_node("/root/AudioManager"):
 		AudioManager.play_sfx(path, -6.0)
@@ -587,6 +639,53 @@ func _play_sfx(path: String) -> void:
 
 func _language() -> String:
 	return String(GameState.get_setting("language", "en"))
+
+
+func _tr(key: String, fallback := "") -> String:
+	if has_node("/root/LocalizationManager"):
+		return LocalizationManager.tr_key(key, fallback)
+	return fallback if not fallback.is_empty() else key
+
+
+func _button_text(key: String) -> String:
+	var normalized := key.to_lower().replace(" ", "_")
+	match normalized:
+		"comprar", "buy":
+			return _tr("buy")
+		"abrir", "open":
+			return _tr("open")
+		"coletar", "claim", "resgatar":
+			return _tr("claim")
+		"concluído", "concluido", "done", "ok":
+			return _tr("done")
+		"usado", "used":
+			return _tr("used")
+		"ver_anúncio", "ver_anuncio", "watch_ad":
+			return _tr("watch_ad")
+		"girar", "spin":
+			return _tr("spin")
+		"ir", "go":
+			return _tr("go")
+		"wait", "aguardar":
+			return _tr("wait")
+		"locked", "bloqueado":
+			return _tr("locked")
+		"free", "grátis", "gratis":
+			return _tr("free")
+	return key
+
+
+func _failure_label(reason: String) -> String:
+	match reason:
+		"coins", "diamonds", "keys", "legendary_key":
+			return _tr("insufficient")
+		"free_used":
+			return _tr("used")
+		"ad_limit":
+			return _tr("unavailable")
+		"empty":
+			return _tr("inventory_empty")
+	return reason
 
 
 func _screen_title() -> String:
@@ -617,6 +716,12 @@ func _screen_title() -> String:
 
 func _shop_tab_label(id: String, fallback: String) -> String:
 	if _language() == "pt":
+		match id:
+			"chests": return _tr("chests")
+			"gems": return _tr("diamonds")
+			"keys": return _tr("keys")
+			"specials": return _tr("rewards")
+			"free": return _tr("free_chest")
 		return fallback
 	match id:
 		"chests": return "Chests"
@@ -624,6 +729,24 @@ func _shop_tab_label(id: String, fallback: String) -> String:
 		"keys": return "Keys"
 		"specials": return "Rewards"
 		"free": return "Free Chest"
+	return fallback
+
+
+func _shop_section_label(id: String, fallback: String) -> String:
+	if _language() == "en":
+		match id:
+			"chests": return "BUY CHESTS"
+			"gems": return "DIAMOND PACKS"
+			"keys": return "KEYS"
+			"specials": return "SPECIAL OFFERS"
+			"free": return "FREE REWARDS"
+		return fallback
+	match id:
+		"chests": return "COMPRAR BAÚS"
+		"gems": return "PACOTES DE DIAMANTES"
+		"keys": return "CHAVES"
+		"specials": return "OFERTAS ESPECIAIS"
+		"free": return "RECOMPENSAS GRÁTIS"
 	return fallback
 
 
@@ -637,20 +760,97 @@ func _make_wheel_visual(data: Dictionary) -> PanelContainer:
 	card.add_child(margin)
 	var center := CenterContainer.new()
 	margin.add_child(center)
-	var wheel := PanelContainer.new()
-	wheel.custom_minimum_size = Vector2(214, 214)
-	wheel.add_theme_stylebox_override("panel", _make_style("#00f0ff18", 107, "#00f0ff99", 3, "#00f0ff77", 14))
-	center.add_child(wheel)
-	var wheel_center := CenterContainer.new()
-	wheel.add_child(wheel_center)
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(248, 248)
+	center.add_child(holder)
+	_wheel_prize_ring = Control.new()
+	_wheel_prize_ring.position = Vector2(124, 124)
+	holder.add_child(_wheel_prize_ring)
+	var prizes := ["coin", "gem", "key", "chest_common", "coin", "chest_rare", "gem", "chest_epic"]
+	for i in range(prizes.size()):
+		var angle := -PI / 2.0 + i * TAU / float(prizes.size())
+		var segment := PanelContainer.new()
+		segment.custom_minimum_size = Vector2(58, 58)
+		segment.position = Vector2(cos(angle), sin(angle)) * 84.0 - Vector2(29, 29)
+		segment.add_theme_stylebox_override("panel", _make_style("#00f0ff22" if i % 2 == 0 else "#ffd70022", 18, "#ffffff55", 1, "#00f0ff55", 6))
+		_wheel_prize_ring.add_child(segment)
+		var segment_center := CenterContainer.new()
+		segment.add_child(segment_center)
+		segment_center.add_child(_make_icon(prizes[i], 30))
+	var hub := PanelContainer.new()
+	hub.custom_minimum_size = Vector2(98, 98)
+	hub.position = Vector2(75, 75)
+	hub.add_theme_stylebox_override("panel", _make_style("#16003b", 49, "#00f0ff", 3, "#00f0ffaa", 14))
+	holder.add_child(hub)
+	var hub_center := CenterContainer.new()
+	hub.add_child(hub_center)
 	var column := VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 6)
-	wheel_center.add_child(column)
-	column.add_child(_make_icon("wheel", 58))
-	column.add_child(_make_label("GIRO", 22, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	column.add_child(_make_label("GRATIS", 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_theme_constant_override("separation", 2)
+	hub_center.add_child(column)
+	column.add_child(_make_icon("wheel", 34))
+	column.add_child(_make_label(_tr("spin").to_upper(), 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var pointer := _make_label("▼", 30, "#ff0055", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	pointer.position = Vector2(104, -14)
+	holder.add_child(pointer)
 	return card
+
+
+func _animate_wheel() -> void:
+	if not _wheel_prize_ring:
+		return
+	var tween := create_tween()
+	tween.tween_property(_wheel_prize_ring, "rotation", _wheel_prize_ring.rotation + TAU * 4.0 + randf_range(0.0, TAU), 0.9).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+
+
+func _make_price_badge(price: String, icon_key: String) -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 4)
+	if not icon_key.is_empty():
+		row.add_child(_make_icon(icon_key, 16))
+	row.add_child(_make_label(price, 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	return row
+
+
+func _reward_icon(reward: Dictionary) -> String:
+	match String(reward.get("type", "")):
+		"coins":
+			return "coin"
+		"diamonds", "gems":
+			return "gem"
+		"keys":
+			return "key"
+		"legendaryKeys", "legendary_keys":
+			return "chest_legendary"
+		"chest":
+			return "chest_%s" % String(reward.get("chest_type", reward.get("chestType", "common")))
+		"skin":
+			return "skins"
+	return "coin"
+
+
+func _reward_label(reward: Dictionary) -> String:
+	var amount := int(reward.get("amount", 1))
+	match String(reward.get("type", "")):
+		"coins":
+			return "+%s %s" % [amount, "coins" if _language() == "en" else "moedas"]
+		"diamonds", "gems":
+			return "+%s %s" % [amount, _tr("diamonds")]
+		"keys":
+			return "+%s %s" % [amount, _tr("keys")]
+		"legendaryKeys", "legendary_keys":
+			return "+%s %s" % [amount, "legendary keys" if _language() == "en" else "chaves lendárias"]
+		"xp", "profileXp", "profile_xp":
+			return "+%s XP" % amount
+		"chest":
+			var chest_type := String(reward.get("chest_type", reward.get("chestType", "common"))).capitalize()
+			return "+%s %s %s" % [amount, chest_type, "Chest" if _language() == "en" else "Baú"]
+		"skin":
+			var skin_id := String(reward.get("skin_id", reward.get("skinId", "")))
+			var skin := MainPortData.skin_by_id(skin_id) if has_node("/root/MainPortData") else {}
+			return String(skin.get("name", skin_id))
+	return String(reward.get("type", "Reward"))
 
 
 func _make_progress_bar(progress: float, tone: String) -> PanelContainer:
