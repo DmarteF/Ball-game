@@ -328,8 +328,19 @@ Checklist:
 
 | Problema observado | Ajuste no Godot | Status |
 | --- | --- | --- |
-| Contador de temporárias internas mostrava mais que as liberadas reais | `MainPortData.released_run_upgrades()` define os 6 upgrades visuais liberados | Corrigido |
-| Saves podiam manter temporárias internas extras como liberadas | `GameState.refresh_unlocks` limpa temporárias fora da lista pública | Corrigido |
-| Level-up podia consultar upgrades internos demais | `GameplayManager.gd` usa somente os 6 liberados para montar opções | Corrigido |
+| Contador de temporárias internas mostrava mais que as liberadas reais | `MainPortData.auto_run_upgrade_ids()` define os 6 upgrades auto-liberados base | Corrigido |
+| Saves podiam manter temporárias internas extras como liberadas | `GameState.refresh_unlocks` limpa temporárias não base nem explicitamente liberadas | Corrigido |
+| Level-up podia consultar upgrades internos demais | `GameplayManager.gd` filtra por desbloqueio real antes de montar opções | Corrigido |
 | Anéis do infinito ainda ficavam fora do alcance | Spawn máximo reduzido e `_keep_infinite_rings_in_reach()` mantém raios perto da bolinha | Corrigido |
 | Muitos anéis podiam forçar raio fora da área útil | `_infinite_ring_capacity()` limita alvo ao que cabe com espaçamento seguro | Corrigido |
+
+## 7.11 Ajustes de fidelidade pós-teste
+
+| Problema observado | Ajuste no Godot | Status |
+| --- | --- | --- |
+| Aviso de conquistas no menu não abria a tela de conquistas | `MainMenu.gd` usa handler dedicado para toque/clique e navega para `Achievements.tscn` | Corrigido |
+| Upgrades temporários internos antigos continuavam aparecendo em saves poluídos | `GameState.gd` limpa temporários não auto-liberados nem explicitamente liberados | Corrigido |
+| Mais upgrades deveriam aparecer conforme fossem liberados depois | `explicit_unlocked_run_upgrades` preserva temporários liberados por recompensa/sistema futuro | Preparado |
+| Level-up podia parecer vazio até rolar | Modal maior, cards menores e preenchimento com repetição aleatória quando necessário | Corrigido |
+| Anéis do infinito começavam com vários gaps no mesmo lado | `_make_infinite_ring` usa gap aleatório e `_keep_infinite_rings_in_reach` não realinha abertura | Corrigido |
+| Bolinha podia escapar da arena em colisões rápidas | `_bounce_arena_edge` revalida posição após colisão e estabiliza velocidade | Corrigido |

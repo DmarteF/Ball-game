@@ -477,10 +477,10 @@ Checklist:
 
 Correções aplicadas:
 
-- O conjunto visual/liberado de upgrades temporários foi fechado em 6 ids: `damage`, `speed`, `coinBoost`, `critical`, `xpBoost` e `perfectChance`.
-- `GameState.refresh_unlocks` não libera mais upgrades temporários internos só por `unlockLevel`; apenas os 6 ids liberados entram na lista pública de desbloqueios.
-- Saves antigos com temporárias internas extras são limpos durante `refresh_unlocks`, mantendo os permanentes e os 6 temporários visuais.
-- O level-up usa `MainPortData.released_run_upgrades()`, então upgrades como efeitos internos, secretos ou ainda não visuais ficam fora da seleção.
+- O conjunto auto-liberado de upgrades temporários foi fechado em 6 ids: `damage`, `speed`, `coinBoost`, `critical`, `xpBoost` e `perfectChance`.
+- `GameState.refresh_unlocks` não libera mais upgrades temporários internos só por `unlockLevel`; extras precisam estar explicitamente desbloqueados.
+- Saves antigos com temporárias internas extras são limpos durante `refresh_unlocks`, mantendo permanentes, temporários-base válidos e temporários explicitamente liberados.
+- O level-up usa `MainPortData.released_run_upgrades()` como banco não secreto, mas só mostra o que `GameState` considera desbloqueado e válido.
 - O modo infinito reduziu `MAX_SPAWN_DISTANCE_FROM_BALL` e usa `_keep_infinite_rings_in_reach()` para manter anéis ativos perto da distância radial da bolinha.
 - `_infinite_ring_capacity()` limita a quantidade alvo ao que cabe na área útil com espaçamento seguro, evitando empurrar anéis para fora do alcance.
 
@@ -488,9 +488,33 @@ Checklist:
 
 | Item | Status |
 | --- | --- |
-| Temporárias públicas limitadas a 6 | Sim |
-| Tela de melhorias conta X/6 | Sim |
-| Level-up mostra só as 6 temporárias liberadas conforme progresso | Sim |
+| Temporárias auto-liberadas limitadas a 6 | Sim |
+| Tela de melhorias conta liberadas reais | Sim |
+| Level-up mostra temporárias desbloqueadas conforme progresso/recompensa | Sim |
 | Temporárias internas extras continuam no banco de dados | Sim |
 | Infinito mantém anéis ativos no alcance da bolinha | Sim |
 | Infinito respeita capacidade real da arena útil | Sim |
+
+## 7.11 Correções de navegação, sorteio e gap infinito
+
+Correções aplicadas:
+
+- O aviso de conquistas pendentes do menu principal chama a cena de conquistas diretamente, inclusive em toque mobile.
+- `MainPortData.gd` separa os 6 temporários auto-liberados dos demais upgrades temporários não secretos.
+- `GameState.gd` limpa desbloqueios temporários indevidos de saves antigos e mantém uma lista de temporários explicitamente liberados por recompensas futuras.
+- `GameplayManager.gd` aceita temporários explicitamente liberados no level-up mesmo quando eles não pertencem ao conjunto auto-liberado.
+- O sorteio de level-up agora pode repetir opções aleatórias quando há poucos upgrades disponíveis e usa cards menores em modal maior.
+- Anéis do modo infinito recebem abertura aleatória no nascimento; o reposicionamento radial não altera mais a direção do gap.
+- A bolinha é clampada novamente depois do tratamento de colisão para impedir fuga da arena em situações rápidas.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Clique/toque no aviso de conquistas navega corretamente | Sim |
+| Upgrades temporários bloqueados de saves antigos são removidos | Sim |
+| Novos temporários liberados por recompensa podem aparecer | Sim |
+| Level-up sempre tenta preencher cards visíveis | Sim |
+| Level-up permite repetição aleatória | Sim |
+| Infinito não alinha vários gaps no mesmo lado | Sim |
+| Bolinha é mantida dentro da arena após colisão | Sim |

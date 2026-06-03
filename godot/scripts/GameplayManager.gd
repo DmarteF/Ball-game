@@ -314,6 +314,8 @@ func _update_game(delta_steps: float) -> void:
 		_update_rings(step_delta)
 		_check_perfect_escape(prev_dist, next_dist, prev_pos, ball_position)
 		_check_ring_hit(prev_dist, next_dist, prev_pos, ball_position)
+		_bounce_arena_edge()
+		next_dist = (ball_position - arena_center).length()
 		_clamp_ring_spacing()
 		previous_distance = next_dist
 		if _is_ball_crushed():
@@ -530,8 +532,6 @@ func _keep_infinite_rings_in_reach() -> void:
 		if too_far or abs(current_radius - target_radius) > MIN_RING_SPACING * 1.25:
 			ring["radius"] = target_radius
 			ring["initial_radius"] = max(float(ring.get("initial_radius", target_radius)), target_radius)
-			if abs(current_radius - target_radius) > 18.0:
-				ring = _align_ring_gap_to_ball(ring)
 			rings[index] = ring
 
 
@@ -571,7 +571,7 @@ func _make_infinite_ring(index: int) -> Dictionary:
 		"closing_multiplier": 1.0,
 	}
 	ring["rotation"] = rotation
-	return _align_ring_gap_to_ball(ring)
+	return _randomize_ring_gap(ring)
 
 
 func _update_rings(delta_steps: float) -> void:
@@ -1138,10 +1138,10 @@ func _build_pause_overlay() -> void:
 
 func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
-	var card := _make_modal_content(_level_up_overlay, "LEVEL UP")
+	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(342, 538))
 	card.add_child(_make_label("ESCOLHA UMA MELHORIA", 14, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
-	_level_up_cards.add_theme_constant_override("separation", 10)
+	_level_up_cards.add_theme_constant_override("separation", 8)
 	card.add_child(_level_up_cards)
 	var reroll_row := HBoxContainer.new()
 	reroll_row.add_theme_constant_override("separation", 8)
@@ -1194,11 +1194,11 @@ func _make_modal() -> PanelContainer:
 	return overlay
 
 
-func _make_modal_content(overlay: Control, title: String) -> VBoxContainer:
+func _make_modal_content(overlay: Control, title: String, panel_size: Vector2 = Vector2(320, 260)) -> VBoxContainer:
 	var center := CenterContainer.new()
 	_fill(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(320, 260)
+	panel.custom_minimum_size = panel_size
 	panel.add_theme_stylebox_override("panel", _make_style("#16003bdd", 18, "#00f0ff66", 2, "#00f0ff55", 18))
 	center.add_child(panel)
 	var margin := MarginContainer.new()
@@ -1472,6 +1472,13 @@ func _align_ring_gap_to_ball(ring: Dictionary) -> Dictionary:
 		aim = (ball_position - arena_center).normalized()
 	var target_angle := _normalize_angle((ball_position + aim * max(24.0, float(ring.get("radius", INNER_RADIUS)) - (ball_position - arena_center).length()) - arena_center).angle())
 	ring["gap_start"] = _normalize_angle(target_angle - float(ring.get("rotation", 0.0)) + randf_range(-0.18, 0.18))
+	return ring
+
+
+func _randomize_ring_gap(ring: Dictionary) -> Dictionary:
+	if String(ring.get("type", "normal")) == "solid":
+		return ring
+	ring["gap_start"] = _normalize_angle(randf() * TWO_PI - float(ring.get("rotation", 0.0)))
 	return ring
 
 
@@ -1907,7 +1914,7 @@ func _open_level_up() -> void:
 	_play_sfx("level_up")
 
 
-func _get_safe_upgrade_options(exclude_ids: Array[String] = []) -> Array[Dictionary]:
+func _get_safe_upgrade_options(exclude_ids: Array[String] = [], allow_repeats := true) -> Array[Dictionary]:
 	GameState.refresh_unlocks(false)
 	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
 	var pool: Array = MainPortData.released_run_upgrades()
@@ -1926,6 +1933,12 @@ func _get_safe_upgrade_options(exclude_ids: Array[String] = []) -> Array[Diction
 	fallback.shuffle()
 	while filtered.size() < 3 and not fallback.is_empty():
 		filtered.append(fallback.pop_front())
+	if allow_repeats and not filtered.is_empty():
+		var seed_options: Array[Dictionary] = []
+		for upgrade in filtered:
+			seed_options.append(upgrade.duplicate(true))
+		while filtered.size() < 3:
+			filtered.append(seed_options[randi() % seed_options.size()].duplicate(true))
 	return filtered.slice(0, min(3, filtered.size()))
 
 
@@ -1945,6 +1958,9 @@ func _is_run_upgrade_available(upgrade: Dictionary, unlocked: Array) -> bool:
 		return unlocked.has(id)
 	if not unlocked.has(id):
 		return false
+	var explicit_unlocks: Array = GameState.data.get("explicit_unlocked_run_upgrades", [])
+	if explicit_unlocks.has(id):
+		return true
 	var profile_level: int = int(GameState.data.get("level", 1))
 	var max_phase: int = int(GameState.data.get("max_unlocked_phase", GameState.data.get("current_phase", 1)))
 	var required_profile: int = max(int(upgrade.get("unlockLevel", 1)), _profile_requirement_from_text(String(upgrade.get("unlockRequirement", ""))))
@@ -1989,10 +2005,16 @@ func _rarity_upgrade_color(rarity: String) -> String:
 func _rebuild_level_up_cards() -> void:
 	for child in _level_up_cards.get_children():
 		child.queue_free()
+	if available_upgrades.is_empty():
+		available_upgrades = _get_safe_upgrade_options([], true)
+		last_upgrade_option_ids = _upgrade_ids(available_upgrades)
 	var reroll_text := "Rerolls %s/3" % rerolls_used
 	if String(GameState.data.get("language", "pt")) == "pt":
 		reroll_text = "Rerolls %s/3 - anuncio ou 10 diamantes" % rerolls_used
 	_level_up_cards.add_child(_make_label(reroll_text, 12, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	if available_upgrades.is_empty():
+		_level_up_cards.add_child(_make_label("Todas as melhorias da rodada chegaram ao limite.", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		return
 	for upgrade in available_upgrades:
 		var button := _make_level_up_button(upgrade)
 		_level_up_cards.add_child(button)
@@ -2020,7 +2042,7 @@ func _reroll_upgrades_diamond() -> void:
 
 func _do_upgrade_reroll() -> void:
 	rerolls_used += 1
-	available_upgrades = _get_safe_upgrade_options(last_upgrade_option_ids)
+	available_upgrades = _get_safe_upgrade_options([], true)
 	last_upgrade_option_ids = _upgrade_ids(available_upgrades)
 	_rebuild_level_up_cards()
 	_play_sfx("upgrade_select")
@@ -2033,9 +2055,9 @@ func _level_up_feedback(pt: String, en: String) -> String:
 func _make_level_up_button(upgrade: Dictionary) -> Button:
 	var id := String(upgrade["id"])
 	var current_level := int(current_upgrades.get(id, 0))
-	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s\n      SELECIONAR" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 280, 96)
+	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s  |  SELECIONAR" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 280, 78)
 	button.add_theme_color_override("font_color", Color("#ffffff"))
-	button.add_theme_font_size_override("font_size", 12)
+	button.add_theme_font_size_override("font_size", 11)
 	_apply_button_style(button, _make_style("#16003bdd", 12, String(upgrade["color"]), 2, String(upgrade["color"]), 8))
 	var icon := _make_icon_texture(_upgrade_icon_key(id), 36)
 	icon.anchor_left = 0.0
@@ -2363,8 +2385,12 @@ func _make_victory_line(icon_key: String, label_text: String, value_text: String
 func _bounce_arena_edge() -> void:
 	var offset := ball_position - arena_center
 	var dist := offset.length()
-	var max_dist := outer_radius - BALL_RADIUS
-	if dist <= max_dist or dist <= 0.0:
+	var max_dist: float = maxf(4.0, outer_radius - BALL_RADIUS - 1.0)
+	if dist <= 0.0:
+		ball_position = arena_center
+		ball_velocity = _stabilize_velocity(ball_velocity)
+		return
+	if dist <= max_dist:
 		return
 	var normal := offset / dist
 	ball_position = arena_center + normal * max_dist
@@ -2373,6 +2399,8 @@ func _bounce_arena_edge() -> void:
 		ball_velocity -= 2.0 * outward_velocity * normal
 		ball_velocity = _stabilize_velocity(ball_velocity.rotated(randf_range(-0.10, 0.10)))
 		last_direction_shift_msec = Time.get_ticks_msec()
+	else:
+		ball_velocity = _stabilize_velocity(ball_velocity)
 
 
 func _clamp_ring_spacing() -> void:

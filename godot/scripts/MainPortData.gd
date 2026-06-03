@@ -134,7 +134,7 @@ const RUN_UPGRADES := [
 	{ "id": "rivalCrusher", "name": "Rival Crusher", "description": "Aumenta dano e XP em partidas competitivas.", "icon": "💢", "rarity": "legendary", "maxLevel": 3, "unlockLevel": 1, "unlockRequirement": "Conquista secreta", "secret": true, "effects": [{ "type": "competitiveBoost", "value": 0.24 }] },
 ]
 
-const RELEASED_RUN_UPGRADE_IDS := [
+const AUTO_RUN_UPGRADE_IDS := [
 	"damage",
 	"speed",
 	"coinBoost",
@@ -165,14 +165,22 @@ func upgrade_by_id(id: String) -> Dictionary:
 	return {}
 
 func released_run_upgrade_ids() -> Array[String]:
-	return RELEASED_RUN_UPGRADE_IDS.duplicate()
+	var result: Array[String] = []
+	for upgrade in RUN_UPGRADES:
+		var id := String(upgrade.get("id", ""))
+		if not id.is_empty() and not bool(upgrade.get("secret", false)):
+			result.append(id)
+	return result
+
+func auto_run_upgrade_ids() -> Array[String]:
+	return AUTO_RUN_UPGRADE_IDS.duplicate()
 
 func is_released_run_upgrade(id: String) -> bool:
-	return RELEASED_RUN_UPGRADE_IDS.has(id)
+	return released_run_upgrade_ids().has(id)
 
 func released_run_upgrades() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for id in RELEASED_RUN_UPGRADE_IDS:
+	for id in released_run_upgrade_ids():
 		var upgrade := upgrade_by_id(id)
 		if not upgrade.is_empty():
 			result.append(upgrade)

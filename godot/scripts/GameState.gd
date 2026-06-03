@@ -145,6 +145,7 @@ func default_save() -> Dictionary:
 		"skin_levels": { "neon_blue": 1 },
 		"skin_fragments": {},
 		"unlocked_upgrades": ["baseDamage", "baseSpeed", "coinMultiplier", "critChance", "damage", "speed", "coinBoost", "critical"],
+		"explicit_unlocked_run_upgrades": [],
 		"permanent_upgrades": {},
 		"settings": {
 			"audio_muted": false,
@@ -254,19 +255,11 @@ func refresh_unlocks(emit_signal := true) -> void:
 	for id in PERMANENT_UPGRADE_DEFS.keys():
 		if _meets_unlock(PERMANENT_UPGRADE_DEFS[id], max_phase, profile_level) and not unlocked.has(id):
 			unlocked.append(id)
-	for id in MainPortData.released_run_upgrade_ids():
+	for id in MainPortData.auto_run_upgrade_ids():
 		if not TEMP_UPGRADE_UNLOCKS.has(id):
 			continue
 		if _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level) and not unlocked.has(id):
 			unlocked.append(id)
-	for upgrade in MainPortData.released_run_upgrades():
-		var upgrade_id := String(upgrade.get("id", ""))
-		if upgrade_id.is_empty():
-			continue
-		var unlock_level := int(upgrade.get("unlockLevel", 1))
-		var is_secret := bool(upgrade.get("secret", false))
-		if not is_secret and profile_level >= unlock_level and not unlocked.has(upgrade_id):
-			unlocked.append(upgrade_id)
 	data["unlocked_upgrades"] = unlocked
 
 	var skins: Array = data.get("unlocked_skins", [])
@@ -284,12 +277,20 @@ func refresh_unlocks(emit_signal := true) -> void:
 
 func _clean_released_upgrade_unlocks(unlocked: Array) -> Array:
 	var released_temp_ids := MainPortData.released_run_upgrade_ids()
+	var auto_temp_ids := MainPortData.auto_run_upgrade_ids()
+	var explicit_temp_ids: Array = data.get("explicit_unlocked_run_upgrades", [])
+	var max_phase := int(data.get("max_unlocked_phase", data.get("current_phase", 1)))
+	var profile_level := int(data.get("level", 1))
 	var cleaned: Array = []
 	for value in unlocked:
 		var id := String(value)
 		if cleaned.has(id):
 			continue
-		if PERMANENT_UPGRADE_DEFS.has(id) or released_temp_ids.has(id):
+		if PERMANENT_UPGRADE_DEFS.has(id):
+			cleaned.append(id)
+		elif released_temp_ids.has(id) and explicit_temp_ids.has(id):
+			cleaned.append(id)
+		elif auto_temp_ids.has(id) and TEMP_UPGRADE_UNLOCKS.has(id) and _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level):
 			cleaned.append(id)
 	return cleaned
 
@@ -411,6 +412,12 @@ func apply_reward(reward: Dictionary, save_after := false) -> String:
 			reward["new_skin"] = true
 			reward["rarity"] = _skin_rarity_from_id(skin_id)
 			return "Skin unlocked"
+		"upgrade", "run_upgrade", "upgrade_unlock":
+			var upgrade_id := String(reward.get("upgrade_id", reward.get("upgradeId", reward.get("id", ""))))
+			if unlock_upgrade(upgrade_id):
+				reward["new_upgrade"] = true
+				return "Upgrade unlocked"
+			return "Upgrade already unlocked"
 		"chest":
 			var chest_type := String(reward.get("chest_type", reward.get("chestType", "common")))
 			add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, amount)
@@ -426,6 +433,25 @@ func add_inventory_item(id: String, item_type: String, label: String, icon: Stri
 	item["amount"] = int(item.get("amount", 0)) + amount
 	inventory[id] = item
 	data["inventory"] = inventory
+
+
+func unlock_upgrade(id: String) -> bool:
+	if id.is_empty():
+		return false
+	if not MainPortData.is_released_run_upgrade(id) and not PERMANENT_UPGRADE_DEFS.has(id):
+		return false
+	if MainPortData.is_released_run_upgrade(id):
+		var explicit: Array = data.get("explicit_unlocked_run_upgrades", [])
+		if not explicit.has(id):
+			explicit.append(id)
+			data["explicit_unlocked_run_upgrades"] = explicit
+	var unlocked: Array = data.get("unlocked_upgrades", [])
+	if unlocked.has(id):
+		return false
+	unlocked.append(id)
+	data["unlocked_upgrades"] = unlocked
+	save_game()
+	return true
 
 
 func open_chest(chest_id: String) -> Dictionary:

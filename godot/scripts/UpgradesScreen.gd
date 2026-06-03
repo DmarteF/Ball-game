@@ -128,7 +128,7 @@ func _make_upgrade_summary() -> PanelContainer:
 	margin.add_child(column)
 	column.add_child(_make_label(("Melhorias disponíveis: %s" if pt else "Available upgrades: %s") % unlocked_count, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label(("Melhorias bloqueadas: %s" if pt else "Locked upgrades: %s") % locked_count, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label(("Temporárias liberadas: %s/%s" if pt else "Released run upgrades: %s/%s") % [unlocked_temp_names.size(), released_temp_upgrades.size()], 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("Temporárias liberadas: %s" if pt else "Released run upgrades: %s") % unlocked_temp_names.size(), 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if not unlocked_temp_names.is_empty():
 		column.add_child(_make_label(("Liberadas: %s" if pt else "Unlocked: %s") % ", ".join(unlocked_temp_names), 11, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label("Desbloqueie avançando, abrindo baús e concluindo conquistas." if pt else "Unlocked by progress, chests and achievements.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))

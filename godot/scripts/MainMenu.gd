@@ -89,6 +89,7 @@ var _gradient_shader: Shader
 var _more_overlay: ColorRect
 var _more_panel: PanelContainer
 var _more_items: Array = []
+var _opening_achievements := false
 
 
 func _ready() -> void:
@@ -222,7 +223,14 @@ func _make_achievement_notice(count: int) -> Button:
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	_apply_button_style(button, _make_style("#ffd70022", 12, "#ffd700aa", 1, "#ffd70077", 10))
-	button.pressed.connect(_open_scene.bind(ACHIEVEMENTS_SCENE))
+	button.pressed.connect(_open_achievements_scene)
+	button.button_down.connect(_open_achievements_scene)
+	button.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventScreenTouch and event.pressed:
+			_open_achievements_scene()
+		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_open_achievements_scene()
+	)
 	var row := HBoxContainer.new()
 	_fill(row)
 	row.offset_left = 10
@@ -241,6 +249,13 @@ func _make_achievement_notice(count: int) -> Button:
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(label)
 	return button
+
+
+func _open_achievements_scene() -> void:
+	if _opening_achievements:
+		return
+	_opening_achievements = true
+	_open_scene(ACHIEVEMENTS_SCENE)
 
 
 func _build_more_button() -> void:
