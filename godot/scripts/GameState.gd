@@ -1341,7 +1341,9 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 
 	var coins: int = max(10, int(summary.get("coins", 0)) + (180 if result == "win" else 65 if result == "loss" else 35))
 	var xp: int = max(8, int(summary.get("xp", 0)) + (80 if result == "win" else 30 if result == "loss" else 16))
+	var diamonds: int = max(0, int(summary.get("diamonds", 0)))
 	data["coins"] = int(data.get("coins", 0)) + coins
+	data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
 	add_profile_xp(xp)
 
 	var stats: Dictionary = data.get("stats", {})
@@ -1355,6 +1357,8 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_value
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_value
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds
+	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
 	if not promotion_skin_id.is_empty():
 		var skins: Array = data.get("unlocked_skins", [])
 		if not skins.has(promotion_skin_id):
@@ -1378,7 +1382,7 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 		_update_skin_collection_stats()
 	_update_achievements(false)
 	save_game()
-	return { "coins": coins, "xp": xp, "trophy_delta": trophy_delta, "trophies": trophies, "rank": rank, "promotion_skin": promotion_skin_id }
+	return { "coins": coins, "xp": xp, "diamonds": diamonds, "trophy_delta": trophy_delta, "trophies": trophies, "rank": rank, "promotion_skin": promotion_skin_id }
 
 
 func set_audio_muted(muted: bool) -> void:

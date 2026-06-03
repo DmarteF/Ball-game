@@ -816,3 +816,37 @@ Checklist:
 | Promocao Bronze libera skin ultimate inicial | Sim |
 | Reset mensal usa relogio interno | Sim |
 | Reset mensal rebaixa uma liga | Sim |
+
+## 7.16 Liga Neon com duelo jogavel
+
+Atualizado nesta etapa:
+
+- `MainPortData.opponent_name()` nao gera mais nomes com numeros como `#001`; os bots usam nomes combinados mais naturais.
+- `LeagueScreen.gd` trocou `COMPETIR EM BREVE` por `COMPETIR` e abre `scenes/LeagueBattle.tscn`.
+- `LeagueBattleScreen.gd` cria duas arenas verticais: rival em cima e jogador embaixo.
+- A luta usa comportamento de modo infinito competitivo: aneis fechando continuamente, reposicao constante, colisao por segmento/substeps, bola ativa, level up e upgrades temporarios de rodada.
+- O jogador escolhe upgrades no level up e pode comprar ATK/GOLD com moedas da run.
+- O bot joga a arena superior automaticamente, ganha XP/moedas, compra ATK/GOLD e escolhe upgrades de run sozinho.
+- A partida tem limite de 90 segundos; se ninguem for preso, vence quem destruiu mais aneis, com score como desempate.
+- Derrota do jogador oferece revive via anuncio mockado antes de registrar a perda.
+- Resultado registra trofeus, moedas, XP e diamantes em `GameState.record_neon_league_match()`.
+- O botao `DOBRAR RECOMPENSA - AD` dobra moedas/XP/diamantes depois do resultado, mas nao dobra trofeus para manter a Liga equilibrada.
+- Vitoria/derrota/saida afetam a Liga, estatisticas, missoes, conquistas e progresso global.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Nomes de bots sem numeros artificiais | Sim |
+| Botao Competir abre batalha real | Sim |
+| Duas arenas cabem na tela | Sim |
+| Jogador sempre na arena inferior | Sim |
+| Bot sempre na arena superior | Sim |
+| Jogador escolhe upgrades | Sim |
+| Bot escolhe upgrades automaticamente | Sim |
+| ATK/GOLD de run funcionam no duelo | Sim |
+| Timer de 90s evita duelo infinito | Sim |
+| Vencedor por aneis/score no tempo limite | Sim |
+| Revive por anuncio mockado antes da derrota | Sim |
+| Dobrar recompensa por anuncio mockado | Sim |
+| Trofeus alteram ranking/salvamento real | Sim |

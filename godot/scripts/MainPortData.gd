@@ -203,9 +203,15 @@ func rank_for_trophies(trophies: int) -> Dictionary:
 	return current
 
 func opponent_name(index: int, rank_id: String) -> String:
-	var prefixes: Array[String] = ["Nova", "Pixel", "Orbit", "Cyber", "Vortex", "Pulse", "Chrome", "Solar", "Astral", "Rift"]
-	var suffixes: Array[String] = ["Runner", "Breaker", "Drifter", "Spark", "Core", "Pilot", "Blade", "Rush", "Echo", "Flux", "Unit", "Zero", "Prime", "Wave", "Byte", "Nova", "Ray", "Loop", "Shift", "Dash"]
-	return "%s %s #%03d" % [prefixes[index % prefixes.size()], suffixes[(index / prefixes.size()) % suffixes.size()], index + 1]
+	var prefixes: Array[String] = ["Nova", "Pixel", "Orbit", "Cyber", "Vortex", "Pulse", "Chrome", "Solar", "Astral", "Rift", "Neon", "Hyper", "Lunar", "Ion", "Prism", "Echo", "Vector", "Zero", "Turbo", "Comet"]
+	var suffixes: Array[String] = ["Runner", "Breaker", "Drifter", "Spark", "Core", "Pilot", "Blade", "Rush", "Echo", "Flux", "Prime", "Wave", "Byte", "Ray", "Loop", "Shift", "Dash", "Glider", "Striker", "Orbit"]
+	var aliases: Array[String] = ["Astra", "Kiro", "Mika", "Zane", "Lyra", "Noah", "Riven", "Kai", "Nix", "Sol", "Vega", "Ari", "Taro", "Lumi", "Iris", "Axel", "Rafa", "Milo", "Luna", "Theo"]
+	var seed: int = abs(("%s_%s" % [rank_id, index]).hash())
+	if seed % 5 == 0:
+		return "%s %s" % [aliases[seed % aliases.size()], suffixes[(seed / 7) % suffixes.size()]]
+	if seed % 4 == 0:
+		return "%s %s" % [prefixes[(seed / 3) % prefixes.size()], aliases[(seed / 11) % aliases.size()]]
+	return "%s %s" % [prefixes[seed % prefixes.size()], suffixes[(seed / prefixes.size()) % suffixes.size()]]
 
 func opponent_for(trophies: int) -> Dictionary:
 	var rank: Dictionary = rank_for_trophies(trophies)

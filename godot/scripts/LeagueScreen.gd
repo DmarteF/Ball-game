@@ -1,6 +1,7 @@
 extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
+const BATTLE_SCENE := "res://scenes/LeagueBattle.tscn"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
@@ -119,11 +120,11 @@ func _make_division_panel(player: Dictionary) -> PanelContainer:
 	top.add_child(_make_label(String(rank.get("name", "Bronze")), 18, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	top.add_child(_make_label("Divisão máxima" if next_rank.is_empty() else "%s troféus até %s" % [_format_int(missing), String(next_rank.get("name", ""))], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT))
 	body.add_child(_make_progress_bar(progress, "#00ff88"))
-	var compete := _make_solid_button("COMPETIR EM BREVE", "#00f0ff", "#001018", 0, 48)
+	var compete := _make_solid_button("COMPETIR", "#00f0ff", "#001018", 0, 48)
 	compete.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	compete.pressed.connect(_show_compete_notice)
+	compete.pressed.connect(_open_battle)
 	body.add_child(compete)
-	_notice_label = _make_label("Tela refeita com base no frontend; disputa real será conectada depois.", 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_notice_label = _make_label("Duelo em duas arenas: voce embaixo, rival em cima.", 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_notice_label)
 	return card
@@ -265,11 +266,10 @@ func _next_rank(rank: Dictionary) -> Dictionary:
 	return {}
 
 
-func _show_compete_notice() -> void:
+func _open_battle() -> void:
 	if has_node("/root/AudioManager"):
 		AudioManager.play_sfx("res://assets/sounds/button_click.mp3")
-	if _notice_label:
-		_notice_label.text = "Competir fica preparado aqui, mas a jogabilidade da Liga foi removida para ser refeita fielmente."
+	get_tree().change_scene_to_file(BATTLE_SCENE)
 
 
 func _skin_name(id: String) -> String:
