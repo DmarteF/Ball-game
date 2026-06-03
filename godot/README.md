@@ -559,3 +559,34 @@ Pendencias:
 
 - A roleta ainda sorteia a recompensa no final do giro e nao trava matematicamente o ponteiro em uma fatia exata do premio; visualmente o giro foi melhorado para Web.
 - O botao de dobrar recompensas por anuncio ainda esta pendente para a tela de resultado sem duplicar o save.
+
+## 7.7 Efeito Controle para skins
+
+Atualizado nesta etapa:
+
+- Criado o efeito `Controle`, uma assistencia de direcao por skin que mostra duas setas neon na gameplay apenas quando a skin equipada possui esse efeito.
+- As setas ficam no rodape superior aos upgrades temporarios da rodada, nao cobrem HUD/arena e somem ao pausar, perder, vencer ou abrir modal de level-up.
+- Pressionar esquerda/direita influencia gradualmente a direcao da bolinha sem teleportar e continua passando pelo clamp de velocidade, substeps e colisao por segmento.
+- A forca escala por raridade: common 13%, rare 24%, epic 34%, legendary 48%, mythic 62%, ultimate 80%.
+- Todas as skins `ultimate` recebem Controle junto com o efeito especial que ja tinham.
+- Skins simples que receberam Controle como efeito principal: `robot`, `alien_rare`, `ninja_rare`, `satellite_rare`, `blue_vortex`, `neon_spiral`, `ripple_eye`, `celestial_core`, `chrono_loop_mythic`.
+- O Controle funciona em fases normais, modo infinito e Liga Neon. Na Liga, o jogador ve as setas; o rival recebe apenas uma assistencia automatica discreta se a skin dele tiver Controle.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Efeito Controle criado | Sim |
+| Setas esquerda/direita aparecem apenas com skin de Controle | Sim |
+| Setas nao aparecem em skins sem Controle | Sim |
+| Controle influencia direcao real da bolinha | Sim |
+| Controle nao quebra colisao | Sim, passa pela fisica/substeps existentes |
+| Controle nao permite atravessar aneis | Sim, nao ignora validacao de colisao |
+| Forca escala por raridade | Sim |
+| Todas as skins Ultimate tem Controle | Sim |
+| Ultimates mantem outros efeitos junto com Controle | Sim |
+| Algumas skins simples tiveram efeito trocado por Controle | Sim |
+| Controle funciona em fases normais | Sim |
+| Controle funciona no modo infinito | Sim |
+| Controle funciona na Liga Neon | Sim |
+| Setas somem/pausam em menus e modais quando necessario | Sim |

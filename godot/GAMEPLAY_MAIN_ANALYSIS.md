@@ -358,3 +358,37 @@ Pendências:
 - Implementar botão de dobrar recompensas no resultado de fase/infinito/Liga sem duplicar save.
 - Revisar visual da Liga Neon contra prints/main depois de testar no navegador.
 - Expandir tradução de nomes próprios de upgrades/skins somente se a branch main também traduzir esses nomes.
+
+## 7.6 Efeito Controle em skins
+
+O efeito `Controle` foi adicionado como uma assistencia real de direcao. Quando a skin equipada possui esse efeito, a gameplay exibe duas setas neon no rodape acima dos upgrades temporarios. As setas ficam ocultas durante pause, derrota, vitoria e level-up para nao cobrir modais ou botoes.
+
+A direcao da bolinha e influenciada gradualmente pela seta pressionada. A implementacao altera a velocidade por interpolacao suave, preserva velocidade minima/maxima e continua usando substeps, separacao/reflexao e colisao por segmento. O Controle nao teleporta a bolinha e nao ignora aneis fechados.
+
+Forca por raridade:
+
+| Raridade | Forca |
+| --- | --- |
+| common | 13% |
+| rare | 24% |
+| epic | 34% |
+| legendary | 48% |
+| mythic | 62% |
+| ultimate | 80% |
+
+Skins que receberam Controle como efeito principal: `robot`, `alien_rare`, `ninja_rare`, `satellite_rare`, `blue_vortex`, `neon_spiral`, `ripple_eye`, `celestial_core`, `chrono_loop_mythic`.
+
+Todas as skins `ultimate` recebem Controle como efeito adicional, mantendo o efeito especial anterior. O Controle funciona em fases normais, modo infinito e Liga Neon; na Liga, o rival usa apenas assistencia automatica discreta sem setas visiveis.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Efeito Controle criado | Sim |
+| Setas aparecem apenas com skin de Controle | Sim |
+| Controle influencia direcao real | Sim |
+| Controle respeita colisao/substeps | Sim |
+| Forca escala por raridade | Sim |
+| Todas as Ultimate tem Controle | Sim |
+| Ultimates mantem efeitos existentes | Sim |
+| Controle funciona em fase normal/infinito/Liga | Sim |

@@ -225,3 +225,28 @@ Pendências:
 - Implementar botão de dobrar recompensas no resultado de fase/infinito/Liga sem duplicar save.
 - Revisar visual da Liga Neon contra prints/main depois de testar no navegador.
 - Expandir tradução de nomes próprios de upgrades/skins somente se a branch main também traduzir esses nomes.
+
+## 7.6 Port do efeito Controle
+
+Foi criado o efeito `Controle` como uma extensao funcional das skins no port Godot 4. A referencia de dados continua sendo `MainPortData.SKINS`; o efeito e aplicado no perfil runtime da skin em `GameplayManager.gd` e na simulacao da Liga em `LeagueBattleScreen.gd`.
+
+Regras portadas/adaptadas:
+
+- Skins com Controle mostram setas esquerda/direita somente durante gameplay ativa.
+- Setas somem em pause, level-up, vitoria, derrota e telas/modais.
+- A seta influencia a direcao da bolinha gradualmente, sem substituir a fisica.
+- A forca depende da raridade: common 13%, rare 24%, epic 34%, legendary 48%, mythic 62%, ultimate 80%.
+- Todas as skins `ultimate` ganham Controle como efeito adicional e preservam o efeito especial anterior.
+- Algumas skins de efeito simples passaram a usar Controle como efeito principal: `robot`, `alien_rare`, `ninja_rare`, `satellite_rare`, `blue_vortex`, `neon_spiral`, `ripple_eye`, `celestial_core`, `chrono_loop_mythic`.
+- Fases normais, modo infinito e Liga Neon usam o novo efeito. Na Liga Neon o rival nao mostra setas; quando aplicavel, recebe apenas assistencia automatica discreta.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Controle criado no port Godot | Sim |
+| Setas visuais neon implementadas | Sim |
+| Toque/mouse preparados para HTML e Android futuro | Sim |
+| Controle passa por colisao segura existente | Sim |
+| Todas as Ultimate incluem Controle | Sim |
+| Controle documentado no README e analises | Sim |

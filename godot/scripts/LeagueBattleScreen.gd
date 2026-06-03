@@ -7,6 +7,25 @@ const TWO_PI := PI * 2.0
 const TARGET_ACTIVE_RINGS := 5
 const MIN_RING_SPACING := 7.0
 const BALL_RADIUS := 7.0
+const CONTROL_SKIN_IDS := [
+	"robot",
+	"alien_rare",
+	"ninja_rare",
+	"satellite_rare",
+	"blue_vortex",
+	"neon_spiral",
+	"ripple_eye",
+	"celestial_core",
+	"chrono_loop_mythic",
+]
+const CONTROL_STRENGTH_BY_RARITY := {
+	"common": 0.13,
+	"rare": 0.24,
+	"epic": 0.34,
+	"legendary": 0.48,
+	"mythic": 0.62,
+	"ultimate": 0.80,
+}
 
 var _regular_font: Font
 var _bold_font: Font
@@ -25,6 +44,10 @@ var _status_label: Label
 var _season_label: Label
 var _start_button: Button
 var _quit_button: Button
+var _control_overlay: HBoxContainer
+var _control_input := 0.0
+var _control_left_down := false
+var _control_right_down := false
 
 
 func _ready() -> void:
@@ -34,14 +57,17 @@ func _ready() -> void:
 		AudioManager.play_context("gameplay")
 	_build_background()
 	_build_ui()
+	_build_control_overlay()
 	_build_upgrade_overlay()
 	_prepare_match()
 
 
 func _process(delta: float) -> void:
 	if not _battle_active or _battle_finished:
+		_update_control_overlay()
 		return
 	_elapsed += delta
+	_update_control_overlay()
 	_tick_arena(_player, delta, false)
 	_tick_arena(_rival, delta, true)
 	if bool(_player.get("level_pending", false)):
@@ -150,6 +176,7 @@ func _make_arena(id: String, label: String, skin_id: String, top_ratio: float, h
 		"gold": 0,
 		"run_upgrades": {},
 		"quality": quality,
+		"control_strength": _skin_control_strength(skin_id),
 		"rings_destroyed": 0,
 		"spawned": 0,
 		"crushed": false,
@@ -173,6 +200,7 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 	var velocity: Vector2 = state["velocity"]
 	var center: Vector2 = state["center"]
 	var arena_radius := float(state["arena_radius"])
+	velocity = _apply_league_control(state, velocity, is_ai, delta)
 	ball += velocity * delta * 60.0
 	var offset := ball - center
 	if offset.length() > arena_radius - BALL_RADIUS:
@@ -201,6 +229,25 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 	state["ball"] = ball
 	state["velocity"] = velocity.normalized() * clampf(velocity.length(), 2.0, 4.8)
 	state["crushed"] = _is_arena_crushed(state)
+
+
+func _apply_league_control(state: Dictionary, velocity: Vector2, is_ai: bool, delta: float) -> Vector2:
+	var strength := float(state.get("control_strength", 0.0))
+	if strength <= 0.0 or velocity.length() <= 0.01:
+		return velocity
+	var control := 0.0
+	if is_ai:
+		var ball: Vector2 = state["ball"]
+		var center: Vector2 = state["center"]
+		control = sign(center.x - ball.x) * clampf(strength * 0.34, 0.05, 0.22)
+	else:
+		control = _control_input
+	if abs(control) <= 0.01:
+		return velocity
+	var speed := velocity.length()
+	var desired := (velocity.normalized() + Vector2(control * (0.42 + strength * 0.72), 0.0)).normalized()
+	var blend := clampf((0.75 + strength * 1.2) * delta, 0.01, 0.12)
+	return velocity.normalized().lerp(desired, blend).normalized() * speed
 
 
 func _check_arena_collisions(state: Dictionary) -> void:
@@ -353,6 +400,17 @@ func _arena_xp_needed(level: int) -> int:
 	return floori(28.0 * pow(max(1, level), 1.35))
 
 
+func _skin_control_strength(skin_id: String) -> float:
+	var skin := MainPortData.skin_by_id(skin_id)
+	if skin.is_empty():
+		return 0.0
+	var rarity := String(skin.get("rarity", "common"))
+	var id := skin_id.to_lower()
+	if rarity != "ultimate" and not CONTROL_SKIN_IDS.has(id):
+		return 0.0
+	return float(CONTROL_STRENGTH_BY_RARITY.get(rarity, 0.13))
+
+
 func _draw_arena(state: Dictionary) -> void:
 	if state.is_empty():
 		return
@@ -430,6 +488,75 @@ func _build_ui() -> void:
 	_quit_button = _make_button("SAIR", 140, 52)
 	_quit_button.pressed.connect(_quit_match)
 	row.add_child(_quit_button)
+
+
+func _build_control_overlay() -> void:
+	_control_overlay = HBoxContainer.new()
+	_control_overlay.anchor_left = 0.0
+	_control_overlay.anchor_top = 1.0
+	_control_overlay.anchor_right = 1.0
+	_control_overlay.anchor_bottom = 1.0
+	_control_overlay.offset_left = 20.0
+	_control_overlay.offset_top = -148.0
+	_control_overlay.offset_right = -20.0
+	_control_overlay.offset_bottom = -88.0
+	_control_overlay.add_theme_constant_override("separation", 10)
+	_control_overlay.visible = false
+	add_child(_control_overlay)
+	var left := _make_control_button("<")
+	left.button_down.connect(_set_control_left.bind(true))
+	left.button_up.connect(_set_control_left.bind(false))
+	_control_overlay.add_child(left)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_control_overlay.add_child(spacer)
+	var right := _make_control_button(">")
+	right.button_down.connect(_set_control_right.bind(true))
+	right.button_up.connect(_set_control_right.bind(false))
+	_control_overlay.add_child(right)
+
+
+func _make_control_button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(72, 56)
+	button.focus_mode = Control.FOCUS_NONE
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_font_size_override("font_size", 26)
+	button.add_theme_color_override("font_color", Color("#00f0ff"))
+	button.add_theme_stylebox_override("normal", _make_style("#06162add", 18, "#00f0ffaa", 2, "#00f0ff66", 10))
+	button.add_theme_stylebox_override("pressed", _make_style("#00f0ff", 18, "#ffffff", 2, "#00f0ffaa", 12))
+	return button
+
+
+func _set_control_left(pressed: bool) -> void:
+	_control_left_down = pressed
+	_refresh_control_input()
+
+
+func _set_control_right(pressed: bool) -> void:
+	_control_right_down = pressed
+	_refresh_control_input()
+
+
+func _refresh_control_input() -> void:
+	_control_input = 0.0
+	if _control_left_down:
+		_control_input -= 1.0
+	if _control_right_down:
+		_control_input += 1.0
+
+
+func _update_control_overlay() -> void:
+	if not _control_overlay:
+		return
+	var should_show := _battle_active and not _battle_finished and not _upgrade_overlay.visible and float(_player.get("control_strength", 0.0)) > 0.0
+	_control_overlay.visible = should_show
+	if not should_show:
+		_control_left_down = false
+		_control_right_down = false
+		_control_input = 0.0
 
 
 func _build_upgrade_overlay() -> void:

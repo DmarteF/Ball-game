@@ -61,6 +61,25 @@ const SOUND_PATHS := {
 	"upgrade_select": "res://assets/sounds/button_confirm.mp3",
 }
 const MUSIC_PATH := "res://assets/music/gameplay.mp3"
+const CONTROL_SKIN_IDS := [
+	"robot",
+	"alien_rare",
+	"ninja_rare",
+	"satellite_rare",
+	"blue_vortex",
+	"neon_spiral",
+	"ripple_eye",
+	"celestial_core",
+	"chrono_loop_mythic",
+]
+const CONTROL_STRENGTH_BY_RARITY := {
+	"common": 0.13,
+	"rare": 0.24,
+	"epic": 0.34,
+	"legendary": 0.48,
+	"mythic": 0.62,
+	"ultimate": 0.80,
+}
 
 var phase_id := 1
 var game_mode := "phase"
@@ -116,6 +135,10 @@ var last_direction_shift_msec := 0
 var rerolls_used := 0
 var last_upgrade_option_ids: Array[String] = []
 var revive_used := false
+var control_input := 0.0
+var control_left_down := false
+var control_right_down := false
+var last_control_sfx_msec := 0
 var skin_profile: Dictionary = {}
 
 var _regular_font: Font
@@ -146,6 +169,8 @@ var _victory_next_button: Button
 var _defeat_overlay: Control
 var _defeat_title: Label
 var _defeat_summary: VBoxContainer
+var _control_overlay: Control
+var _control_indicator: Label
 var _music_player: AudioStreamPlayer
 var _sfx_players: Dictionary = {}
 
@@ -163,6 +188,7 @@ func _ready() -> void:
 	_setup_audio()
 	_build_background()
 	_build_hud()
+	_build_control_overlay()
 	_build_pause_overlay()
 	_build_level_up_overlay()
 	_build_result_overlays()
@@ -170,6 +196,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_control_overlay()
 	if is_paused or level_up_active or finished:
 		return
 	_update_game(delta * PHYSICS_STEPS_PER_SECOND)
@@ -216,6 +243,9 @@ func _start_level() -> void:
 	available_upgrades = []
 	rerolls_used = 0
 	revive_used = false
+	control_input = 0.0
+	control_left_down = false
+	control_right_down = false
 	recent_hit_damage.clear()
 	rings_destroyed = 0
 	perfect_escapes = 0
@@ -261,6 +291,7 @@ func _update_game(delta_steps: float) -> void:
 		var prev_dist := previous_vector.length()
 		var prev_pos := ball_position
 		_apply_dynamic_steering(step_delta)
+		_apply_control_influence(step_delta)
 		ball_position += ball_velocity * step_delta
 		_bounce_arena_edge()
 		var next_dist := (ball_position - arena_center).length()
@@ -610,6 +641,26 @@ func _apply_dynamic_steering(delta_steps: float) -> void:
 		last_direction_shift_msec = Time.get_ticks_msec()
 
 
+func _apply_control_influence(delta_steps: float) -> void:
+	if abs(control_input) <= 0.01 or not bool(skin_profile.get("control", false)):
+		return
+	var speed := ball_velocity.length()
+	if speed <= 0.01:
+		return
+	var strength := clampf(float(skin_profile.get("control_strength", 0.0)), 0.0, 0.85)
+	if strength <= 0.0:
+		return
+	var current_dir := ball_velocity / speed
+	var desired := (current_dir + Vector2(control_input * (0.45 + strength * 0.75), 0.0)).normalized()
+	var blend := clampf((0.022 + strength * 0.074) * delta_steps, 0.012, 0.12)
+	var steered := current_dir.lerp(desired, blend).normalized()
+	var target_speed := _target_ball_speed()
+	ball_velocity = _stabilize_velocity(_clamp_vector_speed(steered * speed, target_speed * 0.78, target_speed * 1.42))
+	last_direction_shift_msec = Time.get_ticks_msec()
+	if randf() < 0.08 * strength:
+		_spawn_particles(ball_position, Color(String(skin_profile.get("color", "#00f0ff"))), 1, 34.0)
+
+
 func _safe_motion_angle(angle: float) -> float:
 	var vector := Vector2(cos(angle), sin(angle))
 	if abs(vector.y) < MIN_DIRECTION_COMPONENT:
@@ -856,6 +907,91 @@ func _build_hud() -> void:
 	_apply_button_style(_run_gold_button, _make_style("#06162a", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
 	_run_gold_button.pressed.connect(_buy_run_gold_upgrade)
 	_run_upgrade_bar.add_child(_run_gold_button)
+
+
+func _build_control_overlay() -> void:
+	_control_overlay = HBoxContainer.new()
+	_control_overlay.anchor_left = 0.0
+	_control_overlay.anchor_top = 1.0
+	_control_overlay.anchor_right = 1.0
+	_control_overlay.anchor_bottom = 1.0
+	_control_overlay.offset_left = 18.0
+	_control_overlay.offset_top = -156.0
+	_control_overlay.offset_right = -18.0
+	_control_overlay.offset_bottom = -92.0
+	_control_overlay.add_theme_constant_override("separation", 10)
+	_control_overlay.visible = false
+	add_child(_control_overlay)
+
+	var left := _make_control_button("<")
+	left.button_down.connect(_set_control_left.bind(true))
+	left.button_up.connect(_set_control_left.bind(false))
+	_control_overlay.add_child(left)
+
+	var center := VBoxContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	_control_indicator = _make_label("CONTROLE", 11, "#00f0ffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_control_indicator.add_theme_color_override("font_shadow_color", Color("#00f0ff77"))
+	_control_indicator.add_theme_constant_override("shadow_offset_x", 0)
+	_control_indicator.add_theme_constant_override("shadow_offset_y", 0)
+	center.add_child(_control_indicator)
+	_control_overlay.add_child(center)
+
+	var right := _make_control_button(">")
+	right.button_down.connect(_set_control_right.bind(true))
+	right.button_up.connect(_set_control_right.bind(false))
+	_control_overlay.add_child(right)
+	_update_control_overlay()
+
+
+func _make_control_button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(72, 58)
+	button.focus_mode = Control.FOCUS_NONE
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_font_size_override("font_size", 26)
+	button.add_theme_color_override("font_color", Color("#00f0ff"))
+	button.add_theme_color_override("font_hover_color", Color("#ffffff"))
+	button.add_theme_color_override("font_pressed_color", Color("#001018"))
+	_apply_button_style(button, _make_style("#06162add", 18, "#00f0ffaa", 2, "#00f0ff66", 10))
+	return button
+
+
+func _set_control_left(pressed: bool) -> void:
+	control_left_down = pressed
+	_refresh_control_input()
+
+
+func _set_control_right(pressed: bool) -> void:
+	control_right_down = pressed
+	_refresh_control_input()
+
+
+func _refresh_control_input() -> void:
+	control_input = 0.0
+	if control_left_down:
+		control_input -= 1.0
+	if control_right_down:
+		control_input += 1.0
+	if abs(control_input) > 0.0 and Time.get_ticks_msec() - last_control_sfx_msec > 420:
+		last_control_sfx_msec = Time.get_ticks_msec()
+		_play_sfx("click")
+
+
+func _update_control_overlay() -> void:
+	if not _control_overlay:
+		return
+	var should_show := bool(skin_profile.get("control", false)) and not is_paused and not level_up_active and not finished
+	_control_overlay.visible = should_show
+	if not should_show:
+		control_left_down = false
+		control_right_down = false
+		control_input = 0.0
+	if _control_indicator:
+		_control_indicator.text = "CONTROLE %s%%" % roundi(float(skin_profile.get("control_strength", 0.0)) * 100.0)
 
 
 func _build_pause_overlay() -> void:
@@ -2005,13 +2141,14 @@ func _load_skin_texture() -> void:
 
 func _make_skin_profile(skin_id: String) -> Dictionary:
 	var id := skin_id.to_lower()
-	var profile := { "id": skin_id, "effect": "trail", "chance": 0.06, "value": 0.0, "color": "#00f0ff", "trail_size": 5.0 }
+	var profile := { "id": skin_id, "effect": "trail", "chance": 0.06, "value": 0.0, "color": "#00f0ff", "trail_size": 5.0, "control": false, "control_strength": 0.0 }
 	var skin_def := MainPortData.skin_by_id(skin_id)
 	if not skin_def.is_empty():
 		var passive: Dictionary = skin_def.get("passive", {})
+		var rarity := String(skin_def.get("rarity", "common"))
 		profile["color"] = String(skin_def.get("primary", "#00f0ff"))
-		profile["trail_size"] = _rarity_trail_size(String(skin_def.get("rarity", "common")))
-		var chance := float(passive.get("chance", _default_skin_chance(String(skin_def.get("rarity", "common")))))
+		profile["trail_size"] = _rarity_trail_size(rarity)
+		var chance := float(passive.get("chance", _default_skin_chance(rarity)))
 		var value := float(passive.get("value", 0.0))
 		match String(passive.get("type", "trail")):
 			"freeze_ring", "slow_ring":
@@ -2034,6 +2171,7 @@ func _make_skin_profile(skin_id: String) -> Dictionary:
 				profile.merge({ "effect": "speed", "chance": chance, "value": max(0.04, value), "color": String(skin_def.get("primary", "#67e8f9")) }, true)
 			"crit_chance", "mega_crit", "damage_multiplier":
 				profile.merge({ "effect": "crit", "chance": chance, "value": max(0.25, value), "color": String(skin_def.get("primary", "#ff4fd8")) }, true)
+		_apply_control_profile(profile, skin_id, rarity)
 		return profile
 	if _id_contains_any(id, ["ice", "frost", "snow", "penguin", "wizard", "red_eye", "neon_spiral"]):
 		profile.merge({ "effect": "freeze", "chance": 0.24, "value": 0.42, "color": "#9be8ff", "trail_size": 7.5 }, true)
@@ -2055,7 +2193,23 @@ func _make_skin_profile(skin_id: String) -> Dictionary:
 		profile.merge({ "effect": "crit", "chance": 0.16, "value": 0.35, "color": "#ff4fd8", "trail_size": 6.5 }, true)
 	elif _id_contains_any(id, ["black_hole", "singularity", "cosmic"]):
 		profile.merge({ "effect": "area", "chance": 0.18, "value": 0.32, "color": "#7c3aed", "trail_size": 8.0 }, true)
+	_apply_control_profile(profile, skin_id, String(profile.get("rarity", "common")))
 	return profile
+
+
+func _apply_control_profile(profile: Dictionary, skin_id: String, rarity: String) -> void:
+	var id := skin_id.to_lower()
+	var is_ultimate := rarity == "ultimate"
+	var has_control := is_ultimate or CONTROL_SKIN_IDS.has(id)
+	if not has_control:
+		return
+	profile["control"] = true
+	profile["control_strength"] = float(CONTROL_STRENGTH_BY_RARITY.get(rarity, 0.13))
+	profile["trail_size"] = max(float(profile.get("trail_size", 5.0)), 6.6 + float(profile["control_strength"]) * 3.5)
+	if not is_ultimate:
+		profile["effect"] = "trail"
+		profile["chance"] = 0.0
+		profile["value"] = 0.0
 
 
 func _default_skin_chance(rarity: String) -> float:
