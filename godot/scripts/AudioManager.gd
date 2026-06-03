@@ -37,8 +37,12 @@ func play_music(path: String, volume_db := -13.0, force_restart := false, contex
 
 
 func play_context(context: String, force_restart := false) -> void:
-	if context == "gameplay":
+	if context == "league":
+		play_music("res://assets/music/gameplay2.mp3", -12.0, force_restart, context)
+	elif context == "gameplay":
 		play_music("res://assets/music/gameplay.mp3", -13.0, force_restart, context)
+	elif context == "boss":
+		play_music("res://assets/music/boss1.wav", -12.0, force_restart, context)
 	else:
 		play_music("res://assets/music/menu.mp3", -16.0, force_restart, "menu")
 

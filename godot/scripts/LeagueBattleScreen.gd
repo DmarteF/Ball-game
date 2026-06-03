@@ -64,13 +64,14 @@ var _result_title: Label
 var _result_details: VBoxContainer
 var _result_double_button: Button
 var _revive_overlay: Control
+var _battle_started_flash := 0.0
 
 
 func _ready() -> void:
 	_regular_font = _make_system_font(400)
 	_bold_font = _make_system_font(700)
 	if has_node("/root/AudioManager"):
-		AudioManager.play_context("gameplay")
+		AudioManager.play_context("league")
 	_build_background()
 	_build_hud()
 	_build_pause_overlay()
@@ -83,6 +84,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _player.is_empty() or _rival.is_empty():
 		return
+	_battle_started_flash = max(0.0, _battle_started_flash - delta * 1.8)
 	if _finished or _paused or not _battle_active:
 		_update_status()
 		queue_redraw()
@@ -108,6 +110,8 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	if _battle_started_flash > 0.0:
+		draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color("#00f0ff", 0.05 * _battle_started_flash), true)
 	if not _rival.is_empty():
 		_draw_arena(_rival)
 	if not _player.is_empty():
@@ -122,7 +126,7 @@ func _notification(what: int) -> void:
 func _prepare_match() -> void:
 	var league: Dictionary = GameState.data.get("league", {})
 	var trophies := int(league.get("trophies", 0))
-	_opponent = MainPortData.opponent_for(trophies)
+	_opponent = _resolve_pending_opponent(trophies)
 	_elapsed = 0.0
 	_winner = ""
 	_finish_reason = ""
@@ -132,8 +136,9 @@ func _prepare_match() -> void:
 	_finished = false
 	_paused = false
 	_battle_active = true
+	_battle_started_flash = 1.0
 	var rank := MainPortData.rank_for_trophies(trophies)
-	var rival_skin: Dictionary = Dictionary(_opponent.get("skin", MainPortData.skin_by_id("neon_blue")))
+	var rival_skin: Dictionary = _skin_dict_from_value(_opponent.get("skin", "neon_blue"))
 	_rival = _make_arena("rival", String(_opponent.get("name", "Rival")), String(rival_skin.get("id", "neon_blue")), float(_opponent.get("quality", 0.45)), true)
 	_player = _make_arena("player", String(GameState.data.get("nickname", "Voce")), String(GameState.data.get("equipped_skin", "neon_blue")), 1.0, false)
 	_layout_arenas()
@@ -146,6 +151,32 @@ func _prepare_match() -> void:
 	_update_status()
 	_update_run_upgrade_buttons()
 	queue_redraw()
+
+
+func _resolve_pending_opponent(trophies: int) -> Dictionary:
+	var pending: Dictionary = GameState.data.get("pending_league_opponent", {})
+	if not pending.is_empty() and not bool(pending.get("is_player", false)):
+		GameState.data.erase("pending_league_opponent")
+		var rank := MainPortData.rank_for_trophies(int(pending.get("trophies", trophies)))
+		return {
+			"id": String(pending.get("id", "league_rival")),
+			"name": String(pending.get("name", "Rival Neon")),
+			"rank": rank,
+			"quality": float(pending.get("quality", 0.55)),
+			"skin": MainPortData.skin_by_id(String(pending.get("skin", "neon_blue"))),
+		}
+	return MainPortData.opponent_for(trophies)
+
+
+func _skin_dict_from_value(value: Variant) -> Dictionary:
+	if typeof(value) == TYPE_DICTIONARY:
+		var dict := Dictionary(value)
+		if not dict.is_empty():
+			return dict
+	var skin := MainPortData.skin_by_id(String(value))
+	if skin.is_empty():
+		return MainPortData.skin_by_id("neon_blue")
+	return skin
 
 
 func _make_arena(id: String, label: String, skin_id: String, quality: float, ai: bool) -> Dictionary:
@@ -184,19 +215,24 @@ func _make_arena(id: String, label: String, skin_id: String, quality: float, ai:
 		"crush_started": 0,
 		"last_hit": 0,
 		"last_direction_shift": Time.get_ticks_msec(),
+		"trail": [],
+		"bursts": [],
 	}
 
 
 func _layout_arenas() -> void:
+	var viewport_size := size
+	if viewport_size.x < 10.0 or viewport_size.y < 10.0:
+		viewport_size = get_viewport_rect().size
 	var hud_height := 100.0
 	var controls_height := 96.0
 	var gap := 16.0
-	var available: float = max(260.0, size.y - hud_height - controls_height - gap)
+	var available: float = max(260.0, viewport_size.y - hud_height - controls_height - gap)
 	var arena_box_height: float = available / 2.0
-	var max_radius: float = min((size.x - 52.0) / 2.0, arena_box_height / 2.0) - 9.0
+	var max_radius: float = min((viewport_size.x - 52.0) / 2.0, arena_box_height / 2.0) - 9.0
 	max_radius = clampf(max_radius, 84.0, 155.0)
-	var top_center := Vector2(size.x / 2.0, hud_height + arena_box_height * 0.5)
-	var bottom_center := Vector2(size.x / 2.0, hud_height + arena_box_height + gap + arena_box_height * 0.5)
+	var top_center := Vector2(viewport_size.x / 2.0, hud_height + arena_box_height * 0.5)
+	var bottom_center := Vector2(viewport_size.x / 2.0, hud_height + arena_box_height + gap + arena_box_height * 0.5)
 	_assign_arena_metrics(_rival, top_center, max_radius)
 	_assign_arena_metrics(_player, bottom_center, max_radius)
 
@@ -242,6 +278,7 @@ func _target_count_for_arena(state: Dictionary) -> int:
 func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 	if bool(state.get("crushed", false)):
 		return
+	_append_trail(state)
 	var delta_steps := delta * PHYSICS_STEPS_PER_SECOND
 	var target_speed := _target_ball_speed(state)
 	var velocity: Vector2 = _stabilize_velocity(Vector2(state.get("velocity", Vector2.RIGHT)) )
@@ -275,6 +312,7 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 		else:
 			state["crush_started"] = 0
 	_refill_rings(state)
+	_update_visual_effects(state, delta)
 	_update_level_progress(state)
 
 
@@ -373,6 +411,7 @@ func _check_perfect_escape(state: Dictionary, prev_dist: float, next_dist: float
 				_play_sfx("clear")
 				if randf() < 0.035 + _perfect_bonus(state):
 					state["diamonds"] = int(state.get("diamonds", 0)) + 1
+			_spawn_burst(state, Vector2(state.get("ball", center)), String(ring.get("color", "#00f0ff")), "clear")
 			return
 
 
@@ -410,11 +449,13 @@ func _check_ring_hit(state: Dictionary, prev_dist: float, next_dist: float, prev
 	_award_arena_xp(state, floori((8.0 if crit else 5.0) * _xp_multiplier(state)))
 	if new_hp <= 0:
 		state["rings_destroyed"] = int(state.get("rings_destroyed", 0)) + 1
+		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), String(ring.get("color", "#00f0ff")), "break")
 		_award_arena_coins(state, max(6, floori((18.0 if String(ring.get("type", "normal")) == "solid" else 12.0) * _gold_multiplier(state))))
 		_award_arena_xp(state, floori((22.0 + randf() * 12.0) * _xp_multiplier(state)))
 		if String(state.get("id", "")) == "player":
 			_play_sfx("break")
 	elif String(state.get("id", "")) == "player":
+		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), String(ring.get("color", "#00f0ff")), "hit")
 		_play_sfx("crit" if crit else "hit")
 
 
@@ -728,6 +769,7 @@ func _apply_special_upgrade_effects(state: Dictionary, ring_index: int, damage: 
 	if int(upgrades.get("ringRepulse", 0)) > 0 and randf() < 0.08 + int(upgrades.get("ringRepulse", 0)) * 0.018:
 		ring["radius"] = min(float(state.get("arena_radius", 100.0)) - 5.0, float(ring.get("radius", 0.0)) + 12.0)
 		ring["defeat_grace_until"] = Time.get_ticks_msec() + 520
+		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), "#00f0ff", "repulse")
 	state["rings"][ring_index] = ring
 	if int(upgrades.get("shockwave", 0)) > 0 and randf() < 0.12:
 		bonus += floori(float(damage) * 0.35)
@@ -755,6 +797,50 @@ func _apply_dynamic_steering(state: Dictionary, delta_steps: float) -> void:
 		var current := Vector2(state.get("velocity", velocity)).normalized()
 		var desired := (current + Vector2(_control_input * 0.68, 0.0)).normalized()
 		state["velocity"] = desired * speed
+
+
+func _append_trail(state: Dictionary) -> void:
+	var trail: Array = state.get("trail", [])
+	var ball: Vector2 = state.get("ball", state.get("center", Vector2.ZERO))
+	if trail.is_empty() or Vector2(trail[trail.size() - 1]).distance_to(ball) > 4.0:
+		trail.append(ball)
+	while trail.size() > (12 if String(state.get("id", "")) == "player" else 9):
+		trail.pop_front()
+	state["trail"] = trail
+
+
+func _spawn_burst(state: Dictionary, position: Vector2, color: String, kind: String) -> void:
+	var bursts: Array = state.get("bursts", [])
+	var base_radius := 24.0
+	if kind == "clear":
+		base_radius = 34.0
+	elif kind == "break":
+		base_radius = 28.0
+	elif kind == "repulse":
+		base_radius = 42.0
+	bursts.append({
+		"position": position,
+		"color": color,
+		"kind": kind,
+		"life": 0.34,
+		"max_life": 0.34,
+		"radius": base_radius,
+	})
+	while bursts.size() > 14:
+		bursts.pop_front()
+	state["bursts"] = bursts
+
+
+func _update_visual_effects(state: Dictionary, delta: float) -> void:
+	var bursts: Array = state.get("bursts", [])
+	for i in range(bursts.size() - 1, -1, -1):
+		var burst: Dictionary = bursts[i]
+		burst["life"] = float(burst.get("life", 0.0)) - delta
+		if float(burst.get("life", 0.0)) <= 0.0:
+			bursts.remove_at(i)
+		else:
+			bursts[i] = burst
+	state["bursts"] = bursts
 
 
 func _safe_motion_angle(angle: float) -> float:
@@ -921,6 +1007,13 @@ func _draw_arena(state: Dictionary) -> void:
 	var is_player := String(state.get("id", "")) == "player"
 	draw_circle(center, arena_radius + 10.0, Color("#12052a55"))
 	draw_arc(center, arena_radius + 2.0, 0.0, TWO_PI, 160, Color("#00f0ff44" if is_player else "#ff4fd844"), 2.0, true)
+	var skin_color := Color(String(state.get("skin_color", "#00f0ff")))
+	var trail: Array = state.get("trail", [])
+	for i in range(trail.size()):
+		var progress := float(i + 1) / float(max(1, trail.size()))
+		var alpha := 0.05 + progress * 0.17
+		var trail_radius := BALL_RADIUS * (0.65 + progress * 0.72)
+		draw_circle(Vector2(trail[i]), trail_radius, Color(skin_color, alpha))
 	for ring in Array(state.get("rings", [])):
 		if String(ring.get("status", "")) != "active":
 			continue
@@ -936,7 +1029,6 @@ func _draw_arena(state: Dictionary) -> void:
 			draw_arc(center, radius, gap_center + half_gap, gap_center - half_gap + TWO_PI, 150, Color(color, 0.24), thickness + 7.0, true)
 			draw_arc(center, radius, gap_center + half_gap, gap_center - half_gap + TWO_PI, 150, color, thickness, true)
 	var ball: Vector2 = state.get("ball", center)
-	var skin_color := Color(String(state.get("skin_color", "#00f0ff")))
 	draw_circle(ball, BALL_RADIUS + 11.0, Color(skin_color, 0.18))
 	draw_circle(ball, BALL_RADIUS + 4.0, Color("#ffffff22"))
 	var texture := _skin_texture(String(state.get("skin", "neon_blue")))
@@ -944,6 +1036,14 @@ func _draw_arena(state: Dictionary) -> void:
 		draw_texture_rect(texture, Rect2(ball - Vector2(BALL_RADIUS, BALL_RADIUS) * 1.65, Vector2(BALL_RADIUS, BALL_RADIUS) * 3.3), false)
 	else:
 		draw_circle(ball, BALL_RADIUS, skin_color)
+	for burst in Array(state.get("bursts", [])):
+		var max_life: float = max(0.001, float(burst.get("max_life", 0.34)))
+		var life: float = clampf(float(burst.get("life", 0.0)) / max_life, 0.0, 1.0)
+		var burst_color: Color = Color(String(burst.get("color", "#00f0ff")))
+		var burst_radius: float = float(burst.get("radius", 26.0)) * (1.0 + (1.0 - life) * 0.65)
+		var position: Vector2 = burst.get("position", ball)
+		draw_arc(position, burst_radius, 0.0, TWO_PI, 64, Color(burst_color, 0.38 * life), 2.4, true)
+		draw_circle(position, max(3.0, burst_radius * 0.12), Color("#ffffff", 0.16 * life))
 	var label_pos := center + Vector2(-arena_radius, -arena_radius - 10.0)
 	draw_string(_bold_font, label_pos, String(state.get("label", "")), HORIZONTAL_ALIGNMENT_LEFT, arena_radius * 2.0, 13, Color("#ffffff"))
 	var info := "Lv.%s - %s aneis - %s moedas" % [int(state.get("level", 1)), int(state.get("rings_destroyed", 0)), int(state.get("coins", 0))]
@@ -953,6 +1053,8 @@ func _draw_arena(state: Dictionary) -> void:
 func _build_background() -> void:
 	var background := TextureRect.new()
 	_fill(background)
+	background.show_behind_parent = true
+	background.z_index = -100
 	var gradient := Gradient.new()
 	gradient.colors = PackedColorArray([Color("#050816"), Color("#1a0a2e"), Color("#16003b")])
 	gradient.offsets = PackedFloat32Array([0.0, 0.48, 1.0])
@@ -973,6 +1075,7 @@ func _build_background() -> void:
 func _build_hud() -> void:
 	_hud_layer = Control.new()
 	_fill(_hud_layer)
+	_hud_layer.z_index = 20
 	add_child(_hud_layer)
 	var top := HBoxContainer.new()
 	top.anchor_left = 0.0
@@ -1184,6 +1287,7 @@ func _normalize_angle(angle: float) -> float:
 func _make_modal() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	_fill(overlay)
+	overlay.z_index = 40
 	overlay.visible = false
 	overlay.add_theme_stylebox_override("panel", _make_style("#050014cc", 0))
 	return overlay

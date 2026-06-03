@@ -854,3 +854,27 @@ Checklist:
 | Revive por anuncio mockado antes da derrota | Sim |
 | Dobrar recompensa por anuncio mockado | Sim |
 | Trofeus alteram ranking/salvamento real | Sim |
+
+## 7.17 Polimento visual/sonoro da Liga
+
+Atualizado nesta etapa:
+
+- Corrigida a causa provavel da tela preta da batalha: o fundo da cena `LeagueBattle` agora fica atras do canvas desenhado, permitindo que arenas, aneis, bolinhas, trilhas e efeitos aparecam corretamente.
+- A batalha usa fallback de tamanho pelo viewport antes de posicionar as duas arenas, evitando que a luta nasca fora da area visivel quando a cena abre no Web.
+- `LeagueScreen.gd` passa para a luta um rival real do ranking: normalmente o competidor imediatamente acima do jogador.
+- Os 5 primeiros bots da Liga usam skins fortes/raras de ranking: `league_king_neon`, `cosmic_champion`, `void_devourer_ultimate`, `omega_infinity` e `singularity_crown`.
+- A luta da Liga usa musica propria de competicao via `AudioManager.play_context("league")`, tocando `assets/music/gameplay2.mp3`.
+- A arena recebeu trilha visual da skin equipada e bursts leves para impacto, quebra, perfect/clear e repulse, usando cores da skin/anel.
+- SFX existentes seguem sincronizados: impacto usa `hit_light`/`hit_heavy`, quebra usa `ring_break`, clear usa `perfect`, vitoria/derrota usam seus respectivos sons.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Tela preta da luta corrigida | Sim |
+| Arenas desenhadas acima do fundo | Sim |
+| Rival real do ranking entra na luta | Sim |
+| Top 5 bots usam skins fortes | Sim |
+| Musica especifica da Liga | Sim |
+| Efeitos visuais de trilha/impacto/quebra | Sim |
+| SFX de luta mantidos por evento | Sim |

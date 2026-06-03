@@ -152,6 +152,37 @@ const LEAGUE_RANKS := [
 	{ "id": "ultimate", "name": "Ultimate", "min": 2800, "reward": { "type": "skin", "skin_id": "league_king_neon" } },
 ]
 
+const LEAGUE_TOP_SKINS := [
+	"league_king_neon",
+	"cosmic_champion",
+	"void_devourer_ultimate",
+	"omega_infinity",
+	"singularity_crown",
+]
+
+const LEAGUE_BOT_SKINS := [
+	"divine_core",
+	"living_singularity",
+	"infinite_vortex_mythic",
+	"chrono_loop_mythic",
+	"cosmic_fragment",
+	"eternal_core",
+	"endless_prism",
+	"neon_eclipse",
+	"league_bronze_champion",
+	"astral_dragon",
+	"solar_guardian",
+	"black_sun",
+	"blue_vortex",
+	"red_comet",
+	"fire",
+	"ice",
+	"lightning",
+	"crystal",
+	"wolf_rare",
+	"robot",
+]
+
 func skin_by_id(id: String) -> Dictionary:
 	for skin in SKINS:
 		if String(skin.get("id", "")) == id:
@@ -202,6 +233,15 @@ func rank_for_trophies(trophies: int) -> Dictionary:
 			current = rank
 	return current
 
+func league_skin_id_for_position(position: int, seed: int = 0) -> String:
+	if position >= 0 and position < LEAGUE_TOP_SKINS.size():
+		return String(LEAGUE_TOP_SKINS[position])
+	var pool_index: int = abs(position + seed) % LEAGUE_BOT_SKINS.size()
+	return String(LEAGUE_BOT_SKINS[pool_index])
+
+func league_skin_for_position(position: int, seed: int = 0) -> Dictionary:
+	return skin_by_id(league_skin_id_for_position(position, seed))
+
 func opponent_name(index: int, rank_id: String) -> String:
 	var prefixes: Array[String] = ["Nova", "Pixel", "Orbit", "Cyber", "Vortex", "Pulse", "Chrome", "Solar", "Astral", "Rift", "Neon", "Hyper", "Lunar", "Ion", "Prism", "Echo", "Vector", "Zero", "Turbo", "Comet"]
 	var suffixes: Array[String] = ["Runner", "Breaker", "Drifter", "Spark", "Core", "Pilot", "Blade", "Rush", "Echo", "Flux", "Prime", "Wave", "Byte", "Ray", "Loop", "Shift", "Dash", "Glider", "Striker", "Orbit"]
@@ -218,4 +258,5 @@ func opponent_for(trophies: int) -> Dictionary:
 	var seed: int = int(Time.get_unix_time_from_system() / 60) + trophies * 17
 	var idx: int = abs(seed) % 200
 	var rank_index: int = LEAGUE_RANKS.find(rank)
-	return { "id": "%s_%03d" % [String(rank.get("id", "bronze")), idx], "name": opponent_name(idx, String(rank.get("id", "bronze"))), "rank": rank, "quality": clampf(0.32 + float(rank_index) * 0.1 + float(idx % 17) / 100.0, 0.32, 0.92), "skin": SKINS[(idx + rank_index * 13) % SKINS.size()] }
+	var skin_position: int = 5 + max(0, 5 - rank_index) + idx % LEAGUE_BOT_SKINS.size()
+	return { "id": "%s_%03d" % [String(rank.get("id", "bronze")), idx], "name": opponent_name(idx, String(rank.get("id", "bronze"))), "rank": rank, "quality": clampf(0.32 + float(rank_index) * 0.1 + float(idx % 17) / 100.0, 0.32, 0.92), "skin": league_skin_for_position(skin_position, idx) }

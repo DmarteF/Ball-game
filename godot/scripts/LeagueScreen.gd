@@ -227,20 +227,20 @@ func _make_standings() -> Array[Dictionary]:
 		"wins": int(league.get("wins", 0)),
 		"is_player": true,
 	})
-	var skins: Array[String] = ["neon_blue", "hamster", "panda", "fox_common", "wolf_rare", "robot", "fire", "ice", "lightning", "crystal", "astral_eye", "solar_guardian", "black_sun", "blue_vortex", "red_comet", "cosmic_eye", "astral_dragon", "league_bronze_champion"]
 	var seed_offset: int = abs(("%s_%s" % [TimeManager.get_month_key(), String(player_rank.get("id", "bronze"))]).hash()) % 23
 	for i in range(LEAGUE_BOT_COUNT):
 		var rank_fraction: float = 1.0 - float(i) / float(max(1, LEAGUE_BOT_COUNT - 1))
 		var jitter: int = int(sin(float(i + seed_offset) * 1.77) * 10.0)
 		var trophies: int = current_min + max(1, roundi(float(room_span) * (0.10 + rank_fraction * 0.86)) + jitter)
 		trophies = clampi(trophies, current_min + 1, next_min - 1)
-		var skin_id: String = skins[i % skins.size()]
+		var skin_id: String = MainPortData.league_skin_id_for_position(i, seed_offset)
 		result.append({
 			"id": "bot_%s" % i,
 			"name": MainPortData.opponent_name(i + seed_offset, String(player_rank.get("id", "bronze"))),
 			"skin": skin_id,
 			"skin_name": _skin_name(skin_id),
 			"trophies": trophies,
+			"quality": clampf(0.92 - float(i) * 0.018 + float(seed_offset % 5) * 0.01, 0.36, 0.96),
 			"division_id": String(player_rank.get("id", "bronze")),
 			"division": String(player_rank.get("name", "Bronze")),
 			"max_phase": clampi(4 + i * 2, 1, 100),
@@ -269,6 +269,13 @@ func _next_rank(rank: Dictionary) -> Dictionary:
 func _open_battle() -> void:
 	if has_node("/root/AudioManager"):
 		AudioManager.play_sfx("res://assets/sounds/button_click.mp3")
+	var target_index: int = max(0, _player_index - 1)
+	if target_index == _player_index and _standings.size() > 1:
+		target_index = 1
+	if target_index >= 0 and target_index < _standings.size():
+		var target := Dictionary(_standings[target_index]).duplicate(true)
+		if not bool(target.get("is_player", false)):
+			GameState.data["pending_league_opponent"] = target
 	get_tree().change_scene_to_file(BATTLE_SCENE)
 
 
