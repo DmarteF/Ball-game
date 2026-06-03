@@ -799,8 +799,15 @@ func _make_wheel_visual(data: Dictionary) -> PanelContainer:
 	hub_center.add_child(column)
 	column.add_child(_make_icon("wheel", 34))
 	column.add_child(_make_label(_tr("spin").to_upper(), 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	var pointer := _make_label("▼", 30, "#ff0055", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
-	pointer.position = Vector2(104, -14)
+	var pointer_glow := Polygon2D.new()
+	pointer_glow.polygon = PackedVector2Array([Vector2(0, 0), Vector2(38, 0), Vector2(19, 42)])
+	pointer_glow.color = Color("#ff005566")
+	pointer_glow.position = Vector2(105, -12)
+	holder.add_child(pointer_glow)
+	var pointer := Polygon2D.new()
+	pointer.polygon = PackedVector2Array([Vector2(0, 0), Vector2(30, 0), Vector2(15, 34)])
+	pointer.color = Color("#ffd700")
+	pointer.position = Vector2(109, -8)
 	holder.add_child(pointer)
 	return card
 

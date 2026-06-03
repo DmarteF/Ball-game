@@ -545,3 +545,6 @@ Checklist:
 | Anéis novos têm janela de segurança | Sim |
 | Perda por esmagamento exige confirmação curta | Sim |
 | Espaçamento corrigido por raio | Sim |
+## Atualizacao - Liga Neon visual
+
+A Liga Neon deixou de usar a gameplay custom de duas arenas criada no port Godot. A tela atual foi refeita como ranking/progresso visual baseado em `frontend/app/league.tsx`, preservando o botao no menu principal e preparando a competicao para ser reimplementada fielmente em outra etapa.

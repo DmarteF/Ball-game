@@ -10,19 +10,21 @@ const ICON_PATHS := {
 	"legendary_key": "res://assets/ui/ui_legendary_key.png",
 	"achievements": "res://assets/ui/ui_achievements.png",
 	"camera": "res://assets/ui/ui_camera.png",
+	"remove_image": "res://assets/ui/ui_remove_image.png",
 	"locked": "res://assets/ui/ui_locked.png",
-	"league": "res://assets/ui/ui_league_neon.png",
 	"mute_on": "res://assets/ui/ui_mute_on.png",
 	"mute_off": "res://assets/ui/ui_mute_off.png",
 	"xp": "res://assets/ui/ui_xp.png",
 }
 
-const AVATARS := ["B", "P", "C", "G", "R", "F", "N", "D", "S", "*"]
 const SETTINGS_PATH := "user://settings.json"
+const PROFILE_AVATAR_IMAGE_PATH := "user://profile_avatar.png"
 
 var _regular_font: Font
 var _bold_font: Font
 var _nickname_edit: LineEdit
+var _avatar_preview: TextureRect
+var _avatar_file_dialog: FileDialog
 var _music_muted := false
 var _sfx_muted := false
 var _master_muted := false
@@ -36,6 +38,7 @@ func _ready() -> void:
 		AudioManager.play_context("menu")
 	_build_background()
 	_build_screen()
+	_build_avatar_file_dialog()
 
 
 func _build_background() -> void:
@@ -115,7 +118,13 @@ func _make_profile_card() -> PanelContainer:
 	photo_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	photo_row.add_theme_constant_override("separation", 8)
 	body.add_child(photo_row)
-	photo_row.add_child(_make_small_icon_button("camera", "TROCAR AVATAR", "#00f0ff22", "#00f0ff88"))
+	var change_avatar := _make_small_icon_button("camera", "TROCAR AVATAR", "#00f0ff22", "#00f0ff88")
+	change_avatar.pressed.connect(_choose_avatar_image)
+	photo_row.add_child(change_avatar)
+	if _has_custom_avatar_image():
+		var remove_avatar := _make_small_icon_button("remove_image", "REMOVER FOTO", "#ff005522", "#ff005588")
+		remove_avatar.pressed.connect(_remove_avatar_image)
+		photo_row.add_child(remove_avatar)
 
 	var save := _make_solid_button("SALVAR NICK", "#00f0ff", "#001018", 120, 36)
 	save.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -126,8 +135,8 @@ func _make_profile_card() -> PanelContainer:
 	avatar_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	avatar_row.add_theme_constant_override("separation", 8)
 	body.add_child(avatar_row)
-	for avatar_key in AVATARS:
-		avatar_row.add_child(_make_avatar_pick(avatar_key, avatar_key == "B"))
+	for skin in _profile_avatar_skins():
+		avatar_row.add_child(_make_avatar_skin_pick(skin))
 
 	body.add_child(_make_section_title("SKIN FAVORITA"))
 	body.add_child(_make_favorite_skin_box())
@@ -136,13 +145,8 @@ func _make_profile_card() -> PanelContainer:
 	skin_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	skin_row.add_theme_constant_override("separation", 8)
 	body.add_child(skin_row)
-	for skin_path in [
-		"res://assets/skins/neon_blue.png",
-		"res://assets/skins/fire.png",
-		"res://assets/skins/ghost.png",
-		"res://assets/skins/crystal.png",
-	]:
-		skin_row.add_child(_make_skin_pick(skin_path))
+	for skin in _profile_avatar_skins():
+		skin_row.add_child(_make_skin_pick(_skin_texture_path(String(skin.get("id", "neon_blue")))))
 	return card
 
 
@@ -280,20 +284,33 @@ func _make_large_avatar() -> PanelContainer:
 	outer.add_theme_stylebox_override("panel", _make_style("#ffffff14", 43, "#ffffff55", 1, "#00f0ff59", 10))
 	var center := CenterContainer.new()
 	outer.add_child(center)
-	var dot := Panel.new()
-	dot.custom_minimum_size = Vector2(48, 48)
-	dot.add_theme_stylebox_override("panel", _make_style("#1f7dff", 24))
-	center.add_child(dot)
+	_avatar_preview = TextureRect.new()
+	_avatar_preview.texture = _avatar_texture()
+	_avatar_preview.custom_minimum_size = Vector2(66, 66)
+	_avatar_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_avatar_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	center.add_child(_avatar_preview)
 	return outer
 
 
-func _make_avatar_pick(text: String, active: bool) -> PanelContainer:
-	var pick := PanelContainer.new()
+func _make_avatar_skin_pick(skin: Dictionary) -> Button:
+	var id := String(skin.get("id", "neon_blue"))
+	var active := String(GameState.data.get("avatar", "")) == "skin:%s" % id and not _has_custom_avatar_image()
+	var pick := Button.new()
 	pick.custom_minimum_size = Vector2(42, 42)
-	pick.add_theme_stylebox_override("panel", _make_style("#ffffff18", 21, "#00ff88" if active else "#00000000", 2 if active else 0))
+	pick.focus_mode = Control.FOCUS_NONE
+	_apply_button_style(pick, _make_style("#ffffff18", 21, "#00ff88" if active else "#00000000", 2 if active else 0))
+	pick.pressed.connect(func() -> void: _select_skin_avatar(id))
 	var center := CenterContainer.new()
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pick.add_child(center)
-	center.add_child(_make_label(text, 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var icon := TextureRect.new()
+	icon.texture = load(_skin_texture_path(id))
+	icon.custom_minimum_size = Vector2(34, 34)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(icon)
 	return pick
 
 
@@ -324,8 +341,12 @@ func _make_favorite_skin_box() -> PanelContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	margin.add_child(row)
+	var favorite_id := String(GameState.data.get("favorite_skin", GameState.data.get("equipped_skin", "neon_blue")))
+	var favorite_skin := MainPortData.skin_by_id(favorite_id)
+	if favorite_skin.is_empty():
+		favorite_skin = MainPortData.skin_by_id("neon_blue")
 	var skin := TextureRect.new()
-	skin.texture = load("res://assets/skins/neon_blue.png")
+	skin.texture = load(_skin_texture_path(String(favorite_skin.get("id", "neon_blue"))))
 	skin.custom_minimum_size = Vector2(44, 44)
 	skin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	skin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -333,9 +354,106 @@ func _make_favorite_skin_box() -> PanelContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 2)
 	row.add_child(column)
-	column.add_child(_make_label("Neon Blue", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label("COMMON", 11, "#9ca3af", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(String(favorite_skin.get("name", "Neon Blue")), 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(String(favorite_skin.get("rarity", "common")).to_upper(), 11, "#9ca3af", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return box
+
+
+func _build_avatar_file_dialog() -> void:
+	_avatar_file_dialog = FileDialog.new()
+	_avatar_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_avatar_file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_avatar_file_dialog.filters = PackedStringArray(["*.png, *.jpg, *.jpeg, *.webp ; Imagens"])
+	_avatar_file_dialog.title = "Escolher avatar"
+	_avatar_file_dialog.use_native_dialog = true
+	_avatar_file_dialog.file_selected.connect(_on_avatar_file_selected)
+	add_child(_avatar_file_dialog)
+
+
+func _choose_avatar_image() -> void:
+	if _avatar_file_dialog:
+		_avatar_file_dialog.popup_centered_ratio(0.86)
+
+
+func _on_avatar_file_selected(path: String) -> void:
+	var image := Image.new()
+	var error := image.load(path)
+	if error != OK:
+		if has_node("/root/AudioManager"):
+			AudioManager.play_sfx("res://assets/sounds/button_error.mp3")
+		return
+	image.resize(256, 256, Image.INTERPOLATE_LANCZOS)
+	if image.save_png(PROFILE_AVATAR_IMAGE_PATH) != OK:
+		if has_node("/root/AudioManager"):
+			AudioManager.play_sfx("res://assets/sounds/button_error.mp3")
+		return
+	GameState.data["avatar_image_path"] = PROFILE_AVATAR_IMAGE_PATH
+	GameState.data["avatar"] = "custom"
+	GameState.save_game()
+	if _avatar_preview:
+		_avatar_preview.texture = _avatar_texture()
+	if has_node("/root/AudioManager"):
+		AudioManager.play_sfx("res://assets/sounds/button_confirm.mp3")
+
+
+func _remove_avatar_image() -> void:
+	GameState.data["avatar_image_path"] = ""
+	GameState.data["avatar"] = "skin:%s" % String(GameState.data.get("favorite_skin", GameState.data.get("equipped_skin", "neon_blue")))
+	GameState.save_game()
+	get_tree().reload_current_scene()
+
+
+func _select_skin_avatar(id: String) -> void:
+	GameState.data["avatar_image_path"] = ""
+	GameState.data["avatar"] = "skin:%s" % id
+	GameState.data["favorite_skin"] = id
+	GameState.save_game()
+	get_tree().reload_current_scene()
+
+
+func _has_custom_avatar_image() -> bool:
+	var path := String(GameState.data.get("avatar_image_path", ""))
+	return not path.is_empty() and FileAccess.file_exists(path)
+
+
+func _avatar_texture() -> Texture2D:
+	var custom_path := String(GameState.data.get("avatar_image_path", ""))
+	if not custom_path.is_empty() and FileAccess.file_exists(custom_path):
+		var image := Image.new()
+		if image.load(custom_path) == OK:
+			return ImageTexture.create_from_image(image)
+	var avatar := String(GameState.data.get("avatar", ""))
+	var skin_id := avatar.trim_prefix("skin:") if avatar.begins_with("skin:") else String(GameState.data.get("favorite_skin", GameState.data.get("equipped_skin", "neon_blue")))
+	return load(_skin_texture_path(skin_id))
+
+
+func _profile_avatar_skins() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var seen: Array[String] = []
+	for id in [String(GameState.data.get("favorite_skin", "")), String(GameState.data.get("equipped_skin", ""))]:
+		_append_profile_skin(result, seen, id)
+	for id in Array(GameState.data.get("unlocked_skins", [])):
+		_append_profile_skin(result, seen, String(id))
+	if result.is_empty():
+		_append_profile_skin(result, seen, "neon_blue")
+	return result
+
+
+func _append_profile_skin(result: Array[Dictionary], seen: Array[String], id: String) -> void:
+	if id.is_empty() or seen.has(id):
+		return
+	var skin := MainPortData.skin_by_id(id)
+	if skin.is_empty():
+		return
+	seen.append(id)
+	result.append(skin)
+
+
+func _skin_texture_path(id: String) -> String:
+	var path := "res://assets/skins/%s.png" % id
+	if ResourceLoader.exists(path):
+		return path
+	return "res://assets/skins/neon_blue.png"
 
 
 func _make_xp_bar(progress: float, text: String) -> PanelContainer:

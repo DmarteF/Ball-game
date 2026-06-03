@@ -6,11 +6,11 @@ const PHASE_SELECT_SCENE := "res://scenes/PhaseSelect.tscn"
 const BALL_RADIUS := 10.0
 const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
-const MIN_RING_SPACING := 8.4
-const MAX_VISIBLE_RINGS := 26
-const MIN_TARGET_ACTIVE_RINGS := 8
-const TARGET_ACTIVE_RINGS := 8
-const MAX_TARGET_ACTIVE_RINGS := 8
+const MIN_RING_SPACING := 7.2
+const MAX_VISIBLE_RINGS := 32
+const MIN_TARGET_ACTIVE_RINGS := 12
+const TARGET_ACTIVE_RINGS := 12
+const MAX_TARGET_ACTIVE_RINGS := 12
 const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
 const MAX_SPAWN_DISTANCE_FROM_BALL := 170.0
 const INFINITE_RING_REACH_DISTANCE := 132.0
@@ -406,7 +406,7 @@ func _make_infinite_gameplay_config() -> Dictionary:
 	var player_level := int(GameState.data.get("level", 1))
 	var pressure := clampf(infinite_clear_pressure, 0.0, 8.0)
 	return {
-		"ring_count": clampi(8 + floori(float(level_factor) * 0.32 + pressure * 0.32), 8, 15),
+		"ring_count": clampi(12 + floori(float(level_factor) * 0.34 + pressure * 0.34), 12, 20),
 		"base_hp": 18 + floori(float(level_factor) * 2.8 + pressure * 1.4) + floori(float(player_level) * 0.25),
 		"closing_speed": 0.0068 + min(0.024, float(level_factor) * 0.00062 + pressure * 0.0008),
 		"rotation_speed": 0.0044 + min(0.014, float(level_factor) * 0.00038 + pressure * 0.00045),
@@ -501,12 +501,12 @@ func _append_infinite_ring() -> bool:
 
 
 func _infinite_ring_spacing() -> float:
-	return max(MIN_RING_SPACING + 1.2, 9.6)
+	return max(MIN_RING_SPACING + 0.8, 8.0)
 
 
 func _infinite_ring_capacity() -> int:
 	var available: float = _playable_ring_max_radius() - _playable_ring_min_radius()
-	return clampi(floori(available / _infinite_ring_spacing()) + 1, TARGET_ACTIVE_RINGS, 12)
+	return clampi(floori(available / _infinite_ring_spacing()) + 1, TARGET_ACTIVE_RINGS, 16)
 
 
 func _active_ring_indices_by_radius() -> Array[int]:

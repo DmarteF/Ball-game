@@ -356,3 +356,8 @@ Checklist:
 | Perda acontecia do nada por spawn/fechamento | Anéis novos/reposicionados têm graça de derrota e esmagamento precisa persistir brevemente | Corrigido |
 | Anéis podiam empurrar outros pela ordem interna da lista | `_clamp_ring_spacing` agora ordena por raio antes de aplicar espaçamento | Corrigido |
 | Infinito começava com possível anel sólido/armadilha | Lote inicial do infinito não cria sólido obrigatório e randomiza gaps | Corrigido |
+## Atualizacao - Liga Neon refeita pelo frontend
+
+Nesta etapa, a implementacao anterior de Liga Neon em formato battle/duas arenas foi removida da cena atual. `League.tscn` agora usa `scripts/LeagueScreen.gd`, uma tela visual baseada em `frontend/app/league.tsx`, com resumo do jogador, trofeus, temporada, progresso de divisao, podium, recompensa estimada e ranking local mockado.
+
+A competicao real da Liga fica pendente para ser recriada depois com fidelidade ao fluxo do frontend/main, sem reutilizar a batalha custom anterior como base definitiva.

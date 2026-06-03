@@ -268,6 +268,7 @@ func default_save() -> Dictionary:
 		"player_id": "player_%s" % now,
 		"nickname": "Player",
 		"avatar": "blue",
+		"avatar_image_path": "",
 		"coins": 600,
 		"diamonds": 60,
 		"keys": 1,
@@ -287,7 +288,7 @@ func default_save() -> Dictionary:
 		"favorite_skin": "neon_blue",
 		"skin_levels": { "neon_blue": 1 },
 		"skin_fragments": {},
-		"unlocked_upgrades": ["baseDamage", "baseSpeed", "coinMultiplier", "critChance", "damage", "speed", "coinBoost", "critical", "xpBoost", "perfectChance", "bounce"],
+		"unlocked_upgrades": ["baseDamage", "baseSpeed", "coinMultiplier", "critChance", "damage", "speed", "coinBoost", "critical", "xpBoost", "perfectChance"],
 		"explicit_unlocked_run_upgrades": [],
 		"permanent_upgrades": {},
 		"settings": {

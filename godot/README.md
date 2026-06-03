@@ -95,7 +95,7 @@ Pendencias marcadas assim porque a `main` usa a fonte de sistema do React Native
 | Roleta | `frontend/app/wheel.tsx`, `assets/ui/ui_wheel.png` | `scenes/Wheel.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Titulo simples; roleta visual mantida e sorteio real pendente. |
 | Recompensa diaria | `frontend/app/daily-reward.tsx`, `assets/ui/ui_daily_reward.png` | `scenes/DailyReward.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Calendario de 7 dias mockado; controle real de tempo/coleta pendente. |
 | Boss | `frontend/app/boss.tsx`, `assets/ui/ui_boss.png` | `scenes/Boss.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado vazio discreto; logica real de boss pendente. |
-| Liga Neon | `frontend/app/league.tsx`, `frontend/app/compete.tsx`, `frontend/src/game/dualArena.ts`, `assets/ui/ui_league_neon.png` | `scenes/League.tscn`, `scripts/LeagueBattleScreen.gd` | Jogavel | Batalha versus com arena rival no topo, arena do jogador embaixo, bot, upgrades temporarios, trofeus, temporada mensal e recompensas proporcionais. |
+| Liga Neon | `frontend/app/league.tsx`, `frontend/src/game/league.ts`, `assets/ui/ui_league_neon.png` | `scenes/League.tscn`, `scripts/LeagueScreen.gd` | Visual refeito | Tela refeita com resumo, divisao, progresso, podium, ranking e recompensa estimada. A batalha/competicao real foi removida para ser recriada fielmente depois. |
 | Conquistas | `frontend/app/achievements.tsx`, `frontend/src/game/achievements.ts`, `assets/ui/ui_achievements.png` | `scenes/Achievements.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado vazio; lista/progresso real pendente. |
 
 ## 6. Save, progresso e tempo
@@ -153,7 +153,7 @@ Telas que ja leem dados reais:
 Ainda mockado/pendente:
 
 - boss real, eventos reais e integracao com pagamento/anuncio real.
-- Liga Neon ja esta jogavel em formato versus, mas ainda precisa de comparacao visual fina contra a branch main.
+- Liga Neon foi refeita como tela visual baseada no frontend; competicao real fica pendente para uma etapa dedicada.
 - Recompensas AFK sao calculadas e armazenadas como pendentes, mas nao sao concedidas automaticamente.
 
 Observacao de seguranca: o relogio atual usa horario local do aparelho. Em Android/APK isso pode ser manipulado alterando o relogio do celular. A estrutura ficou preparada para futura validacao online, mas essa validacao ainda nao foi implementada.
@@ -297,7 +297,7 @@ Arquivos principais adicionados nesta etapa:
 
 - `scripts/MainPortData.gd`: tabela central gerada a partir da `main`, com 92 skins, 34 upgrades temporarios, ranks/recompensas da Liga Neon e geracao de oponente.
 - `scripts/LocalizationManager.gd`: base EN/PT compartilhada, ligada ao idioma salvo em Configuracoes.
-- `scripts/LeagueBattleScreen.gd`: Liga Neon em batalha real, usando duas arenas simultaneas, bot, upgrades de rodada, trofeus e temporada mensal.
+- `scripts/LeagueScreen.gd`: Liga Neon visual baseada em `frontend/app/league.tsx`, com resumo, divisao, podium e ranking local mockado.
 - `MAIN_PORT_ANALYSIS.md`: inventario da migracao fiel por sistema e pendencias.
 
 Fontes da branch `main` usadas como verdade nesta etapa:
@@ -311,18 +311,15 @@ Fontes da branch `main` usadas como verdade nesta etapa:
 
 Regras de anel atualizadas:
 
-- Partidas normais e Liga mantem alvo de 5 aneis ativos visiveis, com fila interna para fases finitas.
-- Modo infinito escala esse alvo gradualmente, sempre com distancia minima entre raios.
+- Partidas normais e modo infinito mantem alvo de 12 aneis ativos visiveis, com fila interna para fases finitas.
+- Modo infinito mantem esse alvo com reposicao imediata e distancia minima entre raios.
 - A area de spawn/enquadramento continua invisivel e respeita HUD, raio minimo/maximo e distancia segura da bolinha.
 
 Liga Neon:
 
-- Nao e mais tela passiva de ranking.
-- Oponente fica no topo e jogador embaixo, seguindo a ideia de `dualArena.ts`.
-- O bot escolhe upgrades automaticamente.
-- O jogador escolhe entre upgrades temporarios reais desbloqueados.
-- Vitoria, derrota e saida concedem moedas/XP proporcionais e ajustam trofeus.
-- O ranking usa ranks mensais e salva `league.trophies`, vitorias, derrotas, saidas, melhor sequencia e temporada.
+- Voltou a ser uma tela de ranking/progresso baseada em `frontend/app/league.tsx`.
+- Mostra resumo do jogador, trofeus, dias de temporada, progresso de divisao, podium, recompensa estimada e lista de rivais ficticios.
+- A batalha versus feita no port anterior foi removida para a competicao ser recriada depois com fidelidade ao frontend/main.
 
 Checklist desta etapa:
 
@@ -428,7 +425,7 @@ Atualizado nesta etapa:
 - Inventario, missoes e conquistas mostram recompensa/progresso de forma mais clara e usam o modal de recompensa ao coletar/abrir.
 - `GameplayManager.gd` calcula o angulo de colisao no ponto real em que o segmento da bolinha cruza o raio do anel. Isso reduz falhas ao passar pelo gap em alta velocidade.
 - Spawn de aneis foi ajustado para manter raios em distancia minima/maxima atingivel pela bolinha, inclusive quando ela esta perto da borda.
-- `LeagueBattleScreen.gd` recebeu spawn mais justo nas duas arenas menores.
+- `LeagueScreen.gd` substituiu a batalha custom da Liga por tela visual baseada no frontend.
 
 Checklist desta etapa:
 
@@ -456,7 +453,7 @@ Checklist desta etapa:
 | Modo infinito recompensa ao morrer/sair | Sim |
 | Spawn justo implementado no normal | Sim |
 | Spawn justo implementado no infinito | Sim |
-| Spawn justo implementado na Liga Neon | Sim |
+| Liga Neon refeita como tela visual | Sim |
 | Recompensas sempre tem feedback visual claro | Sim para loja, bau, roleta, diaria, missoes e conquistas; resultados de fase/Liga ja tinham modal/resumo proprio. |
 
 Pendencias conhecidas:
@@ -478,17 +475,17 @@ Atualizado nesta etapa:
 - Seleção de upgrades temporários ganhou reroll por anúncio mockado ou 10 diamantes, limitado a 3 rerolls por level-up.
 - Game over ganhou revive por anúncio mockado, limitado a uma vez por partida.
 - Notificação de conquista no menu inicial ficou menor, discreta, com resumo de pendências, clique para Conquistas e auto-ocultamento após alguns segundos.
-- Liga Neon usa fallback de tamanho pelo viewport para evitar arenas invisíveis/vazias quando o Control ainda não recebeu layout.
+- Liga Neon foi refeita como tela de ranking/progresso baseada no frontend; a batalha versus anterior foi removida.
 
 Checklist desta etapa:
 
 | Item | Status |
 | --- | --- |
 | Temporários de rodada ocultos da tela de upgrades | Sim |
-| Liga Neon não está mais vazia | Sim, corrigido fallback de layout e mantém modo versus |
-| Liga Neon funciona como versus | Sim |
-| Duas arenas da Liga Neon funcionando | Sim |
-| Oponente automático funcionando | Sim |
+| Liga Neon não está mais vazia | Sim, tela visual refeita |
+| Liga Neon funciona como versus | Pendente, removido para refazer fielmente |
+| Duas arenas da Liga Neon funcionando | Pendente |
+| Oponente automático funcionando | Pendente |
 | Notificação de conquista menor/discreta | Sim |
 | Notificação de conquista some corretamente | Sim |
 | Clicar na notificação abre Conquistas | Sim |
@@ -595,7 +592,7 @@ Checklist:
 
 Atualizado nesta etapa:
 
-- O alvo minimo de aneis ativos passou para 8 na gameplay normal/infinita e na Liga Neon, respeitando o total disponivel da fase e o limite de seguranca.
+- O alvo minimo de aneis ativos passou para 12 na gameplay normal/infinita, respeitando o total disponivel da fase e o limite de seguranca.
 - A roleta agora sorteia a recompensa real antes do giro e anima ate a fatia correspondente ao premio sorteado, com easing de aceleracao/desaceleracao e modal depois do giro.
 - Resultados de vitoria, derrota/infinito e saida manual agora podem exibir `DOBRAR RECOMPENSA - AD` usando anuncio mockado, apenas uma vez por resultado.
 - Dobrar recompensa adiciona somente o extra equivalente de moedas/XP/diamantes ao save, evitando duplicar a recompensa base.
@@ -606,7 +603,7 @@ Checklist:
 
 | Item | Status |
 | --- | --- |
-| Mínimo de 8 anéis ativos quando possível | Sim |
+| Mínimo de 12 anéis ativos quando possível | Sim |
 | Roleta para visualmente no prêmio sorteado | Sim |
 | Roleta entrega recompensa real | Sim |
 | Dobrar recompensa com anúncio mockado em resultados | Sim |
@@ -615,7 +612,7 @@ Checklist:
 | Recompensa ao sair de fase normal | Sim |
 | Recompensa ao sair do modo infinito | Sim |
 | Reviver com anúncio não aparece ao sair manualmente | Sim |
-| Liga Neon usa alvo de 8 anéis ativos | Sim |
+| Liga Neon usa alvo de anéis ativos | Nao, tela visual refeita e versus pendente |
 
 ## 7.9 Correções focadas de spawn, skins e upgrades
 
@@ -760,12 +757,12 @@ Checklist:
 | Anéis novos não matam imediatamente | Sim |
 | Clamp de anéis por raio real | Sim |
 
-## 7.14 Progressão longa, 8 anéis e 100 conquistas
+## 7.14 Progressão longa, 12 anéis e 100 conquistas
 
 Atualizado nesta etapa:
 
 - A progressão de fases foi expandida de 50 para 100 fases em `LevelData.gd`, `PhaseSelectScreen.gd`, `GameState.gd` e `GameplayManager.gd`.
-- O alvo de anéis ativos foi fixado em 8 para fases e modo infinito, mantendo reposição imediata quando um anel quebra ou é limpo pelo gap.
+- O alvo de anéis ativos foi fixado em 12 para fases e modo infinito, mantendo reposição imediata quando um anel quebra ou é limpo pelo gap.
 - A curva de dificuldade das fases foi rebalanceada para 100 fases, com tiers Normal, Difícil, Avançado, Extremo, Insano, Ultimate, Mítico e Ômega.
 - Upgrades permanentes receberam limites maiores e custos iniciais ajustados para sustentar a progressão longa.
 - A tela de Upgrades e o level-up contam temporários apenas quando estão realmente no save: 7 temporárias base auto-liberadas ou extras explicitamente liberadas por recompensa/sistema.
@@ -779,7 +776,7 @@ Checklist:
 | 100 fases disponíveis na seleção | Sim |
 | Gameplay aceita fases 1-100 | Sim |
 | Próxima fase avança até 100 | Sim |
-| 8 anéis ativos como alvo fixo | Sim |
+| 12 anéis ativos como alvo fixo | Sim |
 | Temporários bloqueados não entram na contagem | Sim |
 | 7 temporárias iniciais liberadas | Sim |
 | Temporários extras só aparecem se explicitamente liberados | Sim |

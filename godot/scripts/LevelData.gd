@@ -36,7 +36,7 @@ static func get_solo_gameplay_config(phase_id: int, player_level: int, slow_ring
 	var phase: Dictionary = get_phase_config(phase_id)
 	var difficulty: float = 1.0 + float(phase_id - 1) * 0.072 + max(0.0, float(player_level - 1)) * 0.011
 	return {
-		"ring_count": min(70, floori((int(phase["ring_min"]) + int(phase["ring_max"])) / 2.0) + floori(player_level / 10.0)),
+		"ring_count": max(12, min(70, floori((int(phase["ring_min"]) + int(phase["ring_max"])) / 2.0) + floori(player_level / 10.0))),
 		"base_hp": roundi(float(phase["base_hp"]) * difficulty),
 		"closing_speed": min(0.122, (float(phase["closing_speed"]) + player_level * 0.0002) * 0.8 * (1.0 - min(0.30, slow_ring_level * 0.017))),
 		"rotation_speed": min(0.031, (float(phase["rotation_speed"]) + player_level * 0.00013) * 0.88),
@@ -46,9 +46,9 @@ static func get_solo_gameplay_config(phase_id: int, player_level: int, slow_ring
 
 static func _tier_for_phase(id: int) -> Dictionary:
 	if id <= 5:
-		return { "min": 8, "max": 16, "hp": 12, "close": 0.018, "rotate": 0.0045, "gap": 2.4, "name": "Normal", "desc": "Arena inicial com aberturas grandes e pressão baixa." }
+		return { "min": 12, "max": 18, "hp": 12, "close": 0.018, "rotate": 0.0045, "gap": 2.4, "name": "Normal", "desc": "Arena inicial com aberturas grandes e pressão baixa." }
 	if id <= 10:
-		return { "min": 16, "max": 24, "hp": 34, "close": 0.03, "rotate": 0.007, "gap": 2.75, "name": "Difícil", "desc": "Rotação alternada e anéis um pouco mais resistentes." }
+		return { "min": 18, "max": 26, "hp": 34, "close": 0.03, "rotate": 0.007, "gap": 2.75, "name": "Difícil", "desc": "Rotação alternada e anéis um pouco mais resistentes." }
 	if id <= 20:
 		return { "min": 24, "max": 36, "hp": 68, "close": 0.045, "rotate": 0.01, "gap": 3.15, "name": "Avançado", "desc": "Mais padrões, aberturas menores e anéis resistentes." }
 	if id <= 35:

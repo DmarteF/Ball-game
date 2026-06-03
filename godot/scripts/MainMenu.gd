@@ -409,12 +409,28 @@ func _make_avatar() -> Control:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	outer.add_child(center)
 
-	var dot := Panel.new()
-	dot.custom_minimum_size = Vector2(19, 19)
-	dot.add_theme_stylebox_override("panel", _make_style("#1f7dff", 10))
-	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_child(dot)
+	var icon := TextureRect.new()
+	icon.texture = _avatar_texture()
+	icon.custom_minimum_size = Vector2(25, 25)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(icon)
 	return outer
+
+
+func _avatar_texture() -> Texture2D:
+	var custom_path := String(GameState.data.get("avatar_image_path", ""))
+	if not custom_path.is_empty() and FileAccess.file_exists(custom_path):
+		var image := Image.new()
+		if image.load(custom_path) == OK:
+			return ImageTexture.create_from_image(image)
+	var avatar := String(GameState.data.get("avatar", ""))
+	var skin_id := avatar.trim_prefix("skin:") if avatar.begins_with("skin:") else String(GameState.data.get("favorite_skin", GameState.data.get("equipped_skin", "neon_blue")))
+	var path := "res://assets/skins/%s.png" % skin_id
+	if ResourceLoader.exists(path):
+		return load(path)
+	return load("res://assets/skins/neon_blue.png")
 
 
 func _make_resource_pill(icon_key: String, value: String) -> PanelContainer:
