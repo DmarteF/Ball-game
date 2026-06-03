@@ -8,6 +8,9 @@ const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
 const MIN_RING_SPACING := 8.4
 const MAX_VISIBLE_RINGS := 26
+const TARGET_ACTIVE_RINGS := 5
+const MIN_SPAWN_DISTANCE_FROM_BALL := 30.0
+const MAX_SPAWN_DISTANCE_FROM_BALL := 175.0
 const MAX_PHYSICS_SUBSTEPS := 6
 const SAFE_STEP_DISTANCE := 8.0
 const MIN_DIRECTION_COMPONENT := 0.24
@@ -268,7 +271,9 @@ func _update_game(delta_steps: float) -> void:
 	_update_combo_timeout()
 	if is_infinite:
 		_update_infinite_mode(delta_seconds)
-	elif _active_ring_count() == 0:
+	else:
+		_update_phase_ring_queue()
+	if not is_infinite and _active_ring_count() == 0 and _queued_ring_count() == 0:
 		_finish_victory()
 		return
 
@@ -295,6 +300,7 @@ func _create_rings() -> Array[Dictionary]:
 		var is_solid: bool = solid_indexes.has(i)
 		var hp: int = floori(float(gameplay_config["base_hp"]) * difficulty * (0.9 + progress * 1.55) * (1.45 if is_solid else 1.0))
 		var gap_size: float = max(PI / 13.0, phase_gap * (1.02 - progress * 0.14))
+		var status := "active" if is_infinite or i < TARGET_ACTIVE_RINGS else "queued"
 		result.append({
 			"id": "ring_%s_%s" % [phase_id, i],
 			"type": "solid" if is_solid else "normal",
@@ -307,7 +313,7 @@ func _create_rings() -> Array[Dictionary]:
 			"gap_size": 0.0 if is_solid else gap_size,
 			"hp": hp,
 			"max_hp": hp,
-			"status": "active",
+			"status": status,
 			"thickness": 7.0 if is_solid else 5.0,
 			"color": ["#ff3d00", "#ff0055", "#b000ff"][i % 3] if is_solid else palette[i % palette.size()],
 			"min_radius": 4.0,
@@ -341,10 +347,39 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 		gameplay_config = _make_infinite_gameplay_config()
 	if rings.size() >= MAX_VISIBLE_RINGS:
 		_prune_inactive_rings()
-	var target_count := clampi(8 + floori(float(infinite_level) * 0.24 + infinite_clear_pressure * 0.28), 8, 18)
+	var target_count := clampi(TARGET_ACTIVE_RINGS + floori(float(infinite_level) * 0.18 + infinite_clear_pressure * 0.22), TARGET_ACTIVE_RINGS, 12)
 	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6:
 		_append_infinite_ring()
 	_clamp_ring_spacing()
+
+
+func _update_phase_ring_queue() -> void:
+	var target_count: int = min(TARGET_ACTIVE_RINGS + floori(float(phase_id) / 14.0), int(gameplay_config.get("ring_count", TARGET_ACTIVE_RINGS)))
+	while _active_ring_count() < target_count and _queued_ring_count() > 0:
+		if not _activate_next_queued_ring():
+			break
+	_clamp_ring_spacing()
+
+
+func _queued_ring_count() -> int:
+	var count := 0
+	for ring in rings:
+		if String(ring.get("status", "")) == "queued":
+			count += 1
+	return count
+
+
+func _activate_next_queued_ring() -> bool:
+	for i in range(rings.size()):
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "queued":
+			continue
+		ring["status"] = "active"
+		ring["radius"] = _safe_spawn_radius(float(ring.get("radius", outer_radius - 2.0)))
+		ring["initial_radius"] = max(float(ring.get("initial_radius", ring["radius"])), float(ring["radius"]))
+		rings[i] = ring
+		return true
+	return false
 
 
 func _prune_inactive_rings() -> void:
@@ -368,7 +403,7 @@ func _make_infinite_ring(index: int) -> Dictionary:
 	var is_solid := infinite_level >= 4 and index % solid_every == 0
 	var base_hp := int(gameplay_config.get("base_hp", 20))
 	var hp := floori(float(base_hp) * (1.0 + progress * 0.75) * (1.42 if is_solid else 1.0))
-	var radius := outer_radius - 2.0
+	var radius := _safe_spawn_radius(outer_radius - 2.0)
 	var gap: float = 0.0 if is_solid else max(PI / 15.0, float(gameplay_config.get("gap_size", PI / 4.0)) * randf_range(0.88, 1.08))
 	return {
 		"id": "infinite_%s_%s" % [floori(infinite_elapsed), index],
@@ -949,6 +984,19 @@ func _active_ring_count() -> int:
 	return count
 
 
+func _safe_spawn_radius(preferred_radius: float) -> float:
+	var ball_dist: float = (ball_position - arena_center).length()
+	var min_from_ball: float = max(INNER_RADIUS, ball_dist + MIN_SPAWN_DISTANCE_FROM_BALL)
+	var max_from_ball: float = min(outer_radius - 2.0, max(min_from_ball + MIN_RING_SPACING, ball_dist + MAX_SPAWN_DISTANCE_FROM_BALL))
+	var radius: float = clampf(preferred_radius, min_from_ball, max_from_ball)
+	for ring in rings:
+		if String(ring.get("status", "")) != "active":
+			continue
+		if abs(float(ring.get("radius", 0.0)) - radius) < MIN_RING_SPACING:
+			radius = min(outer_radius - 2.0, float(ring.get("radius", 0.0)) + MIN_RING_SPACING)
+	return clampf(radius, INNER_RADIUS, outer_radius - 2.0)
+
+
 func _base_damage() -> int:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var base_damage := 10.0 * pow(1.1, int(upgrades.get("baseDamage", 0)))
@@ -992,7 +1040,7 @@ func _crit_chance() -> float:
 
 
 func _crit_damage() -> float:
-	return 2.0
+	return 2.0 + int(current_upgrades.get("criticalOverload", 0)) * 0.3
 
 
 func _perfect_diamond_bonus() -> float:
@@ -1059,13 +1107,30 @@ func _try_apply_upgrade_effects(ring_index: int, trigger: String, base_damage_va
 	var bonus_damage := 0
 	if int(current_upgrades.get("frost", 0)) > 0 and randf() < 0.22 + int(current_upgrades.get("frost", 0)) * 0.04:
 		bonus_damage += _apply_effect_to_ring(ring_index, "freeze", 0.48, Color("#9be8ff"), "upgrade")
+	if int(current_upgrades.get("timeFreeze", 0)) > 0 or int(current_upgrades.get("chronoBreak", 0)) > 0:
+		var time_level := int(current_upgrades.get("timeFreeze", 0)) + int(current_upgrades.get("chronoBreak", 0))
+		if randf() < 0.08 + time_level * 0.035:
+			_apply_time_freeze(1300 + time_level * 240)
 	if int(current_upgrades.get("burn", 0)) > 0:
 		bonus_damage += floori(max(1, base_damage_value) * (0.26 + int(current_upgrades.get("burn", 0)) * 0.08))
 		_apply_effect_to_ring(ring_index, "burn", 0.22, Color("#ff8800"), "upgrade")
+	if int(current_upgrades.get("penetration", 0)) > 0:
+		bonus_damage += floori(max(1, base_damage_value) * (0.18 + int(current_upgrades.get("penetration", 0)) * 0.05))
+		_apply_effect_to_ring(ring_index, "poison", 0.18, Color("#39ff14"), "upgrade")
 	if int(current_upgrades.get("ringRepulse", 0)) > 0 and trigger == "hit":
 		_apply_effect_to_ring(ring_index, "repulse", 10.0 + int(current_upgrades.get("ringRepulse", 0)) * 3.0, Color("#c084fc"), "upgrade")
 	if int(current_upgrades.get("chainLightning", 0)) > 0 and randf() < 0.16 + int(current_upgrades.get("chainLightning", 0)) * 0.035:
 		_apply_effect_to_ring(ring_index, "chain", 0.30, Color("#38bdf8"), "upgrade")
+	if int(current_upgrades.get("shockwave", 0)) > 0 or int(current_upgrades.get("voidPulse", 0)) > 0:
+		var area_level := int(current_upgrades.get("shockwave", 0)) + int(current_upgrades.get("voidPulse", 0))
+		if trigger == "break" or randf() < 0.08 + area_level * 0.03:
+			bonus_damage += _apply_effect_to_ring(ring_index, "area", 0.30 + area_level * 0.04, Color("#7c3aed"), "upgrade")
+	if int(current_upgrades.get("laserCut", 0)) > 0 or int(current_upgrades.get("laser", 0)) > 0:
+		var laser_level := int(current_upgrades.get("laserCut", 0)) + int(current_upgrades.get("laser", 0))
+		if randf() < 0.10 + laser_level * 0.025:
+			bonus_damage += max(1, floori(max(1, base_damage_value) * (0.55 + laser_level * 0.12)))
+	if int(current_upgrades.get("chainBreak", 0)) > 0 and trigger == "break":
+		bonus_damage += _apply_effect_to_ring(ring_index, "chain", 0.42 + int(current_upgrades.get("chainBreak", 0)) * 0.06, Color("#ffd700"), "upgrade")
 	return bonus_damage
 
 
@@ -1090,6 +1155,12 @@ func _apply_effect_to_ring(ring_index: int, effect: String, value: float, color:
 			ring["effect_until"] = Time.get_ticks_msec() + 1150
 			_spawn_particles(ball_position, color, 12, 105.0)
 			_spawn_floating("Burn +%s" % bonus_damage, ball_position + Vector2(6, -32), color)
+		"poison":
+			bonus_damage = max(1, floori(float(_base_damage()) * max(0.16, value)))
+			ring["effect_color"] = "#39ff14"
+			ring["effect_until"] = Time.get_ticks_msec() + 1350
+			_spawn_particles(ball_position, color, 10, 95.0)
+			_spawn_floating("Poison +%s" % bonus_damage, ball_position + Vector2(6, -32), color)
 		"chain":
 			bonus_damage = _damage_neighbor_ring(ring_index, max(1, floori(float(_base_damage()) * max(0.25, value))), color)
 			_spawn_particles(ball_position, color, 14, 120.0)
@@ -1117,6 +1188,21 @@ func _apply_effect_to_ring(ring_index: int, effect: String, value: float, color:
 			_spawn_particles(ball_position, color, 5, 70.0)
 	rings[ring_index] = ring
 	return bonus_damage
+
+
+func _apply_time_freeze(duration_ms: int) -> void:
+	var until := Time.get_ticks_msec() + duration_ms
+	for i in range(rings.size()):
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "active":
+			continue
+		ring["effect_color"] = "#9be8ff"
+		ring["effect_until"] = until
+		ring["rotation_multiplier"] = 0.22
+		ring["closing_multiplier"] = 0.55
+		rings[i] = ring
+	_spawn_particles(ball_position, Color("#9be8ff"), 18, 130.0)
+	_spawn_floating("Time Freeze", ball_position + Vector2(-30, -40), Color("#9be8ff"))
 
 
 func _skin_can_phase_collision(ring: Dictionary) -> bool:
@@ -1326,24 +1412,27 @@ func _open_level_up() -> void:
 func _get_safe_upgrade_options() -> Array[Dictionary]:
 	GameState.refresh_unlocks(false)
 	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
-	var pool: Array[Dictionary] = [
-		{ "id": "damage", "name": "Dano+", "description": "+15% de dano", "rarity": "common", "color": "#00f0ff", "unlock": 1 },
-		{ "id": "speed", "name": "Velocidade+", "description": "+20% de velocidade", "rarity": "common", "color": "#00f0ff", "unlock": 1 },
-		{ "id": "coinBoost", "name": "Chuva de Moedas", "description": "+50% de moedas", "rarity": "common", "color": "#ffd700", "unlock": 1 },
-		{ "id": "critical", "name": "Critico+", "description": "+5% chance critica", "rarity": "common", "color": "#ff0055", "unlock": 1 },
-		{ "id": "xpBoost", "name": "XP Boost", "description": "+50% de XP", "rarity": "common", "color": "#00ff88", "unlock": 3 },
-		{ "id": "perfectChance", "name": "Perfect Chance", "description": "+1% chance de diamante no Perfect", "rarity": "rare", "color": "#c084fc", "unlock": 5 },
-		{ "id": "burn", "name": "Queimar", "description": "Dano extra de impacto", "rarity": "rare", "color": "#ff8800", "unlock": 5 },
-		{ "id": "ringRepulse", "name": "Ring Repulse", "description": "Empurra aneis no impacto", "rarity": "rare", "color": "#8b5cf6", "unlock": 7 },
-		{ "id": "frost", "name": "Gelo Neon", "description": "Reduz a rotacao dos aneis", "rarity": "rare", "color": "#9be8ff", "unlock": 8 },
-		{ "id": "chainLightning", "name": "Choque em Cadeia", "description": "Atinge um anel proximo", "rarity": "epic", "color": "#38bdf8", "unlock": 10 },
-	]
+	var pool: Array = MainPortData.RUN_UPGRADES
 	var filtered: Array[Dictionary] = []
 	for upgrade in pool:
-		if unlocked.has(String(upgrade["id"])):
-			filtered.append(upgrade)
+		var id := String(upgrade.get("id", ""))
+		if unlocked.has(id) and int(current_upgrades.get(id, 0)) < int(upgrade.get("maxLevel", 1)):
+			var copy: Dictionary = upgrade.duplicate(true)
+			copy["color"] = _rarity_upgrade_color(String(copy.get("rarity", "common")))
+			filtered.append(copy)
 	filtered.shuffle()
 	return filtered.slice(0, min(3, filtered.size()))
+
+
+func _rarity_upgrade_color(rarity: String) -> String:
+	match rarity:
+		"rare":
+			return "#00aaff"
+		"epic":
+			return "#b000ff"
+		"legendary":
+			return "#ffd700"
+	return "#00f0ff"
 
 
 func _rebuild_level_up_cards() -> void:
@@ -1404,7 +1493,8 @@ func _describe_current_upgrades() -> Dictionary:
 	}
 	for key in current_upgrades.keys():
 		last_key = String(key)
-		labels.append("%s Lv.%s" % [String(names.get(key, key)), int(current_upgrades[key])])
+		var def := MainPortData.upgrade_by_id(last_key)
+		labels.append("%s Lv.%s" % [String(def.get("name", names.get(key, key))), int(current_upgrades[key])])
 	var short := labels[labels.size() - 1] if labels.size() > 0 else ""
 	return { "name": "Upgrades da run", "level": current_upgrades.size(), "effect": ", ".join(labels), "short": short, "icon_key": _upgrade_icon_key(last_key) }
 
@@ -1421,11 +1511,13 @@ func _upgrade_icon_key(id: String) -> String:
 			return "xp"
 		"perfectChance":
 			return "perfect"
-		"frost", "chainLightning":
+		"frost", "timeFreeze", "chronoBreak", "perfectChance":
+			return "perfect"
+		"chainLightning", "shockwave":
 			return "speed"
-		"burn":
+		"burn", "penetration", "laser", "laserCut", "bomb", "multihit", "chainBreak", "criticalOverload":
 			return "damage"
-		"ringRepulse":
+		"ringRepulse", "shieldPulse", "slowField", "voidPulse", "lastShield", "royalBreaker", "bossHunter", "rivalCrusher", "trophyInstinct":
 			return "upgrade"
 		"coinBoost":
 			return "coin"
@@ -1719,6 +1811,35 @@ func _load_skin_texture() -> void:
 func _make_skin_profile(skin_id: String) -> Dictionary:
 	var id := skin_id.to_lower()
 	var profile := { "id": skin_id, "effect": "trail", "chance": 0.06, "value": 0.0, "color": "#00f0ff", "trail_size": 5.0 }
+	var skin_def := MainPortData.skin_by_id(skin_id)
+	if not skin_def.is_empty():
+		var passive: Dictionary = skin_def.get("passive", {})
+		profile["color"] = String(skin_def.get("primary", "#00f0ff"))
+		profile["trail_size"] = _rarity_trail_size(String(skin_def.get("rarity", "common")))
+		var chance := float(passive.get("chance", _default_skin_chance(String(skin_def.get("rarity", "common")))))
+		var value := float(passive.get("value", 0.0))
+		match String(passive.get("type", "trail")):
+			"freeze_ring", "slow_ring":
+				profile.merge({ "effect": "freeze", "chance": chance, "value": max(0.34, value), "color": String(skin_def.get("primary", "#9be8ff")) }, true)
+			"burn":
+				profile.merge({ "effect": "burn", "chance": chance, "value": max(0.22, value * 0.12), "color": String(skin_def.get("primary", "#ff8800")) }, true)
+			"chain_damage":
+				profile.merge({ "effect": "chain", "chance": chance, "value": max(0.28, value), "color": String(skin_def.get("primary", "#38bdf8")) }, true)
+			"phase_solid":
+				profile.merge({ "effect": "phase", "chance": chance, "value": value, "color": String(skin_def.get("primary", "#a855f7")) }, true)
+			"repel_ring":
+				profile.merge({ "effect": "repulse", "chance": chance, "value": max(10.0, value), "color": String(skin_def.get("primary", "#c084fc")) }, true)
+			"area_damage", "cosmic_critical", "league_king_wave":
+				profile.merge({ "effect": "area", "chance": chance, "value": max(0.28, value), "color": String(skin_def.get("primary", "#7c3aed")) }, true)
+			"coin_on_hit", "coin_multiplier":
+				profile.merge({ "effect": "coin", "chance": chance, "value": max(4.0, value * 20.0), "color": String(skin_def.get("primary", "#ffd700")) }, true)
+			"xp_multiplier":
+				profile.merge({ "effect": "xp", "chance": chance, "value": max(6.0, value * 40.0), "color": String(skin_def.get("primary", "#00ff88")) }, true)
+			"speed", "slime_bounce":
+				profile.merge({ "effect": "speed", "chance": chance, "value": max(0.04, value), "color": String(skin_def.get("primary", "#67e8f9")) }, true)
+			"crit_chance", "mega_crit", "damage_multiplier":
+				profile.merge({ "effect": "crit", "chance": chance, "value": max(0.25, value), "color": String(skin_def.get("primary", "#ff4fd8")) }, true)
+		return profile
 	if _id_contains_any(id, ["ice", "frost", "snow", "penguin", "wizard", "red_eye", "neon_spiral"]):
 		profile.merge({ "effect": "freeze", "chance": 0.24, "value": 0.42, "color": "#9be8ff", "trail_size": 7.5 }, true)
 	elif _id_contains_any(id, ["fire", "flame", "dragon", "phoenix", "solar", "meteor"]):
@@ -1740,6 +1861,32 @@ func _make_skin_profile(skin_id: String) -> Dictionary:
 	elif _id_contains_any(id, ["black_hole", "singularity", "cosmic"]):
 		profile.merge({ "effect": "area", "chance": 0.18, "value": 0.32, "color": "#7c3aed", "trail_size": 8.0 }, true)
 	return profile
+
+
+func _default_skin_chance(rarity: String) -> float:
+	match rarity:
+		"rare":
+			return 0.14
+		"epic":
+			return 0.18
+		"legendary", "mythic":
+			return 0.22
+		"ultimate":
+			return 0.28
+	return 0.10
+
+
+func _rarity_trail_size(rarity: String) -> float:
+	match rarity:
+		"rare":
+			return 6.4
+		"epic":
+			return 7.1
+		"legendary", "mythic":
+			return 8.0
+		"ultimate":
+			return 9.0
+	return 5.4
 
 
 func _id_contains_any(id: String, needles: Array) -> bool:

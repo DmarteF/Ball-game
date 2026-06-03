@@ -134,6 +134,8 @@ func _make_language_button(label: String, code: String) -> Button:
 	button.pressed.connect(func() -> void:
 		_language = code
 		_save_settings()
+		if has_node("/root/LocalizationManager"):
+			LocalizationManager.set_language(code)
 		get_tree().reload_current_scene()
 	)
 	return button
@@ -284,7 +286,10 @@ func _load_settings() -> void:
 
 func _save_settings() -> void:
 	GameState.set_audio_muted(_audio_muted)
-	GameState.set_language(_language)
+	if has_node("/root/LocalizationManager"):
+		LocalizationManager.set_language(_language)
+	else:
+		GameState.set_language(_language)
 	if has_node("/root/AudioManager"):
 		AudioManager.apply_audio_settings()
 

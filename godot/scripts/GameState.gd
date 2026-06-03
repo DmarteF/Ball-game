@@ -160,6 +160,18 @@ func default_save() -> Dictionary:
 		"pending_afk_rewards": {},
 		"events": {},
 		"boss": { "last_attempt_at": 0 },
+		"league": {
+			"trophies": 0,
+			"season_key": TimeManager.get_month_key(),
+			"season_reward_claimed": false,
+			"wins": 0,
+			"losses": 0,
+			"quits": 0,
+			"win_streak": 0,
+			"best_streak": 0,
+			"matches": 0,
+			"last_opponent_id": "",
+		},
 		"wheel": { "day_key": "", "free_used": false, "ad_spins_used": 0, "last_reward": {} },
 		"daily_missions": { "day_key": "", "missions": [] },
 		"achievements": {},
@@ -199,6 +211,16 @@ func default_save() -> Dictionary:
 			"storePurchases": 0,
 			"upgradesBought": 0,
 			"skinEquips": 0,
+			"leagueMatches": 0,
+			"leagueWins": 0,
+			"leagueLosses": 0,
+			"leagueQuits": 0,
+			"leagueTrophies": 0,
+			"leagueTrophiesTotal": 0,
+			"leagueWinStreak": 0,
+			"leagueSilverReached": 0,
+			"leagueDiamondReached": 0,
+			"leagueLegendaryReached": 0,
 		},
 	}
 
@@ -234,6 +256,14 @@ func refresh_unlocks(emit_signal := true) -> void:
 	for id in TEMP_UPGRADE_UNLOCKS.keys():
 		if _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level) and not unlocked.has(id):
 			unlocked.append(id)
+	for upgrade in MainPortData.RUN_UPGRADES:
+		var upgrade_id := String(upgrade.get("id", ""))
+		if upgrade_id.is_empty():
+			continue
+		var unlock_level := int(upgrade.get("unlockLevel", 1))
+		var is_secret := bool(upgrade.get("secret", false))
+		if not is_secret and profile_level >= unlock_level and not unlocked.has(upgrade_id):
+			unlocked.append(upgrade_id)
 	data["unlocked_upgrades"] = unlocked
 
 	var skins: Array = data.get("unlocked_skins", [])
@@ -921,6 +951,85 @@ func on_chest_opened() -> void:
 func on_mission_completed() -> void:
 	_increment_stat("missionsCompleted", 1, false)
 	_update_achievements(false)
+
+
+func record_mode_quit(mode: String, summary: Dictionary) -> void:
+	var coins: int = max(0, int(summary.get("coins", 0)))
+	var xp: int = max(0, int(summary.get("xp", 0)))
+	var diamonds: int = max(0, int(summary.get("diamonds", 0)))
+	data["coins"] = int(data.get("coins", 0)) + coins
+	data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
+	add_profile_xp(xp)
+	var stats: Dictionary = data.get("stats", {})
+	stats["runsPlayed"] = int(stats.get("runsPlayed", 0)) + 1
+	stats["runs_played"] = int(stats.get("runs_played", 0)) + 1
+	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + int(summary.get("rings", 0))
+	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + int(summary.get("rings", 0))
+	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	if mode == "infinite":
+		stats["infiniteRuns"] = int(stats.get("infiniteRuns", 0)) + 1
+		stats["bestInfiniteSeconds"] = max(int(stats.get("bestInfiniteSeconds", 0)), int(summary.get("seconds", 0)))
+	data["stats"] = stats
+	_progress_missions("runsPlayed", 1)
+	_progress_missions("ringsDestroyed", int(summary.get("rings", 0)))
+	_progress_missions("runCoins", coins)
+	_update_achievements(false)
+	save_game()
+
+
+func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary:
+	var league: Dictionary = data.get("league", {})
+	var trophies := int(league.get("trophies", 0))
+	var base_delta := 28 if result == "win" else -18 if result == "loss" else -24
+	var rings_value := int(summary.get("rings", 0))
+	var seconds := int(summary.get("seconds", 0))
+	var trophy_delta := base_delta
+	if result == "win":
+		trophy_delta += min(14, rings_value / 3)
+	else:
+		trophy_delta += min(8, rings_value / 8)
+	trophies = max(0, trophies + trophy_delta)
+	league["trophies"] = trophies
+	league["season_key"] = String(league.get("season_key", TimeManager.get_month_key()))
+	league["matches"] = int(league.get("matches", 0)) + 1
+	league["wins"] = int(league.get("wins", 0)) + (1 if result == "win" else 0)
+	league["losses"] = int(league.get("losses", 0)) + (1 if result == "loss" else 0)
+	league["quits"] = int(league.get("quits", 0)) + (1 if result == "quit" else 0)
+	league["win_streak"] = int(league.get("win_streak", 0)) + 1 if result == "win" else 0
+	league["best_streak"] = max(int(league.get("best_streak", 0)), int(league.get("win_streak", 0)))
+	league["last_opponent_id"] = String(summary.get("opponent_id", ""))
+	data["league"] = league
+
+	var coins: int = max(10, int(summary.get("coins", 0)) + (180 if result == "win" else 65 if result == "loss" else 35))
+	var xp: int = max(8, int(summary.get("xp", 0)) + (80 if result == "win" else 30 if result == "loss" else 16))
+	data["coins"] = int(data.get("coins", 0)) + coins
+	add_profile_xp(xp)
+
+	var stats: Dictionary = data.get("stats", {})
+	stats["leagueMatches"] = int(stats.get("leagueMatches", 0)) + 1
+	stats["leagueWins"] = int(stats.get("leagueWins", 0)) + (1 if result == "win" else 0)
+	stats["leagueLosses"] = int(stats.get("leagueLosses", 0)) + (1 if result == "loss" else 0)
+	stats["leagueQuits"] = int(stats.get("leagueQuits", 0)) + (1 if result == "quit" else 0)
+	stats["leagueTrophies"] = trophies
+	stats["leagueTrophiesTotal"] = int(stats.get("leagueTrophiesTotal", 0)) + max(0, trophy_delta)
+	stats["leagueWinStreak"] = max(int(stats.get("leagueWinStreak", 0)), int(league.get("best_streak", 0)))
+	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_value
+	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_value
+	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	var rank := MainPortData.rank_for_trophies(trophies)
+	var rank_id := String(rank.get("id", "bronze"))
+	if rank_id in ["silver", "gold", "diamond", "legendary", "ultimate"]:
+		stats["leagueSilverReached"] = 1
+	if rank_id in ["diamond", "legendary", "ultimate"]:
+		stats["leagueDiamondReached"] = 1
+	if rank_id in ["legendary", "ultimate"]:
+		stats["leagueLegendaryReached"] = 1
+	data["stats"] = stats
+	_progress_missions("ringsDestroyed", rings_value)
+	_progress_missions("runCoins", coins)
+	_update_achievements(false)
+	save_game()
+	return { "coins": coins, "xp": xp, "trophy_delta": trophy_delta, "trophies": trophies, "rank": rank }
 
 
 func set_audio_muted(muted: bool) -> void:

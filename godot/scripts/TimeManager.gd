@@ -9,6 +9,11 @@ func get_now_timestamp() -> int:
 	return int(Time.get_unix_time_from_system())
 
 
+func get_month_key(timestamp: int = get_now_timestamp()) -> String:
+	var date := Time.get_datetime_dict_from_unix_time(timestamp)
+	return "%04d-%02d" % [int(date.year), int(date.month)]
+
+
 func get_last_login_timestamp() -> int:
 	return int(GameState.data.get("last_login_at", 0))
 

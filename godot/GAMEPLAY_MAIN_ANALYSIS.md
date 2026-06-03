@@ -93,6 +93,7 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 
 ## Implementado agora no Godot
 
+- `MainPortData.gd` importa os dados centrais da branch `main`: 92 skins, 34 upgrades temporarios, ranks/recompensas da Liga Neon e geracao de oponente.
 - Fases 1-50 usam `LevelData.gd` com dados derivados da branch `main`; a selecao abre qualquer fase desbloqueada.
 - Geracao/rotacao/gaps/colisao seguem `rings.ts` e `game.tsx`.
 - HUD sem HP visivel e sem debug.
@@ -126,6 +127,7 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Espacamento de aneis usa `MIN_RING_SPACING`, `MAX_VISIBLE_RINGS` e clamp de raios para permitir arena mais cheia sem sobreposicao confusa.
 - SFX foi remapeado por evento: `ring_hit`, `ring_crit`, `ring_break`, `ring_clear`, `reward_coin`, `xp`, `diamond`, `click`, `victory` e `defeat`.
 - Modo infinito foi conectado ao card `Modo Infinito`: gera aneis sem fim, escala dificuldade, salva recordes e mostra resumo de resultado.
+- Liga Neon foi convertida de tela visual para batalha versus: arena rival no topo, arena do jogador embaixo, bot, escolhas de upgrades temporarios, trofeus, temporada mensal e recompensas para vitoria/derrota/saida.
 - O infinito tambem usa pressao dinamica: limpezas rapidas aumentam `infinite_clear_pressure`, que fecha gaps, acelera rotacao/fechamento e aumenta densidade de aneis com clamp para nao sobrepor nem ficar injusto cedo demais.
 - Conquistas/missoes recebem eventos reais de fase, infinito, aneis, perfects, compras, skins, diaria, roleta e recursos.
 - Conquistas adicionais da main foram vinculadas a perfects, diamantes, infinito por tempo/aneis/nivel, combo, criticos, efeitos de skin, colecao por raridade e abertura de baus. `GameState.gd` agora tem hooks publicos para conectar futuros sistemas sem duplicar logica.
@@ -151,6 +153,7 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - Chaves e baus aparecem no resumo como `0/0`, igual ao estado atual observado da gameplay base, mas drops reais ainda nao foram conectados.
 - Barras visuais de XP foram adicionadas, mas ainda nao estao pixel-perfect em relacao ao React Native.
 - As 50 fases usam a mesma formula/dados da branch `main`, mas ainda precisam de comparacao visual fase a fase.
+- A Liga Neon precisa de comparacao visual fina com `frontend/app/league.tsx`, `frontend/app/compete.tsx` e `frontend/src/game/dualArena.ts`.
 
 ## Checklist obrigatoria
 
@@ -237,6 +240,9 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 | Modo infinito funcional | Sim |
 | Modo infinito salva recordes | Sim |
 | Modo infinito aumenta pressao ao limpar aneis rapido | Sim |
+| Liga Neon versus jogavel | Sim |
+| Liga Neon usa bot e upgrades temporarios | Sim |
+| Liga Neon salva trofeus/temporada/recompensas | Sim |
 | Conquistas vinculadas ao modo infinito | Sim |
 | Hooks internos de progresso/criacao de eventos | Sim |
 | Missoes recebem progresso da jogatina real | Sim |

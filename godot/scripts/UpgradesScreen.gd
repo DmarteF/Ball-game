@@ -83,8 +83,12 @@ func _build_screen() -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 16)
 	scroll.add_child(list)
+	list.add_child(_make_label("PERMANENTES", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	for upgrade in UPGRADES:
 		list.add_child(_make_upgrade_card(upgrade))
+	list.add_child(_make_label("TEMPORÁRIOS DE RODADA", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	for upgrade in MainPortData.RUN_UPGRADES:
+		list.add_child(_make_temp_upgrade_card(upgrade))
 
 
 func _make_resource_display() -> HBoxContainer:
@@ -180,6 +184,66 @@ func _make_upgrade_card(upgrade: Dictionary) -> PanelContainer:
 		buy.pressed.connect(_buy_upgrade.bind(id))
 	row.add_child(buy)
 	return card
+
+
+func _make_temp_upgrade_card(upgrade: Dictionary) -> PanelContainer:
+	var id := String(upgrade.get("id", ""))
+	var unlocked := GameState.is_upgrade_unlocked(id)
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _make_style("#ffffff10", 14, "#ffffff1f" if unlocked else "#55555544", 2))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 16)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_right", 16)
+	margin.add_theme_constant_override("margin_bottom", 14)
+	card.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	margin.add_child(row)
+	row.add_child(_make_icon(_upgrade_icon_key(id), 32))
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 3)
+	row.add_child(info)
+	info.add_child(_make_label(String(upgrade.get("name", id)) if unlocked else "???", 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label(String(upgrade.get("description", "")) if unlocked else String(upgrade.get("unlockRequirement", "Bloqueado")), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label("%s • max Lv.%s" % [String(upgrade.get("rarity", "common")).to_upper(), int(upgrade.get("maxLevel", 1))], 11, _rarity_color(String(upgrade.get("rarity", "common"))), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var status := _make_label("LIBERADO" if unlocked else "BLOQUEADO", 12, "#00ff88" if unlocked else "#ff6b9a", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	status.custom_minimum_size.x = 84
+	row.add_child(status)
+	return card
+
+
+func _upgrade_icon_key(id: String) -> String:
+	match id:
+		"damage", "burn", "penetration", "laser", "laserCut", "bomb", "multihit", "chainBreak", "criticalOverload":
+			return "damage"
+		"speed", "ricochet":
+			return "speed"
+		"coinBoost", "magnetCoins", "secretMagnet":
+			return "coin"
+		"critical":
+			return "crit"
+		"xpBoost":
+			return "xp"
+		"frost", "timeFreeze", "chronoBreak", "slowField", "perfectChance", "diamondInstinct":
+			return "freeze"
+		"chainLightning", "shockwave":
+			return "shock"
+		"ringRepulse":
+			return "repulse"
+	return "locked" if not GameState.is_upgrade_unlocked(id) else "key"
+
+
+func _rarity_color(rarity: String) -> String:
+	match rarity:
+		"rare":
+			return "#00aaff"
+		"epic":
+			return "#b000ff"
+		"legendary":
+			return "#ffd700"
+	return "#00f0ff"
 
 
 func _upgrade_value_text(id: String, level: int, max_level: int) -> String:

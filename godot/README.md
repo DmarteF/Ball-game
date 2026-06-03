@@ -86,8 +86,8 @@ Pendencias marcadas assim porque a `main` usa a fonte de sistema do React Native
 | Jogar / selecao de fases | `frontend/app/phase-select.tsx`, `frontend/src/game/phases.ts`, `assets/ui/ui_infinite.png`, `assets/ui/ui_locked.png` | `scenes/PhaseSelect.tscn`, `scripts/PhaseSelectScreen.gd` | Ajustado | Cards mostram fase, dificuldade e aneis, sem HP/descricao longa. Fase 1 abre a gameplay; demais fases e modo infinito seguem visuais/mockados. |
 | Perfil | `frontend/app/profile.tsx`, `frontend/src/components/ProfileAvatar.tsx`, `frontend/src/components/SkinIcon.tsx`, `frontend/src/components/UiIcon.tsx`, `frontend/src/game/skins.ts`, `frontend/src/game/achievements.ts`, `frontend/src/game/upgrades.ts` | `scenes/Profile.tscn`, `scripts/ProfileScreen.gd` | Ajustado nesta etapa | Configuracoes, audio, idioma, FPS e Hz removidos do Perfil. Botao Back padronizado com Coming soon. Dados reais ainda mockados ate o save completo ser portado. |
 | Configuracoes | Pedido desta etapa + estilo visual da tela inicial | `scenes/Settings.tscn`, `scripts/SettingsScreen.gd` | Concluida nesta etapa | Tela simples: audio ligado/mudo, idioma e sobre. Botao Back padronizado com Coming soon. Estado salvo em `user://settings.json`. |
-| Skins | `frontend/app/transformations.tsx`, `frontend/src/game/skins.ts`, `frontend/src/components/SkinIcon.tsx`, `assets/skins/*` | `scenes/Skins.tscn`, `scripts/SkinsScreen.gd` | Funcional nesta etapa | Filtros usam save real, skins desbloqueadas podem ser equipadas e persistem. Evolucao/efeitos especiais seguem pendentes. |
-| Upgrades/Melhorias | `frontend/app/upgrade-shop.tsx`, `frontend/src/game/upgrades.ts`, `frontend/src/game/balance.ts`, `frontend/src/components/UpgradeIcon.tsx` | `scenes/Upgrades.tscn`, `scripts/UpgradesScreen.gd` | Funcional nesta etapa | Compras reais por moedas, limites/custos da main e feedback implementados. Upgrades secretos/eventos/baus seguem pendentes. |
+| Skins | `frontend/app/transformations.tsx`, `frontend/src/game/skins.ts`, `frontend/src/components/SkinIcon.tsx`, `assets/skins/*` | `scenes/Skins.tscn`, `scripts/SkinsScreen.gd`, `scripts/MainPortData.gd` | Funcional | 92 skins da main importadas, com raridade, cores, passivas, bloqueio/equipar e efeito basico na gameplay. Alguns efeitos ultra-especificos seguem aproximados. |
+| Upgrades/Melhorias | `frontend/app/upgrade-shop.tsx`, `frontend/src/game/upgrades.ts`, `frontend/src/game/balance.ts`, `frontend/src/components/UpgradeIcon.tsx` | `scenes/Upgrades.tscn`, `scripts/UpgradesScreen.gd`, `scripts/MainPortData.gd` | Funcional | Permanentes compraveis; 34 upgrades temporarios da main importados e usados em gameplay/Liga. |
 | Loja | `frontend/app/store.tsx`, assets `assets/icons/products/*`, `assets/ui/ui_store.png` | `scenes/Shop.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Titulo simples, descricao longa removida e abas reenquadradas. Cards e botoes mockados; sem compra real. |
 | Inventario | `frontend/app/inventory.tsx`, assets de baus/chaves em `assets/ui` | `scenes/Inventory.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Descricao longa removida; estado vazio discreto preparado. |
 | Missoes | `frontend/app/daily.tsx`, `frontend/src/game/retention.ts`, `assets/ui/ui_missions.png` | `scenes/Missions.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Titulo simples; estado vazio discreto enquanto nao ha missoes reais. |
@@ -95,7 +95,7 @@ Pendencias marcadas assim porque a `main` usa a fonte de sistema do React Native
 | Roleta | `frontend/app/wheel.tsx`, `assets/ui/ui_wheel.png` | `scenes/Wheel.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Titulo simples; roleta visual mantida e sorteio real pendente. |
 | Recompensa diaria | `frontend/app/daily-reward.tsx`, `assets/ui/ui_daily_reward.png` | `scenes/DailyReward.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Calendario de 7 dias mockado; controle real de tempo/coleta pendente. |
 | Boss | `frontend/app/boss.tsx`, `assets/ui/ui_boss.png` | `scenes/Boss.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado vazio discreto; logica real de boss pendente. |
-| Liga Neon | `frontend/app/league.tsx`, `frontend/app/compete.tsx`, `assets/ui/ui_league_neon.png` | `scenes/League.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado indisponivel; ranking/liga real pendente. |
+| Liga Neon | `frontend/app/league.tsx`, `frontend/app/compete.tsx`, `frontend/src/game/dualArena.ts`, `assets/ui/ui_league_neon.png` | `scenes/League.tscn`, `scripts/LeagueBattleScreen.gd` | Jogavel | Batalha versus com arena rival no topo, arena do jogador embaixo, bot, upgrades temporarios, trofeus, temporada mensal e recompensas proporcionais. |
 | Conquistas | `frontend/app/achievements.tsx`, `frontend/src/game/achievements.ts`, `assets/ui/ui_achievements.png` | `scenes/Achievements.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado vazio; lista/progresso real pendente. |
 
 ## 6. Save, progresso e tempo
@@ -152,7 +152,8 @@ Telas que ja leem dados reais:
 
 Ainda mockado/pendente:
 
-- boss real, eventos reais, liga real, conquistas avancadas da main e integracao com pagamento/anuncio real.
+- boss real, eventos reais e integracao com pagamento/anuncio real.
+- Liga Neon ja esta jogavel em formato versus, mas ainda precisa de comparacao visual fina contra a branch main.
 - Recompensas AFK sao calculadas e armazenadas como pendentes, mas nao sao concedidas automaticamente.
 
 Observacao de seguranca: o relogio atual usa horario local do aparelho. Em Android/APK isso pode ser manipulado alterando o relogio do celular. A estrutura ficou preparada para futura validacao online, mas essa validacao ainda nao foi implementada.
@@ -289,6 +290,39 @@ Conquistas/missoes/desbloqueios:
 - `GameState.gd` expoe hooks publicos para fases, modo infinito, moedas, skins, upgrades, diaria, roleta, baus e missoes, mantendo conquistas/missoes/desbloqueios conectaveis aos sistemas reais.
 - Recompensas de conquistas continuam coletaveis pela tela de conquistas existente.
 - Hooks de baus, roleta, loja, diaria e missoes ja chamam `GameState` e alimentam progresso.
+
+## 7.3 Port completo de dados da main
+
+Arquivos principais adicionados nesta etapa:
+
+- `scripts/MainPortData.gd`: tabela central gerada a partir da `main`, com 92 skins, 34 upgrades temporarios, ranks/recompensas da Liga Neon e geracao de oponente.
+- `scripts/LocalizationManager.gd`: base EN/PT compartilhada, ligada ao idioma salvo em Configuracoes.
+- `scripts/LeagueBattleScreen.gd`: Liga Neon em batalha real, usando duas arenas simultaneas, bot, upgrades de rodada, trofeus e temporada mensal.
+- `MAIN_PORT_ANALYSIS.md`: inventario da migracao fiel por sistema e pendencias.
+
+Fontes da branch `main` usadas como verdade nesta etapa:
+
+- `frontend/src/game/skins.ts`
+- `frontend/src/game/upgrades.ts`
+- `frontend/src/game/dualArena.ts`
+- `frontend/src/game/rings.ts`
+- `frontend/src/game/achievements.ts`
+- `frontend/src/i18n/gameText.ts`
+
+Regras de anel atualizadas:
+
+- Partidas normais e Liga mantem alvo de 5 aneis ativos visiveis, com fila interna para fases finitas.
+- Modo infinito escala esse alvo gradualmente, sempre com distancia minima entre raios.
+- A area de spawn/enquadramento continua invisivel e respeita HUD, raio minimo/maximo e distancia segura da bolinha.
+
+Liga Neon:
+
+- Nao e mais tela passiva de ranking.
+- Oponente fica no topo e jogador embaixo, seguindo a ideia de `dualArena.ts`.
+- O bot escolhe upgrades automaticamente.
+- O jogador escolhe entre upgrades temporarios reais desbloqueados.
+- Vitoria, derrota e saida concedem moedas/XP proporcionais e ajustam trofeus.
+- O ranking usa ranks mensais e salva `league.trophies`, vitorias, derrotas, saidas, melhor sequencia e temporada.
 
 Checklist desta etapa:
 

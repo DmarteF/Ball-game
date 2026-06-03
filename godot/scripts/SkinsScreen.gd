@@ -279,9 +279,13 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 func _build_all_skin_data() -> Array:
 	var result: Array = []
 	var seen := {}
-	for skin in SKINS:
-		result.append(skin)
-		seen[String(skin["id"])] = true
+	for skin in MainPortData.SKINS:
+		var item: Dictionary = skin.duplicate(true)
+		item["desc"] = String(item.get("desc", item.get("description", "")))
+		item["effects"] = _effects_from_passive(Dictionary(item.get("passive", {})))
+		item["owned"] = String(item.get("id", "")) == "neon_blue"
+		result.append(item)
+		seen[String(item["id"])] = true
 
 	var directory := DirAccess.open("res://assets/skins")
 	if directory == null:
@@ -305,6 +309,33 @@ func _build_all_skin_data() -> Array:
 				})
 		file_name = directory.get_next()
 	return result
+
+
+func _effects_from_passive(passive: Dictionary) -> Array[String]:
+	match String(passive.get("type", "trail")):
+		"perfect_chance":
+			return ["Perfect"]
+		"coin_on_hit", "coin_multiplier":
+			return ["Moedas"]
+		"crit_chance", "mega_crit", "cosmic_critical":
+			return ["Crítico"]
+		"speed", "slime_bounce":
+			return ["Velocidade"]
+		"phase_solid":
+			return ["Fase"]
+		"slow_ring", "freeze_ring":
+			return ["Congela"]
+		"burn":
+			return ["Queima"]
+		"chain_damage":
+			return ["Corrente"]
+		"area_damage", "league_king_wave":
+			return ["Área"]
+		"repel_ring", "league_starter_champion":
+			return ["Repulsão"]
+		"xp_multiplier":
+			return ["XP"]
+	return ["Trilha"]
 
 
 func _name_from_id(id: String) -> String:
