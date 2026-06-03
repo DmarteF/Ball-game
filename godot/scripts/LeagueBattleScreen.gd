@@ -29,6 +29,14 @@ const SOUND_PATHS := {
 	"victory": "res://assets/sounds/victory.mp3",
 	"defeat": "res://assets/sounds/defeat.mp3",
 }
+const ICON_PATHS := {
+	"coin": "res://assets/ui/ui_coin.png",
+	"gem": "res://assets/ui/ui_gem.png",
+	"key": "res://assets/ui/ui_key.png",
+	"xp": "res://assets/ui/ui_xp.png",
+	"league": "res://assets/ui/ui_league_neon.png",
+	"upgrade": "res://assets/ui/ui_upgrades.png",
+}
 const RING_PALETTE := ["#00f0ff", "#b000ff", "#ff0055", "#00ff88", "#ffd700", "#ff8800"]
 
 var _regular_font: Font
@@ -54,6 +62,11 @@ var _status_label: Label
 var _meta_label: Label
 var _player_label: Label
 var _rival_label: Label
+var _resource_labels: Dictionary = {}
+var _hud_xp_label: Label
+var _hud_xp_bar: ProgressBar
+var _control_overlay: HBoxContainer
+var _control_indicator: Label
 var _run_atk_button: Button
 var _run_gold_button: Button
 var _pause_overlay: Control
@@ -74,6 +87,7 @@ func _ready() -> void:
 		AudioManager.play_context("league")
 	_build_background()
 	_build_hud()
+	_build_control_overlay()
 	_build_pause_overlay()
 	_build_level_up_overlay()
 	_build_result_overlay()
@@ -84,6 +98,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _player.is_empty() or _rival.is_empty():
 		return
+	_update_control_overlay()
 	_battle_started_flash = max(0.0, _battle_started_flash - delta * 1.8)
 	if _finished or _paused or not _battle_active:
 		_update_status()
@@ -111,7 +126,7 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	if _battle_started_flash > 0.0:
-		draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color("#00f0ff", 0.05 * _battle_started_flash), true)
+		draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color("#00f0ff", 0.018 * _battle_started_flash), true)
 	if not _rival.is_empty():
 		_draw_arena(_rival)
 	if not _player.is_empty():
@@ -188,6 +203,8 @@ func _make_arena(id: String, label: String, skin_id: String, quality: float, ai:
 		"label": label,
 		"skin": skin_id,
 		"skin_color": String(skin.get("primary", "#00f0ff")),
+		"skin_secondary": String(skin.get("secondary", "#ffffff")),
+		"skin_rarity": String(skin.get("rarity", "common")),
 		"quality": quality,
 		"ai": ai,
 		"center": Vector2.ZERO,
@@ -224,13 +241,13 @@ func _layout_arenas() -> void:
 	var viewport_size := size
 	if viewport_size.x < 10.0 or viewport_size.y < 10.0:
 		viewport_size = get_viewport_rect().size
-	var hud_height := 100.0
-	var controls_height := 96.0
-	var gap := 16.0
+	var hud_height := 148.0
+	var controls_height := 154.0
+	var gap := 28.0
 	var available: float = max(260.0, viewport_size.y - hud_height - controls_height - gap)
 	var arena_box_height: float = available / 2.0
-	var max_radius: float = min((viewport_size.x - 52.0) / 2.0, arena_box_height / 2.0) - 9.0
-	max_radius = clampf(max_radius, 84.0, 155.0)
+	var max_radius: float = min((viewport_size.x - 64.0) / 2.0, arena_box_height / 2.0) - 7.0
+	max_radius = clampf(max_radius, 86.0, 128.0)
 	var top_center := Vector2(viewport_size.x / 2.0, hud_height + arena_box_height * 0.5)
 	var bottom_center := Vector2(viewport_size.x / 2.0, hud_height + arena_box_height + gap + arena_box_height * 0.5)
 	_assign_arena_metrics(_rival, top_center, max_radius)
@@ -826,7 +843,7 @@ func _spawn_burst(state: Dictionary, position: Vector2, color: String, kind: Str
 		"max_life": 0.34,
 		"radius": base_radius,
 	})
-	while bursts.size() > 14:
+	while bursts.size() > 10:
 		bursts.pop_front()
 	state["bursts"] = bursts
 
@@ -1005,14 +1022,14 @@ func _draw_arena(state: Dictionary) -> void:
 	var center: Vector2 = state.get("center", Vector2.ZERO)
 	var arena_radius := float(state.get("arena_radius", 100.0))
 	var is_player := String(state.get("id", "")) == "player"
-	draw_circle(center, arena_radius + 10.0, Color("#12052a55"))
-	draw_arc(center, arena_radius + 2.0, 0.0, TWO_PI, 160, Color("#00f0ff44" if is_player else "#ff4fd844"), 2.0, true)
+	draw_circle(center, arena_radius + 7.0, Color("#12052a3a"))
+	draw_arc(center, arena_radius + 1.0, 0.0, TWO_PI, 116, Color("#00f0ff38" if is_player else "#ff4fd838"), 2.0, true)
 	var skin_color := Color(String(state.get("skin_color", "#00f0ff")))
 	var trail: Array = state.get("trail", [])
 	for i in range(trail.size()):
 		var progress := float(i + 1) / float(max(1, trail.size()))
-		var alpha := 0.05 + progress * 0.17
-		var trail_radius := BALL_RADIUS * (0.65 + progress * 0.72)
+		var alpha := 0.04 + progress * 0.14
+		var trail_radius := BALL_RADIUS * (0.58 + progress * 0.64)
 		draw_circle(Vector2(trail[i]), trail_radius, Color(skin_color, alpha))
 	for ring in Array(state.get("rings", [])):
 		if String(ring.get("status", "")) != "active":
@@ -1021,33 +1038,55 @@ func _draw_arena(state: Dictionary) -> void:
 		var radius := float(ring.get("radius", 0.0))
 		var thickness := float(ring.get("thickness", 5.0))
 		if String(ring.get("type", "normal")) == "solid":
-			draw_arc(center, radius, 0.0, TWO_PI, 160, Color(color, 0.24), thickness + 7.0, true)
-			draw_arc(center, radius, 0.0, TWO_PI, 160, color, thickness, true)
+			draw_arc(center, radius, 0.0, TWO_PI, 112, Color(color, 0.20), thickness + 6.0, true)
+			draw_arc(center, radius, 0.0, TWO_PI, 112, color, thickness, true)
 		else:
 			var gap_center := _normalize_angle(float(ring.get("gap_start", 0.0)) + float(ring.get("rotation", 0.0)))
 			var half_gap := float(ring.get("gap_size", 0.0)) / 2.0
-			draw_arc(center, radius, gap_center + half_gap, gap_center - half_gap + TWO_PI, 150, Color(color, 0.24), thickness + 7.0, true)
-			draw_arc(center, radius, gap_center + half_gap, gap_center - half_gap + TWO_PI, 150, color, thickness, true)
+			draw_arc(center, radius, gap_center + half_gap, gap_center - half_gap + TWO_PI, 108, Color(color, 0.20), thickness + 6.0, true)
+			draw_arc(center, radius, gap_center + half_gap, gap_center - half_gap + TWO_PI, 108, color, thickness, true)
 	var ball: Vector2 = state.get("ball", center)
-	draw_circle(ball, BALL_RADIUS + 11.0, Color(skin_color, 0.18))
-	draw_circle(ball, BALL_RADIUS + 4.0, Color("#ffffff22"))
-	var texture := _skin_texture(String(state.get("skin", "neon_blue")))
-	if texture:
-		draw_texture_rect(texture, Rect2(ball - Vector2(BALL_RADIUS, BALL_RADIUS) * 1.65, Vector2(BALL_RADIUS, BALL_RADIUS) * 3.3), false)
-	else:
-		draw_circle(ball, BALL_RADIUS, skin_color)
+	_draw_skin_ball(state, ball)
 	for burst in Array(state.get("bursts", [])):
 		var max_life: float = max(0.001, float(burst.get("max_life", 0.34)))
 		var life: float = clampf(float(burst.get("life", 0.0)) / max_life, 0.0, 1.0)
 		var burst_color: Color = Color(String(burst.get("color", "#00f0ff")))
 		var burst_radius: float = float(burst.get("radius", 26.0)) * (1.0 + (1.0 - life) * 0.65)
 		var position: Vector2 = burst.get("position", ball)
-		draw_arc(position, burst_radius, 0.0, TWO_PI, 64, Color(burst_color, 0.38 * life), 2.4, true)
+		draw_arc(position, burst_radius, 0.0, TWO_PI, 44, Color(burst_color, 0.34 * life), 2.2, true)
 		draw_circle(position, max(3.0, burst_radius * 0.12), Color("#ffffff", 0.16 * life))
-	var label_pos := center + Vector2(-arena_radius, -arena_radius - 10.0)
-	draw_string(_bold_font, label_pos, String(state.get("label", "")), HORIZONTAL_ALIGNMENT_LEFT, arena_radius * 2.0, 13, Color("#ffffff"))
-	var info := "Lv.%s - %s aneis - %s moedas" % [int(state.get("level", 1)), int(state.get("rings_destroyed", 0)), int(state.get("coins", 0))]
-	draw_string(_regular_font, center + Vector2(-arena_radius, arena_radius + 18.0), info, HORIZONTAL_ALIGNMENT_LEFT, arena_radius * 2.0, 12, Color("#ffffffaa"))
+	var label_pos := center + Vector2(-arena_radius + 8.0, -arena_radius + 17.0)
+	draw_string(_bold_font, label_pos, String(state.get("label", "")).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, arena_radius * 2.0 - 16.0, 12, Color("#ffffff"))
+	var info := "Lv.%s  %s aneis  %s moedas" % [int(state.get("level", 1)), int(state.get("rings_destroyed", 0)), int(state.get("coins", 0))]
+	draw_string(_regular_font, center + Vector2(-arena_radius + 8.0, arena_radius - 9.0), info, HORIZONTAL_ALIGNMENT_LEFT, arena_radius * 2.0 - 16.0, 11, Color("#ffffffaa"))
+
+
+func _draw_skin_ball(state: Dictionary, ball: Vector2) -> void:
+	var primary := Color(String(state.get("skin_color", "#00f0ff")))
+	var secondary := Color(String(state.get("skin_secondary", "#ffffff")))
+	var rarity := String(state.get("skin_rarity", "common"))
+	var ring_scale: float = float({
+		"common": 1.0,
+		"rare": 1.08,
+		"epic": 1.16,
+		"legendary": 1.25,
+		"mythic": 1.32,
+		"ultimate": 1.42,
+	}.get(rarity, 1.0))
+	draw_circle(ball, BALL_RADIUS + 10.0 * float(ring_scale), Color(primary, 0.15))
+	draw_circle(ball, BALL_RADIUS + 4.0, Color("#ffffff24"))
+	draw_circle(ball, BALL_RADIUS, primary)
+	draw_circle(ball + Vector2(BALL_RADIUS * 0.28, -BALL_RADIUS * 0.28), BALL_RADIUS * 0.46, secondary)
+	draw_arc(ball, BALL_RADIUS + 2.2, -0.35, PI * 1.45, 34, Color(secondary, 0.9), 2.0, true)
+	if rarity in ["epic", "legendary", "mythic", "ultimate"]:
+		draw_arc(ball, BALL_RADIUS + 5.0, PI * 0.12, PI * 1.28, 36, Color(secondary, 0.42), 1.5, true)
+	if rarity in ["legendary", "mythic", "ultimate"]:
+		var crown_y := ball.y - BALL_RADIUS * 0.86
+		draw_line(Vector2(ball.x - 5.0, crown_y + 2.0), Vector2(ball.x - 2.0, crown_y - 4.0), secondary, 1.8)
+		draw_line(Vector2(ball.x - 2.0, crown_y - 4.0), Vector2(ball.x + 2.0, crown_y + 2.0), secondary, 1.8)
+		draw_line(Vector2(ball.x + 2.0, crown_y + 2.0), Vector2(ball.x + 5.0, crown_y - 4.0), secondary, 1.8)
+	if rarity == "ultimate":
+		draw_circle(ball, BALL_RADIUS * 0.22, Color("#ffffff", 0.92))
 
 
 func _build_background() -> void:
@@ -1077,36 +1116,56 @@ func _build_hud() -> void:
 	_fill(_hud_layer)
 	_hud_layer.z_index = 20
 	add_child(_hud_layer)
+
+	var hud := VBoxContainer.new()
+	hud.anchor_left = 0.0
+	hud.anchor_top = 0.0
+	hud.anchor_right = 1.0
+	hud.offset_left = 18.0
+	hud.offset_top = 38.0
+	hud.offset_right = -18.0
+	hud.add_theme_constant_override("separation", 7)
+	_hud_layer.add_child(hud)
+
 	var top := HBoxContainer.new()
-	top.anchor_left = 0.0
-	top.anchor_top = 0.0
-	top.anchor_right = 1.0
-	top.offset_left = 16.0
-	top.offset_top = 38.0
-	top.offset_right = -16.0
-	top.add_theme_constant_override("separation", 8)
-	_hud_layer.add_child(top)
-	var pause := _make_button("PAUSAR", 86, 38)
+	top.add_theme_constant_override("separation", 10)
+	hud.add_child(top)
+	var pause := _make_button("PAUSAR", 96, 40)
 	pause.pressed.connect(_open_pause)
 	top.add_child(pause)
 	var title_box := VBoxContainer.new()
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title_box)
-	_status_label = _make_label("LIGA NEON", 21, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	_status_label = _make_label("LIGA NEON", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
 	title_box.add_child(_status_label)
 	_meta_label = _make_label("", 11, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
 	title_box.add_child(_meta_label)
+
+	var resources := HBoxContainer.new()
+	resources.add_theme_constant_override("separation", 6)
+	hud.add_child(resources)
+	resources.add_child(_make_resource_badge("coin", "0", "coins"))
+	resources.add_child(_make_resource_badge("gem", "0", "gems"))
+	resources.add_child(_make_resource_badge("xp", "0", "xp_total"))
+	resources.add_child(_make_resource_badge("key", str(GameState.data.get("keys", 0)), "keys"))
+
+	_hud_xp_label = _make_label("", 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	hud.add_child(_hud_xp_label)
+	_hud_xp_bar = _make_progress_bar("#00f0ff")
+	hud.add_child(_hud_xp_bar)
 
 	_rival_label = _make_label("", 12, "#ff4fd8", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_rival_label.anchor_left = 0.0
 	_rival_label.anchor_right = 1.0
 	_rival_label.offset_top = 76.0
+	_rival_label.visible = false
 	_hud_layer.add_child(_rival_label)
 	_player_label = _make_label("", 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_player_label.anchor_left = 0.0
 	_player_label.anchor_right = 1.0
 	_player_label.anchor_bottom = 1.0
 	_player_label.offset_bottom = -78.0
+	_player_label.visible = false
 	_hud_layer.add_child(_player_label)
 
 	var bottom := HBoxContainer.new()
@@ -1115,27 +1174,57 @@ func _build_hud() -> void:
 	bottom.anchor_right = 1.0
 	bottom.anchor_bottom = 1.0
 	bottom.offset_left = 12.0
-	bottom.offset_top = -76.0
+	bottom.offset_top = -78.0
 	bottom.offset_right = -12.0
-	bottom.offset_bottom = -12.0
+	bottom.offset_bottom = -14.0
 	bottom.add_theme_constant_override("separation", 8)
 	_hud_layer.add_child(bottom)
-	var left := _make_button("<", 56, 58)
-	left.button_down.connect(_set_control_left.bind(true))
-	left.button_up.connect(_set_control_left.bind(false))
-	bottom.add_child(left)
 	_run_atk_button = _make_button("", 0, 58)
 	_run_atk_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apply_button_style(_run_atk_button, _make_style("#06162add", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
 	_run_atk_button.pressed.connect(_buy_player_run_upgrade.bind("atk"))
 	bottom.add_child(_run_atk_button)
 	_run_gold_button = _make_button("", 0, 58)
 	_run_gold_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apply_button_style(_run_gold_button, _make_style("#06162add", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
 	_run_gold_button.pressed.connect(_buy_player_run_upgrade.bind("gold"))
 	bottom.add_child(_run_gold_button)
-	var right := _make_button(">", 56, 58)
+
+
+func _build_control_overlay() -> void:
+	_control_overlay = HBoxContainer.new()
+	_control_overlay.anchor_left = 0.0
+	_control_overlay.anchor_top = 1.0
+	_control_overlay.anchor_right = 1.0
+	_control_overlay.anchor_bottom = 1.0
+	_control_overlay.offset_left = 18.0
+	_control_overlay.offset_top = -150.0
+	_control_overlay.offset_right = -18.0
+	_control_overlay.offset_bottom = -92.0
+	_control_overlay.add_theme_constant_override("separation", 10)
+	_control_overlay.z_index = 25
+	add_child(_control_overlay)
+
+	var left := _make_control_button("<")
+	left.button_down.connect(_set_control_left.bind(true))
+	left.button_up.connect(_set_control_left.bind(false))
+	_control_overlay.add_child(left)
+
+	var center := VBoxContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	_control_indicator = _make_label("CONTROLE", 11, "#00f0ffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_control_indicator.add_theme_color_override("font_shadow_color", Color("#00f0ff77"))
+	_control_indicator.add_theme_constant_override("shadow_offset_x", 0)
+	_control_indicator.add_theme_constant_override("shadow_offset_y", 0)
+	center.add_child(_control_indicator)
+	_control_overlay.add_child(center)
+
+	var right := _make_control_button(">")
 	right.button_down.connect(_set_control_right.bind(true))
 	right.button_up.connect(_set_control_right.bind(false))
-	bottom.add_child(right)
+	_control_overlay.add_child(right)
+	_update_control_overlay()
 
 
 func _build_pause_overlay() -> void:
@@ -1253,7 +1342,16 @@ func _update_status() -> void:
 	_rival_label.text = "%s - Lv.%s - %s aneis" % [String(_rival.get("label", "Rival")).to_upper(), int(_rival.get("level", 1)), int(_rival.get("rings_destroyed", 0))]
 	if _meta_label:
 		var remaining: int = max(0, ceili(MATCH_LIMIT_SECONDS - _elapsed))
-		_meta_label.text = "%ss restantes - voce %s x %s rival" % [remaining, int(_player.get("rings_destroyed", 0)), int(_rival.get("rings_destroyed", 0))]
+		_meta_label.text = "TEMPO %s   VOCE %s x %s RIVAL" % [_format_time(remaining), int(_player.get("rings_destroyed", 0)), int(_rival.get("rings_destroyed", 0))]
+	_set_resource_value("coins", int(_player.get("coins", 0)))
+	_set_resource_value("gems", int(_player.get("diamonds", 0)))
+	_set_resource_value("xp_total", int(_player.get("total_xp", 0)))
+	_set_resource_value("keys", int(GameState.data.get("keys", 0)))
+	if _hud_xp_label != null and _hud_xp_bar != null:
+		var needed := _arena_xp_needed(int(_player.get("level", 1)))
+		_hud_xp_label.text = "LV.%s   XP %s/%s   GOLD Lv.%s   ATK Lv.%s" % [int(_player.get("level", 1)), int(_player.get("xp", 0)), needed, int(_player.get("gold", 0)), int(_player.get("atk", 0))]
+		_hud_xp_bar.max_value = needed
+		_hud_xp_bar.value = int(_player.get("xp", 0))
 	_update_run_upgrade_buttons()
 
 
@@ -1268,6 +1366,24 @@ func _update_run_upgrade_buttons() -> void:
 	_run_gold_button.disabled = int(_player.get("coins", 0)) < gold_cost or _finished
 
 
+func _update_control_overlay() -> void:
+	if not _control_overlay:
+		return
+	var should_show := _battle_active and not _finished and not _paused
+	_control_overlay.visible = should_show
+	if not should_show:
+		_control_left_down = false
+		_control_right_down = false
+		_control_input = 0.0
+	if _control_indicator:
+		_control_indicator.text = "CONTROLE"
+
+
+func _format_time(seconds: int) -> String:
+	var safe_seconds: int = maxi(0, seconds)
+	return "%02d:%02d" % [floori(float(safe_seconds) / 60.0), safe_seconds % 60]
+
+
 func _skin_texture(id: String) -> Texture2D:
 	var path := "res://assets/skins/%s.png" % id
 	if ResourceLoader.exists(path):
@@ -1278,6 +1394,73 @@ func _skin_texture(id: String) -> Texture2D:
 func _play_sfx(id: String) -> void:
 	if has_node("/root/AudioManager") and SOUND_PATHS.has(id):
 		AudioManager.play_sfx(String(SOUND_PATHS[id]))
+
+
+func _make_resource_badge(icon_key: String, value: String, label_key: String) -> PanelContainer:
+	var badge := PanelContainer.new()
+	badge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	badge.custom_minimum_size = Vector2(0, 34)
+	badge.add_theme_stylebox_override("panel", _make_style("#ffffff11", 10, "#ffffff22", 1, "#00f0ff33", 5))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 7)
+	margin.add_theme_constant_override("margin_right", 7)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_bottom", 4)
+	badge.add_child(margin)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 5)
+	margin.add_child(row)
+	row.add_child(_make_icon_texture(icon_key, 18))
+	var label := _make_label(value, 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	_resource_labels[label_key] = label
+	return badge
+
+
+func _set_resource_value(key: String, value: int) -> void:
+	if _resource_labels.has(key):
+		var label: Label = _resource_labels[key]
+		label.text = str(value)
+
+
+func _make_icon_texture(icon_key: String, icon_size: int) -> TextureRect:
+	var icon := TextureRect.new()
+	var path := String(ICON_PATHS.get(icon_key, ICON_PATHS["upgrade"]))
+	if ResourceLoader.exists(path):
+		icon.texture = load(path)
+	icon.custom_minimum_size = Vector2(icon_size, icon_size)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return icon
+
+
+func _make_progress_bar(fill_color: String) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.custom_minimum_size = Vector2(0, 12)
+	bar.show_percentage = false
+	bar.max_value = 100
+	bar.value = 0
+	bar.add_theme_stylebox_override("background", _make_style("#ffffff11", 7, "#ffffff22", 1))
+	bar.add_theme_stylebox_override("fill", _make_style(fill_color, 7, "#ffffff22", 0, fill_color, 6))
+	return bar
+
+
+func _make_control_button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(72, 58)
+	button.focus_mode = Control.FOCUS_NONE
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_font_size_override("font_size", 26)
+	button.add_theme_color_override("font_color", Color("#00f0ff"))
+	button.add_theme_color_override("font_hover_color", Color("#ffffff"))
+	button.add_theme_color_override("font_pressed_color", Color("#001018"))
+	_apply_button_style(button, _make_style("#06162add", 18, "#00f0ffaa", 2, "#00f0ff66", 10))
+	return button
 
 
 func _normalize_angle(angle: float) -> float:

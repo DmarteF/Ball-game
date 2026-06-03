@@ -862,9 +862,12 @@ Atualizado nesta etapa:
 - Corrigida a causa provavel da tela preta da batalha: o fundo da cena `LeagueBattle` agora fica atras do canvas desenhado, permitindo que arenas, aneis, bolinhas, trilhas e efeitos aparecam corretamente.
 - A batalha usa fallback de tamanho pelo viewport antes de posicionar as duas arenas, evitando que a luta nasca fora da area visivel quando a cena abre no Web.
 - `LeagueScreen.gd` passa para a luta um rival real do ranking: normalmente o competidor imediatamente acima do jogador.
-- Os 5 primeiros bots da Liga usam skins fortes/raras de ranking: `league_king_neon`, `cosmic_champion`, `void_devourer_ultimate`, `omega_infinity` e `singularity_crown`.
+- Os 5 primeiros bots da Liga agora usam uma escala visual por raridade: top 1 ultimate (`league_king_neon`), top 2 mythic (`infinite_vortex_mythic`), top 3 legendary (`cosmic_fragment`), top 4 epic (`neon_eclipse`) e top 5 rare (`ice`).
 - A luta da Liga usa musica propria de competicao via `AudioManager.play_context("league")`, tocando `assets/music/gameplay2.mp3`.
 - A arena recebeu trilha visual da skin equipada e bursts leves para impacto, quebra, perfect/clear e repulse, usando cores da skin/anel.
+- O HUD da luta foi aproximado do modo Infinito, com tempo, moedas, diamantes, XP, barra de XP, ATK/GOLD e controles separados na base da tela.
+- As duas arenas foram reenquadradas para evitar interferencia entre aneis, HUD e controles.
+- A bolinha da Liga agora usa desenho neon por cor secundaria/raridade da skin, evitando o bloco branco causado por texturas grandes em canvas pequeno.
 - SFX existentes seguem sincronizados: impacto usa `hit_light`/`hit_heavy`, quebra usa `ring_break`, clear usa `perfect`, vitoria/derrota usam seus respectivos sons.
 
 Checklist:
@@ -874,7 +877,10 @@ Checklist:
 | Tela preta da luta corrigida | Sim |
 | Arenas desenhadas acima do fundo | Sim |
 | Rival real do ranking entra na luta | Sim |
-| Top 5 bots usam skins fortes | Sim |
+| Top 5 bots usam skins por raridade crescente | Sim |
 | Musica especifica da Liga | Sim |
+| HUD da Liga alinhado ao modo Infinito | Sim |
+| Arenas reenquadradas sem interferencia visual | Sim |
+| Skins deixam de aparecer como quadrado branco | Sim |
 | Efeitos visuais de trilha/impacto/quebra | Sim |
 | SFX de luta mantidos por evento | Sim |

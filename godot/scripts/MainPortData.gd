@@ -154,10 +154,10 @@ const LEAGUE_RANKS := [
 
 const LEAGUE_TOP_SKINS := [
 	"league_king_neon",
-	"cosmic_champion",
-	"void_devourer_ultimate",
-	"omega_infinity",
-	"singularity_crown",
+	"infinite_vortex_mythic",
+	"cosmic_fragment",
+	"neon_eclipse",
+	"ice",
 ]
 
 const LEAGUE_BOT_SKINS := [
