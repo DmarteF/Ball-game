@@ -255,8 +255,12 @@ func refresh_unlocks(emit_signal := true) -> void:
 	for id in PERMANENT_UPGRADE_DEFS.keys():
 		if _meets_unlock(PERMANENT_UPGRADE_DEFS[id], max_phase, profile_level) and not unlocked.has(id):
 			unlocked.append(id)
-	for id in MainPortData.auto_run_upgrade_ids():
-		if not unlocked.has(id):
+	var explicit_temp_ids: Array = data.get("explicit_unlocked_run_upgrades", [])
+	for id in TEMP_UPGRADE_UNLOCKS.keys():
+		if _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level) and MainPortData.is_released_run_upgrade(String(id)) and not unlocked.has(id):
+			unlocked.append(id)
+	for id in explicit_temp_ids:
+		if MainPortData.is_released_run_upgrade(String(id)) and not unlocked.has(id):
 			unlocked.append(id)
 	data["unlocked_upgrades"] = unlocked
 
@@ -275,7 +279,6 @@ func refresh_unlocks(emit_signal := true) -> void:
 
 func _clean_released_upgrade_unlocks(unlocked: Array) -> Array:
 	var released_temp_ids := MainPortData.released_run_upgrade_ids()
-	var auto_temp_ids := MainPortData.auto_run_upgrade_ids()
 	var explicit_temp_ids: Array = data.get("explicit_unlocked_run_upgrades", [])
 	var max_phase := int(data.get("max_unlocked_phase", data.get("current_phase", 1)))
 	var profile_level := int(data.get("level", 1))
@@ -288,7 +291,7 @@ func _clean_released_upgrade_unlocks(unlocked: Array) -> Array:
 			cleaned.append(id)
 		elif released_temp_ids.has(id) and explicit_temp_ids.has(id):
 			cleaned.append(id)
-		elif auto_temp_ids.has(id) and TEMP_UPGRADE_UNLOCKS.has(id) and _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level):
+		elif released_temp_ids.has(id) and TEMP_UPGRADE_UNLOCKS.has(id) and _meets_unlock(TEMP_UPGRADE_UNLOCKS[id], max_phase, profile_level):
 			cleaned.append(id)
 	return cleaned
 

@@ -421,24 +421,29 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 	if next_level != infinite_level:
 		infinite_level = next_level
 		gameplay_config = _make_infinite_gameplay_config()
-	if rings.size() >= MAX_VISIBLE_RINGS:
+	_refill_active_rings_now()
+
+
+func _update_phase_ring_queue() -> void:
+	_refill_active_rings_now()
+
+
+func _refill_active_rings_now() -> void:
+	if finished:
+		return
+	if is_infinite and rings.size() >= MAX_VISIBLE_RINGS:
 		_prune_inactive_rings()
 	var target_count: int = _target_active_ring_count()
-	target_count = mini(target_count, _infinite_ring_capacity())
+	if is_infinite:
+		target_count = mini(target_count, _infinite_ring_capacity())
+	else:
+		target_count = min(target_count, int(gameplay_config.get("ring_count", TARGET_ACTIVE_RINGS)))
 	var attempts := 0
 	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6 and attempts < 16:
 		attempts += 1
 		if _queued_ring_count() > 0 and _activate_next_queued_ring():
 			continue
-		if not _append_infinite_ring():
-			break
-	_clamp_ring_spacing()
-
-
-func _update_phase_ring_queue() -> void:
-	var target_count: int = min(_target_active_ring_count(), int(gameplay_config.get("ring_count", TARGET_ACTIVE_RINGS)))
-	while _active_ring_count() < target_count and _queued_ring_count() > 0:
-		if not _activate_next_queued_ring():
+		if not is_infinite or not _append_infinite_ring():
 			break
 	_clamp_ring_spacing()
 
@@ -659,6 +664,7 @@ func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2
 				run_diamonds += 1
 				_play_sfx("diamond")
 				_spawn_floating("+1 DIAMANTE", ball_position + Vector2(16, 12), Color("#c084fc"))
+			_refill_active_rings_now()
 			return
 
 
@@ -715,6 +721,7 @@ func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next
 		_spawn_particles(ball_position, Color("#ffd700"), 18, 130.0)
 		_spawn_floating("Break!", ball_position + Vector2(-18, -28), Color("#ffd700"))
 		_play_sfx("ring_break")
+		_refill_active_rings_now()
 	else:
 		_play_sfx("ring_crit" if is_crit else "ring_hit")
 
@@ -1362,19 +1369,6 @@ func _find_safe_ring_spawn_radius(preferred_radius: float, active_rings: Array =
 
 func _find_outer_spawn_radius(active_rings: Array = []) -> Dictionary:
 	var max_radius := _playable_ring_max_radius()
-	var ball_dist := (ball_position - arena_center).length()
-	var ball_clearance: float = maxf(BALL_RADIUS * 2.2, MIN_RING_SPACING * 2.2)
-	if abs(max_radius - ball_dist) < ball_clearance:
-		return { "ok": false, "radius": max_radius }
-	var references: Array = active_rings if not active_rings.is_empty() else rings
-	var required_spacing: float = maxf(_infinite_ring_spacing(), MIN_RING_SPACING + 5.0)
-	for ring in references:
-		if String(ring.get("status", "")) != "active" or int(ring.get("hp", 0)) <= 0:
-			continue
-		var radius := float(ring.get("radius", 0.0))
-		var thickness := float(ring.get("thickness", 5.0))
-		if max_radius - radius < required_spacing + thickness * 0.45:
-			return { "ok": false, "radius": max_radius }
 	return { "ok": true, "radius": max_radius }
 
 
@@ -2461,17 +2455,24 @@ func _clamp_ring_spacing() -> void:
 	if active_indices.is_empty():
 		return
 	var max_radius := _playable_ring_max_radius()
-	var playable_width := max_radius - _playable_ring_min_radius()
-	var spacing := MIN_RING_SPACING
+	var min_radius := _playable_ring_min_radius()
+	var playable_width := max_radius - min_radius
+	var spacing := _infinite_ring_spacing() if is_infinite else MIN_RING_SPACING
 	if active_indices.size() > 1:
 		spacing = min(spacing, playable_width / float(active_indices.size() - 1))
-	var previous_radius: float = -INF
+	active_indices.reverse()
+	var previous_radius: float = INF
+	var now := Time.get_ticks_msec()
 	for index in active_indices:
 		var ring: Dictionary = rings[index]
-		var min_radius: float = maxf(float(ring.get("min_radius", INNER_RADIUS)), previous_radius + maxf(spacing, float(ring.get("thickness", 5.0)) + 2.0))
-		if min_radius > max_radius:
-			min_radius = max_radius
-		ring["radius"] = clampf(float(ring.get("radius", min_radius)), min_radius, max_radius)
+		var lower_bound: float = maxf(float(ring.get("min_radius", INNER_RADIUS)), min_radius)
+		var upper_bound: float = max_radius if previous_radius == INF else previous_radius - maxf(spacing, float(ring.get("thickness", 5.0)) + 1.5)
+		upper_bound = maxf(lower_bound, upper_bound)
+		var current_radius: float = float(ring.get("radius", upper_bound))
+		var next_radius: float = clampf(current_radius, lower_bound, upper_bound)
+		if abs(next_radius - current_radius) > 0.5:
+			ring["defeat_grace_until"] = now + RING_REPOSITION_GRACE_MSEC
+		ring["radius"] = next_radius
 		rings[index] = ring
 		previous_radius = float(ring["radius"])
 

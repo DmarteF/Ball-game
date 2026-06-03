@@ -101,18 +101,6 @@ func _build_screen() -> void:
 	for upgrade in visible_upgrades:
 		list.add_child(_make_upgrade_card(upgrade))
 
-	var visible_run_upgrades := _visible_run_upgrade_list()
-	if not visible_run_upgrades.is_empty():
-		for upgrade in visible_run_upgrades:
-			list.add_child(_make_temp_upgrade_card(upgrade))
-
-	var locked_upgrades := _locked_upgrade_list()
-	if not locked_upgrades.is_empty():
-		for upgrade in locked_upgrades:
-			if String(upgrade.get("kind", "permanent")) == "run":
-				list.add_child(_make_temp_upgrade_card(upgrade))
-			else:
-				list.add_child(_make_upgrade_card(upgrade, true))
 	list.add_child(_make_upgrade_summary())
 
 
@@ -153,12 +141,23 @@ func _visible_run_upgrade_list() -> Array[Dictionary]:
 		var id := String(upgrade.get("id", ""))
 		if id.is_empty():
 			continue
-		if not GameState.is_upgrade_unlocked(id):
+		if not _is_run_upgrade_available_for_player(id):
 			continue
 		var copy: Dictionary = upgrade.duplicate(true)
 		copy["kind"] = "run"
 		result.append(copy)
 	return result
+
+
+func _is_run_upgrade_available_for_player(id: String) -> bool:
+	if Array(GameState.data.get("explicit_unlocked_run_upgrades", [])).has(id):
+		return true
+	if not GameState.TEMP_UPGRADE_UNLOCKS.has(id):
+		return GameState.is_upgrade_unlocked(id)
+	var rule: Dictionary = GameState.TEMP_UPGRADE_UNLOCKS[id]
+	var max_phase := int(GameState.data.get("max_unlocked_phase", GameState.data.get("current_phase", 1)))
+	var profile_level := int(GameState.data.get("level", 1))
+	return max_phase >= int(rule.get("phase", 999)) or profile_level >= int(rule.get("level", 999))
 
 
 func _locked_upgrade_list() -> Array[Dictionary]:
@@ -170,7 +169,7 @@ func _locked_upgrade_list() -> Array[Dictionary]:
 			result.append(copy)
 	for upgrade in MainPortData.run_upgrades():
 		var id := String(upgrade.get("id", ""))
-		if id.is_empty() or GameState.is_upgrade_unlocked(id):
+		if id.is_empty() or _is_run_upgrade_available_for_player(id):
 			continue
 		var copy: Dictionary = upgrade.duplicate(true)
 		copy["kind"] = "run"
