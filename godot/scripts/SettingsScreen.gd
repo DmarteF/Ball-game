@@ -12,7 +12,8 @@ const ICON_PATHS := {
 
 var _regular_font: Font
 var _bold_font: Font
-var _audio_muted := false
+var _music_muted := false
+var _sfx_muted := false
 var _language := "en"
 
 
@@ -42,9 +43,10 @@ func _build_screen() -> void:
 	root.anchor_top = 0.0
 	root.anchor_right = 1.0
 	root.anchor_bottom = 1.0
-	root.offset_left = 18.0
-	root.offset_top = 50.0
-	root.offset_right = -18.0
+	var margin_x := 12.0 if _is_narrow_screen() else 18.0
+	root.offset_left = margin_x
+	root.offset_top = 36.0 if _is_narrow_screen() else 50.0
+	root.offset_right = -margin_x
 	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 14)
 	add_child(root)
@@ -57,12 +59,13 @@ func _build_screen() -> void:
 	NeonBackButtonScript.add_to(self, _go_back)
 
 	var scroll := ScrollContainer.new()
+	_configure_scroll(scroll)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	root.add_child(scroll)
 
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.mouse_filter = Control.MOUSE_FILTER_PASS
 	content.add_theme_constant_override("separation", 14)
 	scroll.add_child(content)
 
@@ -76,26 +79,36 @@ func _make_audio_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
 	body.add_child(_make_section_title(_t("audio")))
+	body.add_child(_make_audio_toggle(_t("music"), _music_muted, func() -> void:
+		_music_muted = not _music_muted
+		_save_settings()
+		get_tree().reload_current_scene()
+	))
+	body.add_child(_make_audio_toggle(_t("sfx"), _sfx_muted, func() -> void:
+		_sfx_muted = not _sfx_muted
+		_save_settings()
+		get_tree().reload_current_scene()
+	))
+	return card
+
+
+func _make_audio_toggle(label: String, muted: bool, action: Callable) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size.y = 58
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
-	_apply_button_style(button, _make_style("#00f0ff" if not _audio_muted else "#ffffff14", 14, "#00f0ff88", 1, "#00f0ff66", 8))
-	button.pressed.connect(func() -> void:
-		_audio_muted = not _audio_muted
-		_save_settings()
-		get_tree().reload_current_scene()
-	)
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
+	_apply_button_style(button, _make_style("#00f0ff" if not muted else "#ffffff14", 14, "#00f0ff88", 1, "#00f0ff66", 8))
+	button.pressed.connect(action)
 	var row := HBoxContainer.new()
 	_fill(row)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(row)
-	row.add_child(_make_icon("mute_off" if _audio_muted else "mute_on", 22, Color("#ffffff") if _audio_muted else Color("#001018")))
-	row.add_child(_make_label("%s: %s" % [_t("audio"), _t("muted") if _audio_muted else _t("on")], 18, "#ffffff" if _audio_muted else "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	body.add_child(button)
-	return card
+	row.add_child(_make_icon("mute_off" if muted else "mute_on", 22, Color("#ffffff") if muted else Color("#001018")))
+	row.add_child(_make_label("%s: %s" % [label, _t("muted") if muted else _t("on")], 18, "#ffffff" if muted else "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	return button
 
 
 func _make_language_card() -> PanelContainer:
@@ -128,6 +141,7 @@ func _make_language_button(label: String, code: String) -> Button:
 	var active := _language == code
 	var button := _make_solid_button("%s%s" % [label, "  OK" if active else ""], "#00ff8822" if active else "#ffffff14", "#00ff88" if active else "#ffffff", 220, 48)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.add_theme_stylebox_override("normal", _make_style("#00ff8822" if active else "#ffffff14", 10, "#00ff88" if active else "#ffffff22", 1))
 	button.add_theme_stylebox_override("hover", _make_style("#00ff8822" if active else "#ffffff14", 10, "#00ff88" if active else "#ffffff22", 1))
 	button.add_theme_stylebox_override("pressed", _make_style("#00ff8822" if active else "#ffffff14", 10, "#00ff88" if active else "#ffffff22", 1))
@@ -144,6 +158,7 @@ func _make_language_button(label: String, code: String) -> Button:
 func _make_card() -> PanelContainer:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#ffffff22", 1))
 	return card
 
@@ -154,9 +169,11 @@ func _card_body(card: PanelContainer) -> VBoxContainer:
 	margin.add_theme_constant_override("margin_top", 16)
 	margin.add_theme_constant_override("margin_right", 16)
 	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 10)
+	body.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(body)
 	return body
 
@@ -207,6 +224,7 @@ func _make_solid_button(text: String, bg: String, color: String, width: float, h
 	button.text = text
 	button.custom_minimum_size = Vector2(width, height)
 	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 14)
 	button.add_theme_color_override("font_color", Color(color))
@@ -280,12 +298,14 @@ func _fill(control: Control) -> void:
 
 
 func _load_settings() -> void:
-	_audio_muted = bool(GameState.get_setting("audio_muted", false))
+	_music_muted = bool(GameState.get_setting("music_muted", GameState.get_setting("audio_muted", false)))
+	_sfx_muted = bool(GameState.get_setting("sfx_muted", GameState.get_setting("audio_muted", false)))
 	_language = String(GameState.get_setting("language", "en"))
 
 
 func _save_settings() -> void:
-	GameState.set_audio_muted(_audio_muted)
+	GameState.set_music_muted(_music_muted)
+	GameState.set_sfx_muted(_sfx_muted)
 	if has_node("/root/LocalizationManager"):
 		LocalizationManager.set_language(_language)
 	else:
@@ -299,6 +319,8 @@ func _t(key: String) -> String:
 	match key:
 		"settings_title": return "CONFIGURAÇÕES" if pt else "SETTINGS"
 		"audio": return "ÁUDIO" if pt else "AUDIO"
+		"music": return "Música" if pt else "Music"
+		"sfx": return "Efeitos" if pt else "Sound FX"
 		"muted": return "Mudo" if pt else "Muted"
 		"on": return "Ligado" if pt else "On"
 		"language": return "IDIOMA" if pt else "LANGUAGE"
@@ -310,3 +332,15 @@ func _t(key: String) -> String:
 
 func _go_back() -> void:
 	get_tree().change_scene_to_file(MENU_SCENE)
+
+
+func _configure_scroll(scroll: ScrollContainer) -> void:
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 6
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _is_narrow_screen() -> bool:
+	return get_viewport_rect().size.x <= 430.0

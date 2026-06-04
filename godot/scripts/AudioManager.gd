@@ -14,7 +14,7 @@ func _ready() -> void:
 
 
 func play_music(path: String, volume_db := -13.0, force_restart := false, context := "") -> void:
-	if _is_muted():
+	if _is_music_muted():
 		if _music_player and _music_player.playing:
 			_music_player.stop()
 		_current_music = path
@@ -55,7 +55,7 @@ func stop_music() -> void:
 
 
 func ensure_music() -> void:
-	if _is_muted():
+	if _is_music_muted():
 		if _music_player and _music_player.playing:
 			_music_player.stop()
 		return
@@ -64,7 +64,7 @@ func ensure_music() -> void:
 
 
 func apply_audio_settings() -> void:
-	if _is_muted():
+	if _is_music_muted():
 		if _music_player and _music_player.playing:
 			_music_player.stop()
 		return
@@ -73,7 +73,7 @@ func apply_audio_settings() -> void:
 
 
 func play_sfx(path: String, volume_db := -5.0) -> void:
-	if _is_muted() or not ResourceLoader.exists(path):
+	if _is_sfx_muted() or not ResourceLoader.exists(path):
 		return
 	var player := AudioStreamPlayer.new()
 	player.stream = load(path)
@@ -96,11 +96,20 @@ func _trim_sfx_players() -> void:
 			old.queue_free()
 
 
-func _is_muted() -> bool:
+func _settings() -> Dictionary:
 	if not Engine.has_singleton("GameState") and not has_node("/root/GameState"):
-		return false
+		return {}
 	var state = get_node_or_null("/root/GameState")
 	if not state:
-		return false
-	var settings: Dictionary = state.data.get("settings", {})
-	return bool(settings.get("audio_muted", false)) or bool(settings.get("master_muted", false))
+		return {}
+	return state.data.get("settings", {})
+
+
+func _is_music_muted() -> bool:
+	var settings := _settings()
+	return bool(settings.get("master_muted", false)) or bool(settings.get("audio_muted", false)) or bool(settings.get("music_muted", false))
+
+
+func _is_sfx_muted() -> bool:
+	var settings := _settings()
+	return bool(settings.get("master_muted", false)) or bool(settings.get("audio_muted", false)) or bool(settings.get("sfx_muted", false))

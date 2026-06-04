@@ -937,3 +937,39 @@ Checklist:
 | Skins deixam de aparecer como quadrado branco | Sim |
 | Efeitos visuais de trilha/impacto/quebra | Sim |
 | SFX de luta mantidos por evento | Sim |
+
+## 7.18 Evento Codex, Boss visual e ajustes mobile
+
+Atualizado nesta etapa:
+
+- Configuracoes agora separa musica e efeitos sonoros: o jogador pode mutar apenas musicas, apenas SFX ou ambos.
+- Telas com listas receberam margem responsiva, `ScrollContainer` com toque/drag e padding inferior preservado pelo botao Voltar global.
+- Skins, Loja, Missoes, Jogar/Selecao de fases, Upgrades e Configuracoes foram revisadas para caber melhor em telas verticais pequenas.
+- A aba `Eventos` agora mostra o evento semanal `Evento Codex Neon`, com duracao de uma semana calculada pelo relogio interno.
+- O evento Codex fica exclusivamente dentro da tela `Event.tscn` / aba Eventos.
+- Objetivos do evento Codex: completar fases, sobreviver no Modo Infinito e vencer lutas da Liga Neon.
+- Recompensas do evento Codex: moedas, diamantes, bau raro e skin `infinite_vortex_mythic` como recompensa final.
+- A tela `Boss` foi recriada visualmente a partir da referencia da main (`frontend/app/boss.tsx` e `frontend/src/game/boss.ts`), sem iniciar gameplay ainda.
+- Boss mensal mostra skin, descricao, passiva, reset diario/mensal e niveis Normal/Forte/Elite/Lendario/Impossivel com recompensas visuais.
+- Liga Neon recebeu reroll de upgrades temporarios no level-up: video mockado ou 15 diamantes, limite de 3 rerolls por luta.
+- O reroll da Liga continua respeitando apenas upgrades temporarios desbloqueados no `GameState`.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Musica pode ser mutada separada de SFX | Sim |
+| SFX pode ser mutado separado de musica | Sim |
+| Scroll por toque em telas de lista | Sim, revisado em telas principais |
+| Safe area/margens mobile revisadas | Sim |
+| Evento Codex fica na aba Eventos | Sim |
+| Evento semanal dura uma semana | Sim |
+| Evento usa relogio interno | Sim |
+| Evento tem recompensas reais no save | Sim |
+| Evento pode dar skin final | Sim |
+| Boss interface copiada/portada visualmente | Sim |
+| Boss gameplay ainda pendente | Sim |
+| Liga Neon reroll por video mockado | Sim |
+| Liga Neon reroll por diamantes | Sim |
+| Limite de 3 rerolls por luta | Sim |
+| Reroll respeita upgrades bloqueados | Sim |

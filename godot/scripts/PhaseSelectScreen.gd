@@ -43,23 +43,25 @@ func _build_screen() -> void:
 	root.anchor_top = 0.0
 	root.anchor_right = 1.0
 	root.anchor_bottom = 1.0
-	root.offset_left = 20.0
-	root.offset_top = 50.0
-	root.offset_right = -20.0
+	var margin_x := 12.0 if _is_narrow_screen() else 20.0
+	root.offset_left = margin_x
+	root.offset_top = 36.0 if _is_narrow_screen() else 50.0
+	root.offset_right = -margin_x
 	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 10)
 	add_child(root)
 
-	root.add_child(_make_label("SELECIONAR FASE", 32, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	root.add_child(_make_label("SELECIONAR FASE", 28 if _is_narrow_screen() else 32, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	NeonBackButtonScript.add_to(self, _go_back)
 
 	var scroll := ScrollContainer.new()
+	_configure_scroll(scroll)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	root.add_child(scroll)
 
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.mouse_filter = Control.MOUSE_FILTER_PASS
 	list.add_theme_constant_override("separation", 16)
 	scroll.add_child(list)
 
@@ -106,6 +108,7 @@ func _make_card_button() -> Button:
 	var button := Button.new()
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	_apply_button_style(button, _make_style("#00000000", 16))
 	return button
 
@@ -113,7 +116,7 @@ func _make_card_button() -> Button:
 func _make_card_body(button: Button, color_a: String, color_b: String) -> HBoxContainer:
 	var panel := PanelContainer.new()
 	_fill(panel)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
 	panel.add_theme_stylebox_override("panel", _make_style(color_a, 16, "#ffffff22", 2, color_b, 10))
 	button.add_child(panel)
 	var margin := MarginContainer.new()
@@ -121,27 +124,28 @@ func _make_card_body(button: Button, color_a: String, color_b: String) -> HBoxCo
 	margin.add_theme_constant_override("margin_top", 18)
 	margin.add_theme_constant_override("margin_right", 18)
 	margin.add_theme_constant_override("margin_bottom", 18)
-	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	panel.add_child(margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 10 if _is_narrow_screen() else 16)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(row)
 	return row
 
 
 func _make_circle_icon(icon_key: String, text: String, bg: String) -> PanelContainer:
 	var circle := PanelContainer.new()
-	circle.custom_minimum_size = Vector2(60, 60)
+	var size := 52.0 if _is_narrow_screen() else 60.0
+	circle.custom_minimum_size = Vector2(size, size)
 	circle.add_theme_stylebox_override("panel", _make_style(bg, 30))
 	circle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var center := CenterContainer.new()
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	circle.add_child(center)
 	if icon_key.is_empty():
-		center.add_child(_make_label(text, 32, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		center.add_child(_make_label(text, 28 if _is_narrow_screen() else 32, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
-		center.add_child(_make_icon(icon_key, 38))
+		center.add_child(_make_icon(icon_key, 34 if _is_narrow_screen() else 38))
 	return circle
 
 
@@ -152,9 +156,9 @@ func _make_phase_info(title: String, difficulty: String, stats: String, locked: 
 	info.add_theme_constant_override("separation", 8)
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var opacity := "55" if locked else ""
-	info.add_child(_make_label(title, 20, "#ffffff" + opacity, _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
+	info.add_child(_make_label(title, 18 if _is_narrow_screen() else 20, "#ffffff" + opacity, _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var row: BoxContainer = VBoxContainer.new() if _is_narrow_screen() else HBoxContainer.new()
+	row.add_theme_constant_override("separation", 3 if _is_narrow_screen() else 16)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info.add_child(row)
 	row.add_child(_make_label("DIFICULDADE: %s" % difficulty, 12, "#ffffff88" if not locked else "#ffffff55", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
@@ -164,7 +168,7 @@ func _make_phase_info(title: String, difficulty: String, stats: String, locked: 
 
 func _make_lock_overlay(text: String) -> PanelContainer:
 	var overlay := PanelContainer.new()
-	overlay.custom_minimum_size = Vector2(88, 86)
+	overlay.custom_minimum_size = Vector2(74, 76) if _is_narrow_screen() else Vector2(88, 86)
 	overlay.add_theme_stylebox_override("panel", _make_style("#00000066", 12))
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var center := CenterContainer.new()
@@ -176,8 +180,20 @@ func _make_lock_overlay(text: String) -> PanelContainer:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(column)
 	column.add_child(_make_icon("locked", 22))
-	column.add_child(_make_label(text, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label(text, 12 if _is_narrow_screen() else 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return overlay
+
+
+func _configure_scroll(scroll: ScrollContainer) -> void:
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 6
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _is_narrow_screen() -> bool:
+	return get_viewport_rect().size.x <= 430.0
 
 
 func _make_icon(key: String, icon_size: int) -> TextureRect:

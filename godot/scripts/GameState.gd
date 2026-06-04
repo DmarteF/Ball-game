@@ -841,6 +841,109 @@ func shop_claim(action_id: String) -> Dictionary:
 	return result
 
 
+func get_weekly_event() -> Dictionary:
+	var now := TimeManager.get_now_timestamp()
+	var week_index := floori(float(now) / float(7 * 86400))
+	var starts_at := week_index * 7 * 86400
+	var ends_at := starts_at + 7 * 86400
+	var event_id := "codex_neon_week_%s" % week_index
+	var event_state := _weekly_event_state(event_id)
+	var tasks: Array[Dictionary] = [
+		{ "id": "phases_10", "title": "Complete 10 fases", "desc": "Avance nas fases normais durante a semana Codex.", "metric": "phaseWins", "target": 10, "reward": { "type": "coins", "amount": 900 }, "icon": "event", "tone": "#00f0ff" },
+		{ "id": "infinite_120", "title": "Sobreviva 2 minutos no Infinito", "desc": "Bata 120 segundos no Modo Infinito.", "metric": "bestInfiniteSeconds", "target": 120, "reward": { "type": "diamonds", "amount": 45 }, "icon": "gem", "tone": "#00ff88" },
+		{ "id": "league_2", "title": "Vença 2 lutas da Liga Neon", "desc": "Ganhe lutas de ranking nesta semana.", "metric": "leagueWins", "target": 2, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "icon": "league", "tone": "#ffd700" },
+	]
+	for i in range(tasks.size()):
+		var task: Dictionary = tasks[i]
+		var progress := _event_metric_value(String(task.get("metric", "")))
+		task["progress"] = progress
+		task["completed"] = progress >= int(task.get("target", 1))
+		task["claimed"] = Array(event_state.get("claimed", [])).has(String(task.get("id", "")))
+		tasks[i] = task
+	var completed_count := 0
+	for task in tasks:
+		if bool(task.get("completed", false)):
+			completed_count += 1
+	var final_claimed := Array(event_state.get("claimed", [])).has("final_skin")
+	return {
+		"id": event_id,
+		"base_id": "codex_neon_week",
+		"title": "Evento Codex Neon",
+		"desc": "Evento semanal de fases, infinito e Liga Neon. Dura uma semana e fica na aba Eventos.",
+		"starts_at": starts_at,
+		"ends_at": ends_at,
+		"seconds_remaining": max(0, ends_at - now),
+		"tasks": tasks,
+		"final": {
+			"id": "final_skin",
+			"title": "Recompensa final",
+			"desc": "Conclua os 3 objetivos para liberar uma skin especial.",
+			"progress": completed_count,
+			"target": tasks.size(),
+			"completed": completed_count >= tasks.size(),
+			"claimed": final_claimed,
+			"reward": { "type": "skin", "skin_id": "infinite_vortex_mythic", "amount": 1 },
+			"icon": "skins",
+			"tone": "#ff00aa",
+		},
+	}
+
+
+func claim_weekly_event_reward(reward_id: String) -> Dictionary:
+	var event := get_weekly_event()
+	var event_id := String(event.get("id", ""))
+	var state := _weekly_event_state(event_id)
+	var claimed: Array = state.get("claimed", [])
+	if claimed.has(reward_id):
+		return { "ok": false, "reason": "already_claimed" }
+	var reward: Dictionary = {}
+	var ready := false
+	if reward_id == "final_skin":
+		var final: Dictionary = event.get("final", {})
+		ready = bool(final.get("completed", false))
+		reward = Dictionary(final.get("reward", {})).duplicate(true)
+	else:
+		for task in Array(event.get("tasks", [])):
+			var item: Dictionary = task
+			if String(item.get("id", "")) == reward_id:
+				ready = bool(item.get("completed", false))
+				reward = Dictionary(item.get("reward", {})).duplicate(true)
+				break
+	if not ready or reward.is_empty():
+		return { "ok": false, "reason": "not_ready" }
+	var text := apply_reward(reward)
+	claimed.append(reward_id)
+	state["claimed"] = claimed
+	var events: Dictionary = data.get("events", {})
+	events[event_id] = state
+	data["events"] = events
+	data["last_reward_text"] = text
+	save_game()
+	return { "ok": true, "reward": reward, "text": text }
+
+
+func _weekly_event_state(event_id: String) -> Dictionary:
+	var events: Dictionary = data.get("events", {})
+	var state: Dictionary = events.get(event_id, {})
+	if state.is_empty():
+		state = { "claimed": [] }
+		events[event_id] = state
+		data["events"] = events
+	return state
+
+
+func _event_metric_value(metric: String) -> int:
+	var stats: Dictionary = data.get("stats", {})
+	match metric:
+		"phaseWins":
+			return int(stats.get("phaseWins", 0))
+		"bestInfiniteSeconds":
+			return int(stats.get("bestInfiniteSeconds", data.get("infinite_best_seconds", 0)))
+		"leagueWins":
+			return int(stats.get("leagueWins", 0))
+	return int(stats.get(metric, 0))
+
+
 func get_daily_mission_def(id: String) -> Dictionary:
 	for definition in DAILY_MISSION_DEFS:
 		if String(definition["id"]) == id:
@@ -1390,6 +1493,20 @@ func set_audio_muted(muted: bool) -> void:
 	data["settings"]["master_muted"] = muted
 	data["settings"]["music_muted"] = muted
 	data["settings"]["sfx_muted"] = muted
+	save_game()
+
+
+func set_music_muted(muted: bool) -> void:
+	data["settings"]["music_muted"] = muted
+	data["settings"]["audio_muted"] = bool(data["settings"].get("music_muted", false)) and bool(data["settings"].get("sfx_muted", false))
+	data["settings"]["master_muted"] = data["settings"]["audio_muted"]
+	save_game()
+
+
+func set_sfx_muted(muted: bool) -> void:
+	data["settings"]["sfx_muted"] = muted
+	data["settings"]["audio_muted"] = bool(data["settings"].get("music_muted", false)) and bool(data["settings"].get("sfx_muted", false))
+	data["settings"]["master_muted"] = data["settings"]["audio_muted"]
 	save_game()
 
 

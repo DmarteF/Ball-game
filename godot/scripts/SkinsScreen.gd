@@ -87,27 +87,29 @@ func _build_screen() -> void:
 	root.anchor_top = 0.0
 	root.anchor_right = 1.0
 	root.anchor_bottom = 1.0
-	root.offset_left = 18.0
-	root.offset_top = 50.0
-	root.offset_right = -18.0
+	var margin_x := 12.0 if _is_narrow_screen() else 18.0
+	root.offset_left = margin_x
+	root.offset_top = 36.0 if _is_narrow_screen() else 50.0
+	root.offset_right = -margin_x
 	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 10)
 	add_child(root)
 
-	var header := HBoxContainer.new()
+	var header: BoxContainer = VBoxContainer.new() if _is_narrow_screen() else HBoxContainer.new()
 	header.add_theme_constant_override("separation", 12)
 	root.add_child(header)
 	NeonBackButtonScript.add_to(self, _go_back)
-	header.add_child(_make_label("SKINS", 30, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	header.add_child(_make_label("SKINS", 28 if _is_narrow_screen() else 30, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	header.add_child(_make_wallet())
 
 	var scroll := ScrollContainer.new()
+	_configure_scroll(scroll)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	root.add_child(scroll)
 
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.mouse_filter = Control.MOUSE_FILTER_PASS
 	content.add_theme_constant_override("separation", 12)
 	scroll.add_child(content)
 
@@ -116,9 +118,11 @@ func _build_screen() -> void:
 	content.add_child(_make_filters())
 
 	_content_grid = GridContainer.new()
-	_content_grid.columns = 2
+	_content_grid.columns = 1 if _is_narrow_screen() else 2
 	_content_grid.add_theme_constant_override("h_separation", 10)
 	_content_grid.add_theme_constant_override("v_separation", 10)
+	_content_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_content_grid.mouse_filter = Control.MOUSE_FILTER_PASS
 	content.add_child(_content_grid)
 	_populate_skins()
 
@@ -126,7 +130,7 @@ func _build_screen() -> void:
 func _make_wallet() -> HBoxContainer:
 	var wallet := HBoxContainer.new()
 	wallet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	wallet.alignment = BoxContainer.ALIGNMENT_END
+	wallet.alignment = BoxContainer.ALIGNMENT_BEGIN if _is_narrow_screen() else BoxContainer.ALIGNMENT_END
 	wallet.add_theme_constant_override("separation", 8)
 	wallet.add_child(_make_wallet_item("coin", str(GameState.data.get("coins", 0))))
 	wallet.add_child(_make_wallet_item("gem", str(GameState.data.get("diamonds", 0))))
@@ -153,7 +157,9 @@ func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
 
 func _make_progress_grid() -> GridContainer:
 	var grid := GridContainer.new()
-	grid.columns = 3
+	grid.columns = 2 if _is_narrow_screen() else 3
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.mouse_filter = Control.MOUSE_FILTER_PASS
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	for rarity in RARITIES:
@@ -165,6 +171,8 @@ func _make_progress_grid() -> GridContainer:
 				if _is_owned(String(skin["id"])):
 					owned += 1
 		var card := PanelContainer.new()
+		card.mouse_filter = Control.MOUSE_FILTER_PASS
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.add_theme_stylebox_override("panel", _make_style("#ffffff10", 10, _rarity_color(rarity) + "77", 1))
 		var margin := MarginContainer.new()
 		margin.add_theme_constant_override("margin_left", 10)
@@ -203,7 +211,9 @@ func _make_skin_summary() -> PanelContainer:
 
 func _make_filters() -> GridContainer:
 	var row := GridContainer.new()
-	row.columns = 3
+	row.columns = 2 if _is_narrow_screen() else 3
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_theme_constant_override("h_separation", 8)
 	row.add_theme_constant_override("v_separation", 8)
 	_filter_buttons.clear()
@@ -213,6 +223,7 @@ func _make_filters() -> GridContainer:
 		button.custom_minimum_size = Vector2(96, 34)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.focus_mode = Control.FOCUS_NONE
+		button.mouse_filter = Control.MOUSE_FILTER_PASS
 		button.add_theme_font_override("font", _bold_font)
 		button.add_theme_font_size_override("font_size", 12)
 		button.set_meta("filter_id", String(filter_data["id"]))
@@ -272,21 +283,25 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	var hidden := not owned
 	var rarity_color := _rarity_color(String(skin["rarity"]))
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(160, 246)
+	card.custom_minimum_size = Vector2(0, 246)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 14, "#00ff88" if selected else rarity_color + "88", 2 if selected else 1))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)
 	margin.add_theme_constant_override("margin_top", 12)
 	margin.add_theme_constant_override("margin_right", 12)
 	margin.add_theme_constant_override("margin_bottom", 12)
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 7)
+	column.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(column)
 
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 8)
+	top.mouse_filter = Control.MOUSE_FILTER_PASS
 	column.add_child(top)
 	top.add_child(_make_skin_icon(String(skin["id"]), hidden, Color(String(skin["primary"]))))
 	var badge := _make_label(_rarity_name(String(skin["rarity"])), 9, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
@@ -302,6 +317,7 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 
 	var effects := HBoxContainer.new()
 	effects.add_theme_constant_override("separation", 5)
+	effects.mouse_filter = Control.MOUSE_FILTER_PASS
 	column.add_child(effects)
 	if owned and not hidden:
 		for effect in skin.get("effects", []).slice(0, 3):
@@ -314,6 +330,7 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	if owned:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 7)
+		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		column.add_child(row)
 		row.add_child(_make_action("USANDO" if selected else "EQUIPAR", "#00f0ff", selected, _equip_skin.bind(String(skin["id"]))))
 		row.add_child(_make_action("EVOLUIR", "#00ff88", true))
@@ -499,6 +516,7 @@ func _contains_any(id: String, needles: Array) -> bool:
 func _make_skin_icon(skin_id: String, hidden: bool, tint: Color) -> PanelContainer:
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(58, 58)
+	box.mouse_filter = Control.MOUSE_FILTER_PASS
 	box.add_theme_stylebox_override("panel", _make_style("#00000033", 29, "#ffffff44", 1))
 	var center := CenterContainer.new()
 	box.add_child(center)
@@ -538,6 +556,7 @@ func _make_action(text: String, color: String, disabled: bool, action: Callable 
 	button.custom_minimum_size = Vector2(66, 34)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.modulate.a = 0.45 if disabled else 1.0
 	button.disabled = disabled
 	button.add_theme_font_override("font", _bold_font)
@@ -678,3 +697,15 @@ func _fill(control: Control) -> void:
 
 func _go_back() -> void:
 	get_tree().change_scene_to_file(MENU_SCENE)
+
+
+func _configure_scroll(scroll: ScrollContainer) -> void:
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 6
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _is_narrow_screen() -> bool:
+	return get_viewport_rect().size.x <= 430.0

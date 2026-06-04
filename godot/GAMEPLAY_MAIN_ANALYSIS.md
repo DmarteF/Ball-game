@@ -548,3 +548,34 @@ Checklist:
 ## Atualizacao - Liga Neon visual
 
 A Liga Neon deixou de usar a gameplay custom de duas arenas criada no port Godot. A tela atual foi refeita como ranking/progresso visual baseado em `frontend/app/league.tsx`, preservando o botao no menu principal e preparando a competicao para ser reimplementada fielmente em outra etapa.
+
+## Atualizacao - Evento Codex, Boss visual e mobile
+
+Correcoes aplicadas:
+
+- O evento semanal foi implementado como `Evento Codex Neon` dentro da aba Eventos, com duracao de uma semana baseada no relogio interno.
+- O evento usa progresso real de fases concluidas, melhor tempo do Modo Infinito e vitorias na Liga Neon.
+- As recompensas do evento sao aplicadas pelo `GameState`: moedas, diamantes, bau raro e a skin `infinite_vortex_mythic` como premio final.
+- A tela de Boss foi portada visualmente da main, usando referencia de `frontend/app/boss.tsx` e `frontend/src/game/boss.ts`, mas sem gameplay de Boss ainda.
+- A Liga Neon voltou a ter reroll no level-up: video mockado ou diamantes, com limite de 3 rerolls por luta.
+- O reroll consulta apenas upgrades temporarios desbloqueados no save, mantendo bloqueados fora das opcoes.
+- Configuracoes separa mute de musicas e mute de efeitos sonoros.
+- Telas de listas receberam ajustes de margem, safe area e scroll por toque para mobile.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Evento Codex dentro da aba Eventos | Sim |
+| Evento dura uma semana | Sim |
+| Evento usa relogio interno | Sim |
+| Evento entrega recompensas reais | Sim |
+| Evento entrega skin final | Sim |
+| Boss visual portado da main | Sim |
+| Boss gameplay pendente | Sim |
+| Reroll da Liga por video mockado | Sim |
+| Reroll da Liga por diamantes | Sim |
+| Limite de 3 rerolls por luta | Sim |
+| Reroll respeita upgrades bloqueados | Sim |
+| Mute separado de musicas/SFX | Sim |
+| Scroll mobile revisado | Sim |

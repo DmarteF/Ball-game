@@ -17,6 +17,8 @@ const CRUSH_CONFIRM_MSEC := 150
 const MATCH_LIMIT_SECONDS := 60.0
 const XP_BASE := 34.0
 const BASE_BALL_SPEED := 2.25
+const MAX_UPGRADE_REROLLS := 3
+const REROLL_DIAMOND_COST := 15
 const SOUND_PATHS := {
 	"click": "res://assets/sounds/button_click.mp3",
 	"select": "res://assets/sounds/button_confirm.mp3",
@@ -81,6 +83,9 @@ var _run_gold_button: Button
 var _pause_overlay: Control
 var _level_up_overlay: Control
 var _level_up_cards: VBoxContainer
+var _level_up_actions: VBoxContainer
+var _current_upgrade_choices: Array[Dictionary] = []
+var _upgrade_rerolls_used := 0
 var _result_overlay: Control
 var _result_title: Label
 var _result_details: VBoxContainer
@@ -156,6 +161,7 @@ func _prepare_match() -> void:
 	_finish_reason = ""
 	_result_reward = {}
 	_result_doubled = false
+	_upgrade_rerolls_used = 0
 	_revive_used = false
 	_finished = false
 	_paused = false
@@ -647,13 +653,18 @@ func _update_level_progress(state: Dictionary) -> void:
 func _open_player_upgrade() -> void:
 	_battle_active = false
 	_player["level_pending"] = false
+	_current_upgrade_choices = _upgrade_choices(_player, true)
+	_render_player_upgrade_choices()
+	_level_up_overlay.visible = true
+
+
+func _render_player_upgrade_choices() -> void:
 	for child in _level_up_cards.get_children():
 		child.queue_free()
-	var choices := _upgrade_choices(_player, true)
-	if choices.is_empty():
+	if _current_upgrade_choices.is_empty():
 		_level_up_cards.add_child(_make_label("Todas as melhorias chegaram ao limite.", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
-		for upgrade in choices:
+		for upgrade in _current_upgrade_choices:
 			var id := String(upgrade.get("id", ""))
 			var current := int(Dictionary(_player.get("run_upgrades", {})).get(id, 0))
 			var button := _make_button("%s\n%s\nLv.%s > Lv.%s" % [String(upgrade.get("name", id)).to_upper(), String(upgrade.get("description", "")), current, current + 1], 292, 76)
@@ -661,7 +672,58 @@ func _open_player_upgrade() -> void:
 			_set_button_icon(button, _upgrade_icon_key(id))
 			button.pressed.connect(_select_player_upgrade.bind(id))
 			_level_up_cards.add_child(button)
-	_level_up_overlay.visible = true
+	_render_reroll_actions()
+
+
+func _render_reroll_actions() -> void:
+	if not _level_up_actions:
+		return
+	for child in _level_up_actions.get_children():
+		child.queue_free()
+	if _current_upgrade_choices.is_empty():
+		return
+	var label := _make_label("Rerolls %s/%s" % [_upgrade_rerolls_used, MAX_UPGRADE_REROLLS], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_level_up_actions.add_child(label)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_level_up_actions.add_child(row)
+	var ad_button := _make_button("REROLL\nVIDEO", 0, 50)
+	ad_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ad_button.disabled = _upgrade_rerolls_used >= MAX_UPGRADE_REROLLS
+	ad_button.pressed.connect(_reroll_player_upgrades_with_ad)
+	row.add_child(ad_button)
+	var diamond_button := _make_button("REROLL\n%s DIAMANTES" % REROLL_DIAMOND_COST, 0, 50)
+	diamond_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	diamond_button.disabled = _upgrade_rerolls_used >= MAX_UPGRADE_REROLLS or int(GameState.data.get("diamonds", 0)) < REROLL_DIAMOND_COST
+	diamond_button.pressed.connect(_reroll_player_upgrades_with_diamonds)
+	row.add_child(diamond_button)
+
+
+func _reroll_player_upgrades_with_ad() -> void:
+	if _upgrade_rerolls_used >= MAX_UPGRADE_REROLLS:
+		_play_sfx("click")
+		return
+	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+		if ok:
+			_consume_upgrade_reroll()
+	)
+
+
+func _reroll_player_upgrades_with_diamonds() -> void:
+	if _upgrade_rerolls_used >= MAX_UPGRADE_REROLLS:
+		_play_sfx("click")
+		return
+	if not GameState.spend_diamonds(REROLL_DIAMOND_COST):
+		_play_sfx("click")
+		return
+	_consume_upgrade_reroll()
+
+
+func _consume_upgrade_reroll() -> void:
+	_upgrade_rerolls_used += 1
+	_current_upgrade_choices = _upgrade_choices(_player, true)
+	_render_player_upgrade_choices()
+	_play_sfx("select")
 
 
 func _select_player_upgrade(id: String) -> void:
@@ -1312,11 +1374,14 @@ func _build_pause_overlay() -> void:
 
 func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
-	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(340, 390))
+	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(340, 470))
 	card.add_child(_make_label("Escolha uma melhoria para sua arena.", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
 	_level_up_cards.add_theme_constant_override("separation", 8)
 	card.add_child(_level_up_cards)
+	_level_up_actions = VBoxContainer.new()
+	_level_up_actions.add_theme_constant_override("separation", 6)
+	card.add_child(_level_up_actions)
 	add_child(_level_up_overlay)
 
 

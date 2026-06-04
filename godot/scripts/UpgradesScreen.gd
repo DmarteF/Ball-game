@@ -71,14 +71,16 @@ func _build_screen() -> void:
 	root.anchor_top = 0.0
 	root.anchor_right = 1.0
 	root.anchor_bottom = 1.0
-	root.offset_left = 20.0
-	root.offset_top = 50.0
-	root.offset_right = -20.0
+	var margin_x := 12.0 if _is_narrow_screen() else 20.0
+	root.offset_left = margin_x
+	root.offset_top = 36.0 if _is_narrow_screen() else 50.0
+	root.offset_right = -margin_x
 	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 10)
+	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 
-	root.add_child(_make_label("UPGRADES PERMANENTES", 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	root.add_child(_make_label("UPGRADES PERMANENTES", 24 if _is_narrow_screen() else 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	NeonBackButtonScript.add_to(self, _go_back)
 	root.add_child(_make_resource_display())
 	_feedback_label = _make_label("", 13, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
@@ -87,11 +89,12 @@ func _build_screen() -> void:
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_configure_scroll(scroll)
 	root.add_child(scroll)
 
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.mouse_filter = Control.MOUSE_FILTER_PASS
 	list.add_theme_constant_override("separation", 16)
 	scroll.add_child(list)
 	list.add_child(_make_label("PERMANENTES DISPONIVEIS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
@@ -245,6 +248,7 @@ func _title_from_id(id: String) -> String:
 func _make_resource_display() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_theme_constant_override("separation", 10)
 	row.add_child(_make_resource_pill("coin", str(GameState.data.get("coins", 0)), "#ffd70044"))
 	row.add_child(_make_resource_pill("gem", str(GameState.data.get("diamonds", 0)), "#00ff8844"))
@@ -285,15 +289,18 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 	var is_maxed := level >= max_level
 	var can_afford := int(GameState.data.get("coins", 0)) >= cost
 	var card := PanelContainer.new()
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12" if unlocked else "#ffffff0c", 16, "#ffffff22" if unlocked else "#55557755", 2))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 16)
 	margin.add_theme_constant_override("margin_top", 16)
 	margin.add_theme_constant_override("margin_right", 16)
 	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(row)
 
 	var icon_box := PanelContainer.new()
@@ -306,6 +313,7 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.mouse_filter = Control.MOUSE_FILTER_PASS
 	info.add_theme_constant_override("separation", 4)
 	row.add_child(info)
 	info.add_child(_make_label(String(upgrade["name"]), 18, "#ffffff" if unlocked else "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
@@ -328,6 +336,7 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 	var buy := Button.new()
 	buy.custom_minimum_size = Vector2(86, 58)
 	buy.focus_mode = Control.FOCUS_NONE
+	buy.mouse_filter = Control.MOUSE_FILTER_PASS
 	buy.disabled = not unlocked or is_maxed
 	if is_maxed:
 		buy.text = "MAX"
@@ -490,6 +499,18 @@ func _make_label(text: String, font_size: int, color: String, font: Font, alignm
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
+
+
+func _configure_scroll(scroll: ScrollContainer) -> void:
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 6
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _is_narrow_screen() -> bool:
+	return get_viewport_rect().size.x <= 430.0
 
 
 func _make_background_gradient() -> GradientTexture2D:

@@ -210,11 +210,12 @@ func _build_screen() -> void:
 	root.anchor_top = 0.0
 	root.anchor_right = 1.0
 	root.anchor_bottom = 1.0
-	root.offset_left = 18.0
-	root.offset_top = 50.0
-	root.offset_right = -18.0
+	var margin_x := 12.0 if _is_narrow_screen() else 18.0
+	root.offset_left = margin_x
+	root.offset_top = 36.0 if _is_narrow_screen() else 50.0
+	root.offset_right = -margin_x
 	NeonBackButtonScript.reserve_footer_space(root)
-	root.add_theme_constant_override("separation", 12)
+	root.add_theme_constant_override("separation", 10 if _is_narrow_screen() else 12)
 	add_child(root)
 
 	var header := _make_header(data)
@@ -232,12 +233,13 @@ func _build_screen() -> void:
 		root.add_child(_make_wheel_visual(data))
 
 	var scroll := ScrollContainer.new()
+	_configure_scroll(scroll)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	root.add_child(scroll)
 
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_content.mouse_filter = Control.MOUSE_FILTER_PASS
 	_content.add_theme_constant_override("separation", 12)
 	scroll.add_child(_content)
 
@@ -258,6 +260,10 @@ func _populate_content(data: Dictionary) -> void:
 		_populate_inventory()
 	elif screen_id == "missions":
 		_populate_missions()
+	elif screen_id == "event":
+		_populate_event()
+	elif screen_id == "boss":
+		_populate_boss()
 	elif screen_id == "achievements":
 		_populate_achievements()
 	elif screen_id == "daily_reward":
@@ -277,9 +283,10 @@ func _make_header(data: Dictionary) -> PanelContainer:
 	var body := _card_body(card, 14)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	body.add_child(row)
-	row.add_child(_make_icon(String(data["icon"]), 42))
-	var title := _make_label(_screen_title(), 27, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	row.add_child(_make_icon(String(data["icon"]), 34 if _is_narrow_screen() else 42))
+	var title := _make_label(_screen_title(), 23 if _is_narrow_screen() else 27, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	title.add_theme_color_override("font_outline_color", Color("#00f0ff66"))
 	title.add_theme_constant_override("outline_size", 4)
 	row.add_child(title)
@@ -293,8 +300,11 @@ func _current_shop_tab() -> Dictionary:
 	return SHOP_TABS[0]
 
 
-func _make_wallet() -> HBoxContainer:
-	var wallet := HBoxContainer.new()
+func _make_wallet() -> GridContainer:
+	var wallet := GridContainer.new()
+	wallet.columns = 2 if _is_narrow_screen() else 4
+	wallet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wallet.mouse_filter = Control.MOUSE_FILTER_PASS
 	wallet.add_theme_constant_override("separation", 8)
 	wallet.add_child(_make_wallet_item("coin", str(GameState.data.get("coins", 0))))
 	wallet.add_child(_make_wallet_item("gem", str(GameState.data.get("diamonds", 0))))
@@ -305,6 +315,8 @@ func _make_wallet() -> HBoxContainer:
 
 func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
 	var item := PanelContainer.new()
+	item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	item.mouse_filter = Control.MOUSE_FILTER_PASS
 	item.add_theme_stylebox_override("panel", _make_style("#ffffff12", 8, "#ffffff22", 1))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 8)
@@ -322,7 +334,9 @@ func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
 
 func _make_shop_tabs() -> GridContainer:
 	var tabs := GridContainer.new()
-	tabs.columns = 3
+	tabs.columns = 2 if _is_narrow_screen() else 3
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.mouse_filter = Control.MOUSE_FILTER_PASS
 	tabs.add_theme_constant_override("separation", 6)
 	tabs.add_theme_constant_override("h_separation", 6)
 	tabs.add_theme_constant_override("v_separation", 6)
@@ -339,6 +353,7 @@ func _make_shop_tab_button(tab: Dictionary) -> Button:
 	button.custom_minimum_size.y = 42
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 11)
 	button.set_meta("tab_id", String(tab["id"]))
@@ -407,35 +422,61 @@ func _make_feature_card(data: Dictionary) -> PanelContainer:
 	var card := _make_card("#ffffff12", tone + "77")
 	var body := _card_body(card, 12)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	body.add_child(row)
-
-	row.add_child(_make_icon(String(data.get("icon", "coin")), 46))
-
-	var column := VBoxContainer.new()
-	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation", 4)
-	row.add_child(column)
-
-	column.add_child(_make_label(String(data["title"]), 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var title := _make_label(String(data["title"]), 17 if _is_narrow_screen() else 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var desc := _make_label(String(data["desc"]), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(desc)
-
-	if data.has("progress"):
-		column.add_child(_make_progress_bar(float(data["progress"]), tone))
-
-	var right := VBoxContainer.new()
-	right.alignment = BoxContainer.ALIGNMENT_CENTER
-	right.add_theme_constant_override("separation", 5)
-	row.add_child(right)
-	if data.has("price"):
-		right.add_child(_make_price_badge(String(data["price"]), String(data.get("cost_icon", ""))))
 	var button := _make_action_button(_button_text(String(data.get("button", "view"))), tone)
+	button.disabled = bool(data.get("disabled", false))
 	if data.has("action"):
 		button.pressed.connect(_handle_action.bind(String(data["action"])))
-	right.add_child(button)
+	if _is_narrow_screen():
+		var top := HBoxContainer.new()
+		top.add_theme_constant_override("separation", 10)
+		top.mouse_filter = Control.MOUSE_FILTER_PASS
+		body.add_child(top)
+		top.add_child(_make_icon(String(data.get("icon", "coin")), 38))
+		var column := VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.mouse_filter = Control.MOUSE_FILTER_PASS
+		column.add_theme_constant_override("separation", 4)
+		top.add_child(column)
+		column.add_child(title)
+		column.add_child(desc)
+		if data.has("progress"):
+			column.add_child(_make_progress_bar(float(data["progress"]), tone))
+		var bottom := HBoxContainer.new()
+		bottom.alignment = BoxContainer.ALIGNMENT_END
+		bottom.add_theme_constant_override("separation", 8)
+		bottom.mouse_filter = Control.MOUSE_FILTER_PASS
+		body.add_child(bottom)
+		if data.has("price"):
+			bottom.add_child(_make_price_badge(String(data["price"]), String(data.get("cost_icon", ""))))
+		button.custom_minimum_size = Vector2(122, 42)
+		bottom.add_child(button)
+	else:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		row.mouse_filter = Control.MOUSE_FILTER_PASS
+		body.add_child(row)
+		row.add_child(_make_icon(String(data.get("icon", "coin")), 46))
+		var column := VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.mouse_filter = Control.MOUSE_FILTER_PASS
+		column.add_theme_constant_override("separation", 4)
+		row.add_child(column)
+		column.add_child(title)
+		column.add_child(desc)
+		if data.has("progress"):
+			column.add_child(_make_progress_bar(float(data["progress"]), tone))
+		var right := VBoxContainer.new()
+		right.alignment = BoxContainer.ALIGNMENT_CENTER
+		right.mouse_filter = Control.MOUSE_FILTER_PASS
+		right.add_theme_constant_override("separation", 5)
+		row.add_child(right)
+		if data.has("price"):
+			right.add_child(_make_price_badge(String(data["price"]), String(data.get("cost_icon", ""))))
+		right.add_child(button)
 	return card
 
 
@@ -498,6 +539,126 @@ func _populate_wheel(data: Dictionary) -> void:
 		"tone": "#ffd700",
 		"action": "wheel_ad",
 	}))
+
+
+func _populate_event() -> void:
+	var event: Dictionary = GameState.get_weekly_event()
+	_content.add_child(_make_event_header(event))
+	_content.add_child(_make_section_title("OBJETIVOS DA SEMANA" if _language() == "pt" else "WEEKLY GOALS"))
+	for task_value in Array(event.get("tasks", [])):
+		var task: Dictionary = task_value
+		var completed := bool(task.get("completed", false))
+		var claimed := bool(task.get("claimed", false))
+		var progress := int(task.get("progress", 0))
+		var target := int(task.get("target", 1))
+		_content.add_child(_make_feature_card({
+			"title": String(task.get("title", "")),
+			"desc": "%s/%s • %s" % [progress, target, _reward_label(Dictionary(task.get("reward", {})))],
+			"icon": String(task.get("icon", "event")),
+			"button": "done" if claimed else "claim" if completed else "go",
+			"tone": String(task.get("tone", "#00f0ff")),
+			"progress": float(progress) / max(1.0, float(target)),
+			"action": "event:%s" % String(task.get("id", "")) if completed and not claimed else "",
+			"disabled": not completed or claimed,
+		}))
+	var final: Dictionary = event.get("final", {})
+	var final_completed := bool(final.get("completed", false))
+	var final_claimed := bool(final.get("claimed", false))
+	_content.add_child(_make_section_title("RECOMPENSA FINAL" if _language() == "pt" else "FINAL REWARD"))
+	_content.add_child(_make_feature_card({
+		"title": String(final.get("title", "")),
+		"desc": "%s/%s • %s" % [int(final.get("progress", 0)), int(final.get("target", 1)), _reward_label(Dictionary(final.get("reward", {})))],
+		"icon": String(final.get("icon", "skins")),
+		"button": "done" if final_claimed else "claim" if final_completed else "locked",
+		"tone": String(final.get("tone", "#ff00aa")),
+		"progress": float(final.get("progress", 0)) / max(1.0, float(final.get("target", 1))),
+		"action": "event:%s" % String(final.get("id", "final_skin")) if final_completed and not final_claimed else "",
+		"disabled": not final_completed or final_claimed,
+	}))
+
+
+func _make_event_header(event: Dictionary) -> PanelContainer:
+	var card := _make_card("#00f0ff16", "#00f0ff88")
+	var body := _card_body(card, 14)
+	var row: BoxContainer = VBoxContainer.new() if _is_narrow_screen() else HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	body.add_child(row)
+	row.add_child(_make_icon("event", 54 if _is_narrow_screen() else 66))
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy.add_theme_constant_override("separation", 4)
+	copy.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(copy)
+	copy.add_child(_make_label(String(event.get("title", "Evento Codex Neon")).to_upper(), 20, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var desc := _make_label(String(event.get("desc", "")), 13, "#ffffffbb", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	copy.add_child(desc)
+	copy.add_child(_make_label("Termina em %s" % _format_remaining(int(event.get("seconds_remaining", 0))), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return card
+
+
+func _populate_boss() -> void:
+	var boss := _current_boss_data()
+	_content.add_child(_make_boss_header(boss))
+	_content.add_child(_make_section_title("NÍVEIS DO BOSS" if _language() == "pt" else "BOSS LEVELS"))
+	var unlocked := int(GameState.data.get("max_unlocked_phase", 1)) >= 5 or int(GameState.data.get("level", 1)) >= 5
+	for level_data in _boss_level_data():
+		var card := Dictionary(level_data).duplicate(true)
+		card["disabled"] = true
+		card["button"] = "wait" if unlocked else "locked"
+		card["desc"] = "%s • %s" % [String(card.get("desc", "")), _reward_label(Dictionary(card.get("reward", {})))]
+		_content.add_child(_make_feature_card(card))
+	_content.add_child(_make_empty_state(
+		"Gameplay do Boss em breve" if _language() == "pt" else "Boss gameplay coming soon",
+		"Interface portada da main. As lutas do Boss ainda nao iniciam nesta etapa." if _language() == "pt" else "Interface ported from main. Boss fights do not start yet.",
+		"boss"
+	))
+
+
+func _make_boss_header(boss: Dictionary) -> PanelContainer:
+	var card := _make_card("#ff005516", "#ff005588")
+	var body := _card_body(card, 14)
+	var row: BoxContainer = VBoxContainer.new() if _is_narrow_screen() else HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	body.add_child(row)
+	row.add_child(_make_skin_preview(String(boss.get("skin", "neon_phoenix")), 72))
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy.add_theme_constant_override("separation", 4)
+	copy.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(copy)
+	copy.add_child(_make_label("BOSS MENSAL", 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	copy.add_child(_make_label(String(boss.get("name", "Fênix Solar")).to_upper(), 22, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var desc := _make_label(String(boss.get("desc", "")), 13, "#ffffffbb", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	copy.add_child(desc)
+	copy.add_child(_make_label("Passiva: %s" % String(boss.get("passive", "")), 12, "#ffcc66", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	copy.add_child(_make_label("Reset diario: %s • Reset mensal: %s" % [_format_remaining(_seconds_until_next_day()), _format_remaining(_seconds_until_next_month())], 11, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return card
+
+
+func _current_boss_data() -> Dictionary:
+	var month := int(Time.get_datetime_dict_from_system().get("month", 6))
+	match month:
+		6:
+			return { "name": "Fênix Solar", "skin": "neon_phoenix", "desc": "Um Boss que renasce em anéis sólidos.", "passive": "Quebras sólidas dão mais moedas ao Boss." }
+		7:
+			return { "name": "Dragão Astral", "skin": "astral_dragon", "desc": "Pressiona a arena com anéis orbitais.", "passive": "Quanto maior o combo, maior a rotação." }
+		8:
+			return { "name": "Guardião Dimensional", "skin": "dimensional_guardian", "desc": "Alterna padrões de fase e repulsão.", "passive": "A arena muda de ritmo em ciclos." }
+	return { "name": "Fênix Solar", "skin": "neon_phoenix", "desc": "Um Boss que renasce em anéis sólidos.", "passive": "Quebras sólidas dão mais moedas ao Boss." }
+
+
+func _boss_level_data() -> Array[Dictionary]:
+	return [
+		{ "title": "Normal", "desc": "Entrada diária do Boss", "icon": "boss", "tone": "#00f0ff", "reward": { "type": "coins", "amount": 180 } },
+		{ "title": "Forte", "desc": "Boss com rotação elevada", "icon": "boss", "tone": "#00ff88", "reward": { "type": "diamonds", "amount": 4 } },
+		{ "title": "Elite", "desc": "Arena mais agressiva", "icon": "boss", "tone": "#b000ff", "reward": { "type": "keys", "amount": 1 } },
+		{ "title": "Lendário", "desc": "Recompensa rara e baú especial", "icon": "boss", "tone": "#ffd700", "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
+		{ "title": "Impossível", "desc": "Desafio visual máximo", "icon": "boss", "tone": "#ff0055", "reward": { "type": "chest", "chest_type": "epic", "amount": 1 } },
+	]
 
 
 func _populate_missions() -> void:
@@ -564,6 +725,8 @@ func _handle_action(action: String) -> void:
 		result = GameState.claim_daily_mission(action.trim_prefix("mission:"))
 	elif action.begins_with("achievement:"):
 		result = GameState.claim_achievement(action.trim_prefix("achievement:"))
+	elif action.begins_with("event:"):
+		result = GameState.claim_weekly_event_reward(action.trim_prefix("event:"))
 	elif action == "daily_claim":
 		result = GameState.claim_daily_reward()
 	elif action == "wheel_free":
@@ -871,15 +1034,22 @@ func _reward_icon(reward: Dictionary) -> String:
 func _make_reward_visual(reward: Dictionary) -> Control:
 	if String(reward.get("type", "")) == "skin":
 		var skin_id := String(reward.get("skin_id", reward.get("skinId", "")))
-		var path := "res://assets/skins/%s.png" % skin_id
-		if ResourceLoader.exists(path):
-			var icon := TextureRect.new()
-			icon.texture = load(path)
-			icon.custom_minimum_size = Vector2(90, 90)
-			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			return icon
+		return _make_skin_preview(skin_id, 90)
 	return _make_icon(_reward_icon(reward), 72)
+
+
+func _make_skin_preview(skin_id: String, preview_size: int) -> TextureRect:
+	var icon := TextureRect.new()
+	var path := "res://assets/skins/%s.png" % skin_id
+	if not ResourceLoader.exists(path):
+		path = "res://assets/skins/neon_blue.png"
+	if ResourceLoader.exists(path):
+		icon.texture = load(path)
+	icon.custom_minimum_size = Vector2(preview_size, preview_size)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return icon
 
 
 func _reward_label(reward: Dictionary) -> String:
@@ -950,6 +1120,51 @@ func _flash_reward_diamonds(card: Control) -> void:
 		tween.tween_callback(sparkle.queue_free)
 
 
+func _format_remaining(seconds: int) -> String:
+	var safe_seconds: int = maxi(0, seconds)
+	var days := floori(float(safe_seconds) / 86400.0)
+	var hours := floori(float(safe_seconds % 86400) / 3600.0)
+	var minutes := floori(float(safe_seconds % 3600) / 60.0)
+	if days > 0:
+		return "%sd %02dh" % [days, hours]
+	if hours > 0:
+		return "%02dh %02dm" % [hours, minutes]
+	return "%02dm" % minutes
+
+
+func _seconds_until_next_day() -> int:
+	var now := Time.get_unix_time_from_system()
+	var date := Time.get_datetime_dict_from_system()
+	var next_day := Time.get_unix_time_from_datetime_dict({
+		"year": int(date.year),
+		"month": int(date.month),
+		"day": int(date.day) + 1,
+		"hour": 0,
+		"minute": 0,
+		"second": 0,
+	})
+	return max(0, int(next_day) - int(now))
+
+
+func _seconds_until_next_month() -> int:
+	var now := Time.get_unix_time_from_system()
+	var date := Time.get_datetime_dict_from_system()
+	var month := int(date.month) + 1
+	var year := int(date.year)
+	if month > 12:
+		month = 1
+		year += 1
+	var next_month := Time.get_unix_time_from_datetime_dict({
+		"year": year,
+		"month": month,
+		"day": 1,
+		"hour": 0,
+		"minute": 0,
+		"second": 0,
+	})
+	return max(0, int(next_month) - int(now))
+
+
 func _make_progress_bar(progress: float, tone: String) -> PanelContainer:
 	var shell := PanelContainer.new()
 	shell.custom_minimum_size.y = 12
@@ -967,6 +1182,7 @@ func _make_action_button(text: String, tone: String) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(94, 42)
 	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.text = text
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 11)
@@ -978,6 +1194,7 @@ func _make_action_button(text: String, tone: String) -> Button:
 func _make_card(bg: String = "#ffffff12", border: String = "#ffffff22") -> PanelContainer:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style(bg, 12, border, 1))
 	return card
 
@@ -988,9 +1205,11 @@ func _card_body(card: PanelContainer, padding: int) -> VBoxContainer:
 	margin.add_theme_constant_override("margin_top", padding)
 	margin.add_theme_constant_override("margin_right", padding)
 	margin.add_theme_constant_override("margin_bottom", padding)
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 8)
+	body.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(body)
 	return body
 
@@ -1097,3 +1316,15 @@ func _fill(control: Control) -> void:
 
 func _go_back() -> void:
 	get_tree().change_scene_to_file(MENU_SCENE)
+
+
+func _configure_scroll(scroll: ScrollContainer) -> void:
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 6
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _is_narrow_screen() -> bool:
+	return get_viewport_rect().size.x <= 430.0
