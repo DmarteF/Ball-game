@@ -3,6 +3,7 @@ extends Control
 @export var screen_id := "shop"
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
+const BATTLE_SCENE := "res://scenes/LeagueBattle.tscn"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
@@ -601,19 +602,25 @@ func _make_event_header(event: Dictionary) -> PanelContainer:
 func _populate_boss() -> void:
 	var boss := _current_boss_data()
 	_content.add_child(_make_boss_header(boss))
+	_content.add_child(_make_feature_card({
+		"title": "Tentativas diárias" if _language() == "pt" else "Daily attempts",
+		"desc": "Cada dificuldade pode ser enfrentada uma vez por dia. A batalha usa duas arenas como a Liga Neon: Boss em cima, você embaixo." if _language() == "pt" else "Each difficulty can be attempted once per day. Battle uses two arenas like Neon League: Boss above, you below.",
+		"icon": "boss",
+		"button": "done",
+		"tone": "#ff8800",
+		"disabled": true,
+	}))
 	_content.add_child(_make_section_title("NÍVEIS DO BOSS" if _language() == "pt" else "BOSS LEVELS"))
 	var unlocked := int(GameState.data.get("max_unlocked_phase", 1)) >= 5 or int(GameState.data.get("level", 1)) >= 5
 	for level_data in _boss_level_data():
 		var card := Dictionary(level_data).duplicate(true)
-		card["disabled"] = true
-		card["button"] = "wait" if unlocked else "locked"
+		var level_id := String(card.get("id", "normal"))
+		var available := unlocked and GameState.can_start_boss_level(level_id)
+		card["disabled"] = not available
+		card["button"] = "battle" if available else "used" if unlocked else "locked"
+		card["action"] = "boss_start:%s" % level_id if available else ""
 		card["desc"] = "%s • %s" % [String(card.get("desc", "")), _reward_label(Dictionary(card.get("reward", {})))]
 		_content.add_child(_make_feature_card(card))
-	_content.add_child(_make_empty_state(
-		"Gameplay do Boss em breve" if _language() == "pt" else "Boss gameplay coming soon",
-		"Interface portada da main. As lutas do Boss ainda nao iniciam nesta etapa." if _language() == "pt" else "Interface ported from main. Boss fights do not start yet.",
-		"boss"
-	))
 
 
 func _make_boss_header(boss: Dictionary) -> PanelContainer:
@@ -653,11 +660,11 @@ func _current_boss_data() -> Dictionary:
 
 func _boss_level_data() -> Array[Dictionary]:
 	return [
-		{ "title": "Normal", "desc": "Entrada diária do Boss", "icon": "boss", "tone": "#00f0ff", "reward": { "type": "coins", "amount": 180 } },
-		{ "title": "Forte", "desc": "Boss com rotação elevada", "icon": "boss", "tone": "#00ff88", "reward": { "type": "diamonds", "amount": 4 } },
-		{ "title": "Elite", "desc": "Arena mais agressiva", "icon": "boss", "tone": "#b000ff", "reward": { "type": "keys", "amount": 1 } },
-		{ "title": "Lendário", "desc": "Recompensa rara e baú especial", "icon": "boss", "tone": "#ffd700", "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
-		{ "title": "Impossível", "desc": "Desafio visual máximo", "icon": "boss", "tone": "#ff0055", "reward": { "type": "chest", "chest_type": "epic", "amount": 1 } },
+		{ "id": "normal", "title": "Normal", "desc": "Entrada diária do Boss", "icon": "boss", "tone": "#00f0ff", "reward": { "type": "coins", "amount": 220 } },
+		{ "id": "strong", "title": "Forte", "desc": "Boss com rotação elevada", "icon": "boss", "tone": "#00ff88", "reward": { "type": "diamonds", "amount": 8 } },
+		{ "id": "elite", "title": "Elite", "desc": "Arena mais agressiva", "icon": "boss", "tone": "#b000ff", "reward": { "type": "keys", "amount": 1 } },
+		{ "id": "legendary", "title": "Lendário", "desc": "Recompensa rara e baú especial", "icon": "boss", "tone": "#ffd700", "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
+		{ "id": "impossible", "title": "Impossível", "desc": "Desafio visual máximo", "icon": "boss", "tone": "#ff0055", "reward": { "type": "chest", "chest_type": "epic", "amount": 1 } },
 	]
 
 
@@ -684,6 +691,20 @@ func _populate_missions() -> void:
 
 func _populate_achievements() -> void:
 	GameState._update_achievements(false)
+	var pending_claims := 0
+	for achievement in GameState.get_achievements():
+		var state: Dictionary = GameState.data.get("achievements", {}).get(String(achievement.get("id", "")), {})
+		if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
+			pending_claims += 1
+	_content.add_child(_make_feature_card({
+		"title": "Coletar tudo" if _language() == "pt" else "Claim all",
+		"desc": ("%s conquista(s) prontas para coletar." % pending_claims) if pending_claims > 0 else ("Nenhuma conquista pendente." if _language() == "pt" else "No pending achievements."),
+		"icon": "achievements",
+		"button": "claim" if pending_claims > 0 else "done",
+		"tone": "#ffd700",
+		"action": "achievement_all" if pending_claims > 0 else "",
+		"disabled": pending_claims <= 0,
+	}))
 	for achievement in GameState.get_achievements():
 		var id := String(achievement["id"])
 		var state: Dictionary = GameState.data.get("achievements", {}).get(id, {})
@@ -725,8 +746,16 @@ func _handle_action(action: String) -> void:
 		result = GameState.claim_daily_mission(action.trim_prefix("mission:"))
 	elif action.begins_with("achievement:"):
 		result = GameState.claim_achievement(action.trim_prefix("achievement:"))
+	elif action == "achievement_all":
+		result = GameState.claim_all_achievements()
 	elif action.begins_with("event:"):
 		result = GameState.claim_weekly_event_reward(action.trim_prefix("event:"))
+	elif action.begins_with("boss_start:"):
+		result = GameState.start_boss_battle(action.trim_prefix("boss_start:"))
+		if bool(result.get("ok", false)):
+			_play_sfx("res://assets/sounds/button_confirm.mp3")
+			get_tree().change_scene_to_file(BATTLE_SCENE)
+			return
 	elif action == "daily_claim":
 		result = GameState.claim_daily_reward()
 	elif action == "wheel_free":
@@ -824,27 +853,29 @@ func _button_text(key: String) -> String:
 	var normalized := key.to_lower().replace(" ", "_")
 	match normalized:
 		"comprar", "buy":
-			return _tr("buy")
+			return _tr("buy", "Comprar" if _language() == "pt" else "Buy")
 		"abrir", "open":
-			return _tr("open")
+			return _tr("open", "Abrir" if _language() == "pt" else "Open")
 		"coletar", "claim", "resgatar":
-			return _tr("claim")
+			return _tr("claim", "Coletar" if _language() == "pt" else "Claim")
 		"concluído", "concluido", "done", "ok":
-			return _tr("done")
+			return _tr("done", "Concluído" if _language() == "pt" else "Done")
 		"usado", "used":
-			return _tr("used")
+			return _tr("used", "Usado" if _language() == "pt" else "Used")
 		"ver_anúncio", "ver_anuncio", "watch_ad":
-			return _tr("watch_ad")
+			return _tr("watch_ad", "Ver anúncio" if _language() == "pt" else "Watch Ad")
 		"girar", "spin":
-			return _tr("spin")
+			return _tr("spin", "Girar" if _language() == "pt" else "Spin")
 		"ir", "go":
-			return _tr("go")
+			return _tr("go", "Ir" if _language() == "pt" else "Go")
 		"wait", "aguardar":
-			return _tr("wait")
+			return _tr("wait", "Aguardar" if _language() == "pt" else "Wait")
 		"locked", "bloqueado":
-			return _tr("locked")
+			return _tr("locked", "Bloqueado" if _language() == "pt" else "Locked")
+		"battle", "batalhar", "lutar":
+			return _tr("battle", "Batalhar" if _language() == "pt" else "Battle")
 		"free", "grátis", "gratis":
-			return _tr("free")
+			return _tr("free", "Grátis" if _language() == "pt" else "Free")
 	return key
 
 
@@ -1053,6 +1084,8 @@ func _make_skin_preview(skin_id: String, preview_size: int) -> TextureRect:
 
 
 func _reward_label(reward: Dictionary) -> String:
+	if reward.has("coins") or reward.has("diamonds") or reward.has("chests") or reward.has("skins"):
+		return "Várias recompensas" if _language() == "pt" else "Multiple rewards"
 	var amount := int(reward.get("amount", 1))
 	match String(reward.get("type", "")):
 		"coins":
@@ -1183,11 +1216,15 @@ func _make_action_button(text: String, tone: String) -> Button:
 	button.custom_minimum_size = Vector2(94, 42)
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_PASS
-	button.text = text
+	button.text = text if not text.strip_edges().is_empty() else _tr("unavailable", "Indisponível")
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 11)
 	button.add_theme_color_override("font_color", Color("#001018"))
+	button.add_theme_color_override("font_disabled_color", Color("#ffffffcc"))
+	button.add_theme_color_override("font_pressed_color", Color("#001018"))
+	button.add_theme_color_override("font_hover_color", Color("#001018"))
 	_apply_button_style(button, _make_style(tone, 10, "#00000000", 0, tone + "88", 8))
+	button.add_theme_stylebox_override("disabled", _make_style("#ffffff18", 10, tone + "66", 1, tone + "44", 5))
 	return button
 
 

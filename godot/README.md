@@ -973,3 +973,35 @@ Checklist:
 | Liga Neon reroll por diamantes | Sim |
 | Limite de 3 rerolls por luta | Sim |
 | Reroll respeita upgrades bloqueados | Sim |
+
+## 7.19 Boss funcional, save de update e ajustes de gameplay
+
+Atualizado nesta etapa:
+
+- A tela `Boss` agora inicia lutas reais usando a mesma estrutura visual/jogavel da `LeagueBattle`: boss em cima, jogador embaixo, timer de 1 minuto e resultado por sobrevivencia/aneis/score.
+- Cada dificuldade do Boss (`normal`, `strong`, `elite`, `legendary`, `impossible`) pode ser tentada uma vez por dia, usando o relogio interno e salvando em `GameState.data.boss.daily_attempts`.
+- O APK Android subiu para `versionCode=2` / `versionName=1.0.1`, mantendo o mesmo package `com.dmartef.neonidleescape`; atualizacao por cima preserva `user://` quando a assinatura e o package sao os mesmos.
+- `SaveManager` agora grava tambem `user://neon_idle_escape_save_backup.json` e tenta recuperar esse backup caso o save principal nao carregue.
+- `GameState.load_game()` sanitiza upgrades/skins salvos: remove ids invalidos/duplicados, preserva permanentes validos, temporarios liberados e garante fallback para `neon_blue`.
+- A aba Conquistas recebeu card `Coletar tudo`, que coleta todas as conquistas completas e ainda nao resgatadas de uma vez, sem duplicar recompensas ja coletadas.
+- Moedas por hit foram aumentadas nas fases, infinito, Liga e Boss; quebras/perfects tambem receberam ajuste para a jogatina render melhor.
+- O fechamento dos aneis nas fases deixou de parar em uma barreira invisivel: o spawn continua respeitando area segura, mas o fechamento agora pode seguir ate o centro.
+- A derrota por esmagamento continua exigindo contato real fora do gap e confirmacao curta, evitando derrota instantanea por spawn/recolocacao.
+- SFX de impacto foram limpos: `hit_light` fica para impacto normal em anel, `hit_heavy` para critico, sem SFX extra de XP/level-up empilhado no mesmo hit.
+- Splash/boot Web foi mascarado com fundo/icone neon do jogo; Android usa o icone configurado em `project.godot`.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Boss usa batalha estilo Liga | Sim |
+| Dificuldades do Boss uma vez ao dia | Sim |
+| Save preservado em update do app | Sim, com mesmo package/assinatura |
+| Backup local de save | Sim |
+| Sanitizacao de desbloqueios ao carregar | Sim |
+| Coletar todas conquistas | Sim |
+| Moedas por hit aumentadas | Sim |
+| Aneis das fases fecham sem barreira invisivel | Sim |
+| Derrota exige bolinha realmente fechada | Sim |
+| SFX normal/critico sem duplicidade de XP | Sim |
+| APK atualizado para 1.0.1/versionCode 2 | Sim |

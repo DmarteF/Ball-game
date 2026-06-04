@@ -1,6 +1,7 @@
 extends Control
 
 const LEAGUE_SCENE := "res://scenes/League.tscn"
+const BOSS_SCENE := "res://scenes/Boss.tscn"
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 
 const TWO_PI := PI * 2.0
@@ -67,6 +68,8 @@ var _result_doubled := false
 var _control_input := 0.0
 var _control_left_down := false
 var _control_right_down := false
+var _battle_kind := "league"
+var _boss_level_id := ""
 
 var _hud_layer: Control
 var _status_label: Label
@@ -90,6 +93,7 @@ var _result_overlay: Control
 var _result_title: Label
 var _result_details: VBoxContainer
 var _result_double_button: Button
+var _result_retry_button: Button
 var _revive_overlay: Control
 var _battle_started_flash := 0.0
 
@@ -155,7 +159,20 @@ func _notification(what: int) -> void:
 func _prepare_match() -> void:
 	var league: Dictionary = GameState.data.get("league", {})
 	var trophies := int(league.get("trophies", 0))
-	_opponent = _resolve_pending_opponent(trophies)
+	var pending_boss: Dictionary = GameState.data.get("pending_boss_battle", {})
+	var reuse_current_boss := _battle_kind == "boss" and not _finished and not _opponent.is_empty() and not _boss_level_id.is_empty()
+	if reuse_current_boss:
+		_battle_kind = "boss"
+	elif not pending_boss.is_empty():
+		_battle_kind = "boss"
+		_opponent = pending_boss.duplicate(true)
+		_boss_level_id = String(_opponent.get("level_id", "normal"))
+		GameState.data.erase("pending_boss_battle")
+		GameState.save_game(false)
+	else:
+		_battle_kind = "league"
+		_opponent = _resolve_pending_opponent(trophies)
+		_boss_level_id = ""
 	_elapsed = 0.0
 	_winner = ""
 	_finish_reason = ""
@@ -172,12 +189,14 @@ func _prepare_match() -> void:
 	_rival = _make_arena("rival", String(_opponent.get("name", "Rival")), String(rival_skin.get("id", "neon_blue")), float(_opponent.get("quality", 0.45)), true)
 	_player = _make_arena("player", String(GameState.data.get("nickname", "Voce")), String(GameState.data.get("equipped_skin", "neon_blue")), 1.0, false)
 	_layout_arenas()
-	_status_label.text = "LIGA %s" % String(rank.get("name", "Bronze")).to_upper()
-	_meta_label.text = "Temporada %s - %s trofeus" % [TimeManager.get_month_key(), trophies]
+	_status_label.text = "BOSS %s" % _boss_level_id.to_upper() if _battle_kind == "boss" else "LIGA %s" % String(rank.get("name", "Bronze")).to_upper()
+	_meta_label.text = "Duelo diario - %s" % String(_opponent.get("name", "Boss")) if _battle_kind == "boss" else "Temporada %s - %s trofeus" % [TimeManager.get_month_key(), trophies]
 	_hide_overlays()
 	if _result_double_button:
 		_result_double_button.text = "DOBRAR RECOMPENSA - AD"
 		_result_double_button.disabled = false
+	if _result_retry_button:
+		_result_retry_button.text = "VOLTAR AO BOSS" if _battle_kind == "boss" else "JOGAR NOVAMENTE"
 	_update_status()
 	_update_run_upgrade_buttons()
 	queue_redraw()
@@ -481,12 +500,12 @@ func _check_ring_hit(state: Dictionary, prev_dist: float, next_dist: float, prev
 	state["score"] = int(state.get("score", 0)) + damage
 	if crit:
 		state["criticals"] = int(state.get("criticals", 0)) + 1
-	_award_arena_coins(state, max(1, floori(float(damage) * 0.42 * _gold_multiplier(state))))
+	_award_arena_coins(state, max(2, floori(float(damage) * 0.72 * _gold_multiplier(state))))
 	_award_arena_xp(state, floori((18.0 if crit else 12.0) * _xp_multiplier(state)))
 	if new_hp <= 0:
 		state["rings_destroyed"] = int(state.get("rings_destroyed", 0)) + 1
 		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), String(ring.get("color", "#00f0ff")), "break")
-		_award_arena_coins(state, max(6, floori((18.0 if String(ring.get("type", "normal")) == "solid" else 12.0) * _gold_multiplier(state))))
+		_award_arena_coins(state, max(8, floori((24.0 if String(ring.get("type", "normal")) == "solid" else 16.0) * _gold_multiplier(state))))
 		_award_arena_xp(state, floori((22.0 + randf() * 12.0) * _xp_multiplier(state)))
 		if String(state.get("id", "")) == "player":
 			_play_sfx("break")
@@ -614,6 +633,7 @@ func _clamp_ring_spacing(state: Dictionary) -> void:
 				indices[i] = indices[j]
 				indices[j] = temp
 	var min_radius := MIN_RING_RADIUS
+	var crush_min_radius := 4.0
 	var max_radius := float(state.get("arena_radius", 100.0)) - 4.0
 	var spacing: float = min(MIN_RING_SPACING, max(4.2, (max_radius - min_radius) / float(max(1, indices.size() - 1))))
 	var previous: float = max_radius + spacing
@@ -621,7 +641,7 @@ func _clamp_ring_spacing(state: Dictionary) -> void:
 	for index in indices:
 		var ring: Dictionary = state["rings"][index]
 		var upper_bound: float = minf(max_radius, previous - spacing)
-		var lower_bound: float = min_radius
+		var lower_bound: float = maxf(float(ring.get("min_radius", crush_min_radius)), crush_min_radius)
 		var current_radius: float = float(ring.get("radius", upper_bound))
 		var radius: float = clampf(current_radius, lower_bound, maxf(lower_bound, upper_bound))
 		if abs(radius - current_radius) > 0.5 and now - int(ring.get("spawned_at", 0)) > 180:
@@ -646,8 +666,6 @@ func _update_level_progress(state: Dictionary) -> void:
 	state["xp"] = int(state.get("xp", 0)) - needed
 	state["level"] = int(state.get("level", 1)) + 1
 	state["level_pending"] = true
-	if String(state.get("id", "")) == "player":
-		_play_sfx("level")
 
 
 func _open_player_upgrade() -> void:
@@ -667,8 +685,8 @@ func _render_player_upgrade_choices() -> void:
 		for upgrade in _current_upgrade_choices:
 			var id := String(upgrade.get("id", ""))
 			var current := int(Dictionary(_player.get("run_upgrades", {})).get(id, 0))
-			var button := _make_button("%s\n%s\nLv.%s > Lv.%s" % [String(upgrade.get("name", id)).to_upper(), String(upgrade.get("description", "")), current, current + 1], 292, 76)
-			button.add_theme_font_size_override("font_size", 11)
+			var button := _make_button("%s\n%s\nLv.%s > Lv.%s" % [String(upgrade.get("name", id)).to_upper(), String(upgrade.get("description", "")), current, current + 1], 286, 60)
+			button.add_theme_font_size_override("font_size", 10)
 			_set_button_icon(button, _upgrade_icon_key(id))
 			button.pressed.connect(_select_player_upgrade.bind(id))
 			_level_up_cards.add_child(button)
@@ -687,12 +705,12 @@ func _render_reroll_actions() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_level_up_actions.add_child(row)
-	var ad_button := _make_button("REROLL\nVIDEO", 0, 50)
+	var ad_button := _make_button("REROLL\nVIDEO", 0, 42)
 	ad_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ad_button.disabled = _upgrade_rerolls_used >= MAX_UPGRADE_REROLLS
 	ad_button.pressed.connect(_reroll_player_upgrades_with_ad)
 	row.add_child(ad_button)
-	var diamond_button := _make_button("REROLL\n%s DIAMANTES" % REROLL_DIAMOND_COST, 0, 50)
+	var diamond_button := _make_button("REROLL\n%s DIAMANTES" % REROLL_DIAMOND_COST, 0, 42)
 	diamond_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	diamond_button.disabled = _upgrade_rerolls_used >= MAX_UPGRADE_REROLLS or int(GameState.data.get("diamonds", 0)) < REROLL_DIAMOND_COST
 	diamond_button.pressed.connect(_reroll_player_upgrades_with_diamonds)
@@ -1091,7 +1109,7 @@ func _finish_match(result: String, reason: String = "") -> void:
 		"skin_effects": 0,
 		"run_upgrades": int(_player.get("run_upgrade_count", 0)),
 	}
-	_result_reward = GameState.record_neon_league_match(result, summary)
+	_result_reward = GameState.record_boss_match(_boss_level_id, result, summary) if _battle_kind == "boss" else GameState.record_neon_league_match(result, summary)
 	if result == "win":
 		_play_sfx("victory")
 	elif result == "loss":
@@ -1102,7 +1120,10 @@ func _finish_match(result: String, reason: String = "") -> void:
 
 
 func _show_result(summary: Dictionary) -> void:
-	_result_title.text = "VITORIA NEON" if _winner == "win" else "DERROTA NEON" if _winner == "loss" else "SAIDA DA LIGA"
+	if _battle_kind == "boss":
+		_result_title.text = "BOSS DERROTADO" if _winner == "win" else "DERROTA NO BOSS" if _winner == "loss" else "SAIDA DO BOSS"
+	else:
+		_result_title.text = "VITORIA NEON" if _winner == "win" else "DERROTA NEON" if _winner == "loss" else "SAIDA DA LIGA"
 	for child in _result_details.get_children():
 		child.queue_free()
 	_result_details.add_child(_make_result_line("Tempo", "%ss" % int(summary.get("seconds", 0))))
@@ -1114,9 +1135,14 @@ func _show_result(summary: Dictionary) -> void:
 	_result_details.add_child(_make_result_line("XP", "+%s" % int(_result_reward.get("xp", 0))))
 	if int(_result_reward.get("diamonds", 0)) > 0:
 		_result_details.add_child(_make_result_line("Diamantes", "+%s" % int(_result_reward.get("diamonds", 0))))
-	_result_details.add_child(_make_result_line("Trofeus", "%+d" % int(_result_reward.get("trophy_delta", 0))))
-	if not String(_result_reward.get("promotion_skin", "")).is_empty():
-		_result_details.add_child(_make_label("Skin desbloqueada: Campeao Neon Inicial", 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	if _battle_kind == "boss":
+		var reward: Dictionary = _result_reward.get("reward", {})
+		_result_details.add_child(_make_result_line("Boss", String(_opponent.get("name", "Boss"))))
+		_result_details.add_child(_make_result_line("Recompensa", _boss_reward_label(reward)))
+	else:
+		_result_details.add_child(_make_result_line("Trofeus", "%+d" % int(_result_reward.get("trophy_delta", 0))))
+		if not String(_result_reward.get("promotion_skin", "")).is_empty():
+			_result_details.add_child(_make_label("Skin desbloqueada: Campeao Neon Inicial", 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if _result_double_button:
 		_result_double_button.visible = _winner != "quit"
 		_result_double_button.disabled = _result_doubled
@@ -1368,19 +1394,20 @@ func _build_pause_overlay() -> void:
 	var card := _make_modal_content(_pause_overlay, "PAUSA", Vector2(320, 250))
 	card.add_child(_make_modal_button("CONTINUAR", _close_pause))
 	card.add_child(_make_modal_button("REINICIAR DUELO", _prepare_match))
-	card.add_child(_make_modal_button("SAIR DA LIGA", _quit_match))
+	card.add_child(_make_modal_button("SAIR", _quit_match))
 	add_child(_pause_overlay)
 
 
 func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
-	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(340, 470))
+	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(326, 438))
+	card.add_theme_constant_override("separation", 8)
 	card.add_child(_make_label("Escolha uma melhoria para sua arena.", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
-	_level_up_cards.add_theme_constant_override("separation", 8)
+	_level_up_cards.add_theme_constant_override("separation", 6)
 	card.add_child(_level_up_cards)
 	_level_up_actions = VBoxContainer.new()
-	_level_up_actions.add_theme_constant_override("separation", 6)
+	_level_up_actions.add_theme_constant_override("separation", 5)
 	card.add_child(_level_up_actions)
 	add_child(_level_up_overlay)
 
@@ -1395,8 +1422,9 @@ func _build_result_overlay() -> void:
 	card.add_child(_result_details)
 	_result_double_button = _make_modal_button("DOBRAR RECOMPENSA - AD", _double_result_reward)
 	card.add_child(_result_double_button)
-	card.add_child(_make_modal_button("JOGAR NOVAMENTE", _prepare_match))
-	card.add_child(_make_modal_button("VOLTAR A LIGA", _go_to_league))
+	_result_retry_button = _make_modal_button("JOGAR NOVAMENTE", _retry_or_return)
+	card.add_child(_result_retry_button)
+	card.add_child(_make_modal_button("VOLTAR", _go_to_mode_menu))
 	card.add_child(_make_modal_button("MENU", _go_to_menu))
 	add_child(_result_overlay)
 
@@ -1412,6 +1440,22 @@ func _build_revive_overlay() -> void:
 
 func _make_result_line(label: String, value: String) -> Label:
 	return _make_label("%s: %s" % [label, value], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+func _boss_reward_label(reward: Dictionary) -> String:
+	var amount := int(reward.get("amount", 1))
+	match String(reward.get("type", "")):
+		"coins":
+			return "+%s moedas" % amount
+		"diamonds", "gems":
+			return "+%s diamantes" % amount
+		"keys":
+			return "+%s chaves" % amount
+		"chest":
+			return "+%s baú %s" % [amount, String(reward.get("chest_type", "common"))]
+		"skin":
+			return "Skin %s" % String(reward.get("skin_id", ""))
+	return "Recompensa"
 
 
 func _open_pause() -> void:
@@ -1439,6 +1483,17 @@ func _quit_match() -> void:
 
 func _go_to_league() -> void:
 	get_tree().change_scene_to_file(LEAGUE_SCENE)
+
+
+func _go_to_mode_menu() -> void:
+	get_tree().change_scene_to_file(BOSS_SCENE if _battle_kind == "boss" else LEAGUE_SCENE)
+
+
+func _retry_or_return() -> void:
+	if _battle_kind == "boss":
+		_go_to_mode_menu()
+	else:
+		_prepare_match()
 
 
 func _go_to_menu() -> void:

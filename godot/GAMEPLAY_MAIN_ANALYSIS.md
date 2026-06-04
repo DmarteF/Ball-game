@@ -579,3 +579,33 @@ Checklist:
 | Reroll respeita upgrades bloqueados | Sim |
 | Mute separado de musicas/SFX | Sim |
 | Scroll mobile revisado | Sim |
+
+## Atualizacao - Boss funcional, update seguro e aneis fechando
+
+Correcoes aplicadas:
+
+- Boss deixou de ser apenas interface visual: `Boss.tscn` inicia `LeagueBattle.tscn` com `pending_boss_battle`, usando duas arenas como a Liga Neon.
+- Cada dificuldade do Boss e marcada em `GameState.data.boss.daily_attempts` pela chave de dia local, permitindo uma tentativa diaria por dificuldade.
+- Recompensas do Boss sao aplicadas por `GameState.record_boss_match`, com moedas/XP sempre e premios de diamantes/chaves/baus conforme dificuldade.
+- `SaveManager` mantem `user://neon_idle_escape_save.json` e backup `user://neon_idle_escape_save_backup.json`; o package Android segue `com.dmartef.neonidleescape`, entao update assinado por cima preserva dados.
+- `GameState._sanitize_persistent_unlocks` valida upgrades e skins no carregamento, removendo ids invalidos/duplicados e garantindo skin equipada valida.
+- Conquistas agora possuem acao de coleta em massa por `GameState.claim_all_achievements`, marcando apenas conquistas completas e nao coletadas.
+- Moedas por hit foram aumentadas nas fases/infinito e tambem em Liga/Boss, mantendo a conversao global de recompensa final.
+- A barreira invisivel das fases foi removida do fechamento: `_clamp_ring_spacing` agora permite que aneis fechem ate `min_radius` real do anel, enquanto o spawn ainda usa area jogavel segura.
+- A derrota por esmagamento continua baseada em colisao real fora do gap e contato confirmado por `CRUSH_CONFIRM_MSEC`.
+- SFX de hit nao recebe mais camada extra de XP/level-up no mesmo evento: impacto normal usa `hit_light`, critico usa `hit_heavy`, quebra usa `ring_break` e perfect/clear usa `perfect`.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Boss batalha visualmente como Liga | Sim |
+| Boss usa limite diario por dificuldade | Sim |
+| Save preserva dados em update do APK | Sim |
+| Save possui backup local | Sim |
+| Desbloqueios de upgrades/skins sanitizados | Sim |
+| Coletar todas conquistas | Sim |
+| Moedas por hit melhoradas | Sim |
+| Aneis fecham sobre a bolinha nas fases | Sim |
+| Derrota por fechamento segue validacao real | Sim |
+| SFX hit light/heavy sem som duplo de XP | Sim |

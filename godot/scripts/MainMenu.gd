@@ -90,6 +90,7 @@ var _more_overlay: ColorRect
 var _more_panel: PanelContainer
 var _more_items: Array = []
 var _opening_achievements := false
+var _achievement_notice: Button
 
 
 func _ready() -> void:
@@ -150,6 +151,7 @@ func _build_achievement_notice_overlay() -> void:
 	var pending := _pending_achievement_count()
 	if pending > 0:
 		var notice := _make_achievement_notice(pending)
+		_achievement_notice = notice
 		notice.anchor_left = 0.0
 		notice.anchor_top = 0.0
 		notice.anchor_right = 0.0
@@ -160,6 +162,8 @@ func _build_achievement_notice_overlay() -> void:
 		notice.offset_bottom = 198.0
 		notice.z_index = 30
 		add_child(notice)
+		var timer := get_tree().create_timer(6.0)
+		timer.timeout.connect(_hide_achievement_notice)
 
 
 func _build_content() -> void:
@@ -259,6 +263,15 @@ func _make_achievement_notice(count: int) -> Button:
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(label)
 	return button
+
+
+func _hide_achievement_notice() -> void:
+	if not is_instance_valid(_achievement_notice):
+		return
+	var tween := create_tween()
+	tween.tween_property(_achievement_notice, "modulate:a", 0.0, 0.35)
+	tween.parallel().tween_property(_achievement_notice, "position:y", _achievement_notice.position.y - 8.0, 0.35)
+	tween.tween_callback(_achievement_notice.queue_free)
 
 
 func _open_achievements_scene() -> void:

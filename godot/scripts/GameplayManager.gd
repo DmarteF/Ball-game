@@ -24,7 +24,7 @@ const RING_SPAWN_GRACE_MSEC := 1050
 const RING_REPOSITION_GRACE_MSEC := 520
 const CRUSH_CONFIRM_MSEC := 150
 const XP_BASE_REQUIREMENT := 150.0
-const RUN_COIN_MULTIPLIER := 0.92
+const RUN_COIN_MULTIPLIER := 1.25
 const GLOBAL_COIN_CONVERSION_RATE := 0.72
 const PROFILE_XP_MULTIPLIER := 0.95
 const COMBO_WINDOW_MSEC := 2600
@@ -632,7 +632,7 @@ func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2
 			rings[i] = ring
 			_register_ring_clear()
 			perfect_escapes += 1
-			var perfect_coins: int = max(2, floori(5.0 * _gold_multiplier()))
+			var perfect_coins: int = max(5, floori(10.0 * _gold_multiplier()))
 			var perfect_xp: int = floori((28.0 + randf() * 16.0 + phase_id * 1.2) * _xp_multiplier())
 			_award_coins(perfect_coins)
 			_award_xp(perfect_xp)
@@ -681,7 +681,7 @@ func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next
 	ring["hp"] = new_hp
 	ring["status"] = "broken" if new_hp <= 0 else "active"
 	rings[closest_index] = ring
-	_award_coins(floori(damage * 0.5 * _gold_multiplier()))
+	_award_coins(max(2, floori(damage * 0.82 * _gold_multiplier())))
 	_award_xp(floori((18.0 if is_crit else 12.0) * _xp_multiplier()))
 	run_score += damage
 	_track_dps(float(damage))
@@ -696,7 +696,7 @@ func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next
 		_try_apply_skin_effect(closest_index, "break")
 		_try_apply_upgrade_effects(closest_index, "break", damage)
 		_register_combo("Break", Color("#ffd700"))
-		_award_coins(max(6, floori((18.0 if String(ring.get("type", "normal")) == "solid" else 12.0) * _gold_multiplier())))
+		_award_coins(max(10, floori((26.0 if String(ring.get("type", "normal")) == "solid" else 18.0) * _gold_multiplier())))
 		_award_xp(floori(((24.0 if String(ring.get("type", "normal")) == "solid" else 14.0) + phase_id * 0.8 + randf() * (14.0 if String(ring.get("type", "normal")) == "solid" else 9.0)) * _xp_multiplier()))
 		_spawn_particles(ball_position, Color("#ffd700"), 18, 130.0)
 		_spawn_floating("Break!", ball_position + Vector2(-18, -28), Color("#ffd700"))
@@ -1158,13 +1158,14 @@ func _build_pause_overlay() -> void:
 
 func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
-	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(342, 538))
-	card.add_child(_make_label("ESCOLHA UMA MELHORIA", 14, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(326, 454))
+	card.add_theme_constant_override("separation", 9)
+	card.add_child(_make_label("ESCOLHA UMA MELHORIA", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
-	_level_up_cards.add_theme_constant_override("separation", 8)
+	_level_up_cards.add_theme_constant_override("separation", 6)
 	card.add_child(_level_up_cards)
 	var reroll_row := HBoxContainer.new()
-	reroll_row.add_theme_constant_override("separation", 8)
+	reroll_row.add_theme_constant_override("separation", 6)
 	card.add_child(reroll_row)
 	reroll_row.add_child(_make_modal_button("REROLL AD", _reroll_upgrades_ad))
 	reroll_row.add_child(_make_modal_button("REROLL 10♦", _reroll_upgrades_diamond))
@@ -1222,22 +1223,23 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2 = 
 	panel.add_theme_stylebox_override("panel", _make_style("#16003bdd", 18, "#00f0ff66", 2, "#00f0ff55", 18))
 	center.add_child(panel)
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_top", 22)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_bottom", 22)
+	margin.add_theme_constant_override("margin_left", 18 if panel_size.y > 420.0 else 24)
+	margin.add_theme_constant_override("margin_top", 16 if panel_size.y > 420.0 else 22)
+	margin.add_theme_constant_override("margin_right", 18 if panel_size.y > 420.0 else 24)
+	margin.add_theme_constant_override("margin_bottom", 16 if panel_size.y > 420.0 else 22)
 	panel.add_child(margin)
 	var column := VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 14)
+	column.add_theme_constant_override("separation", 10 if panel_size.y > 420.0 else 14)
 	margin.add_child(column)
-	column.add_child(_make_label(title, 26, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label(title, 24 if panel_size.y > 420.0 else 26, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	overlay.add_child(center)
 	return column
 
 
 func _make_modal_button(text: String, target: Callable) -> Button:
-	var button := _make_button(text, 250, 46)
+	var button := _make_button(text, 0, 42)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(target)
 	return button
 
@@ -1829,8 +1831,6 @@ func _award_xp(amount: int) -> void:
 		run_xp -= needed
 		run_level += 1
 		_open_level_up()
-	elif balanced >= 8:
-		_play_sfx("xp")
 
 
 func _register_combo(label: String, color: Color) -> void:
@@ -1945,7 +1945,6 @@ func _open_level_up() -> void:
 	_level_up_overlay.visible = true
 	_spawn_particles(arena_center, Color("#00f0ff"), 34, 150.0)
 	_spawn_floating("LEVEL %s" % run_level, arena_center + Vector2(-24, -46), Color("#ffd700"))
-	_play_sfx("level_up")
 
 
 func _get_safe_upgrade_options(exclude_ids: Array[String] = [], allow_repeats := true) -> Array[Dictionary]:
@@ -2091,19 +2090,19 @@ func _level_up_feedback(pt: String, en: String) -> String:
 func _make_level_up_button(upgrade: Dictionary) -> Button:
 	var id := String(upgrade["id"])
 	var current_level := int(current_upgrades.get(id, 0))
-	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s  |  SELECIONAR" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 280, 78)
+	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 286, 62)
 	button.add_theme_color_override("font_color", Color("#ffffff"))
-	button.add_theme_font_size_override("font_size", 11)
+	button.add_theme_font_size_override("font_size", 10)
 	_apply_button_style(button, _make_style("#16003bdd", 12, String(upgrade["color"]), 2, String(upgrade["color"]), 8))
-	var icon := _make_icon_texture(_upgrade_icon_key(id), 36)
+	var icon := _make_icon_texture(_upgrade_icon_key(id), 32)
 	icon.anchor_left = 0.0
 	icon.anchor_top = 0.5
 	icon.anchor_right = 0.0
 	icon.anchor_bottom = 0.5
-	icon.offset_left = 14.0
-	icon.offset_top = -18.0
-	icon.offset_right = 50.0
-	icon.offset_bottom = 18.0
+	icon.offset_left = 13.0
+	icon.offset_top = -16.0
+	icon.offset_right = 45.0
+	icon.offset_bottom = 16.0
 	button.add_child(icon)
 	button.pressed.connect(_select_level_up_upgrade.bind(id))
 	return button
@@ -2445,6 +2444,7 @@ func _clamp_ring_spacing() -> void:
 		return
 	var max_radius := _playable_ring_max_radius()
 	var min_radius := _playable_ring_min_radius()
+	var crush_min_radius := 4.0
 	var playable_width := max_radius - min_radius
 	var spacing := _infinite_ring_spacing() if is_infinite else MIN_RING_SPACING
 	if active_indices.size() > 1:
@@ -2454,7 +2454,7 @@ func _clamp_ring_spacing() -> void:
 	var now := Time.get_ticks_msec()
 	for index in active_indices:
 		var ring: Dictionary = rings[index]
-		var lower_bound: float = maxf(float(ring.get("min_radius", INNER_RADIUS)), min_radius)
+		var lower_bound: float = maxf(float(ring.get("min_radius", crush_min_radius)), crush_min_radius)
 		var upper_bound: float = max_radius if previous_radius == INF else previous_radius - maxf(spacing, float(ring.get("thickness", 5.0)) + 1.5)
 		upper_bound = maxf(lower_bound, upper_bound)
 		var current_radius: float = float(ring.get("radius", upper_bound))

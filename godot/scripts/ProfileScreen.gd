@@ -57,18 +57,20 @@ func _build_screen() -> void:
 	root.anchor_top = 0.0
 	root.anchor_right = 1.0
 	root.anchor_bottom = 1.0
-	root.offset_left = 18.0
-	root.offset_top = 50.0
-	root.offset_right = -18.0
+	var margin_x := 12.0 if _is_narrow_screen() else 18.0
+	root.offset_left = margin_x
+	root.offset_top = 36.0 if _is_narrow_screen() else 50.0
+	root.offset_right = -margin_x
 	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 10)
+	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 
 	var header := VBoxContainer.new()
 	header.add_theme_constant_override("separation", 8)
 	root.add_child(header)
 
-	var title := _make_label("PERFIL", 30, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var title := _make_label("PERFIL", 25 if _is_narrow_screen() else 30, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	title.add_theme_color_override("font_outline_color", Color("#00f0ff66"))
 	title.add_theme_constant_override("outline_size", 4)
 	header.add_child(title)
@@ -76,11 +78,12 @@ func _build_screen() -> void:
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_configure_scroll(scroll)
 	root.add_child(scroll)
 
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.mouse_filter = Control.MOUSE_FILTER_PASS
 	content.add_theme_constant_override("separation", 14)
 	scroll.add_child(content)
 
@@ -114,7 +117,7 @@ func _make_profile_card() -> PanelContainer:
 	_nickname_edit.text_submitted.connect(func(_text: String) -> void: _save_profile_mock())
 	body.add_child(_nickname_edit)
 
-	var photo_row := HBoxContainer.new()
+	var photo_row: BoxContainer = VBoxContainer.new() if _is_narrow_screen() else HBoxContainer.new()
 	photo_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	photo_row.add_theme_constant_override("separation", 8)
 	body.add_child(photo_row)
@@ -131,9 +134,11 @@ func _make_profile_card() -> PanelContainer:
 	save.pressed.connect(_save_profile_mock)
 	body.add_child(save)
 
-	var avatar_row := HBoxContainer.new()
-	avatar_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	avatar_row.add_theme_constant_override("separation", 8)
+	var avatar_row := GridContainer.new()
+	avatar_row.columns = 4 if _is_narrow_screen() else 6
+	avatar_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	avatar_row.add_theme_constant_override("h_separation", 8)
+	avatar_row.add_theme_constant_override("v_separation", 8)
 	body.add_child(avatar_row)
 	for skin in _profile_avatar_skins():
 		avatar_row.add_child(_make_avatar_skin_pick(skin))
@@ -141,9 +146,11 @@ func _make_profile_card() -> PanelContainer:
 	body.add_child(_make_section_title("SKIN FAVORITA"))
 	body.add_child(_make_favorite_skin_box())
 
-	var skin_row := HBoxContainer.new()
-	skin_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	skin_row.add_theme_constant_override("separation", 8)
+	var skin_row := GridContainer.new()
+	skin_row.columns = 4 if _is_narrow_screen() else 6
+	skin_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	skin_row.add_theme_constant_override("h_separation", 8)
+	skin_row.add_theme_constant_override("v_separation", 8)
 	body.add_child(skin_row)
 	for skin in _profile_avatar_skins():
 		skin_row.add_child(_make_skin_pick(_skin_texture_path(String(skin.get("id", "neon_blue")))))
@@ -160,8 +167,10 @@ func _make_account_card() -> PanelContainer:
 	body.add_child(_make_label("Level %s" % level, 24, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	body.add_child(_make_xp_bar(float(xp) / float(max(1, xp_needed)), "%s/%s XP" % [xp, xp_needed]))
 
-	var resources := HBoxContainer.new()
-	resources.add_theme_constant_override("separation", 8)
+	var resources := GridContainer.new()
+	resources.columns = 2 if _is_narrow_screen() else 4
+	resources.add_theme_constant_override("h_separation", 8)
+	resources.add_theme_constant_override("v_separation", 8)
 	body.add_child(resources)
 	resources.add_child(_make_resource("coin", str(GameState.data.get("coins", 0))))
 	resources.add_child(_make_resource("gem", str(GameState.data.get("diamonds", 0))))
@@ -475,6 +484,8 @@ func _make_xp_bar(progress: float, text: String) -> PanelContainer:
 
 func _make_resource(icon_key: String, value: String) -> PanelContainer:
 	var resource := PanelContainer.new()
+	resource.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	resource.mouse_filter = Control.MOUSE_FILTER_PASS
 	resource.add_theme_stylebox_override("panel", _make_style("#ffffff14", 8))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 10)
@@ -534,7 +545,8 @@ func _make_language_button(label: String, code: String) -> Button:
 
 func _make_small_icon_button(icon_key: String, text: String, bg: String, border: String) -> Button:
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(148, 36)
+	button.custom_minimum_size = Vector2(0 if _is_narrow_screen() else 148, 36)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
 	_apply_button_style(button, _make_style(bg, 8, border, 1))
 	var row := HBoxContainer.new()
@@ -591,6 +603,7 @@ func _make_flat_button(text: String, color: String, size: int) -> Button:
 func _make_card() -> PanelContainer:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#ffffff22", 1))
 	return card
 
@@ -601,9 +614,11 @@ func _card_body(card: PanelContainer) -> VBoxContainer:
 	margin.add_theme_constant_override("margin_top", 16)
 	margin.add_theme_constant_override("margin_right", 16)
 	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 8)
+	body.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(body)
 	return body
 
@@ -707,6 +722,18 @@ func _fill(control: Control) -> void:
 	control.offset_top = 0.0
 	control.offset_right = 0.0
 	control.offset_bottom = 0.0
+
+
+func _configure_scroll(scroll: ScrollContainer) -> void:
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 6
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _is_narrow_screen() -> bool:
+	return get_viewport_rect().size.x <= 430.0
 
 
 func _load_settings() -> void:

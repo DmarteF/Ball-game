@@ -379,6 +379,7 @@ func load_game() -> void:
 	data = _merge_defaults(default_save(), loaded)
 	_migrate_legacy_settings()
 	_ensure_live_systems()
+	_sanitize_persistent_unlocks()
 	refresh_unlocks(false)
 	var now := TimeManager.get_now_timestamp()
 	var offline_seconds := TimeManager.get_offline_seconds()
@@ -449,6 +450,7 @@ func _ensure_live_systems() -> void:
 		data["wheel"] = { "day_key": day_key, "free_used": false, "ad_spins_used": 0, "last_reward": {} }
 	if String(data.get("daily_missions", {}).get("day_key", "")) != day_key:
 		data["daily_missions"] = _create_daily_missions(day_key)
+	_ensure_boss_state()
 	_ensure_league_season()
 	var achievements: Dictionary = data.get("achievements", {})
 	for achievement in get_achievements():
@@ -457,6 +459,40 @@ func _ensure_live_systems() -> void:
 			achievements[id] = { "progress": 0, "completed": false, "claimed": false }
 	data["achievements"] = achievements
 	_update_achievements(false)
+
+
+func _sanitize_persistent_unlocks() -> void:
+	var valid_upgrades: Array[String] = []
+	for id in PERMANENT_UPGRADE_DEFS.keys():
+		valid_upgrades.append(String(id))
+	for id in MainPortData.released_run_upgrade_ids():
+		valid_upgrades.append(String(id))
+	var cleaned_upgrades: Array = []
+	for value in Array(data.get("unlocked_upgrades", [])):
+		var upgrade_id := String(value)
+		if valid_upgrades.has(upgrade_id) and not cleaned_upgrades.has(upgrade_id):
+			cleaned_upgrades.append(upgrade_id)
+	data["unlocked_upgrades"] = cleaned_upgrades
+
+	var cleaned_explicit: Array = []
+	for value in Array(data.get("explicit_unlocked_run_upgrades", [])):
+		var upgrade_id := String(value)
+		if MainPortData.is_released_run_upgrade(upgrade_id) and not cleaned_explicit.has(upgrade_id):
+			cleaned_explicit.append(upgrade_id)
+	data["explicit_unlocked_run_upgrades"] = cleaned_explicit
+
+	var cleaned_skins: Array = []
+	for value in Array(data.get("unlocked_skins", [])):
+		var skin_id := String(value)
+		if not MainPortData.skin_by_id(skin_id).is_empty() and not cleaned_skins.has(skin_id):
+			cleaned_skins.append(skin_id)
+	if not cleaned_skins.has("neon_blue"):
+		cleaned_skins.push_front("neon_blue")
+	data["unlocked_skins"] = cleaned_skins
+	if not cleaned_skins.has(String(data.get("equipped_skin", "neon_blue"))):
+		data["equipped_skin"] = "neon_blue"
+	if not cleaned_skins.has(String(data.get("favorite_skin", data.get("equipped_skin", "neon_blue")))):
+		data["favorite_skin"] = String(data.get("equipped_skin", "neon_blue"))
 
 
 func _ensure_league_season() -> void:
@@ -944,6 +980,111 @@ func _event_metric_value(metric: String) -> int:
 	return int(stats.get(metric, 0))
 
 
+func can_start_boss_level(level_id: String) -> bool:
+	_ensure_boss_state()
+	var boss: Dictionary = data.get("boss", {})
+	var attempts: Dictionary = boss.get("daily_attempts", {})
+	var day_attempts: Dictionary = attempts.get(_day_key(), {})
+	return not bool(day_attempts.get(level_id, false))
+
+
+func start_boss_battle(level_id: String) -> Dictionary:
+	_ensure_boss_state()
+	var definition := boss_level_definition(level_id)
+	if definition.is_empty():
+		return { "ok": false, "reason": "missing" }
+	if not can_start_boss_level(level_id):
+		return { "ok": false, "reason": "used" }
+	var boss: Dictionary = data.get("boss", {})
+	var attempts: Dictionary = boss.get("daily_attempts", {})
+	var day_attempts: Dictionary = attempts.get(_day_key(), {})
+	day_attempts[level_id] = true
+	attempts[_day_key()] = day_attempts
+	boss["daily_attempts"] = attempts
+	boss["last_attempt_at"] = TimeManager.get_now_timestamp()
+	data["boss"] = boss
+	data["pending_boss_battle"] = {
+		"id": "boss_%s_%s" % [TimeManager.get_month_key(), level_id],
+		"level_id": level_id,
+		"name": String(_current_boss_definition().get("name", "Boss Neon")),
+		"skin": String(_current_boss_definition().get("skin", "neon_phoenix")),
+		"quality": float(definition.get("quality", 0.55)),
+		"reward": Dictionary(definition.get("reward", {})).duplicate(true),
+	}
+	save_game()
+	return { "ok": true, "text": "Boss iniciado", "scene": "battle" }
+
+
+func record_boss_match(level_id: String, result: String, summary: Dictionary) -> Dictionary:
+	_ensure_boss_state()
+	var definition := boss_level_definition(level_id)
+	var reward: Dictionary = Dictionary(definition.get("reward", { "type": "coins", "amount": 80 })).duplicate(true)
+	if result != "win":
+		reward = { "type": "coins", "amount": max(25, floori(float(int(reward.get("amount", 100))) * 0.35)) }
+	var coins_bonus: int = int(summary.get("coins", 0)) + (int(reward.get("amount", 0)) if String(reward.get("type", "")) == "coins" else 0)
+	var xp_bonus: int = maxi(30, int(summary.get("xp", 0)) + int(definition.get("xp", 60)))
+	if coins_bonus > 0:
+		data["coins"] = int(data.get("coins", 0)) + coins_bonus
+	if String(reward.get("type", "")) != "coins":
+		apply_reward(reward)
+	add_profile_xp(xp_bonus)
+	var stats: Dictionary = data.get("stats", {})
+	stats["boss_runs"] = int(stats.get("boss_runs", 0)) + 1
+	stats["boss_wins"] = int(stats.get("boss_wins", 0)) + (1 if result == "win" else 0)
+	stats["boss_losses"] = int(stats.get("boss_losses", 0)) + (1 if result == "loss" else 0)
+	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + int(summary.get("rings", 0))
+	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + int(summary.get("rings", 0))
+	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins_bonus
+	data["stats"] = stats
+	_progress_missions("ringsDestroyed", int(summary.get("rings", 0)))
+	_progress_missions("runCoins", coins_bonus)
+	_update_achievements(false)
+	save_game()
+	return {
+		"coins": coins_bonus,
+		"xp": xp_bonus,
+		"diamonds": 0,
+		"reward": reward,
+		"boss_level": level_id,
+	}
+
+
+func boss_level_definition(level_id: String) -> Dictionary:
+	for definition in boss_level_definitions():
+		if String(definition.get("id", "")) == level_id:
+			return definition
+	return {}
+
+
+func boss_level_definitions() -> Array[Dictionary]:
+	return [
+		{ "id": "normal", "title": "Normal", "quality": 0.45, "xp": 80, "reward": { "type": "coins", "amount": 220 } },
+		{ "id": "strong", "title": "Forte", "quality": 0.58, "xp": 120, "reward": { "type": "diamonds", "amount": 8 } },
+		{ "id": "elite", "title": "Elite", "quality": 0.72, "xp": 170, "reward": { "type": "keys", "amount": 1 } },
+		{ "id": "legendary", "title": "Lendário", "quality": 0.86, "xp": 240, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
+		{ "id": "impossible", "title": "Impossível", "quality": 1.0, "xp": 360, "reward": { "type": "chest", "chest_type": "epic", "amount": 1 } },
+	]
+
+
+func _ensure_boss_state() -> void:
+	var boss: Dictionary = data.get("boss", {})
+	if not boss.has("daily_attempts"):
+		boss["daily_attempts"] = {}
+	data["boss"] = boss
+
+
+func _current_boss_definition() -> Dictionary:
+	var month := int(Time.get_datetime_dict_from_system().get("month", 6))
+	match month:
+		6:
+			return { "name": "Fênix Solar", "skin": "neon_phoenix" }
+		7:
+			return { "name": "Dragão Astral", "skin": "astral_dragon" }
+		8:
+			return { "name": "Guardião Dimensional", "skin": "dimensional_guardian" }
+	return { "name": "Fênix Solar", "skin": "neon_phoenix" }
+
+
 func get_daily_mission_def(id: String) -> Dictionary:
 	for definition in DAILY_MISSION_DEFS:
 		if String(definition["id"]) == id:
@@ -989,6 +1130,82 @@ func claim_achievement(id: String) -> Dictionary:
 	data["last_reward_text"] = text
 	save_game()
 	return { "ok": true, "reward": definition.get("reward", {}), "text": text }
+
+
+func claim_all_achievements() -> Dictionary:
+	_update_achievements(false)
+	var achievements: Dictionary = data.get("achievements", {})
+	var claimed_count := 0
+	var reward_summary := {
+		"coins": 0,
+		"diamonds": 0,
+		"keys": 0,
+		"legendary_keys": 0,
+		"xp": 0,
+		"chests": 0,
+		"skins": 0,
+	}
+	for achievement in get_achievements():
+		var id := String(achievement.get("id", ""))
+		var state: Dictionary = achievements.get(id, {})
+		if id.is_empty() or not bool(state.get("completed", false)) or bool(state.get("claimed", false)):
+			continue
+		var reward: Dictionary = achievement.get("reward", {})
+		_accumulate_reward_summary(reward_summary, reward)
+		apply_reward(reward, false)
+		state["claimed"] = true
+		achievements[id] = state
+		claimed_count += 1
+	if claimed_count <= 0:
+		return { "ok": false, "reason": "not_ready" }
+	data["achievements"] = achievements
+	var text := _reward_summary_text(reward_summary, claimed_count)
+	data["last_reward_text"] = text
+	save_game()
+	return {
+		"ok": true,
+		"reward": reward_summary,
+		"text": text,
+		"claimed": claimed_count,
+	}
+
+
+func _accumulate_reward_summary(summary: Dictionary, reward: Dictionary) -> void:
+	var amount := int(reward.get("amount", 1))
+	match String(reward.get("type", "")):
+		"coins":
+			summary["coins"] = int(summary.get("coins", 0)) + amount
+		"diamonds", "gems":
+			summary["diamonds"] = int(summary.get("diamonds", 0)) + amount
+		"keys":
+			summary["keys"] = int(summary.get("keys", 0)) + amount
+		"legendaryKeys":
+			summary["legendary_keys"] = int(summary.get("legendary_keys", 0)) + amount
+		"xp":
+			summary["xp"] = int(summary.get("xp", 0)) + amount
+		"chest":
+			summary["chests"] = int(summary.get("chests", 0)) + amount
+		"skin":
+			summary["skins"] = int(summary.get("skins", 0)) + 1
+
+
+func _reward_summary_text(summary: Dictionary, claimed_count: int) -> String:
+	var parts: Array[String] = ["%s conquistas" % claimed_count]
+	if int(summary.get("coins", 0)) > 0:
+		parts.append("+%s moedas" % int(summary.get("coins", 0)))
+	if int(summary.get("diamonds", 0)) > 0:
+		parts.append("+%s diamantes" % int(summary.get("diamonds", 0)))
+	if int(summary.get("keys", 0)) > 0:
+		parts.append("+%s chaves" % int(summary.get("keys", 0)))
+	if int(summary.get("legendary_keys", 0)) > 0:
+		parts.append("+%s chaves lendarias" % int(summary.get("legendary_keys", 0)))
+	if int(summary.get("xp", 0)) > 0:
+		parts.append("+%s XP" % int(summary.get("xp", 0)))
+	if int(summary.get("chests", 0)) > 0:
+		parts.append("+%s baus" % int(summary.get("chests", 0)))
+	if int(summary.get("skins", 0)) > 0:
+		parts.append("+%s skins" % int(summary.get("skins", 0)))
+	return "Coletado: %s" % ", ".join(parts)
 
 
 func _achievement_def(id: String) -> Dictionary:

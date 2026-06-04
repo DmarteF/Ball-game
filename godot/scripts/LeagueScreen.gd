@@ -51,26 +51,29 @@ func _build_screen() -> void:
 	root.anchor_top = 0.0
 	root.anchor_right = 1.0
 	root.anchor_bottom = 1.0
-	root.offset_left = 18.0
-	root.offset_top = 48.0
-	root.offset_right = -18.0
+	var margin_x := 12.0 if _is_narrow_screen() else 18.0
+	root.offset_left = margin_x
+	root.offset_top = 36.0 if _is_narrow_screen() else 48.0
+	root.offset_right = -margin_x
 	NeonBackButtonScript.reserve_footer_space(root)
 	root.add_theme_constant_override("separation", 10)
+	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 	NeonBackButtonScript.add_to(self, _go_back)
 
 	var header := VBoxContainer.new()
 	header.add_theme_constant_override("separation", 4)
 	root.add_child(header)
-	header.add_child(_make_label("LIGA NEON", 31, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	header.add_child(_make_label("LIGA NEON", 26 if _is_narrow_screen() else 31, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_configure_scroll(scroll)
 	root.add_child(scroll)
 
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.mouse_filter = Control.MOUSE_FILTER_PASS
 	content.add_theme_constant_override("separation", 10)
 	scroll.add_child(content)
 
@@ -132,7 +135,8 @@ func _make_division_panel(player: Dictionary) -> PanelContainer:
 
 func _make_top_three() -> HBoxContainer:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_theme_constant_override("separation", 6 if _is_narrow_screen() else 8)
 	for i in range(min(3, _standings.size())):
 		row.add_child(_make_podium_card(_standings[i], i))
 	return row
@@ -323,6 +327,7 @@ func _make_solid_button(text: String, bg: String, color: String, width: float, h
 func _make_card(bg: String, border: String) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style(bg, 12, border, 1, "#00f0ff33", 6))
 	return card
 
@@ -333,6 +338,7 @@ func _card_margin(card: PanelContainer, amount := 12) -> MarginContainer:
 	margin.add_theme_constant_override("margin_top", amount)
 	margin.add_theme_constant_override("margin_right", amount)
 	margin.add_theme_constant_override("margin_bottom", amount)
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	return margin
 
@@ -427,6 +433,18 @@ func _spacer(height: float) -> Control:
 	spacer.custom_minimum_size.y = height
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return spacer
+
+
+func _configure_scroll(scroll: ScrollContainer) -> void:
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 6
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _is_narrow_screen() -> bool:
+	return get_viewport_rect().size.x <= 430.0
 
 
 func _fill(control: Control) -> void:
