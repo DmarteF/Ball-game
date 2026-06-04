@@ -51,7 +51,15 @@ O workflow `.github/workflows/godot-web.yml` exporta apenas o projeto em `godot/
 
 ## Android futuro
 
-A estrutura do projeto Godot e os assets ja estao dentro de `godot/`. A exportacao Android futura deve ser configurada a partir de `godot/export_presets.cfg`, sem depender de `frontend/` ou `backend/`.
+A estrutura do projeto Godot e os assets ja estao dentro de `godot/`. O preset Android fica em `godot/export_presets.cfg`, sem depender de `frontend/` ou `backend/`.
+
+APK debug local gerado nesta branch:
+
+```text
+godot/build/android/neon-idle-escape-debug.apk
+```
+
+Ele foi gerado pelo export Android do Godot, nao por Expo, porque esta branch agora e Godot-only.
 
 ## Legado removido desta branch
 

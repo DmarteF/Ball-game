@@ -5,9 +5,9 @@ const MENU_SCENE := "res://scenes/MainMenu.tscn"
 
 const TWO_PI := PI * 2.0
 const BALL_RADIUS := 8.0
-const TARGET_ACTIVE_RINGS := 12
-const MAX_ACTIVE_RINGS := 12
-const MIN_RING_SPACING := 5.8
+const TARGET_ACTIVE_RINGS := 6
+const MAX_ACTIVE_RINGS := 6
+const MIN_RING_SPACING := 8.8
 const MIN_RING_RADIUS := 25.0
 const SAFE_STEP_DISTANCE := 7.0
 const MAX_PHYSICS_SUBSTEPS := 7
@@ -36,6 +36,15 @@ const ICON_PATHS := {
 	"xp": "res://assets/ui/ui_xp.png",
 	"league": "res://assets/ui/ui_league_neon.png",
 	"upgrade": "res://assets/ui/ui_upgrades.png",
+	"damage": "res://assets/ui/ui_damage.png",
+	"speed": "res://assets/ui/ui_speed.png",
+	"crit": "res://assets/ui/ui_crit.png",
+	"burn": "res://assets/ui/ui_burn.png",
+	"freeze": "res://assets/ui/ui_freeze.png",
+	"repulse": "res://assets/ui/ui_repulse.png",
+	"shock": "res://assets/ui/ui_shock.png",
+	"area": "res://assets/ui/ui_area.png",
+	"perfect": "res://assets/ui/ui_perfect.png",
 }
 const RING_PALETTE := ["#00f0ff", "#b000ff", "#ff0055", "#00ff88", "#ffd700", "#ff8800"]
 
@@ -232,6 +241,7 @@ func _make_arena(id: String, label: String, skin_id: String, quality: float, ai:
 		"crush_started": 0,
 		"last_hit": 0,
 		"last_direction_shift": Time.get_ticks_msec(),
+		"effect_cooldowns": {},
 		"trail": [],
 		"bursts": [],
 	}
@@ -241,13 +251,13 @@ func _layout_arenas() -> void:
 	var viewport_size := size
 	if viewport_size.x < 10.0 or viewport_size.y < 10.0:
 		viewport_size = get_viewport_rect().size
-	var hud_height := 148.0
-	var controls_height := 154.0
-	var gap := 28.0
+	var hud_height := 150.0
+	var controls_height := 166.0
+	var gap := 44.0
 	var available: float = max(260.0, viewport_size.y - hud_height - controls_height - gap)
 	var arena_box_height: float = available / 2.0
-	var max_radius: float = min((viewport_size.x - 64.0) / 2.0, arena_box_height / 2.0) - 7.0
-	max_radius = clampf(max_radius, 86.0, 128.0)
+	var max_radius: float = min((viewport_size.x - 88.0) / 2.0, arena_box_height / 2.0) - 10.0
+	max_radius = clampf(max_radius, 72.0, 106.0)
 	var top_center := Vector2(viewport_size.x / 2.0, hud_height + arena_box_height * 0.5)
 	var bottom_center := Vector2(viewport_size.x / 2.0, hud_height + arena_box_height + gap + arena_box_height * 0.5)
 	_assign_arena_metrics(_rival, top_center, max_radius)
@@ -289,7 +299,7 @@ func _create_initial_rings(state: Dictionary) -> Array[Dictionary]:
 
 func _target_count_for_arena(state: Dictionary) -> int:
 	var capacity := floori((float(state.get("arena_radius", 100.0)) - MIN_RING_RADIUS) / MIN_RING_SPACING) + 1
-	return clampi(min(TARGET_ACTIVE_RINGS, capacity), 8, MAX_ACTIVE_RINGS)
+	return clampi(min(TARGET_ACTIVE_RINGS, capacity), TARGET_ACTIVE_RINGS, MAX_ACTIVE_RINGS)
 
 
 func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
@@ -633,6 +643,7 @@ func _open_player_upgrade() -> void:
 			var current := int(Dictionary(_player.get("run_upgrades", {})).get(id, 0))
 			var button := _make_button("%s\n%s\nLv.%s > Lv.%s" % [String(upgrade.get("name", id)).to_upper(), String(upgrade.get("description", "")), current, current + 1], 292, 76)
 			button.add_theme_font_size_override("font_size", 11)
+			_set_button_icon(button, _upgrade_icon_key(id))
 			button.pressed.connect(_select_player_upgrade.bind(id))
 			_level_up_cards.add_child(button)
 	_level_up_overlay.visible = true
@@ -661,13 +672,15 @@ func _apply_ai_upgrade(state: Dictionary) -> void:
 
 
 func _upgrade_choices(state: Dictionary, player_only: bool) -> Array[Dictionary]:
-	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
+	if player_only:
+		GameState.refresh_unlocks(false)
+	var unlocked: Array = _player_unlocked_run_upgrade_ids() if player_only else MainPortData.released_run_upgrade_ids()
 	var options: Array[Dictionary] = []
 	for upgrade in MainPortData.run_upgrades():
 		var id := String(upgrade.get("id", ""))
 		if id.is_empty() or bool(upgrade.get("secret", false)):
 			continue
-		if player_only and not unlocked.has(id):
+		if not unlocked.has(id):
 			continue
 		if not player_only and int(upgrade.get("unlockLevel", 1)) > int(state.get("level", 1)) + 4:
 			continue
@@ -679,6 +692,22 @@ func _upgrade_choices(state: Dictionary, player_only: bool) -> Array[Dictionary]
 	while options.size() < 3 and not options.is_empty():
 		options.append(Dictionary(options[randi() % options.size()]).duplicate(true))
 	return options.slice(0, min(3, options.size()))
+
+
+func _player_unlocked_run_upgrade_ids() -> Array[String]:
+	var released: Array[String] = MainPortData.released_run_upgrade_ids()
+	var unlocked_save: Array = GameState.data.get("unlocked_upgrades", [])
+	var explicit: Array = GameState.data.get("explicit_unlocked_run_upgrades", [])
+	var result: Array[String] = []
+	for id in MainPortData.auto_run_upgrade_ids():
+		var upgrade_id := String(id)
+		if released.has(upgrade_id) and not result.has(upgrade_id):
+			result.append(upgrade_id)
+	for id in explicit:
+		var upgrade_id := String(id)
+		if released.has(upgrade_id) and unlocked_save.has(upgrade_id) and not result.has(upgrade_id):
+			result.append(upgrade_id)
+	return result
 
 
 func _apply_run_upgrade(state: Dictionary, id: String) -> void:
@@ -775,24 +804,49 @@ func _apply_special_upgrade_effects(state: Dictionary, ring_index: int, damage: 
 	var upgrades: Dictionary = state.get("run_upgrades", {})
 	var bonus := 0
 	var ring: Dictionary = state["rings"][ring_index]
-	if int(upgrades.get("burn", 0)) > 0 and randf() < 0.12 + int(upgrades.get("burn", 0)) * 0.035:
-		bonus += 4 * int(upgrades.get("burn", 0))
+	var burn_level := int(upgrades.get("burn", 0))
+	if burn_level > 0 and _can_trigger_arena_effect(state, "burn", 0.12 + burn_level * 0.035, 650):
+		bonus += 4 * burn_level
 		ring["effect_color"] = "#ff6b00"
 		ring["effect_until"] = Time.get_ticks_msec() + 900
-	if int(upgrades.get("frost", 0)) > 0 and randf() < 0.12 + int(upgrades.get("frost", 0)) * 0.03:
+		_mark_arena_effect_triggered(state, "burn", 650)
+	var frost_level := int(upgrades.get("frost", 0))
+	if frost_level > 0 and _can_trigger_arena_effect(state, "frost", 0.12 + frost_level * 0.03, 900):
 		ring["rotation_speed"] = float(ring.get("base_rotation_speed", ring.get("rotation_speed", 0.004))) * 0.42
 		ring["effect_color"] = "#b8f3ff"
 		ring["effect_until"] = Time.get_ticks_msec() + 1500
-	if int(upgrades.get("ringRepulse", 0)) > 0 and randf() < 0.08 + int(upgrades.get("ringRepulse", 0)) * 0.018:
+		_mark_arena_effect_triggered(state, "frost", 900)
+	var repulse_level := int(upgrades.get("ringRepulse", 0))
+	var repulse_cooldown: int = maxi(850, 1550 - repulse_level * 120)
+	if repulse_level > 0 and _can_trigger_arena_effect(state, "ringRepulse", 0.08 + repulse_level * 0.018, repulse_cooldown):
 		ring["radius"] = min(float(state.get("arena_radius", 100.0)) - 5.0, float(ring.get("radius", 0.0)) + 12.0)
 		ring["defeat_grace_until"] = Time.get_ticks_msec() + 520
 		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), "#00f0ff", "repulse")
+		_mark_arena_effect_triggered(state, "ringRepulse", repulse_cooldown)
 	state["rings"][ring_index] = ring
-	if int(upgrades.get("shockwave", 0)) > 0 and randf() < 0.12:
+	var shockwave_level := int(upgrades.get("shockwave", 0))
+	if shockwave_level > 0 and _can_trigger_arena_effect(state, "shockwave", 0.12, 760):
 		bonus += floori(float(damage) * 0.35)
-	if int(upgrades.get("chainLightning", 0)) > 0 and randf() < 0.12:
+		_mark_arena_effect_triggered(state, "shockwave", 760)
+	var chain_level := int(upgrades.get("chainLightning", 0))
+	if chain_level > 0 and _can_trigger_arena_effect(state, "chainLightning", 0.12, 760):
 		bonus += floori(float(damage) * 0.28)
+		_mark_arena_effect_triggered(state, "chainLightning", 760)
 	return bonus
+
+
+func _can_trigger_arena_effect(state: Dictionary, id: String, chance: float, _cooldown_ms: int) -> bool:
+	var cooldowns: Dictionary = state.get("effect_cooldowns", {})
+	var now := Time.get_ticks_msec()
+	if now < int(cooldowns.get(id, 0)):
+		return false
+	return randf() < clampf(chance, 0.0, 0.75)
+
+
+func _mark_arena_effect_triggered(state: Dictionary, id: String, cooldown_ms: int) -> void:
+	var cooldowns: Dictionary = state.get("effect_cooldowns", {})
+	cooldowns[id] = Time.get_ticks_msec() + max(0, cooldown_ms)
+	state["effect_cooldowns"] = cooldowns
 
 
 func _arena_xp_needed(level: int) -> int:
@@ -1182,11 +1236,13 @@ func _build_hud() -> void:
 	_run_atk_button = _make_button("", 0, 58)
 	_run_atk_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_button_style(_run_atk_button, _make_style("#06162add", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
+	_set_button_icon(_run_atk_button, "damage")
 	_run_atk_button.pressed.connect(_buy_player_run_upgrade.bind("atk"))
 	bottom.add_child(_run_atk_button)
 	_run_gold_button = _make_button("", 0, 58)
 	_run_gold_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_button_style(_run_gold_button, _make_style("#06162add", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
+	_set_button_icon(_run_gold_button, "coin")
 	_run_gold_button.pressed.connect(_buy_player_run_upgrade.bind("gold"))
 	bottom.add_child(_run_gold_button)
 
@@ -1461,6 +1517,41 @@ func _make_control_button(text: String) -> Button:
 	button.add_theme_color_override("font_pressed_color", Color("#001018"))
 	_apply_button_style(button, _make_style("#06162add", 18, "#00f0ffaa", 2, "#00f0ff66", 10))
 	return button
+
+
+func _set_button_icon(button: Button, icon_key: String) -> void:
+	var path := String(ICON_PATHS.get(icon_key, ICON_PATHS["upgrade"]))
+	if ResourceLoader.exists(path):
+		button.icon = load(path)
+		button.expand_icon = true
+
+
+func _upgrade_icon_key(id: String) -> String:
+	match id:
+		"damage":
+			return "damage"
+		"speed":
+			return "speed"
+		"critical", "criticalOverload":
+			return "crit"
+		"coinBoost", "magnetCoins":
+			return "coin"
+		"xpBoost":
+			return "xp"
+		"perfectChance", "diamondInstinct":
+			return "perfect"
+		"burn":
+			return "burn"
+		"frost", "slowField", "timeFreeze", "chronoBreak":
+			return "freeze"
+		"ringRepulse":
+			return "repulse"
+		"shockwave", "chainLightning":
+			return "shock"
+		"bomb", "laser", "laserCut", "chainBreak", "multihit", "voidPulse":
+			return "area"
+		_:
+			return "upgrade"
 
 
 func _normalize_angle(angle: float) -> float:

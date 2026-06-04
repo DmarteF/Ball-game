@@ -6,6 +6,50 @@ Esta pasta foi reiniciada do zero na branch `godot-4-rebuild`. A branch `main` f
 
 Depois da auditoria de 2026-06-03, a branch `godot-4-rebuild` foi limpa para manter o projeto ativo focado em Godot. O runtime, os assets e a exportacao Web ficam dentro de `/godot`; as pastas legadas Expo/React Native/backend/Emergent foram removidas desta branch. A politica de privacidade antiga foi migrada para `docs/privacy-policy.html` dentro desta pasta. O relatorio completo esta em `docs/LEGACY_CLEANUP_AUDIT.md`.
 
+## Build de teste atual
+
+HTML/Web:
+
+```bash
+mkdir -p godot/build/web
+/tmp/godot-cli/Godot_v4.3-stable_linux.x86_64 --headless --path godot --export-release Web build/web/index.html
+cd godot/build/web
+python3 -m http.server 8083 --bind 0.0.0.0
+```
+
+Teste local:
+
+```text
+http://127.0.0.1:8083/index.html
+```
+
+APK debug:
+
+```bash
+export ANDROID_SDK_ROOT=/home/codespace/android-sdk
+export ANDROID_HOME=/home/codespace/android-sdk
+export JAVA_HOME=/usr/local/sdkman/candidates/java/current
+mkdir -p godot/build/android
+/tmp/godot-cli/Godot_v4.3-stable_linux.x86_64 --headless --path godot --export-debug Android build/android/neon-idle-escape-debug.apk
+/home/codespace/android-sdk/build-tools/34.0.0/apksigner verify --verbose godot/build/android/neon-idle-escape-debug.apk
+```
+
+Arquivo gerado:
+
+```text
+godot/build/android/neon-idle-escape-debug.apk
+```
+
+O APK de teste foi gerado pelo export Android do Godot 4.3. Expo/EAS nao foi usado porque o projeto ativo desta branch nao e mais Expo/React Native.
+
+Configuracoes Android adicionadas:
+
+- preset `Android` em `export_presets.cfg`;
+- icones Android em `assets/icons/android`;
+- compressao ETC2/ASTC habilitada em `project.godot`;
+- package debug `com.dmartef.neonidleescape`;
+- orientacao retrato e modo imersivo.
+
 ## 1. O que foi limpo
 
 - Removida completamente a tentativa Godot anterior em `/godot`.
@@ -99,7 +143,7 @@ Pendencias marcadas assim porque a `main` usa a fonte de sistema do React Native
 | Roleta | `frontend/app/wheel.tsx`, `assets/ui/ui_wheel.png` | `scenes/Wheel.tscn`, `scripts/VisualFeatureScreen.gd` | Visual ajustado | Titulo simples; roleta visual mantida e sorteio real pendente. |
 | Recompensa diaria | `frontend/app/daily-reward.tsx`, `assets/ui/ui_daily_reward.png` | `scenes/DailyReward.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Calendario de 7 dias mockado; controle real de tempo/coleta pendente. |
 | Boss | `frontend/app/boss.tsx`, `assets/ui/ui_boss.png` | `scenes/Boss.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado vazio discreto; logica real de boss pendente. |
-| Liga Neon | `frontend/app/league.tsx`, `frontend/src/game/league.ts`, `assets/ui/ui_league_neon.png` | `scenes/League.tscn`, `scripts/LeagueScreen.gd` | Visual refeito | Tela refeita com resumo, divisao, progresso, podium, ranking e recompensa estimada. A batalha/competicao real foi removida para ser recriada fielmente depois. |
+| Liga Neon | `frontend/app/league.tsx`, `frontend/src/game/league.ts`, `assets/ui/ui_league_neon.png` | `scenes/League.tscn`, `scripts/LeagueScreen.gd`, `scenes/LeagueBattle.tscn`, `scripts/LeagueBattleScreen.gd` | Funcional | Tela de ranking mensal, 30 competidores, batalha versus com duas arenas, trofeus, recompensas e anuncios mockados. |
 | Conquistas | `frontend/app/achievements.tsx`, `frontend/src/game/achievements.ts`, `assets/ui/ui_achievements.png` | `scenes/Achievements.tscn`, `scripts/VisualFeatureScreen.gd` | Visual criado | Tela visual com estado vazio; lista/progresso real pendente. |
 
 ## 6. Save, progresso e tempo
@@ -157,7 +201,7 @@ Telas que ja leem dados reais:
 Ainda mockado/pendente:
 
 - boss real, eventos reais e integracao com pagamento/anuncio real.
-- Liga Neon foi refeita como tela visual baseada no frontend; competicao real fica pendente para uma etapa dedicada.
+- Liga Neon tem tela mensal e duelo jogavel; balanceamento fino e comparacao visual contra a main seguem em evolucao.
 - Recompensas AFK sao calculadas e armazenadas como pendentes, mas nao sao concedidas automaticamente.
 
 Observacao de seguranca: o relogio atual usa horario local do aparelho. Em Android/APK isso pode ser manipulado alterando o relogio do celular. A estrutura ficou preparada para futura validacao online, mas essa validacao ainda nao foi implementada.
@@ -623,7 +667,7 @@ Checklist:
 | Recompensa ao sair de fase normal | Sim |
 | Recompensa ao sair do modo infinito | Sim |
 | Reviver com anúncio não aparece ao sair manualmente | Sim |
-| Liga Neon usa alvo de anéis ativos | Nao, tela visual refeita e versus pendente |
+| Liga Neon usa alvo de aneis ativos | Sim, 6 aneis fixos por arena apenas na Liga |
 
 ## 7.9 Correções focadas de spawn, skins e upgrades
 
@@ -805,7 +849,7 @@ Atualizado nesta etapa:
 - `GameState.record_neon_league_match()` prepara ganho/perda de trofeus: vitoria parte de +36, derrota parte de -18 e saida parte de -24.
 - A primeira promocao do Bronze para qualquer liga superior libera e salva a skin ultimate `initial_neon_champion`.
 - `GameState._ensure_league_season()` usa o mes real/local do `TimeManager`; ao virar o mes, salva `last_season_summary`, reseta estatisticas de temporada e rebaixa uma liga.
-- A partida real da Liga ainda nao foi reativada; esta etapa ajusta tela, save, rank, temporada e recompensa de promocao antes de voltar para gameplay.
+- A partida real da Liga foi reativada depois desta etapa em `LeagueBattleScreen.gd`, usando duas arenas compactas e regras competitivas baseadas no modo infinito.
 
 Checklist:
 
@@ -869,6 +913,11 @@ Atualizado nesta etapa:
 - As duas arenas foram reenquadradas para evitar interferencia entre aneis, HUD e controles.
 - A bolinha da Liga agora usa desenho neon por cor secundaria/raridade da skin, evitando o bloco branco causado por texturas grandes em canvas pequeno.
 - SFX existentes seguem sincronizados: impacto usa `hit_light`/`hit_heavy`, quebra usa `ring_break`, clear usa `perfect`, vitoria/derrota usam seus respectivos sons.
+- Ajuste posterior: a Liga usa exatamente 6 aneis ativos por arena, sem alterar fases normais nem modo infinito.
+- Ajuste posterior: as arenas da Liga ficaram menores e mais afastadas para impedir invasao visual entre jogador e rival.
+- Ajuste posterior: as opcoes de level-up do jogador na Liga chamam `GameState.refresh_unlocks(false)` e respeitam apenas upgrades temporarios realmente liberados.
+- Ajuste posterior: `ringRepulse` na Liga respeita chance e cooldown, evitando disparo continuo.
+- Ajuste posterior: botoes/level-up da Liga usam assets reais de upgrade em `assets/ui`.
 
 Checklist:
 
@@ -879,6 +928,10 @@ Checklist:
 | Rival real do ranking entra na luta | Sim |
 | Top 5 bots usam skins por raridade crescente | Sim |
 | Musica especifica da Liga | Sim |
+| Liga usa 6 aneis fixos por arena | Sim |
+| Upgrades bloqueados respeitados na Liga | Sim |
+| Ring Repulse com chance e cooldown | Sim |
+| APK debug Godot exportado e assinado | Sim |
 | HUD da Liga alinhado ao modo Infinito | Sim |
 | Arenas reenquadradas sem interferencia visual | Sim |
 | Skins deixam de aparecer como quadrado branco | Sim |
