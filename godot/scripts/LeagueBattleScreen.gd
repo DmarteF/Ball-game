@@ -214,6 +214,8 @@ func _make_arena(id: String, label: String, skin_id: String, quality: float, ai:
 		"skin_color": String(skin.get("primary", "#00f0ff")),
 		"skin_secondary": String(skin.get("secondary", "#ffffff")),
 		"skin_rarity": String(skin.get("rarity", "common")),
+		"control": MainPortData.skin_has_control(skin_id),
+		"control_strength": MainPortData.skin_control_strength(skin_id),
 		"quality": quality,
 		"ai": ai,
 		"center": Vector2.ZERO,
@@ -877,9 +879,10 @@ func _apply_dynamic_steering(state: Dictionary, delta_steps: float) -> void:
 		var amount := (0.024 if stale else 0.034) * (-1.0 if randf() < 0.5 else 1.0) * clampf(delta_steps, 0.4, 2.4)
 		state["velocity"] = _stabilize_velocity(velocity.rotated(amount))
 		state["last_direction_shift"] = Time.get_ticks_msec()
-	if not bool(state.get("ai", false)) and abs(_control_input) > 0.01:
+	if not bool(state.get("ai", false)) and bool(state.get("control", false)) and abs(_control_input) > 0.01:
 		var current := Vector2(state.get("velocity", velocity)).normalized()
-		var desired := (current + Vector2(_control_input * 0.68, 0.0)).normalized()
+		var strength := clampf(float(state.get("control_strength", 0.0)), 0.0, 0.85)
+		var desired := (current + Vector2(_control_input * (0.42 + strength * 0.74), 0.0)).normalized()
 		state["velocity"] = desired * speed
 
 
@@ -1440,14 +1443,14 @@ func _update_run_upgrade_buttons() -> void:
 func _update_control_overlay() -> void:
 	if not _control_overlay:
 		return
-	var should_show := _battle_active and not _finished and not _paused
+	var should_show := _battle_active and not _finished and not _paused and not _player.is_empty() and bool(_player.get("control", false))
 	_control_overlay.visible = should_show
 	if not should_show:
 		_control_left_down = false
 		_control_right_down = false
 		_control_input = 0.0
 	if _control_indicator:
-		_control_indicator.text = "CONTROLE"
+		_control_indicator.text = "CONTROLE %s%%" % roundi(float(_player.get("control_strength", 0.0)) * 100.0)
 
 
 func _format_time(seconds: int) -> String:

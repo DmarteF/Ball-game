@@ -183,11 +183,41 @@ const LEAGUE_BOT_SKINS := [
 	"robot",
 ]
 
+const CONTROL_SKIN_IDS := [
+	"robot",
+	"alien_rare",
+	"ninja_rare",
+	"satellite_rare",
+	"blue_vortex",
+	"neon_spiral",
+	"ripple_eye",
+	"celestial_core",
+	"chrono_loop_mythic",
+	"divine_core",
+]
+
+const CONTROL_STRENGTH_BY_RARITY := {
+	"common": 0.13,
+	"rare": 0.24,
+	"epic": 0.34,
+	"legendary": 0.48,
+	"mythic": 0.62,
+	"ultimate": 0.80,
+}
+
 func skin_by_id(id: String) -> Dictionary:
 	for skin in SKINS:
 		if String(skin.get("id", "")) == id:
 			return skin
 	return {}
+
+func skin_has_control(id: String) -> bool:
+	return CONTROL_SKIN_IDS.has(id.to_lower())
+
+func skin_control_strength(id: String) -> float:
+	var skin := skin_by_id(id)
+	var rarity := String(skin.get("rarity", "common")) if not skin.is_empty() else "common"
+	return float(CONTROL_STRENGTH_BY_RARITY.get(rarity, 0.13))
 
 func upgrade_by_id(id: String) -> Dictionary:
 	for upgrade in RUN_UPGRADES:

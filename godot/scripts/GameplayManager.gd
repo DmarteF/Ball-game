@@ -70,26 +70,6 @@ const SOUND_PATHS := {
 	"upgrade_select": "res://assets/sounds/button_confirm.mp3",
 }
 const MUSIC_PATH := "res://assets/music/gameplay.mp3"
-const CONTROL_SKIN_IDS := [
-	"robot",
-	"alien_rare",
-	"ninja_rare",
-	"satellite_rare",
-	"blue_vortex",
-	"neon_spiral",
-	"ripple_eye",
-	"celestial_core",
-	"chrono_loop_mythic",
-]
-const CONTROL_STRENGTH_BY_RARITY := {
-	"common": 0.13,
-	"rare": 0.24,
-	"epic": 0.34,
-	"legendary": 0.48,
-	"mythic": 0.62,
-	"ultimate": 0.80,
-}
-
 var phase_id := 1
 var game_mode := "phase"
 var is_infinite := false
@@ -2658,19 +2638,15 @@ func _make_skin_profile(skin_id: String) -> Dictionary:
 	return profile
 
 
-func _apply_control_profile(profile: Dictionary, skin_id: String, rarity: String) -> void:
-	var id := skin_id.to_lower()
-	var is_ultimate := rarity == "ultimate"
-	var has_control := is_ultimate or CONTROL_SKIN_IDS.has(id)
-	if not has_control:
+func _apply_control_profile(profile: Dictionary, skin_id: String, _rarity: String) -> void:
+	if not MainPortData.skin_has_control(skin_id):
 		return
 	profile["control"] = true
-	profile["control_strength"] = float(CONTROL_STRENGTH_BY_RARITY.get(rarity, 0.13))
+	profile["control_strength"] = MainPortData.skin_control_strength(skin_id)
 	profile["trail_size"] = max(float(profile.get("trail_size", 5.0)), 6.6 + float(profile["control_strength"]) * 3.5)
-	if not is_ultimate:
-		profile["effect"] = "trail"
-		profile["chance"] = 0.0
-		profile["value"] = 0.0
+	profile["effect"] = "trail"
+	profile["chance"] = 0.0
+	profile["value"] = 0.0
 
 
 func _default_skin_chance(rarity: String) -> float:
