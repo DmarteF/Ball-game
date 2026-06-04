@@ -702,7 +702,7 @@ func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next
 	ring["status"] = "broken" if new_hp <= 0 else "active"
 	rings[closest_index] = ring
 	_award_coins(floori(damage * 0.5 * _gold_multiplier()))
-	_award_xp(floori((8.0 if is_crit else 5.0) * _xp_multiplier()))
+	_award_xp(floori((18.0 if is_crit else 12.0) * _xp_multiplier()))
 	run_score += damage
 	_track_dps(float(damage))
 	_spawn_particles(ball_position, Color(String(ring["color"])), 6, 70.0)
@@ -1334,7 +1334,11 @@ func _update_hud() -> void:
 	_set_resource_value("account", int(GameState.data.get("coins", 0)))
 	_set_resource_value("keys", int(GameState.data.get("keys", 0)))
 	var difficulty_text := "INFINITO Lv.%s" % infinite_level if is_infinite else String(phase_config["difficulty"]).to_upper()
-	_hud_meta.text = "DIFICULDADE: %s%s" % [difficulty_text, "   COMBO x%s" % combo if combo >= 2 else ""]
+	var combo_text := "   COMBO x%s" % combo if combo >= 2 else ""
+	if is_infinite:
+		_hud_meta.text = "TEMPO %s   %s%s" % [_format_time(floori(infinite_elapsed)), difficulty_text, combo_text]
+	else:
+		_hud_meta.text = "DIFICULDADE: %s%s" % [difficulty_text, combo_text]
 	var xp_needed := _run_xp_needed_for_level(run_level)
 	_hud_xp.text = "LV.%s   XP %s/%s   +%s XP" % [run_level, run_xp, xp_needed, run_xp]
 	_hud_xp_bar.max_value = xp_needed
@@ -1347,6 +1351,11 @@ func _update_hud() -> void:
 			_hud_upgrade_icon.texture = load(icon_path)
 		_hud_upgrade_label.text = String(temporary_upgrade.get("short", temporary_upgrade.get("effect", "")))
 	_update_run_upgrade_buttons()
+
+
+func _format_time(seconds: int) -> String:
+	var safe_seconds: int = maxi(0, seconds)
+	return "%02d:%02d" % [floori(float(safe_seconds) / 60.0), safe_seconds % 60]
 
 
 func _active_ring_count() -> int:

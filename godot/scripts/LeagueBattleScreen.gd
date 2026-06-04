@@ -14,7 +14,7 @@ const MAX_PHYSICS_SUBSTEPS := 7
 const PHYSICS_STEPS_PER_SECOND := 60.0
 const RING_SPAWN_GRACE_MSEC := 900
 const CRUSH_CONFIRM_MSEC := 150
-const MATCH_LIMIT_SECONDS := 90.0
+const MATCH_LIMIT_SECONDS := 60.0
 const XP_BASE := 34.0
 const BASE_BALL_SPEED := 2.25
 const SOUND_PATHS := {
@@ -409,6 +409,7 @@ func _make_ring(state: Dictionary, radius: float, index: int) -> Dictionary:
 		"min_radius": 4.0,
 		"effect_color": "",
 		"effect_until": 0,
+		"spawned_at": Time.get_ticks_msec(),
 		"defeat_grace_until": Time.get_ticks_msec() + RING_SPAWN_GRACE_MSEC,
 	}
 
@@ -473,7 +474,7 @@ func _check_ring_hit(state: Dictionary, prev_dist: float, next_dist: float, prev
 	if crit:
 		state["criticals"] = int(state.get("criticals", 0)) + 1
 	_award_arena_coins(state, max(1, floori(float(damage) * 0.42 * _gold_multiplier(state))))
-	_award_arena_xp(state, floori((8.0 if crit else 5.0) * _xp_multiplier(state)))
+	_award_arena_xp(state, floori((18.0 if crit else 12.0) * _xp_multiplier(state)))
 	if new_hp <= 0:
 		state["rings_destroyed"] = int(state.get("rings_destroyed", 0)) + 1
 		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), String(ring.get("color", "#00f0ff")), "break")
@@ -594,17 +595,29 @@ func _clamp_ring_spacing(state: Dictionary) -> void:
 			indices.append(i)
 	for i in range(indices.size()):
 		for j in range(i + 1, indices.size()):
-			if float(state["rings"][indices[j]].get("radius", 0.0)) < float(state["rings"][indices[i]].get("radius", 0.0)):
+			var left: Dictionary = state["rings"][indices[i]]
+			var right: Dictionary = state["rings"][indices[j]]
+			var left_radius: float = float(left.get("radius", 0.0))
+			var right_radius: float = float(right.get("radius", 0.0))
+			var right_is_outer: bool = right_radius > left_radius
+			var same_radius_newer: bool = absf(right_radius - left_radius) < 0.01 and int(right.get("spawned_at", 0)) > int(left.get("spawned_at", 0))
+			if right_is_outer or same_radius_newer:
 				var temp := indices[i]
 				indices[i] = indices[j]
 				indices[j] = temp
 	var min_radius := MIN_RING_RADIUS
 	var max_radius := float(state.get("arena_radius", 100.0)) - 4.0
 	var spacing: float = min(MIN_RING_SPACING, max(4.2, (max_radius - min_radius) / float(max(1, indices.size() - 1))))
-	var previous: float = min_radius - spacing
+	var previous: float = max_radius + spacing
+	var now: int = Time.get_ticks_msec()
 	for index in indices:
 		var ring: Dictionary = state["rings"][index]
-		var radius := clampf(float(ring.get("radius", min_radius)), previous + spacing, max_radius)
+		var upper_bound: float = minf(max_radius, previous - spacing)
+		var lower_bound: float = min_radius
+		var current_radius: float = float(ring.get("radius", upper_bound))
+		var radius: float = clampf(current_radius, lower_bound, maxf(lower_bound, upper_bound))
+		if abs(radius - current_radius) > 0.5 and now - int(ring.get("spawned_at", 0)) > 180:
+			ring["defeat_grace_until"] = maxi(int(ring.get("defeat_grace_until", 0)), now + 260)
 		ring["radius"] = radius
 		previous = radius
 		state["rings"][index] = ring
@@ -1089,6 +1102,8 @@ func _draw_arena(state: Dictionary) -> void:
 		if String(ring.get("status", "")) != "active":
 			continue
 		var color := Color(String(ring.get("effect_color", ring.get("color", "#00f0ff"))) if not String(ring.get("effect_color", "")).is_empty() else String(ring.get("color", "#00f0ff")))
+		var spawn_alpha := clampf(float(Time.get_ticks_msec() - int(ring.get("spawned_at", 0))) / 360.0, 0.35, 1.0)
+		color.a *= spawn_alpha
 		var radius := float(ring.get("radius", 0.0))
 		var thickness := float(ring.get("thickness", 5.0))
 		if String(ring.get("type", "normal")) == "solid":
