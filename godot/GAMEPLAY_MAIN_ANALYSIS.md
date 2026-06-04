@@ -609,3 +609,39 @@ Checklist:
 | Aneis fecham sobre a bolinha nas fases | Sim |
 | Derrota por fechamento segue validacao real | Sim |
 | SFX hit light/heavy sem som duplo de XP | Sim |
+
+## Atualizacao - Upgrades desbloqueaveis por conquistas reais
+
+Correcoes aplicadas:
+
+- Foi criada uma trilha de conquistas para liberar todos os upgrades temporarios definidos no port.
+- Os upgrades-base continuam disponiveis desde o inicio; os demais entram em `explicit_unlocked_run_upgrades` somente ao coletar a conquista que entrega o upgrade.
+- A selecao de level-up de fases, Modo Infinito, Liga Neon e Boss consulta o mesmo pool desbloqueado do `GameState`, impedindo upgrade bloqueado aparecer por engano.
+- Upgrades secretos ficam escondidos na tela de Melhorias ate serem liberados por conquista.
+- Boss atualiza metricas de vitoria por dificuldade (`bossNormalWins`, `bossStrongWins`, `bossEliteWins`, `bossLegendaryWins`, `bossImpossibleWins`) e isso alimenta conquistas/desbloqueios.
+- Liga atualiza metricas por rank alcancado (`leagueSilverReached`, `leagueGoldReached`, `leagueDiamondReached`, `leagueLegendaryReached`, `leagueUltimateReached`).
+- Modo Infinito usa `infinite_elapsed` para HUD, resultado e `bestInfiniteSeconds`, garantindo conquistas de tempo coerentes.
+- O HUD do Modo Infinito agora tem um badge visual `TEMPO mm:ss`.
+- Boss/Liga continuam mostrando controle por setas apenas quando a skin equipada tem suporte de controle.
+
+Desbloqueios principais:
+
+| Origem | Upgrades liberados |
+| --- | --- |
+| Fases | `burn`, `ricochet`, `laser`, `lastShield`, `royalBreaker` |
+| Modo Infinito | `frost`, `chainLightning`, `slowField`, `chainBreak`, `chronoBreak` |
+| Boss | `shockwave`, `bomb`, `laserCut`, `shieldPulse`, `timeFreeze`, `bossHunter` |
+| Liga Neon | `ringRepulse`, `multihit`, `criticalOverload`, `trophyInstinct`, `rivalCrusher` |
+| Progresso geral | `magnetCoins`, `bounce`, `penetration`, `voidPulse`, `diamondInstinct`, `comboOverdrive`, `secretMagnet` |
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Todos os temporarios do port possuem conquista de unlock | Sim |
+| Coletar conquista libera upgrade no save | Sim |
+| Level-up respeita desbloqueio real | Sim |
+| Boss alimenta conquistas/desbloqueios | Sim |
+| Liga alimenta conquistas/desbloqueios | Sim |
+| Tempo do infinito contabiliza conquistas | Sim |
+| Timer visual no infinito | Sim |

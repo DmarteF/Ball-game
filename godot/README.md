@@ -1005,3 +1005,64 @@ Checklist:
 | Derrota exige bolinha realmente fechada | Sim |
 | SFX normal/critico sem duplicidade de XP | Sim |
 | APK atualizado para 1.0.1/versionCode 2 | Sim |
+
+## 7.20 Desbloqueios reais de upgrades por conquistas
+
+Atualizado nesta etapa:
+
+- Todos os upgrades temporarios definidos em `MainPortData.RUN_UPGRADES` agora podem ser desbloqueados por recompensas de conquistas reais.
+- Os 6 upgrades-base continuam auto-liberados: `damage`, `speed`, `coinBoost`, `critical`, `xpBoost`, `perfectChance`.
+- Upgrades extras e secretos ficam escondidos/bloqueados ate a conquista correspondente ser concluida e coletada.
+- Ao coletar a conquista, `GameState.apply_reward({ type = "upgrade" })` chama `unlock_upgrade`, grava em `explicit_unlocked_run_upgrades` e o upgrade passa a aparecer no level-up de fases, Modo Infinito, Liga Neon e Boss.
+- Boss e Liga agora salvam estatisticas em nomes unificados (`bossWins`, `bossNormalWins`, `leagueGoldReached`, etc.), evitando conquistas que nao completavam por diferenca de chave.
+- O Modo Infinito recebeu badge visual de tempo no HUD, usando o mesmo `infinite_elapsed` que salva `bestInfiniteSeconds`.
+- Liga/Boss respeitam os upgrades desbloqueados do jogador e continuam mostrando setas apenas quando a skin equipada possui controle (`MainPortData.skin_has_control`).
+- `Trophy Instinct` da bonus de trofeus somente se for escolhido durante a luta; `Boss Hunter` melhora XP/dano em Boss/Liga.
+- `Shield Pulse` e `Last Shield` podem evitar uma derrota por fechamento uma vez por partida, empurrando aneis e aplicando efeito visual.
+
+Tabela de desbloqueios dos temporarios:
+
+| Upgrade | Como desbloqueia |
+| --- | --- |
+| `burn` | Liberar fase 5 |
+| `magnetCoins` | Ganhar 1.500 moedas em partidas |
+| `bounce` | Alcancar combo 5 |
+| `ricochet` | Liberar fase 7 |
+| `penetration` | Destruir 250 aneis |
+| `frost` | Sobreviver 60s no Modo Infinito |
+| `ringRepulse` | Alcancar Liga Prata |
+| `shockwave` | Derrotar Boss Normal |
+| `chainLightning` | Quebrar 50 aneis em uma run infinita |
+| `slowField` | Sobreviver 180s no Modo Infinito |
+| `bomb` | Derrotar Boss Forte |
+| `laser` | Liberar fase 25 |
+| `laserCut` | Derrotar Boss Elite |
+| `multihit` | Alcancar Liga Ouro |
+| `chainBreak` | Quebrar 100 aneis em uma run infinita |
+| `shieldPulse` | Derrotar Boss Lendario |
+| `timeFreeze` | Derrotar Boss Impossivel |
+| `criticalOverload` | Alcancar Liga Diamante |
+| `chronoBreak` | Sobreviver 300s no Modo Infinito |
+| `voidPulse` | Destruir 1.000 aneis |
+| `diamondInstinct` | Fazer 25 Perfect Escapes |
+| `comboOverdrive` | Alcancar combo 20 |
+| `lastShield` | Liberar fase 50 |
+| `royalBreaker` | Liberar fase 75 |
+| `bossHunter` | Derrotar 3 bosses |
+| `secretMagnet` | Ganhar 5.000 moedas em partidas |
+| `trophyInstinct` | Alcancar Liga Lendaria |
+| `rivalCrusher` | Alcancar Liga Ultimate |
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Upgrades desbloqueaveis por conquistas reais | Sim |
+| Boss alimenta conquistas por dificuldade | Sim |
+| Tempo do Modo Infinito contabiliza conquistas | Sim |
+| Timer visual do Modo Infinito | Sim |
+| Liga alimenta conquistas por rank | Sim |
+| Upgrades secretos ficam escondidos ate liberar | Sim |
+| Level-up usa temporarios liberados reais | Sim |
+| Liga/Boss usam o mesmo pool desbloqueado | Sim |
+| Setas do Boss dependem da skin equipada | Sim |

@@ -231,6 +231,14 @@ func run_upgrades() -> Array[Dictionary]:
 		result.append(Dictionary(upgrade).duplicate(true))
 	return result
 
+func all_run_upgrade_ids() -> Array[String]:
+	var result: Array[String] = []
+	for upgrade in RUN_UPGRADES:
+		var id := String(upgrade.get("id", ""))
+		if not id.is_empty():
+			result.append(id)
+	return result
+
 func released_run_upgrade_ids() -> Array[String]:
 	var result: Array[String] = []
 	for upgrade in RUN_UPGRADES:
@@ -247,6 +255,9 @@ func auto_run_upgrade_ids() -> Array[String]:
 
 func is_released_run_upgrade(id: String) -> bool:
 	return released_run_upgrade_ids().has(id)
+
+func is_run_upgrade_defined(id: String) -> bool:
+	return all_run_upgrade_ids().has(id)
 
 func released_run_upgrades() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []

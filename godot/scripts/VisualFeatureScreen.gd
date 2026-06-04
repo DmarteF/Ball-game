@@ -1032,6 +1032,8 @@ func _wheel_prize_key(reward: Dictionary) -> String:
 			return "chest_%s" % String(reward.get("chest_type", "common"))
 		"skin":
 			return "skins"
+		"upgrade", "run_upgrade", "upgrade_unlock":
+			return "upgrade"
 	return "coin"
 
 
@@ -1105,6 +1107,11 @@ func _reward_label(reward: Dictionary) -> String:
 			var skin_id := String(reward.get("skin_id", reward.get("skinId", "")))
 			var skin := MainPortData.skin_by_id(skin_id) if has_node("/root/MainPortData") else {}
 			return String(skin.get("name", skin_id))
+		"upgrade", "run_upgrade", "upgrade_unlock":
+			var upgrade_id := String(reward.get("upgrade_id", reward.get("upgradeId", reward.get("id", ""))))
+			var upgrade := MainPortData.upgrade_by_id(upgrade_id) if has_node("/root/MainPortData") else {}
+			var upgrade_name := String(upgrade.get("name", upgrade_id))
+			return "Upgrade: %s" % upgrade_name
 	return String(reward.get("type", "Reward"))
 
 

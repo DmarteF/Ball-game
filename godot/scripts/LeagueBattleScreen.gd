@@ -264,6 +264,7 @@ func _make_arena(id: String, label: String, skin_id: String, quality: float, ai:
 		"perfects": 0,
 		"criticals": 0,
 		"crushed": false,
+		"shield_used": false,
 		"level_pending": false,
 		"crush_started": 0,
 		"last_hit": 0,
@@ -610,8 +611,32 @@ func _is_ball_crushed(state: Dictionary) -> bool:
 		var dist := (Vector2(state.get("ball", center)) - center).length()
 		var outer_edge := float(ring.get("radius", 0.0)) + float(ring.get("thickness", 5.0)) / 2.0
 		if outer_edge <= max(0.0, dist - BALL_RADIUS * 0.25) or (dist <= BALL_RADIUS * 1.15 and outer_edge <= BALL_RADIUS + 4.0):
+			if _try_consume_state_shield(state):
+				return false
 			return true
 	return false
+
+
+func _try_consume_state_shield(state: Dictionary) -> bool:
+	var upgrades: Dictionary = state.get("run_upgrades", {})
+	var shield_level: int = int(upgrades.get("shieldPulse", 0)) + int(upgrades.get("lastShield", 0))
+	if shield_level <= 0 or bool(state.get("shield_used", false)):
+		return false
+	state["shield_used"] = true
+	var now := Time.get_ticks_msec()
+	var push_amount: float = 12.0 + float(shield_level) * 3.0
+	for i in range(Array(state.get("rings", [])).size()):
+		var ring: Dictionary = state["rings"][i]
+		if String(ring.get("status", "")) != "active":
+			continue
+		ring["radius"] = min(float(state.get("arena_radius", 100.0)) - 4.0, float(ring.get("radius", 0.0)) + push_amount)
+		ring["defeat_grace_until"] = now + 850
+		ring["effect_color"] = "#00f0ff"
+		ring["effect_until"] = now + 1050
+		state["rings"][i] = ring
+	state["crush_started"] = 0
+	_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), "#00f0ff", "shield")
+	return true
 
 
 func _clamp_ring_spacing(state: Dictionary) -> void:
@@ -773,7 +798,9 @@ func _upgrade_choices(state: Dictionary, player_only: bool) -> Array[Dictionary]
 	var options: Array[Dictionary] = []
 	for upgrade in MainPortData.run_upgrades():
 		var id := String(upgrade.get("id", ""))
-		if id.is_empty() or bool(upgrade.get("secret", false)):
+		if id.is_empty():
+			continue
+		if bool(upgrade.get("secret", false)) and not player_only:
 			continue
 		if not unlocked.has(id):
 			continue
@@ -790,17 +817,17 @@ func _upgrade_choices(state: Dictionary, player_only: bool) -> Array[Dictionary]
 
 
 func _player_unlocked_run_upgrade_ids() -> Array[String]:
-	var released: Array[String] = MainPortData.released_run_upgrade_ids()
+	var defined: Array[String] = MainPortData.all_run_upgrade_ids()
 	var unlocked_save: Array = GameState.data.get("unlocked_upgrades", [])
 	var explicit: Array = GameState.data.get("explicit_unlocked_run_upgrades", [])
 	var result: Array[String] = []
 	for id in MainPortData.auto_run_upgrade_ids():
 		var upgrade_id := String(id)
-		if released.has(upgrade_id) and not result.has(upgrade_id):
+		if defined.has(upgrade_id) and not result.has(upgrade_id):
 			result.append(upgrade_id)
 	for id in explicit:
 		var upgrade_id := String(id)
-		if released.has(upgrade_id) and unlocked_save.has(upgrade_id) and not result.has(upgrade_id):
+		if defined.has(upgrade_id) and unlocked_save.has(upgrade_id) and not result.has(upgrade_id):
 			result.append(upgrade_id)
 	return result
 
@@ -810,11 +837,11 @@ func _apply_run_upgrade(state: Dictionary, id: String) -> void:
 	upgrades[id] = int(upgrades.get(id, 0)) + 1
 	state["run_upgrades"] = upgrades
 	state["run_upgrade_count"] = int(state.get("run_upgrade_count", 0)) + 1
-	if id == "speed":
+	if id in ["speed", "ricochet", "bounce"]:
 		state["velocity"] = Vector2(state.get("velocity", Vector2.RIGHT)) * 1.06
-	elif id == "coinBoost":
+	elif id in ["coinBoost", "magnetCoins", "secretMagnet"]:
 		state["gold"] = int(state.get("gold", 0)) + 1
-	elif id in ["damage", "critical", "burn", "frost", "ringRepulse", "shockwave", "chainLightning"]:
+	elif id in ["damage", "critical", "burn", "frost", "ringRepulse", "shockwave", "chainLightning", "penetration", "bomb", "laser", "laserCut", "multihit", "slowField", "chainBreak", "shieldPulse", "timeFreeze", "criticalOverload", "chronoBreak", "voidPulse", "comboOverdrive", "lastShield", "royalBreaker", "bossHunter", "rivalCrusher"]:
 		state["atk"] = int(state.get("atk", 0)) + 1
 
 
@@ -863,7 +890,9 @@ func _base_damage(state: Dictionary) -> int:
 	var permanent: Dictionary = GameState.data.get("permanent_upgrades", {}) if not bool(state.get("ai", false)) else {}
 	var base := 10.0 * pow(1.1, int(permanent.get("baseDamage", 0)))
 	base *= 1.0 + int(state.get("atk", 0)) * 0.12
-	base *= 1.0 + int(Dictionary(state.get("run_upgrades", {})).get("damage", 0)) * 0.15
+	var run_upgrades: Dictionary = state.get("run_upgrades", {})
+	base *= 1.0 + int(run_upgrades.get("damage", 0)) * 0.15
+	base *= 1.0 + int(run_upgrades.get("royalBreaker", 0)) * 0.12 + int(run_upgrades.get("bossHunter", 0)) * 0.14 + int(run_upgrades.get("rivalCrusher", 0)) * 0.16
 	base *= 1.0 + float(state.get("quality", 0.5)) * (0.08 if bool(state.get("ai", false)) else 0.0)
 	return max(1, roundi(base))
 
@@ -871,28 +900,33 @@ func _base_damage(state: Dictionary) -> int:
 func _target_ball_speed(state: Dictionary) -> float:
 	var permanent: Dictionary = GameState.data.get("permanent_upgrades", {}) if not bool(state.get("ai", false)) else {}
 	var speed: float = BASE_BALL_SPEED + min(1.05, float(int(state.get("level", 1)) - 1) * 0.028 + float(int(state.get("rings_destroyed", 0))) * 0.002)
-	speed *= 1.0 + int(permanent.get("baseSpeed", 0)) * 0.018 + int(Dictionary(state.get("run_upgrades", {})).get("speed", 0)) * 0.2
+	var run_upgrades: Dictionary = state.get("run_upgrades", {})
+	speed *= 1.0 + int(permanent.get("baseSpeed", 0)) * 0.018 + int(run_upgrades.get("speed", 0)) * 0.2 + int(run_upgrades.get("ricochet", 0)) * 0.025 + int(run_upgrades.get("bounce", 0)) * 0.02
 	speed *= 1.0 + float(state.get("quality", 0.5)) * (0.05 if bool(state.get("ai", false)) else 0.0)
 	return speed
 
 
 func _gold_multiplier(state: Dictionary) -> float:
 	var permanent: Dictionary = GameState.data.get("permanent_upgrades", {}) if not bool(state.get("ai", false)) else {}
-	return (1.0 + int(permanent.get("coinMultiplier", 0)) * 0.15) * (1.0 + int(state.get("gold", 0)) * 0.12 + int(Dictionary(state.get("run_upgrades", {})).get("coinBoost", 0)) * 0.5)
+	var run_upgrades: Dictionary = state.get("run_upgrades", {})
+	return (1.0 + int(permanent.get("coinMultiplier", 0)) * 0.15) * (1.0 + int(state.get("gold", 0)) * 0.12 + int(run_upgrades.get("coinBoost", 0)) * 0.5 + int(run_upgrades.get("magnetCoins", 0)) * 0.25 + int(run_upgrades.get("secretMagnet", 0)) * 0.18)
 
 
 func _xp_multiplier(state: Dictionary) -> float:
 	var permanent: Dictionary = GameState.data.get("permanent_upgrades", {}) if not bool(state.get("ai", false)) else {}
-	return (1.0 + int(permanent.get("xpBoost", 0)) * 0.2) * (1.0 + int(state.get("gold", 0)) * 0.05 + int(Dictionary(state.get("run_upgrades", {})).get("xpBoost", 0)) * 0.5)
+	var run_upgrades: Dictionary = state.get("run_upgrades", {})
+	return (1.0 + int(permanent.get("xpBoost", 0)) * 0.2) * (1.0 + int(state.get("gold", 0)) * 0.05 + int(run_upgrades.get("xpBoost", 0)) * 0.5 + int(run_upgrades.get("bossHunter", 0)) * 0.10 + int(run_upgrades.get("rivalCrusher", 0)) * 0.12)
 
 
 func _crit_chance(state: Dictionary) -> float:
 	var permanent: Dictionary = GameState.data.get("permanent_upgrades", {}) if not bool(state.get("ai", false)) else {}
-	return 5.0 + int(permanent.get("critChance", 0)) * 2.0 + int(Dictionary(state.get("run_upgrades", {})).get("critical", 0)) * 5.0
+	var run_upgrades: Dictionary = state.get("run_upgrades", {})
+	return 5.0 + int(permanent.get("critChance", 0)) * 2.0 + int(run_upgrades.get("critical", 0)) * 5.0 + int(run_upgrades.get("criticalOverload", 0)) * 2.0
 
 
 func _perfect_bonus(state: Dictionary) -> float:
-	return int(Dictionary(state.get("run_upgrades", {})).get("perfectChance", 0)) * 0.01
+	var run_upgrades: Dictionary = state.get("run_upgrades", {})
+	return int(run_upgrades.get("perfectChance", 0)) * 0.01 + int(run_upgrades.get("diamondInstinct", 0)) * 0.018
 
 
 func _apply_special_upgrade_effects(state: Dictionary, ring_index: int, damage: int) -> int:
@@ -911,6 +945,19 @@ func _apply_special_upgrade_effects(state: Dictionary, ring_index: int, damage: 
 		ring["effect_color"] = "#b8f3ff"
 		ring["effect_until"] = Time.get_ticks_msec() + 1500
 		_mark_arena_effect_triggered(state, "frost", 900)
+	var slow_field_level := int(upgrades.get("slowField", 0)) + int(upgrades.get("timeFreeze", 0)) + int(upgrades.get("chronoBreak", 0))
+	if slow_field_level > 0 and _can_trigger_arena_effect(state, "slowField", 0.08 + slow_field_level * 0.02, maxi(900, 2300 - slow_field_level * 150)):
+		var until := Time.get_ticks_msec() + 900 + slow_field_level * 120
+		for i in range(Array(state.get("rings", [])).size()):
+			var other: Dictionary = state["rings"][i]
+			if String(other.get("status", "")) != "active":
+				continue
+			other["rotation_speed"] = float(other.get("base_rotation_speed", other.get("rotation_speed", 0.004))) * 0.34
+			other["effect_color"] = "#9be8ff"
+			other["effect_until"] = until
+			state["rings"][i] = other
+		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), "#9be8ff", "freeze")
+		_mark_arena_effect_triggered(state, "slowField", maxi(900, 2300 - slow_field_level * 150))
 	var repulse_level := int(upgrades.get("ringRepulse", 0))
 	var repulse_cooldown: int = maxi(850, 1550 - repulse_level * 120)
 	if repulse_level > 0 and _can_trigger_arena_effect(state, "ringRepulse", 0.08 + repulse_level * 0.018, repulse_cooldown):
@@ -920,13 +967,29 @@ func _apply_special_upgrade_effects(state: Dictionary, ring_index: int, damage: 
 		_mark_arena_effect_triggered(state, "ringRepulse", repulse_cooldown)
 	state["rings"][ring_index] = ring
 	var shockwave_level := int(upgrades.get("shockwave", 0))
-	if shockwave_level > 0 and _can_trigger_arena_effect(state, "shockwave", 0.12, 760):
-		bonus += floori(float(damage) * 0.35)
+	shockwave_level += int(upgrades.get("voidPulse", 0))
+	shockwave_level += int(upgrades.get("bomb", 0))
+	if shockwave_level > 0 and _can_trigger_arena_effect(state, "shockwave", 0.12 + shockwave_level * 0.018, 760):
+		bonus += floori(float(damage) * (0.28 + shockwave_level * 0.08))
 		_mark_arena_effect_triggered(state, "shockwave", 760)
 	var chain_level := int(upgrades.get("chainLightning", 0))
-	if chain_level > 0 and _can_trigger_arena_effect(state, "chainLightning", 0.12, 760):
-		bonus += floori(float(damage) * 0.28)
+	chain_level += int(upgrades.get("chainBreak", 0))
+	if chain_level > 0 and _can_trigger_arena_effect(state, "chainLightning", 0.12 + chain_level * 0.018, 760):
+		bonus += floori(float(damage) * (0.24 + chain_level * 0.06))
 		_mark_arena_effect_triggered(state, "chainLightning", 760)
+	var poison_level := int(upgrades.get("penetration", 0))
+	if poison_level > 0 and _can_trigger_arena_effect(state, "penetration", 0.16 + poison_level * 0.02, 720):
+		bonus += 3 * poison_level
+		ring = state["rings"][ring_index]
+		ring["effect_color"] = "#39ff14"
+		ring["effect_until"] = Time.get_ticks_msec() + 1100
+		state["rings"][ring_index] = ring
+		_mark_arena_effect_triggered(state, "penetration", 720)
+	var laser_level := int(upgrades.get("laser", 0)) + int(upgrades.get("laserCut", 0)) + int(upgrades.get("multihit", 0))
+	if laser_level > 0 and _can_trigger_arena_effect(state, "laser", 0.10 + laser_level * 0.018, 820):
+		bonus += floori(float(damage) * (0.32 + laser_level * 0.10))
+		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), "#ffffff", "laser")
+		_mark_arena_effect_triggered(state, "laser", 820)
 	return bonus
 
 
@@ -1108,6 +1171,7 @@ func _finish_match(result: String, reason: String = "") -> void:
 		"criticals": int(_player.get("criticals", 0)),
 		"skin_effects": 0,
 		"run_upgrades": int(_player.get("run_upgrade_count", 0)),
+		"run_upgrade_levels": Dictionary(_player.get("run_upgrades", {})).duplicate(true),
 	}
 	_result_reward = GameState.record_boss_match(_boss_level_id, result, summary) if _battle_kind == "boss" else GameState.record_neon_league_match(result, summary)
 	if result == "win":

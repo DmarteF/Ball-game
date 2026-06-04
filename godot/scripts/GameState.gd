@@ -78,10 +78,43 @@ const ACHIEVEMENTS := [
 	{ "id": "store_buyer", "name": "Neon Shopper", "name_pt": "Comprador Neon", "desc": "Buy or claim something in the shop.", "desc_pt": "Compre ou resgate algo na loja.", "metric": "storePurchases", "required": 1, "reward": { "type": "diamonds", "amount": 6 }, "rarity": "common" },
 ]
 
+const RUN_UPGRADE_UNLOCK_ACHIEVEMENTS := [
+	{ "id": "unlock_burn_phase_5", "name": "Fire Circuit", "name_pt": "Circuito de Fogo", "desc": "Unlock phase 5.", "desc_pt": "Libere a fase 5.", "metric": "highestPhase", "required": 5, "reward": { "type": "upgrade", "upgrade_id": "burn" }, "rarity": "rare" },
+	{ "id": "unlock_magnet_coins_1500", "name": "Coin Magnet", "name_pt": "Ima de Moedas", "desc": "Earn 1500 run coins.", "desc_pt": "Ganhe 1500 moedas em partidas.", "metric": "runCoins", "required": 1500, "reward": { "type": "upgrade", "upgrade_id": "magnetCoins" }, "rarity": "rare" },
+	{ "id": "unlock_bounce_combo_5", "name": "Bounce Line", "name_pt": "Linha de Ricochete", "desc": "Reach combo 5.", "desc_pt": "Alcance combo 5.", "metric": "bestCombo", "required": 5, "reward": { "type": "upgrade", "upgrade_id": "bounce" }, "rarity": "rare" },
+	{ "id": "unlock_ricochet_phase_7", "name": "Living Ricochet", "name_pt": "Ricochete Vivo", "desc": "Unlock phase 7.", "desc_pt": "Libere a fase 7.", "metric": "highestPhase", "required": 7, "reward": { "type": "upgrade", "upgrade_id": "ricochet" }, "rarity": "rare" },
+	{ "id": "unlock_penetration_rings_250", "name": "Toxic Cut", "name_pt": "Corte Toxico", "desc": "Destroy 250 rings.", "desc_pt": "Destrua 250 aneis.", "metric": "ringsDestroyed", "required": 250, "reward": { "type": "upgrade", "upgrade_id": "penetration" }, "rarity": "rare" },
+	{ "id": "unlock_frost_infinite_60", "name": "Frozen Minute", "name_pt": "Minuto Congelado", "desc": "Survive 60 seconds in Infinite Mode.", "desc_pt": "Sobreviva 60 segundos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 60, "reward": { "type": "upgrade", "upgrade_id": "frost" }, "rarity": "epic" },
+	{ "id": "unlock_ring_repulse_silver", "name": "Silver Pulse", "name_pt": "Pulso de Prata", "desc": "Reach Silver in Neon League.", "desc_pt": "Alcance a Liga Prata.", "metric": "leagueSilverReached", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "ringRepulse" }, "rarity": "rare" },
+	{ "id": "unlock_shockwave_boss_normal", "name": "Boss Shock", "name_pt": "Choque no Boss", "desc": "Defeat a Normal Boss.", "desc_pt": "Derrote o Boss Normal.", "metric": "bossNormalWins", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "shockwave" }, "rarity": "epic" },
+	{ "id": "unlock_chain_lightning_infinite_50", "name": "Endless Spark", "name_pt": "Faísca Infinita", "desc": "Destroy 50 rings in one Infinite run.", "desc_pt": "Destrua 50 aneis em uma partida infinita.", "metric": "bestInfiniteRings", "required": 50, "reward": { "type": "upgrade", "upgrade_id": "chainLightning" }, "rarity": "epic" },
+	{ "id": "unlock_slow_field_infinite_180", "name": "Slow Orbit", "name_pt": "Orbita Lenta", "desc": "Survive 180 seconds in Infinite Mode.", "desc_pt": "Sobreviva 180 segundos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 180, "reward": { "type": "upgrade", "upgrade_id": "slowField" }, "rarity": "epic" },
+	{ "id": "unlock_bomb_boss_strong", "name": "Explosive Rival", "name_pt": "Rival Explosivo", "desc": "Defeat a Strong Boss.", "desc_pt": "Derrote o Boss Forte.", "metric": "bossStrongWins", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "bomb" }, "rarity": "epic" },
+	{ "id": "unlock_laser_phase_25", "name": "Phase Laser", "name_pt": "Laser de Fase", "desc": "Unlock phase 25.", "desc_pt": "Libere a fase 25.", "metric": "highestPhase", "required": 25, "reward": { "type": "upgrade", "upgrade_id": "laser" }, "rarity": "epic" },
+	{ "id": "unlock_laser_cut_boss_elite", "name": "Elite Cut", "name_pt": "Corte Elite", "desc": "Defeat an Elite Boss.", "desc_pt": "Derrote o Boss Elite.", "metric": "bossEliteWins", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "laserCut" }, "rarity": "epic" },
+	{ "id": "unlock_multihit_gold", "name": "Golden Multi-Hit", "name_pt": "Multi-Hit Dourado", "desc": "Reach Gold in Neon League.", "desc_pt": "Alcance a Liga Ouro.", "metric": "leagueGoldReached", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "multihit" }, "rarity": "legendary" },
+	{ "id": "unlock_chain_break_infinite_100", "name": "Chain Breaker", "name_pt": "Quebra-Corrente", "desc": "Destroy 100 rings in one Infinite run.", "desc_pt": "Destrua 100 aneis em uma partida infinita.", "metric": "bestInfiniteRings", "required": 100, "reward": { "type": "upgrade", "upgrade_id": "chainBreak" }, "rarity": "legendary" },
+	{ "id": "unlock_shield_pulse_boss_legendary", "name": "Legend Shield", "name_pt": "Escudo Lendario", "desc": "Defeat a Legendary Boss.", "desc_pt": "Derrote o Boss Lendario.", "metric": "bossLegendaryWins", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "shieldPulse" }, "rarity": "epic" },
+	{ "id": "unlock_time_freeze_boss_impossible", "name": "Impossible Freeze", "name_pt": "Congelamento Impossivel", "desc": "Defeat an Impossible Boss.", "desc_pt": "Derrote o Boss Impossivel.", "metric": "bossImpossibleWins", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "timeFreeze" }, "rarity": "legendary" },
+	{ "id": "unlock_critical_overload_diamond", "name": "Diamond Overload", "name_pt": "Sobrecarga Diamante", "desc": "Reach Diamond in Neon League.", "desc_pt": "Alcance a Liga Diamante.", "metric": "leagueDiamondReached", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "criticalOverload" }, "rarity": "legendary" },
+	{ "id": "unlock_chrono_break_infinite_300", "name": "Chrono Break", "name_pt": "Ruptura Cronal", "desc": "Survive 300 seconds in Infinite Mode.", "desc_pt": "Sobreviva 300 segundos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 300, "reward": { "type": "upgrade", "upgrade_id": "chronoBreak" }, "rarity": "legendary" },
+	{ "id": "unlock_void_pulse_rings_1000", "name": "Void Pulse", "name_pt": "Pulso do Vazio", "desc": "Destroy 1000 rings.", "desc_pt": "Destrua 1000 aneis.", "metric": "ringsDestroyed", "required": 1000, "reward": { "type": "upgrade", "upgrade_id": "voidPulse" }, "rarity": "legendary" },
+	{ "id": "unlock_diamond_instinct_perfect_25", "name": "Diamond Instinct", "name_pt": "Instinto de Diamante", "desc": "Make 25 Perfect Escapes.", "desc_pt": "Faca 25 Perfect Escapes.", "metric": "perfectEscapes", "required": 25, "reward": { "type": "upgrade", "upgrade_id": "diamondInstinct" }, "rarity": "epic" },
+	{ "id": "unlock_combo_overdrive_combo_20", "name": "Combo Overdrive", "name_pt": "Sobrecarga de Combo", "desc": "Reach combo 20.", "desc_pt": "Alcance combo 20.", "metric": "bestCombo", "required": 20, "reward": { "type": "upgrade", "upgrade_id": "comboOverdrive" }, "rarity": "legendary" },
+	{ "id": "unlock_last_shield_phase_50", "name": "Last Shield", "name_pt": "Ultimo Escudo", "desc": "Unlock phase 50.", "desc_pt": "Libere a fase 50.", "metric": "highestPhase", "required": 50, "reward": { "type": "upgrade", "upgrade_id": "lastShield" }, "rarity": "legendary" },
+	{ "id": "unlock_royal_breaker_phase_75", "name": "Royal Breaker", "name_pt": "Quebrador Real", "desc": "Unlock phase 75.", "desc_pt": "Libere a fase 75.", "metric": "highestPhase", "required": 75, "reward": { "type": "upgrade", "upgrade_id": "royalBreaker" }, "rarity": "legendary" },
+	{ "id": "unlock_boss_hunter_boss_3", "name": "Boss Hunter", "name_pt": "Cacador de Boss", "desc": "Defeat 3 bosses.", "desc_pt": "Derrote 3 bosses.", "metric": "bossWins", "required": 3, "reward": { "type": "upgrade", "upgrade_id": "bossHunter" }, "rarity": "epic" },
+	{ "id": "unlock_secret_magnet_run_coins_5000", "name": "Secret Magnet", "name_pt": "Ima Secreto", "desc": "Earn 5000 run coins.", "desc_pt": "Ganhe 5000 moedas em partidas.", "metric": "runCoins", "required": 5000, "reward": { "type": "upgrade", "upgrade_id": "secretMagnet" }, "rarity": "epic" },
+	{ "id": "unlock_trophy_instinct_legendary", "name": "Trophy Instinct", "name_pt": "Instinto de Trofeu", "desc": "Reach Legendary in Neon League.", "desc_pt": "Alcance a Liga Lendaria.", "metric": "leagueLegendaryReached", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "trophyInstinct" }, "rarity": "epic" },
+	{ "id": "unlock_rival_crusher_ultimate", "name": "Rival Crusher", "name_pt": "Esmagador de Rivais", "desc": "Reach Ultimate in Neon League.", "desc_pt": "Alcance a Liga Ultimate.", "metric": "leagueUltimateReached", "required": 1, "reward": { "type": "upgrade", "upgrade_id": "rivalCrusher" }, "rarity": "legendary" },
+]
+
 
 func get_achievements() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for achievement in ACHIEVEMENTS:
+		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
+	for achievement in RUN_UPGRADE_UNLOCK_ACHIEVEMENTS:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
 	_append_phase_achievements(result)
 	_append_infinite_achievements(result)
@@ -354,6 +387,15 @@ func default_save() -> Dictionary:
 			"boss_runs": 0,
 			"boss_wins": 0,
 			"boss_losses": 0,
+			"bossRuns": 0,
+			"bossWins": 0,
+			"bossLosses": 0,
+			"bossNormalWins": 0,
+			"bossStrongWins": 0,
+			"bossEliteWins": 0,
+			"bossLegendaryWins": 0,
+			"bossImpossibleWins": 0,
+			"bossBestLevelIndex": 0,
 			"daily_rewards_collected": 0,
 			"phaseWins": 0,
 			"wheelSpins": 0,
@@ -367,9 +409,12 @@ func default_save() -> Dictionary:
 			"leagueTrophies": 0,
 			"leagueTrophiesTotal": 0,
 			"leagueWinStreak": 0,
+			"leagueRankIndex": 0,
 			"leagueSilverReached": 0,
+			"leagueGoldReached": 0,
 			"leagueDiamondReached": 0,
 			"leagueLegendaryReached": 0,
+			"leagueUltimateReached": 0,
 		},
 	}
 
@@ -409,7 +454,7 @@ func refresh_unlocks(emit_signal := true) -> void:
 		if MainPortData.is_released_run_upgrade(String(id)) and not unlocked.has(id):
 			unlocked.append(id)
 	for id in explicit_temp_ids:
-		if MainPortData.is_released_run_upgrade(String(id)) and not unlocked.has(id):
+		if MainPortData.is_run_upgrade_defined(String(id)) and not unlocked.has(id):
 			unlocked.append(id)
 	data["unlocked_upgrades"] = unlocked
 
@@ -436,6 +481,8 @@ func _clean_released_upgrade_unlocks(unlocked: Array) -> Array:
 		if cleaned.has(id):
 			continue
 		if PERMANENT_UPGRADE_DEFS.has(id):
+			cleaned.append(id)
+		elif MainPortData.is_run_upgrade_defined(id) and explicit_temp_ids.has(id):
 			cleaned.append(id)
 		elif released_temp_ids.has(id) and explicit_temp_ids.has(id):
 			cleaned.append(id)
@@ -465,7 +512,7 @@ func _sanitize_persistent_unlocks() -> void:
 	var valid_upgrades: Array[String] = []
 	for id in PERMANENT_UPGRADE_DEFS.keys():
 		valid_upgrades.append(String(id))
-	for id in MainPortData.released_run_upgrade_ids():
+	for id in MainPortData.all_run_upgrade_ids():
 		valid_upgrades.append(String(id))
 	var cleaned_upgrades: Array = []
 	for value in Array(data.get("unlocked_upgrades", [])):
@@ -477,7 +524,7 @@ func _sanitize_persistent_unlocks() -> void:
 	var cleaned_explicit: Array = []
 	for value in Array(data.get("explicit_unlocked_run_upgrades", [])):
 		var upgrade_id := String(value)
-		if MainPortData.is_released_run_upgrade(upgrade_id) and not cleaned_explicit.has(upgrade_id):
+		if MainPortData.is_run_upgrade_defined(upgrade_id) and not cleaned_explicit.has(upgrade_id):
 			cleaned_explicit.append(upgrade_id)
 	data["explicit_unlocked_run_upgrades"] = cleaned_explicit
 
@@ -676,9 +723,9 @@ func add_inventory_item(id: String, item_type: String, label: String, icon: Stri
 func unlock_upgrade(id: String) -> bool:
 	if id.is_empty():
 		return false
-	if not MainPortData.is_released_run_upgrade(id) and not PERMANENT_UPGRADE_DEFS.has(id):
+	if not MainPortData.is_run_upgrade_defined(id) and not PERMANENT_UPGRADE_DEFS.has(id):
 		return false
-	if MainPortData.is_released_run_upgrade(id):
+	if MainPortData.is_run_upgrade_defined(id):
 		var explicit: Array = data.get("explicit_unlocked_run_upgrades", [])
 		if not explicit.has(id):
 			explicit.append(id)
@@ -1022,7 +1069,8 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 	if result != "win":
 		reward = { "type": "coins", "amount": max(25, floori(float(int(reward.get("amount", 100))) * 0.35)) }
 	var coins_bonus: int = int(summary.get("coins", 0)) + (int(reward.get("amount", 0)) if String(reward.get("type", "")) == "coins" else 0)
-	var xp_bonus: int = maxi(30, int(summary.get("xp", 0)) + int(definition.get("xp", 60)))
+	var run_upgrade_levels: Dictionary = summary.get("run_upgrade_levels", {})
+	var xp_bonus: int = maxi(30, int(summary.get("xp", 0)) + int(definition.get("xp", 60)) + int(run_upgrade_levels.get("bossHunter", 0)) * 20)
 	if coins_bonus > 0:
 		data["coins"] = int(data.get("coins", 0)) + coins_bonus
 	if String(reward.get("type", "")) != "coins":
@@ -1032,9 +1080,17 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 	stats["boss_runs"] = int(stats.get("boss_runs", 0)) + 1
 	stats["boss_wins"] = int(stats.get("boss_wins", 0)) + (1 if result == "win" else 0)
 	stats["boss_losses"] = int(stats.get("boss_losses", 0)) + (1 if result == "loss" else 0)
+	stats["bossRuns"] = int(stats.get("bossRuns", 0)) + 1
+	stats["bossWins"] = int(stats.get("bossWins", 0)) + (1 if result == "win" else 0)
+	stats["bossLosses"] = int(stats.get("bossLosses", 0)) + (1 if result == "loss" else 0)
+	if result == "win":
+		var difficulty_metric := "boss%sWins" % level_id.capitalize()
+		stats[difficulty_metric] = int(stats.get(difficulty_metric, 0)) + 1
+		stats["bossBestLevelIndex"] = max(int(stats.get("bossBestLevelIndex", 0)), _boss_level_index(level_id) + 1)
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + int(summary.get("rings", 0))
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + int(summary.get("rings", 0))
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins_bonus
+	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + int(summary.get("run_upgrades", 0))
 	data["stats"] = stats
 	_progress_missions("ringsDestroyed", int(summary.get("rings", 0)))
 	_progress_missions("runCoins", coins_bonus)
@@ -1047,6 +1103,14 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 		"reward": reward,
 		"boss_level": level_id,
 	}
+
+
+func _boss_level_index(level_id: String) -> int:
+	var levels := boss_level_definitions()
+	for i in range(levels.size()):
+		if String(Dictionary(levels[i]).get("id", "")) == level_id:
+			return i
+	return 0
 
 
 func boss_level_definition(level_id: String) -> Dictionary:
@@ -1144,6 +1208,7 @@ func claim_all_achievements() -> Dictionary:
 		"xp": 0,
 		"chests": 0,
 		"skins": 0,
+		"upgrades": 0,
 	}
 	for achievement in get_achievements():
 		var id := String(achievement.get("id", ""))
@@ -1187,6 +1252,8 @@ func _accumulate_reward_summary(summary: Dictionary, reward: Dictionary) -> void
 			summary["chests"] = int(summary.get("chests", 0)) + amount
 		"skin":
 			summary["skins"] = int(summary.get("skins", 0)) + 1
+		"upgrade", "run_upgrade", "upgrade_unlock":
+			summary["upgrades"] = int(summary.get("upgrades", 0)) + 1
 
 
 func _reward_summary_text(summary: Dictionary, claimed_count: int) -> String:
@@ -1205,6 +1272,8 @@ func _reward_summary_text(summary: Dictionary, claimed_count: int) -> String:
 		parts.append("+%s baus" % int(summary.get("chests", 0)))
 	if int(summary.get("skins", 0)) > 0:
 		parts.append("+%s skins" % int(summary.get("skins", 0)))
+	if int(summary.get("upgrades", 0)) > 0:
+		parts.append("+%s upgrades" % int(summary.get("upgrades", 0)))
 	return "Coletado: %s" % ", ".join(parts)
 
 
@@ -1265,6 +1334,18 @@ func _update_achievements(save_after := true) -> void:
 	stats["bestInfiniteSeconds"] = max(int(stats.get("bestInfiniteSeconds", 0)), int(stats.get("best_infinite_seconds", 0)))
 	stats["bestInfiniteRings"] = max(int(stats.get("bestInfiniteRings", 0)), int(stats.get("best_infinite_rings", 0)))
 	stats["bestInfiniteScore"] = max(int(stats.get("bestInfiniteScore", 0)), int(stats.get("best_infinite_score", 0)))
+	stats["bossRuns"] = max(int(stats.get("bossRuns", 0)), int(stats.get("boss_runs", 0)))
+	stats["bossWins"] = max(int(stats.get("bossWins", 0)), int(stats.get("boss_wins", 0)))
+	stats["bossLosses"] = max(int(stats.get("bossLosses", 0)), int(stats.get("boss_losses", 0)))
+	var league: Dictionary = data.get("league", {})
+	var highest_rank_id := String(league.get("highest_rank_id", "bronze"))
+	var rank_index := _league_rank_index(highest_rank_id)
+	stats["leagueRankIndex"] = max(int(stats.get("leagueRankIndex", 0)), rank_index)
+	stats["leagueSilverReached"] = max(int(stats.get("leagueSilverReached", 0)), 1 if rank_index >= _league_rank_index("silver") else 0)
+	stats["leagueGoldReached"] = max(int(stats.get("leagueGoldReached", 0)), 1 if rank_index >= _league_rank_index("gold") else 0)
+	stats["leagueDiamondReached"] = max(int(stats.get("leagueDiamondReached", 0)), 1 if rank_index >= _league_rank_index("diamond") else 0)
+	stats["leagueLegendaryReached"] = max(int(stats.get("leagueLegendaryReached", 0)), 1 if rank_index >= _league_rank_index("legendary") else 0)
+	stats["leagueUltimateReached"] = max(int(stats.get("leagueUltimateReached", 0)), 1 if rank_index >= _league_rank_index("ultimate") else 0)
 	for achievement in get_achievements():
 		var id := String(achievement["id"])
 		var state: Dictionary = achievements.get(id, { "progress": 0, "completed": false, "claimed": false })
@@ -1633,8 +1714,10 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	var rings_value := int(summary.get("rings", 0))
 	var seconds := int(summary.get("seconds", 0))
 	var trophy_delta := base_delta
+	var run_upgrade_levels: Dictionary = summary.get("run_upgrade_levels", {})
 	if result == "win":
 		trophy_delta += min(14, rings_value / 3) + min(6, seconds / 45)
+		trophy_delta += int(run_upgrade_levels.get("trophyInstinct", 0)) * 2
 	else:
 		trophy_delta += min(8, rings_value / 8)
 	trophies = max(0, trophies + trophy_delta)
@@ -1674,6 +1757,7 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	stats["leagueTrophies"] = trophies
 	stats["leagueTrophiesTotal"] = int(stats.get("leagueTrophiesTotal", 0)) + max(0, trophy_delta)
 	stats["leagueWinStreak"] = max(int(stats.get("leagueWinStreak", 0)), int(league.get("best_streak", 0)))
+	stats["leagueRankIndex"] = max(int(stats.get("leagueRankIndex", 0)), _league_rank_index(rank_id))
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_value
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_value
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
@@ -1691,10 +1775,14 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 			stats["skinsUnlocked"] = skins.size()
 	if rank_id in ["silver", "gold", "diamond", "legendary", "ultimate"]:
 		stats["leagueSilverReached"] = 1
+	if rank_id in ["gold", "diamond", "legendary", "ultimate"]:
+		stats["leagueGoldReached"] = 1
 	if rank_id in ["diamond", "legendary", "ultimate"]:
 		stats["leagueDiamondReached"] = 1
 	if rank_id in ["legendary", "ultimate"]:
 		stats["leagueLegendaryReached"] = 1
+	if rank_id == "ultimate":
+		stats["leagueUltimateReached"] = 1
 	data["stats"] = stats
 	_progress_missions("ringsDestroyed", rings_value)
 	_progress_missions("runCoins", coins)

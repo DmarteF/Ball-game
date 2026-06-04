@@ -144,6 +144,8 @@ func _visible_run_upgrade_list() -> Array[Dictionary]:
 		var id := String(upgrade.get("id", ""))
 		if id.is_empty():
 			continue
+		if bool(upgrade.get("secret", false)) and not _is_run_upgrade_available_for_player(id):
+			continue
 		if not _is_run_upgrade_available_for_player(id):
 			continue
 		var copy: Dictionary = upgrade.duplicate(true)
@@ -168,6 +170,8 @@ func _locked_upgrade_list() -> Array[Dictionary]:
 	for upgrade in MainPortData.run_upgrades():
 		var id := String(upgrade.get("id", ""))
 		if id.is_empty() or _is_run_upgrade_available_for_player(id):
+			continue
+		if bool(upgrade.get("secret", false)):
 			continue
 		var copy: Dictionary = upgrade.duplicate(true)
 		copy["kind"] = "run"

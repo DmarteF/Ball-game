@@ -127,6 +127,7 @@ var crush_contact_started_msec := 0
 var rerolls_used := 0
 var last_upgrade_option_ids: Array[String] = []
 var revive_used := false
+var shield_pulse_used := false
 var control_input := 0.0
 var control_left_down := false
 var control_right_down := false
@@ -143,6 +144,8 @@ var _hud_phase: Label
 var _hud_resources: HBoxContainer
 var _resource_labels: Dictionary = {}
 var _hud_meta: Label
+var _hud_timer_panel: PanelContainer
+var _hud_timer_label: Label
 var _hud_xp: Label
 var _hud_xp_bar: ProgressBar
 var _hud_ring_bar: ProgressBar
@@ -241,6 +244,7 @@ func _start_level() -> void:
 	available_upgrades = []
 	rerolls_used = 0
 	revive_used = false
+	shield_pulse_used = false
 	result_rewards_doubled = false
 	pending_result_reward = {}
 	control_input = 0.0
@@ -846,8 +850,33 @@ func _is_ball_crushed() -> bool:
 		var dist := (ball_position - arena_center).length()
 		var outer_edge := float(ring["radius"]) + float(ring["thickness"]) / 2.0
 		if outer_edge <= max(0.0, dist - BALL_RADIUS * 0.25) or (dist <= BALL_RADIUS * 1.15 and outer_edge <= BALL_RADIUS + 4.0):
+			if _try_consume_escape_shield():
+				return false
 			return true
 	return false
+
+
+func _try_consume_escape_shield() -> bool:
+	var shield_level: int = int(current_upgrades.get("shieldPulse", 0)) + int(current_upgrades.get("lastShield", 0))
+	if shield_level <= 0 or shield_pulse_used:
+		return false
+	shield_pulse_used = true
+	var now := Time.get_ticks_msec()
+	var push_amount: float = 16.0 + float(shield_level) * 4.0
+	for i in range(rings.size()):
+		var ring := rings[i]
+		if String(ring.get("status", "")) != "active":
+			continue
+		ring["radius"] = min(_playable_ring_max_radius(), float(ring.get("radius", INNER_RADIUS)) + push_amount)
+		ring["defeat_grace_until"] = now + 950
+		ring["effect_color"] = "#00f0ff"
+		ring["effect_until"] = now + 1200
+		rings[i] = ring
+	crush_contact_started_msec = 0
+	_spawn_particles(ball_position, Color("#00f0ff"), 22, 140.0)
+	_spawn_floating("Shield Pulse", ball_position + Vector2(-30, -38), Color("#00f0ff"))
+	_play_sfx("upgrade_select")
+	return true
 
 
 func _finish_victory() -> void:
@@ -1021,6 +1050,22 @@ func _build_hud() -> void:
 	_hud_resources.add_child(_make_resource_badge("gem", "0", "gems"))
 	_hud_resources.add_child(_make_resource_badge("coin", "0", "account"))
 	_hud_resources.add_child(_make_resource_badge("key", "0", "keys"))
+
+	_hud_timer_panel = PanelContainer.new()
+	_hud_timer_panel.visible = false
+	_hud_timer_panel.add_theme_stylebox_override("panel", _make_style("#06162add", 14, "#00f0ffaa", 2, "#00f0ff66", 10))
+	var timer_margin := MarginContainer.new()
+	timer_margin.add_theme_constant_override("margin_left", 14)
+	timer_margin.add_theme_constant_override("margin_top", 7)
+	timer_margin.add_theme_constant_override("margin_right", 14)
+	timer_margin.add_theme_constant_override("margin_bottom", 7)
+	_hud_timer_panel.add_child(timer_margin)
+	_hud_timer_label = _make_label("TEMPO 00:00", 18, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_hud_timer_label.add_theme_color_override("font_shadow_color", Color("#00f0ff88"))
+	_hud_timer_label.add_theme_constant_override("shadow_offset_x", 0)
+	_hud_timer_label.add_theme_constant_override("shadow_offset_y", 0)
+	timer_margin.add_child(_hud_timer_label)
+	hud.add_child(_hud_timer_panel)
 
 	_hud_meta = _make_label("", 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	hud.add_child(_hud_meta)
@@ -1317,6 +1362,9 @@ func _update_hud() -> void:
 	_set_resource_value("keys", int(GameState.data.get("keys", 0)))
 	var difficulty_text := "INFINITO Lv.%s" % infinite_level if is_infinite else String(phase_config["difficulty"]).to_upper()
 	var combo_text := "   COMBO x%s" % combo if combo >= 2 else ""
+	if _hud_timer_panel and _hud_timer_label:
+		_hud_timer_panel.visible = is_infinite
+		_hud_timer_label.text = "TEMPO %s" % _format_time(floori(infinite_elapsed))
 	if is_infinite:
 		_hud_meta.text = "TEMPO %s   %s%s" % [_format_time(floori(infinite_elapsed)), difficulty_text, combo_text]
 	else:
@@ -1524,7 +1572,9 @@ func _base_damage() -> int:
 	var temporary_damage := int(current_upgrades.get("damage", 0)) * 0.15
 	var skin_bonus := _skin_damage_bonus()
 	var arena_bonus := int(run_shop_upgrades.get("atk", 0)) * 0.12
-	return max(1, roundi(base_damage * (1.0 + skin_bonus + arena_bonus + temporary_damage)))
+	var secret_bonus := int(current_upgrades.get("royalBreaker", 0)) * 0.12 + int(current_upgrades.get("bossHunter", 0)) * 0.06
+	var combo_bonus: float = minf(0.32, float(combo) * 0.012 * float(int(current_upgrades.get("comboOverdrive", 0))))
+	return max(1, roundi(base_damage * (1.0 + skin_bonus + arena_bonus + temporary_damage + secret_bonus + combo_bonus)))
 
 
 func _target_ball_speed() -> float:
@@ -1538,13 +1588,14 @@ func _speed_multiplier() -> float:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var base_speed := 100.0 * pow(1.08, int(upgrades.get("baseSpeed", 0)))
 	var temporary_speed := int(current_upgrades.get("speed", 0)) * 0.20
-	return 1.0 + base_speed / 1200.0 + _skin_speed_bonus() + temporary_speed + int(current_upgrades.get("ricochet", 0)) * 0.025
+	return 1.0 + base_speed / 1200.0 + _skin_speed_bonus() + temporary_speed + int(current_upgrades.get("ricochet", 0)) * 0.025 + int(current_upgrades.get("bounce", 0)) * 0.02
 
 
 func _gold_multiplier() -> float:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var base := 1.0 + int(upgrades.get("coinMultiplier", 0)) * 0.15
-	var temporary_gold := int(current_upgrades.get("coinBoost", 0)) * 0.5
+	var temporary_gold := int(current_upgrades.get("coinBoost", 0)) * 0.5 + int(current_upgrades.get("magnetCoins", 0)) * 0.25 + int(current_upgrades.get("secretMagnet", 0)) * 0.18
+	temporary_gold += min(0.26, float(combo) * 0.01 * float(int(current_upgrades.get("comboOverdrive", 0))))
 	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.12 + _skin_coin_bonus() + temporary_gold)
 
 
@@ -1557,7 +1608,7 @@ func _xp_multiplier() -> float:
 
 func _crit_chance() -> float:
 	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	return 5.0 + int(upgrades.get("critChance", 0)) * 2.0 + int(current_upgrades.get("critical", 0)) * 5.0 + _skin_crit_bonus()
+	return 5.0 + int(upgrades.get("critChance", 0)) * 2.0 + int(current_upgrades.get("critical", 0)) * 5.0 + int(current_upgrades.get("criticalOverload", 0)) * 2.0 + _skin_crit_bonus()
 
 
 func _crit_damage() -> float:
@@ -1569,11 +1620,12 @@ func _perfect_diamond_bonus() -> float:
 	var permanent_upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
 	var temporary_bonus := int(current_upgrades.get("perfectChance", 0)) * 0.01
 	var permanent_bonus := int(permanent_upgrades.get("perfectChance", 0)) * 0.01
+	var instinct_bonus := int(current_upgrades.get("diamondInstinct", 0)) * 0.018
 	if skin_id == "neon_blue":
-		return 0.005 + temporary_bonus + permanent_bonus
+		return 0.005 + temporary_bonus + permanent_bonus + instinct_bonus
 	if skin_id in ["star_rare", "planet", "crystal", "alien_rare", "purple_crystal", "cosmic_eye", "astral_eye"]:
-		return 0.02 + temporary_bonus + permanent_bonus
-	return temporary_bonus + permanent_bonus
+		return 0.02 + temporary_bonus + permanent_bonus + instinct_bonus
+	return temporary_bonus + permanent_bonus + instinct_bonus
 
 
 func _skin_damage_bonus() -> float:
@@ -1626,12 +1678,19 @@ func _try_apply_skin_effect(ring_index: int, trigger: String) -> int:
 
 func _try_apply_upgrade_effects(ring_index: int, trigger: String, base_damage_value: int) -> int:
 	var bonus_damage := 0
-	if int(current_upgrades.get("frost", 0)) > 0 and randf() < 0.22 + int(current_upgrades.get("frost", 0)) * 0.04:
+	var frost_level := int(current_upgrades.get("frost", 0))
+	if frost_level > 0 and _can_trigger_upgrade_effect("frost", 0.18 + frost_level * 0.035, max(760, 1650 - frost_level * 120)):
+		_mark_upgrade_effect_triggered("frost", max(760, 1650 - frost_level * 120))
 		bonus_damage += _apply_effect_to_ring(ring_index, "freeze", 0.48, Color("#9be8ff"), "upgrade")
 	if int(current_upgrades.get("timeFreeze", 0)) > 0 or int(current_upgrades.get("chronoBreak", 0)) > 0:
 		var time_level := int(current_upgrades.get("timeFreeze", 0)) + int(current_upgrades.get("chronoBreak", 0))
-		if randf() < 0.08 + time_level * 0.035:
+		if _can_trigger_upgrade_effect("timeFreeze", 0.08 + time_level * 0.035, max(1200, 2800 - time_level * 220)):
+			_mark_upgrade_effect_triggered("timeFreeze", max(1200, 2800 - time_level * 220))
 			_apply_time_freeze(1300 + time_level * 240)
+	var slow_field_level := int(current_upgrades.get("slowField", 0))
+	if slow_field_level > 0 and trigger in ["hit", "break"] and _can_trigger_upgrade_effect("slowField", 0.09 + slow_field_level * 0.025, max(1050, 2500 - slow_field_level * 160)):
+		_mark_upgrade_effect_triggered("slowField", max(1050, 2500 - slow_field_level * 160))
+		_apply_time_freeze(820 + slow_field_level * 180)
 	if int(current_upgrades.get("burn", 0)) > 0:
 		bonus_damage += floori(max(1, base_damage_value) * (0.26 + int(current_upgrades.get("burn", 0)) * 0.08))
 		_apply_effect_to_ring(ring_index, "burn", 0.22, Color("#ff8800"), "upgrade")
@@ -1642,12 +1701,25 @@ func _try_apply_upgrade_effects(ring_index: int, trigger: String, base_damage_va
 	if repulse_level > 0 and trigger == "hit" and _can_trigger_upgrade_effect("ringRepulse", 0.10 + repulse_level * 0.035, max(720, 1500 - repulse_level * 110)):
 		_mark_upgrade_effect_triggered("ringRepulse")
 		_apply_effect_to_ring(ring_index, "repulse", 8.0 + repulse_level * 2.5, Color("#c084fc"), "upgrade")
-	if int(current_upgrades.get("chainLightning", 0)) > 0 and randf() < 0.16 + int(current_upgrades.get("chainLightning", 0)) * 0.035:
+	if int(current_upgrades.get("chainLightning", 0)) > 0 and _can_trigger_upgrade_effect("chainLightning", 0.16 + int(current_upgrades.get("chainLightning", 0)) * 0.035, 720):
+		_mark_upgrade_effect_triggered("chainLightning", 720)
 		_apply_effect_to_ring(ring_index, "chain", 0.30, Color("#38bdf8"), "upgrade")
 	if int(current_upgrades.get("shockwave", 0)) > 0 or int(current_upgrades.get("voidPulse", 0)) > 0:
 		var area_level := int(current_upgrades.get("shockwave", 0)) + int(current_upgrades.get("voidPulse", 0))
-		if trigger == "break" or randf() < 0.08 + area_level * 0.03:
+		if trigger == "break" or _can_trigger_upgrade_effect("shockwave", 0.08 + area_level * 0.03, 740):
+			_mark_upgrade_effect_triggered("shockwave", 740)
 			bonus_damage += _apply_effect_to_ring(ring_index, "area", 0.30 + area_level * 0.04, Color("#7c3aed"), "upgrade")
+	if int(current_upgrades.get("bomb", 0)) > 0:
+		var bomb_level := int(current_upgrades.get("bomb", 0))
+		if trigger == "break" or _can_trigger_upgrade_effect("bomb", 0.08 + bomb_level * 0.025, max(900, 1900 - bomb_level * 120)):
+			_mark_upgrade_effect_triggered("bomb", max(900, 1900 - bomb_level * 120))
+			bonus_damage += _apply_effect_to_ring(ring_index, "area", 0.38 + bomb_level * 0.08, Color("#ffcc33"), "upgrade")
+	if int(current_upgrades.get("multihit", 0)) > 0:
+		var multi_level := int(current_upgrades.get("multihit", 0))
+		if _can_trigger_upgrade_effect("multihit", 0.10 + multi_level * 0.035, max(780, 1600 - multi_level * 140)):
+			_mark_upgrade_effect_triggered("multihit", max(780, 1600 - multi_level * 140))
+			bonus_damage += max(1, floori(float(base_damage_value) * (0.28 + multi_level * 0.12)))
+			bonus_damage += _damage_neighbor_ring(ring_index, max(1, floori(float(base_damage_value) * 0.24)), Color("#ffffff"))
 	if int(current_upgrades.get("laserCut", 0)) > 0 or int(current_upgrades.get("laser", 0)) > 0:
 		var laser_level := int(current_upgrades.get("laserCut", 0)) + int(current_upgrades.get("laser", 0))
 		if randf() < 0.10 + laser_level * 0.025:
@@ -1950,7 +2022,7 @@ func _open_level_up() -> void:
 func _get_safe_upgrade_options(exclude_ids: Array[String] = [], allow_repeats := true) -> Array[Dictionary]:
 	GameState.refresh_unlocks(false)
 	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
-	var pool: Array = MainPortData.released_run_upgrades()
+	var pool: Array = MainPortData.run_upgrades()
 	var filtered: Array[Dictionary] = []
 	var fallback: Array[Dictionary] = []
 	for upgrade in pool:
@@ -1979,7 +2051,7 @@ func _is_run_upgrade_available(upgrade: Dictionary, unlocked: Array) -> bool:
 	var id := String(upgrade.get("id", ""))
 	if id.is_empty():
 		return false
-	if not MainPortData.is_released_run_upgrade(id):
+	if not MainPortData.is_run_upgrade_defined(id):
 		return false
 	if int(upgrade.get("maxLevel", 0)) <= 0:
 		return false
