@@ -447,7 +447,7 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
@@ -467,4 +467,7 @@ func _fill(control: Control) -> void:
 
 
 func _go_back() -> void:
-	get_tree().change_scene_to_file(MENU_SCENE)
+	if has_node("/root/NavigationManager"):
+		NavigationManager.go_back(MENU_SCENE)
+	else:
+		get_tree().change_scene_to_file(MENU_SCENE)

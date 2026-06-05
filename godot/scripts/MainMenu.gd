@@ -394,11 +394,16 @@ func _build_more_modal() -> void:
 	header.add_child(title)
 
 	var close := Button.new()
+	close.custom_minimum_size = Vector2(96, 38)
 	close.focus_mode = Control.FOCUS_NONE
 	_clear_button_styles(close)
 	close.text = _menu_label("close")
-	close.add_theme_color_override("font_color", Color("#ffffffaa"))
+	close.add_theme_color_override("font_color", Color("#001018"))
+	close.add_theme_color_override("font_hover_color", Color("#001018"))
+	close.add_theme_color_override("font_pressed_color", Color("#001018"))
 	close.add_theme_font_override("font", _bold_font)
+	close.add_theme_font_size_override("font_size", 13)
+	_apply_button_style(close, _make_style("#00f0ff", 12, "#ffffff33", 1, "#00f0ff99", 9))
 	close.pressed.connect(_hide_more_modal)
 	header.add_child(close)
 
@@ -1005,7 +1010,10 @@ func _open_scene(scene_path: String) -> void:
 	if _more_overlay != null:
 		_more_overlay.visible = false
 	_play_click()
-	get_tree().change_scene_to_file(scene_path)
+	if has_node("/root/NavigationManager"):
+		NavigationManager.navigate_to(scene_path)
+	else:
+		get_tree().change_scene_to_file(scene_path)
 
 
 func _play_click() -> void:

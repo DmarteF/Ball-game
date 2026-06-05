@@ -1262,32 +1262,33 @@ func upgrade_with_diamonds(id: String) -> Dictionary:
 func apply_reward(reward: Dictionary, save_after := false) -> String:
 	var reward_type := String(reward.get("type", ""))
 	var amount := int(reward.get("amount", 1))
+	var text := "Reward"
 	match reward_type:
 		"coins":
 			data["coins"] = max(0, int(data.get("coins", 0)) + amount)
-			return "+%s coins" % amount
+			text = "+%s coins" % amount
 		"diamonds", "gems":
 			data["diamonds"] = max(0, int(data.get("diamonds", 0)) + amount)
 			_increment_stat("diamondsFound", amount, false)
-			return "+%s diamonds" % amount
+			text = "+%s diamonds" % amount
 		"keys":
 			data["keys"] = max(0, int(data.get("keys", 0)) + amount)
-			return "+%s keys" % amount
+			text = "+%s keys" % amount
 		"legendaryKeys", "legendary_keys":
 			data["legendary_keys"] = max(0, int(data.get("legendary_keys", 0)) + amount)
-			return "+%s legendary keys" % amount
+			text = "+%s legendary keys" % amount
 		"xp":
 			add_profile_xp(amount)
-			return "+%s XP" % amount
+			text = "+%s XP" % amount
 		"profileXp", "profile_xp":
 			add_profile_xp(amount)
-			return "+%s profile XP" % amount
+			text = "+%s profile XP" % amount
 		"fragments":
 			var skin_id := String(reward.get("skin_id", reward.get("skinId", "generic")))
 			var fragments: Dictionary = data.get("skin_fragments", {})
 			fragments[skin_id] = int(fragments.get(skin_id, 0)) + amount
 			data["skin_fragments"] = fragments
-			return "+%s fragments" % amount
+			text = "+%s fragments" % amount
 		"skin":
 			var skin_id := String(reward.get("skin_id", reward.get("skinId", "")))
 			if Array(data.get("unlocked_skins", [])).has(skin_id):
@@ -1298,24 +1299,26 @@ func apply_reward(reward: Dictionary, save_after := false) -> String:
 				reward["type"] = "diamonds"
 				reward["amount"] = compensation
 				reward["duplicate_skin"] = true
-				return "Duplicate skin converted to +%s diamonds" % compensation
-			unlock_skin(skin_id)
-			reward["new_skin"] = true
-			reward["rarity"] = _skin_rarity_from_id(skin_id)
-			return "Skin unlocked"
+				text = "Duplicate skin converted to +%s diamonds" % compensation
+			else:
+				unlock_skin(skin_id)
+				reward["new_skin"] = true
+				reward["rarity"] = _skin_rarity_from_id(skin_id)
+				text = "Skin unlocked"
 		"upgrade", "run_upgrade", "upgrade_unlock":
 			var upgrade_id := String(reward.get("upgrade_id", reward.get("upgradeId", reward.get("id", ""))))
 			if unlock_upgrade(upgrade_id):
 				reward["new_upgrade"] = true
-				return "Upgrade unlocked"
-			return "Upgrade already unlocked"
+				text = "Upgrade unlocked"
+			else:
+				text = "Upgrade already unlocked"
 		"chest":
 			var chest_type := String(reward.get("chest_type", reward.get("chestType", "common")))
 			add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, amount)
-			return "+%s %s chest" % [amount, chest_type]
+			text = "+%s %s chest" % [amount, chest_type]
 	if save_after:
 		save_game()
-	return "Reward"
+	return text
 
 
 func add_inventory_item(id: String, item_type: String, label: String, icon: String, amount: int) -> void:
@@ -1324,6 +1327,7 @@ func add_inventory_item(id: String, item_type: String, label: String, icon: Stri
 	item["amount"] = int(item.get("amount", 0)) + amount
 	inventory[id] = item
 	data["inventory"] = inventory
+	save_game()
 
 
 func unlock_upgrade(id: String) -> bool:

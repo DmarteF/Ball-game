@@ -673,7 +673,7 @@ func _make_modal_root() -> Control:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 	margin.add_child(scroll)
 	var body := VBoxContainer.new()
@@ -800,6 +800,10 @@ func _make_solid_button(text: String, bg: String, color: String, width: float, h
 	button.clip_text = true
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.add_theme_color_override("font_color", Color(color))
+	button.add_theme_color_override("font_hover_color", Color(color))
+	button.add_theme_color_override("font_pressed_color", Color(color))
+	button.add_theme_color_override("font_focus_color", Color(color))
+	button.add_theme_color_override("font_disabled_color", Color("#ffffff88"))
 	_apply_button_style(button, _make_style(bg, 10, "#ffffff22", 1))
 	return button
 
@@ -1017,14 +1021,17 @@ func _t(key: String) -> String:
 
 
 func _go_back() -> void:
-	get_tree().change_scene_to_file(MENU_SCENE)
+	if has_node("/root/NavigationManager"):
+		NavigationManager.go_back(MENU_SCENE)
+	else:
+		get_tree().change_scene_to_file(MENU_SCENE)
 
 
 func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 

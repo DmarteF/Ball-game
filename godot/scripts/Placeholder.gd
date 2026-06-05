@@ -49,7 +49,10 @@ func _build_content() -> void:
 
 
 func _go_back() -> void:
-	get_tree().change_scene_to_file(MENU_SCENE)
+	if has_node("/root/NavigationManager"):
+		NavigationManager.go_back(MENU_SCENE)
+	else:
+		get_tree().change_scene_to_file(MENU_SCENE)
 
 
 func _make_background_gradient() -> GradientTexture2D:

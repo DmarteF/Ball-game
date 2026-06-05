@@ -428,7 +428,11 @@ func _make_upgrade_button(text: String, color: String, disabled: bool, action: C
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 10 if _is_narrow_screen() else 11)
-	button.add_theme_color_override("font_color", Color("#ffffff"))
+	button.add_theme_color_override("font_color", Color("#001018") if not disabled else Color("#ffffffaa"))
+	button.add_theme_color_override("font_hover_color", Color("#001018") if not disabled else Color("#ffffffaa"))
+	button.add_theme_color_override("font_pressed_color", Color("#001018") if not disabled else Color("#ffffffaa"))
+	button.add_theme_color_override("font_focus_color", Color("#001018") if not disabled else Color("#ffffffaa"))
+	button.add_theme_color_override("font_disabled_color", Color("#ffffff88"))
 	button.modulate.a = 0.55 if disabled else 1.0
 	_apply_button_style(button, _make_style(color if not disabled else "#555555", 12, "#00000000", 0, color + "88" if not disabled else "#00000000", 8))
 	if action.is_valid() and not disabled:
@@ -565,7 +569,7 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
@@ -632,4 +636,7 @@ func _fill(control: Control) -> void:
 
 
 func _go_back() -> void:
-	get_tree().change_scene_to_file(MENU_SCENE)
+	if has_node("/root/NavigationManager"):
+		NavigationManager.go_back(MENU_SCENE)
+	else:
+		get_tree().change_scene_to_file(MENU_SCENE)

@@ -1542,7 +1542,7 @@ func _build_pause_overlay() -> void:
 
 func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
-	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(326, 438))
+	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(346, 540))
 	card.add_theme_constant_override("separation", 8)
 	card.add_child(_make_label(_txt("Choose an upgrade for your arena.", "Escolha uma melhoria para sua arena.", "Elige una mejora para tu arena.", "自分のアリーナ強化を選択。", "为你的竞技场选择升级。"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
@@ -1556,7 +1556,7 @@ func _build_level_up_overlay() -> void:
 
 func _build_result_overlay() -> void:
 	_result_overlay = _make_modal()
-	var card := _make_modal_content(_result_overlay, _txt("RESULT", "RESULTADO", "RESULTADO", "結果", "结果"), Vector2(334, 420))
+	var card := _make_modal_content(_result_overlay, _txt("RESULT", "RESULTADO", "RESULTADO", "結果", "结果"), Vector2(346, 540))
 	_result_title = _make_label("", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	card.add_child(_result_title)
 	_result_details = VBoxContainer.new()
@@ -1566,8 +1566,8 @@ func _build_result_overlay() -> void:
 	card.add_child(_result_double_button)
 	_result_retry_button = _make_modal_button(_txt("PLAY AGAIN", "JOGAR NOVAMENTE", "JUGAR DE NUEVO", "もう一度プレイ", "再玩一次"), _retry_or_return)
 	card.add_child(_result_retry_button)
-	card.add_child(_make_modal_button(_tr("back").to_upper(), _go_to_mode_menu))
-	card.add_child(_make_modal_button("MENU", _go_to_menu))
+	card.add_child(_make_modal_button(_txt("BACK TO MODE", "VOLTAR AO MODO", "VOLVER AL MODO", "モードへ戻る", "返回模式"), _go_to_mode_menu))
+	card.add_child(_make_modal_button(_txt("BACK TO MENU", "VOLTAR AO MENU", "VOLVER AL MENU", "メニューへ戻る", "返回菜单"), _go_to_menu))
 	add_child(_result_overlay)
 
 
@@ -1854,15 +1854,15 @@ func _make_modal() -> PanelContainer:
 func _make_modal_content(overlay: Control, title: String, panel_size: Vector2) -> VBoxContainer:
 	var center := CenterContainer.new()
 	_fill(center)
-	center.offset_left = 12.0
-	center.offset_top = 24.0
-	center.offset_right = -12.0
-	center.offset_bottom = -24.0
+	center.offset_left = 8.0
+	center.offset_top = 10.0
+	center.offset_right = -8.0
+	center.offset_bottom = -10.0
 	var panel := PanelContainer.new()
 	var viewport := get_viewport_rect().size
 	var safe_size := Vector2(
-		min(panel_size.x, max(280.0, viewport.x - 28.0)),
-		min(panel_size.y, max(250.0, viewport.y - 88.0))
+		min(panel_size.x, max(286.0, viewport.x - 18.0)),
+		min(panel_size.y, max(270.0, viewport.y - 36.0))
 	)
 	panel.custom_minimum_size = safe_size
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -1870,10 +1870,10 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2) -
 	panel.add_theme_stylebox_override("panel", _make_style("#16003bdd", 18, "#00f0ff66", 2, "#00f0ff55", 18))
 	center.add_child(panel)
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_top", 18)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_bottom", 18)
+	margin.add_theme_constant_override("margin_left", 14 if panel_size.y > 420.0 else 20)
+	margin.add_theme_constant_override("margin_top", 14 if panel_size.y > 420.0 else 18)
+	margin.add_theme_constant_override("margin_right", 14 if panel_size.y > 420.0 else 20)
+	margin.add_theme_constant_override("margin_bottom", 14 if panel_size.y > 420.0 else 18)
 	panel.add_child(margin)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1881,15 +1881,15 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2) -
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 	margin.add_child(scroll)
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_theme_constant_override("separation", 10)
+	content.add_theme_constant_override("separation", 8 if panel_size.y > 420.0 else 10)
 	scroll.add_child(content)
-	content.add_child(_make_label(title, 22, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	content.add_child(_make_label(title, 22 if panel_size.y > 420.0 else 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	overlay.add_child(center)
 	return content
 
@@ -1912,6 +1912,9 @@ func _make_button(text: String, width: int, height: int) -> Button:
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 14)
 	button.add_theme_color_override("font_color", Color("#ffffff"))
+	button.add_theme_color_override("font_hover_color", Color("#ffffff"))
+	button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
+	button.add_theme_color_override("font_focus_color", Color("#ffffff"))
 	button.add_theme_color_override("font_disabled_color", Color("#ffffff66"))
 	_apply_button_style(button, _make_style("#06162add", 13, "#00f0ffaa", 2, "#00f0ff66", 8))
 	return button

@@ -300,7 +300,7 @@ func _make_filters(kind: String) -> VBoxContainer:
 	scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroller.follow_focus = true
-	scroller.scroll_deadzone = 4
+	scroller.scroll_deadzone = 2
 	scroller.mouse_filter = Control.MOUSE_FILTER_STOP
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -406,9 +406,9 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 				dragged = false
 			elif _is_skin_tap_valid(press_pos, event.position, press_msec, start_scroll, dragged):
 				_show_skin_details(skin)
-		elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and card.get_global_mouse_position().distance_to(press_pos) > 14.0:
+		elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and card.get_global_mouse_position().distance_to(press_pos) > 4.0:
 			dragged = true
-		elif event is InputEventScreenDrag and event.position.distance_to(press_pos) > 8.0:
+		elif event is InputEventScreenDrag and event.position.distance_to(press_pos) > 3.0:
 			dragged = true
 	)
 	var margin := MarginContainer.new()
@@ -918,7 +918,7 @@ func _show_skin_details(skin: Dictionary) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 	margin.add_child(scroll)
 	var column := VBoxContainer.new()
@@ -1195,25 +1195,28 @@ func _fill(control: Control) -> void:
 
 
 func _go_back() -> void:
-	get_tree().change_scene_to_file(MENU_SCENE)
+	if has_node("/root/NavigationManager"):
+		NavigationManager.go_back(MENU_SCENE)
+	else:
+		get_tree().change_scene_to_file(MENU_SCENE)
 
 
 func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 14
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 func _is_skin_tap_valid(start_pos: Vector2, end_pos: Vector2, start_msec: int, start_scroll: int, dragged: bool) -> bool:
 	if dragged:
 		return false
-	if start_pos.distance_to(end_pos) > 10.0:
+	if start_pos.distance_to(end_pos) > 5.0:
 		return false
-	if Time.get_ticks_msec() - start_msec > 650:
+	if Time.get_ticks_msec() - start_msec > 320:
 		return false
-	if _skin_scroll and abs(_skin_scroll.scroll_vertical - start_scroll) > 3:
+	if _skin_scroll and abs(_skin_scroll.scroll_vertical - start_scroll) > 1:
 		return false
 	return true
 

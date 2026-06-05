@@ -25,6 +25,7 @@ UpgradeManager="*res://scripts/UpgradeManager.gd"
 AudioManager="*res://scripts/AudioManager.gd"
 AdManager="*res://scripts/AdManager.gd"
 LocalizationManager="*res://scripts/LocalizationManager.gd"
+NavigationManager="*res://scripts/NavigationManager.gd"
 
 [display]
 

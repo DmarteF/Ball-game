@@ -129,6 +129,23 @@ const TEXT := {
 		"ad_spin_desc": "Prepared rewarded-ad flow. Uses a mock reward for now.",
 		"missions_reward": "Reward",
 		"progress": "Progress",
+		"date": "Date",
+		"difficulty": "Difficulty",
+		"seed": "Seed",
+		"best_score": "Best Score",
+		"reward": "Reward",
+		"time_until_reset": "Time until reset",
+		"daily_challenge": "Daily Challenge",
+		"today_challenge_status": "Challenge Status",
+		"double_reward": "Double Reward",
+		"double_reward_desc": "Watch a mock ad to claim today's reward doubled.",
+		"ad_cancelled": "Ad cancelled",
+		"missions_empty_desc": "Daily missions refresh automatically and will appear here.",
+		"event_empty_desc": "Weekly events and daily challenges will appear here.",
+		"daily_available": "Available today",
+		"daily_claimed": "Already claimed",
+		"view_rewards": "View Rewards",
+		"claim_all": "Claim All",
 	},
 	"pt": {
 		"back": "Voltar",
@@ -191,6 +208,23 @@ const TEXT := {
 		"ad_spin_desc": "Fluxo preparado de anúncio recompensado. Usa recompensa mockada por enquanto.",
 		"missions_reward": "Recompensa",
 		"progress": "Progresso",
+		"date": "Data",
+		"difficulty": "Dificuldade",
+		"seed": "Seed",
+		"best_score": "Melhor pontuação",
+		"reward": "Recompensa",
+		"time_until_reset": "Tempo até resetar",
+		"daily_challenge": "Desafio Diário",
+		"today_challenge_status": "Status do desafio",
+		"double_reward": "Dobrar recompensa",
+		"double_reward_desc": "Assista um anúncio de teste para coletar a recompensa diária em dobro.",
+		"ad_cancelled": "Anúncio cancelado",
+		"missions_empty_desc": "Missões diárias atualizam automaticamente e aparecerão aqui.",
+		"event_empty_desc": "Eventos semanais e desafios diários aparecerão aqui.",
+		"daily_available": "Disponível hoje",
+		"daily_claimed": "Já coletada",
+		"view_rewards": "Ver prêmios",
+		"claim_all": "Coletar tudo",
 	},
 	"es": {
 		"back": "Volver", "play": "Jugar", "upgrades": "Mejoras", "skins": "Skins", "shop": "Tienda", "inventory": "Inventario", "missions": "Misiones", "event": "Evento", "wheel": "Ruleta", "daily_reward": "Recompensa diaria", "boss": "Boss", "league": "Liga Neon", "achievements": "Logros", "settings": "Configuración", "profile": "Perfil",
@@ -198,7 +232,7 @@ const TEXT := {
 		"buy": "Comprar", "open": "Abrir", "claim": "Cobrar", "done": "Completado", "used": "Usado", "watch_ad": "Ver anuncio", "free": "Gratis", "spin": "Girar", "go": "Ir", "wait": "Esperar", "continue": "Continuar", "unavailable": "No disponible", "insufficient": "Recursos insuficientes",
 		"chests": "Cofres", "diamonds": "Diamantes", "keys": "Llaves", "rewards": "Recompensas", "free_chest": "Cofre gratis", "inventory_empty": "Inventario vacío", "inventory_empty_desc": "Los cofres, llaves y recompensas guardadas aparecerán aquí.", "no_chests": "No hay cofres guardados",
 		"stored_chests_desc": "Los cofres comprados o ganados aparecerán en el Inventario.", "stored_reward": "Recompensa guardada. Ábrela cuando quieras.", "stored_item": "Objeto guardado.", "reward_obtained": "Recompensa obtenida", "achievement_unlocked": "Logro desbloqueado", "claim_your_reward": "Cobra tu recompensa",
-		"free_spin": "Giro gratis", "mock_ad_spin": "Giro con anuncio", "spin_desc": "Gira una vez al día para ganar monedas, diamantes, llaves o cofres.", "ad_spin_desc": "Flujo de anuncio recompensado preparado. Usa recompensa simulada por ahora.", "missions_reward": "Recompensa", "progress": "Progreso",
+		"free_spin": "Giro gratis", "mock_ad_spin": "Giro con anuncio", "spin_desc": "Gira una vez al día para ganar monedas, diamantes, llaves o cofres.", "ad_spin_desc": "Flujo de anuncio recompensado preparado. Usa recompensa simulada por ahora.", "missions_reward": "Recompensa", "progress": "Progreso", "date": "Fecha", "difficulty": "Dificultad", "seed": "Seed", "best_score": "Mejor puntuación", "reward": "Recompensa", "time_until_reset": "Tiempo hasta reinicio", "daily_challenge": "Desafío diario", "today_challenge_status": "Estado del desafío", "double_reward": "Duplicar recompensa", "double_reward_desc": "Mira un anuncio simulado para cobrar la recompensa diaria duplicada.", "ad_cancelled": "Anuncio cancelado", "missions_empty_desc": "Las misiones diarias se actualizan automáticamente y aparecerán aquí.", "event_empty_desc": "Los eventos semanales y desafíos diarios aparecerán aquí.", "daily_available": "Disponible hoy", "daily_claimed": "Ya cobrada", "view_rewards": "Ver premios", "claim_all": "Cobrar todo",
 	},
 	"ja": {
 		"back": "戻る", "play": "プレイ", "upgrades": "強化", "skins": "スキン", "shop": "ショップ", "inventory": "インベントリ", "missions": "ミッション", "event": "イベント", "wheel": "ルーレット", "daily_reward": "デイリー報酬", "boss": "ボス", "league": "ネオンリーグ", "achievements": "実績", "settings": "設定", "profile": "プロフィール",
@@ -206,7 +240,7 @@ const TEXT := {
 		"buy": "購入", "open": "開く", "claim": "受け取る", "done": "完了", "used": "使用済み", "watch_ad": "広告を見る", "free": "無料", "spin": "回す", "go": "進む", "wait": "待つ", "continue": "続ける", "unavailable": "利用不可", "insufficient": "リソース不足",
 		"chests": "宝箱", "diamonds": "ダイヤ", "keys": "鍵", "rewards": "報酬", "free_chest": "無料宝箱", "inventory_empty": "インベントリは空です", "inventory_empty_desc": "宝箱、鍵、保存した報酬がここに表示されます。", "no_chests": "保存された宝箱はありません",
 		"stored_chests_desc": "購入または獲得した宝箱がインベントリに表示されます。", "stored_reward": "保存された報酬。いつでも開けます。", "stored_item": "保存されたアイテム。", "reward_obtained": "報酬を獲得", "achievement_unlocked": "実績解除", "claim_your_reward": "報酬を受け取る",
-		"free_spin": "無料スピン", "mock_ad_spin": "広告スピン", "spin_desc": "1日1回、コイン、ダイヤ、鍵、宝箱を獲得できます。", "ad_spin_desc": "報酬広告フロー準備済み。現在はモック報酬です。", "missions_reward": "報酬", "progress": "進行",
+		"free_spin": "無料スピン", "mock_ad_spin": "広告スピン", "spin_desc": "1日1回、コイン、ダイヤ、鍵、宝箱を獲得できます。", "ad_spin_desc": "報酬広告フロー準備済み。現在はモック報酬です。", "missions_reward": "報酬", "progress": "進行", "date": "日付", "difficulty": "難易度", "seed": "シード", "best_score": "ベストスコア", "reward": "報酬", "time_until_reset": "リセットまで", "daily_challenge": "デイリーチャレンジ", "today_challenge_status": "チャレンジ状況", "double_reward": "報酬2倍", "double_reward_desc": "モック広告を見て本日の報酬を2倍で受け取ります。", "ad_cancelled": "広告キャンセル", "missions_empty_desc": "デイリーミッションは自動更新され、ここに表示されます。", "event_empty_desc": "週間イベントとデイリーチャレンジがここに表示されます。", "daily_available": "本日利用可能", "daily_claimed": "受け取り済み", "view_rewards": "報酬を見る", "claim_all": "すべて受け取る",
 	},
 	"zh": {
 		"back": "返回", "play": "开始", "upgrades": "升级", "skins": "皮肤", "shop": "商店", "inventory": "背包", "missions": "任务", "event": "活动", "wheel": "转盘", "daily_reward": "每日奖励", "boss": "Boss", "league": "霓虹联赛", "achievements": "成就", "settings": "设置", "profile": "资料",
@@ -214,7 +248,7 @@ const TEXT := {
 		"buy": "购买", "open": "打开", "claim": "领取", "done": "完成", "used": "已使用", "watch_ad": "观看广告", "free": "免费", "spin": "旋转", "go": "前往", "wait": "等待", "continue": "继续", "unavailable": "不可用", "insufficient": "资源不足",
 		"chests": "宝箱", "diamonds": "钻石", "keys": "钥匙", "rewards": "奖励", "free_chest": "免费宝箱", "inventory_empty": "背包为空", "inventory_empty_desc": "宝箱、钥匙和保存的奖励会显示在这里。", "no_chests": "没有保存的宝箱",
 		"stored_chests_desc": "购买或获得的宝箱会显示在背包中。", "stored_reward": "已保存奖励，可随时打开。", "stored_item": "已保存物品。", "reward_obtained": "获得奖励", "achievement_unlocked": "成就解锁", "claim_your_reward": "领取奖励",
-		"free_spin": "免费旋转", "mock_ad_spin": "广告旋转", "spin_desc": "每天旋转一次，获得金币、钻石、钥匙或宝箱。", "ad_spin_desc": "激励广告流程已准备好，目前使用模拟奖励。", "missions_reward": "奖励", "progress": "进度",
+		"free_spin": "免费旋转", "mock_ad_spin": "广告旋转", "spin_desc": "每天旋转一次，获得金币、钻石、钥匙或宝箱。", "ad_spin_desc": "激励广告流程已准备好，目前使用模拟奖励。", "missions_reward": "奖励", "progress": "进度", "date": "日期", "difficulty": "难度", "seed": "种子", "best_score": "最佳分数", "reward": "奖励", "time_until_reset": "重置倒计时", "daily_challenge": "每日挑战", "today_challenge_status": "挑战状态", "double_reward": "双倍奖励", "double_reward_desc": "观看模拟广告领取双倍每日奖励。", "ad_cancelled": "广告已取消", "missions_empty_desc": "每日任务会自动刷新并显示在这里。", "event_empty_desc": "每周活动和每日挑战会显示在这里。", "daily_available": "今日可用", "daily_claimed": "已领取", "view_rewards": "查看奖励", "claim_all": "全部领取",
 	},
 }
 
@@ -346,9 +380,11 @@ func effect_name(value: String) -> String:
 
 func achievement_name(achievement: Dictionary) -> String:
 	var en := String(achievement.get("name", ""))
+	if en.strip_edges().is_empty():
+		en = String(achievement.get("id", "Achievement")).capitalize()
 	var pt := String(achievement.get("name_pt", en))
 	if current_language() == "pt":
-		return pt
+		return pt if not pt.strip_edges().is_empty() else en
 	if current_language() == "es":
 		return _translate_achievement_phrase(en, true, "es")
 	if current_language() == "ja":
@@ -360,9 +396,11 @@ func achievement_name(achievement: Dictionary) -> String:
 
 func achievement_desc(achievement: Dictionary) -> String:
 	var en := String(achievement.get("desc", ""))
+	if en.strip_edges().is_empty():
+		en = "Complete this achievement."
 	var pt := String(achievement.get("desc_pt", en))
 	if current_language() == "pt":
-		return pt
+		return pt if not pt.strip_edges().is_empty() else en
 	if current_language() == "es":
 		return _translate_achievement_phrase(en, false, "es")
 	if current_language() == "ja":

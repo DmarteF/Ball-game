@@ -58,7 +58,7 @@ const SCREEN_DATA := {
 		"icon": "missions",
 		"accent": "#ff8800",
 		"empty_title": "Nenhuma missão disponível",
-		"empty_desc": "",
+		"empty_desc": "missions_empty_desc",
 		"cards": [],
 	},
 	"event": {
@@ -66,7 +66,7 @@ const SCREEN_DATA := {
 		"icon": "event",
 		"accent": "#00ff88",
 		"empty_title": "Nenhum evento ativo",
-		"empty_desc": "",
+		"empty_desc": "event_empty_desc",
 		"cards": [],
 	},
 	"wheel": {
@@ -273,7 +273,7 @@ func _populate_content(data: Dictionary) -> void:
 	elif screen_id == "wheel":
 		_populate_wheel(data)
 	elif data.get("cards", []).is_empty() and data.has("empty_title"):
-		_content.add_child(_make_empty_state(_dynamic_empty_title(data), String(data["empty_desc"]), String(data["icon"])))
+		_content.add_child(_make_empty_state(_dynamic_empty_title(data), _dynamic_empty_desc(data), String(data["icon"])))
 	else:
 		for card_data in data["cards"]:
 			_content.add_child(_make_feature_card(card_data))
@@ -341,7 +341,7 @@ func _make_shop_tabs() -> ScrollContainer:
 	scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroller.follow_focus = true
-	scroller.scroll_deadzone = 4
+	scroller.scroll_deadzone = 2
 	scroller.mouse_filter = Control.MOUSE_FILTER_STOP
 	var tabs := HBoxContainer.new()
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -427,14 +427,36 @@ func _dynamic_empty_title(data: Dictionary) -> String:
 	return _phrase(String(data["empty_title"]))
 
 
+func _dynamic_empty_desc(data: Dictionary) -> String:
+	var raw := String(data.get("empty_desc", ""))
+	if raw.is_empty():
+		match screen_id:
+			"missions":
+				return _tr("missions_empty_desc")
+			"event":
+				return _tr("event_empty_desc")
+			"boss":
+				return _txt("Boss battles refresh with the internal clock.", "Batalhas de Boss atualizam com o relógio interno.", "Las batallas de Boss se actualizan con el reloj interno.", "ボス戦は内部時計で更新されます。", "Boss战斗会根据内部时钟刷新。")
+		return ""
+	if raw.find(" ") == -1:
+		return _tr(raw, raw)
+	return _phrase(raw)
+
+
 func _make_feature_card(data: Dictionary) -> PanelContainer:
 	var tone := String(data.get("tone", "#00f0ff"))
 	var card := _make_card("#ffffff12", tone + "77")
 	var body := _card_body(card, 12)
 
-	var title := _make_label(_phrase(String(data["title"])), 17 if _is_narrow_screen() else 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var title_text := _phrase(String(data.get("title", ""))).strip_edges()
+	if title_text.is_empty():
+		title_text = _tr("unavailable", "Indisponível")
+	var desc_text := _phrase(String(data.get("desc", ""))).strip_edges()
+	if desc_text.is_empty():
+		desc_text = _txt("Information will appear here.", "As informações aparecerão aqui.", "La información aparecerá aquí.", "情報はここに表示されます。", "信息会显示在这里。")
+	var title := _make_label(title_text, 17 if _is_narrow_screen() else 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var desc := _make_label(_phrase(String(data["desc"])), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var desc := _make_label(desc_text, 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var button := _make_action_button(_button_text(String(data.get("button", "view"))), tone)
 	button.disabled = bool(data.get("disabled", false))
@@ -525,6 +547,7 @@ func _populate_daily_reward(data: Dictionary) -> void:
 	for i in range(data["cards"].size()):
 		var card: Dictionary = data["cards"][i].duplicate()
 		card["title"] = _txt("Day %s", "Dia %s", "Día %s", "%s日目", "第%s天") % (i + 1)
+		card["desc"] = _daily_streak_reward_description(i)
 		card["button"] = "claim" if can_claim and i == clampi(streak, 0, 6) else "done" if i < streak else "wait"
 		card["action"] = "daily_claim" if can_claim and i == clampi(streak, 0, 6) else ""
 		_content.add_child(_make_feature_card(card))
@@ -724,6 +747,7 @@ func _boss_level_data() -> Array[Dictionary]:
 func _populate_missions() -> void:
 	GameState._ensure_live_systems()
 	var daily: Dictionary = GameState.data.get("daily_missions", {})
+	var added := 0
 	for mission in daily.get("missions", []):
 		var definition := GameState.get_daily_mission_def(String(mission.get("id", "")))
 		if definition.is_empty():
@@ -740,6 +764,9 @@ func _populate_missions() -> void:
 			"progress": float(progress) / max(1.0, float(target)),
 			"action": "mission:%s" % String(mission.get("id", "")) if progress >= target and not bool(mission.get("claimed", false)) else "",
 		}))
+		added += 1
+	if added == 0:
+		_content.add_child(_make_empty_state(_dynamic_empty_title(SCREEN_DATA["missions"]), _tr("missions_empty_desc"), "missions"))
 
 
 func _populate_achievements() -> void:
@@ -750,7 +777,7 @@ func _populate_achievements() -> void:
 		if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
 			pending_claims += 1
 	_content.add_child(_make_feature_card({
-		"title": _txt("Claim all", "Coletar tudo", "Cobrar todo", "すべて受け取る", "全部领取"),
+		"title": _tr("claim_all"),
 		"desc": (_txt("%s achievement reward(s) ready to claim.", "%s conquista(s) prontas para coletar.", "%s recompensa(s) de logro listas para cobrar.", "%s個の実績報酬を受け取れます。", "%s个成就奖励可领取。") % pending_claims) if pending_claims > 0 else _txt("No pending achievements.", "Nenhuma conquista pendente.", "No hay logros pendientes.", "保留中の実績はありません。", "没有待领取成就。"),
 		"icon": "achievements",
 		"button": "claim" if pending_claims > 0 else "done",
@@ -1006,20 +1033,35 @@ func _phrase(value: String) -> String:
 		"Skins lendárias, diamantes e itens especiais.": return _txt("Legendary skins, diamonds and special items.", "Skins lendárias, diamantes e itens especiais.", "Skins legendarias, diamantes y objetos especiales.", "レジェンドスキン、ダイヤ、特別アイテム。", "传奇皮肤、钻石和特殊物品。")
 		"Pacote pequeno de diamantes": return _txt("Small Diamond Pack", "Pacote pequeno de diamantes", "Paquete pequeño de diamantes", "小ダイヤパック", "小钻石礼包")
 		"Pacote médio de diamantes": return _txt("Medium Diamond Pack", "Pacote médio de diamantes", "Paquete mediano de diamantes", "中ダイヤパック", "中钻石礼包")
+		"Diamantes para baús, skins e ofertas.": return _txt("Diamonds for chests, skins and offers.", "Diamantes para baús, skins e ofertas.", "Diamantes para cofres, skins y ofertas.", "宝箱、スキン、オファー用のダイヤ。", "用于宝箱、皮肤和优惠的钻石。")
+		"Mais valor para evoluir sua coleção.": return _txt("More value to grow your collection.", "Mais valor para evoluir sua coleção.", "Más valor para mejorar tu colección.", "コレクション強化にお得。", "更划算地提升收藏。")
 		"Oferta diária": return _txt("Daily Offer", "Oferta diária", "Oferta diaria", "デイリーオファー", "每日优惠")
+		"Pacote visual diário com diamantes e bônus.": return _txt("Daily visual pack with diamonds and bonuses.", "Pacote visual diário com diamantes e bônus.", "Paquete visual diario con diamantes y bonus.", "ダイヤとボーナス付きデイリーパック。", "每日视觉礼包，包含钻石和加成。")
 		"Diamantes grátis": return _txt("Free Diamonds", "Diamantes grátis", "Diamantes gratis", "無料ダイヤ", "免费钻石")
 		"Recompensa mockada por anúncio.": return _txt("Mock ad reward.", "Recompensa mockada por anúncio.", "Recompensa simulada por anuncio.", "モック広告報酬。", "模拟广告奖励。")
 		"Pacote de chaves": return _txt("Key Pack", "Pacote de chaves", "Paquete de llaves", "鍵パック", "钥匙礼包")
+		"+6 chaves raras para abrir recompensas.": return _txt("+6 rare keys to open rewards.", "+6 chaves raras para abrir recompensas.", "+6 llaves raras para abrir recompensas.", "報酬を開けるレア鍵 +6。", "+6把稀有钥匙用于开启奖励。")
 		"Chaves lendárias": return _txt("Legendary Keys", "Chaves lendárias", "Llaves legendarias", "レジェンド鍵", "传奇钥匙")
+		"+2 chaves lendárias para baús premium.": return _txt("+2 legendary keys for premium chests.", "+2 chaves lendárias para baús premium.", "+2 llaves legendarias para cofres premium.", "プレミアム宝箱用レジェンド鍵 +2。", "+2把传奇钥匙用于高级宝箱。")
 		"Chave grátis": return _txt("Free Key", "Chave grátis", "Llave gratis", "無料鍵", "免费钥匙")
+		"Assista um anúncio mockado para receber diamantes.": return _txt("Watch a mock ad to receive diamonds.", "Assista um anúncio mockado para receber diamantes.", "Mira un anuncio simulado para recibir diamantes.", "モック広告を見てダイヤを受け取る。", "观看模拟广告领取钻石。")
+		"Assista um anúncio mockado para receber moedas.": return _txt("Watch a mock ad to receive coins.", "Assista um anúncio mockado para receber moedas.", "Mira un anuncio simulado para recibir monedas.", "モック広告を見てコインを受け取る。", "观看模拟广告领取金币。")
 		"Moedas grátis": return _txt("Free Coins", "Moedas grátis", "Monedas gratis", "無料コイン", "免费金币")
 		"Baú comum grátis": return _txt("Free Common Chest", "Baú comum grátis", "Cofre común gratis", "無料コモン宝箱", "免费普通宝箱")
+		"Recompensa visual por anúncio.": return _txt("Visual reward from a mock ad.", "Recompensa visual por anúncio.", "Recompensa visual por anuncio.", "広告によるビジュアル報酬。", "通过广告获得的视觉奖励。")
 		"Dobrar offline": return _txt("Double Offline", "Dobrar offline", "Duplicar offline", "オフライン2倍", "离线翻倍")
 		"Preparado para dobrar recompensas AFK.": return _txt("Prepared to double AFK rewards.", "Preparado para dobrar recompensas AFK.", "Preparado para duplicar recompensas AFK.", "AFK報酬2倍用に準備済み。", "已准备离线奖励翻倍。")
+		"Pacote de skins": return _txt("Skin Pack", "Pacote de skins", "Paquete de skins", "スキンパック", "皮肤礼包")
+		"Visual preparado para liberar skins futuras.": return _txt("Visual pack prepared for future skins.", "Visual preparado para liberar skins futuras.", "Visual preparado para liberar skins futuras.", "将来のスキン解放用ビジュアルパック。", "为未来皮肤准备的视觉礼包。")
+		"Pacote de evento": return _txt("Event Pack", "Pacote de evento", "Paquete de evento", "イベントパック", "活动礼包")
+		"Pacote de baús": return _txt("Chest Pack", "Pacote de baús", "Paquete de cofres", "宝箱パック", "宝箱礼包")
+		"Baús variados para recompensas futuras.": return _txt("Mixed chests for future rewards.", "Baús variados para recompensas futuras.", "Cofres variados para recompensas futuras.", "将来の報酬用の各種宝箱。", "用于未来奖励的混合宝箱。")
 	return LocalizationManager.phrase(value) if has_node("/root/LocalizationManager") else value
 
 
 func _button_text(key: String) -> String:
+	if key.strip_edges().is_empty():
+		return _tr("unavailable", "Indisponível")
 	var normalized := key.to_lower().replace(" ", "_")
 	match normalized:
 		"play", "jogar":
@@ -1048,7 +1090,12 @@ func _button_text(key: String) -> String:
 			return _tr("battle", "Batalhar" if _language() == "pt" else "Battle")
 		"free", "grátis", "gratis":
 			return _tr("free", "Grátis" if _language() == "pt" else "Free")
-	return key
+		"ver_prêmios", "ver_premios", "view_rewards":
+			return _tr("view_rewards")
+		"claim_all", "coletar_tudo":
+			return _tr("claim_all")
+	var translated := _phrase(key)
+	return translated if not translated.strip_edges().is_empty() else _tr("unavailable", "Indisponível")
 
 
 func _failure_label(reason: String) -> String:
@@ -1276,6 +1323,25 @@ func _daily_reward_label(reward: Dictionary) -> String:
 	if reward.has("chest_type"):
 		parts.append("%s %s" % [String(reward.get("chest_type", "rare")), _tr("chests")])
 	return ", ".join(parts)
+
+
+func _daily_streak_reward_description(day_index: int) -> String:
+	match day_index:
+		0:
+			return _txt("100 coins", "100 moedas", "100 monedas", "100 コイン", "100 金币")
+		1:
+			return _txt("25 diamonds", "25 diamantes", "25 diamantes", "25 ダイヤ", "25 钻石")
+		2:
+			return _txt("1 key", "1 chave", "1 llave", "鍵 1本", "1 把钥匙")
+		3:
+			return _txt("Common chest", "Baú comum", "Cofre común", "コモン宝箱", "普通宝箱")
+		4:
+			return _txt("Rare chest", "Baú raro", "Cofre raro", "レア宝箱", "稀有宝箱")
+		5:
+			return _txt("75 diamonds", "75 diamantes", "75 diamantes", "75 ダイヤ", "75 钻石")
+		6:
+			return _txt("Epic chest", "Baú épico", "Cofre épico", "エピック宝箱", "史诗宝箱")
+	return _txt("Daily reward", "Recompensa diária", "Recompensa diaria", "デイリー報酬", "每日奖励")
 
 
 func _skin_reward_status(reward: Dictionary) -> String:
@@ -1532,14 +1598,17 @@ func _fill(control: Control) -> void:
 
 
 func _go_back() -> void:
-	get_tree().change_scene_to_file(MENU_SCENE)
+	if has_node("/root/NavigationManager"):
+		NavigationManager.go_back(MENU_SCENE)
+	else:
+		get_tree().change_scene_to_file(MENU_SCENE)
 
 
 func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 

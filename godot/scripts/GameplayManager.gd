@@ -439,7 +439,7 @@ func _solid_ring_indexes_for_phase(count: int) -> Dictionary:
 	var stride := float(count - 1) / float(extra_solids + 1)
 	for n in range(extra_solids):
 		var wobble := ((phase_id * 5 + n * 7) % 5) - 2
-		var candidate := clampi(roundi(stride * float(n + 1)) + wobble, 0, count - 2)
+		var candidate := clampi(roundi(stride * float(n + 1)) + wobble, 1, count - 2)
 		candidate = _nearest_free_solid_index(candidate, indexes, count)
 		indexes[candidate] = true
 	return indexes
@@ -455,12 +455,14 @@ func _solid_ring_count_for_phase(count: int) -> int:
 
 
 func _nearest_free_solid_index(candidate: int, indexes: Dictionary, count: int) -> int:
-	var max_index: int = max(0, count - 2)
+	var min_index := 1
+	var max_index: int = max(min_index, count - 2)
+	candidate = clampi(candidate, min_index, max_index)
 	if not indexes.has(candidate):
 		return candidate
 	for offset in range(1, max_index + 1):
 		var lower := candidate - offset
-		if lower >= 0 and not indexes.has(lower):
+		if lower >= min_index and not indexes.has(lower):
 			return lower
 		var upper := candidate + offset
 		if upper <= max_index and not indexes.has(upper):
@@ -1277,12 +1279,18 @@ func _build_hud() -> void:
 	_run_atk_button = _make_button("", 0, 58)
 	_run_atk_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_run_atk_button.add_theme_color_override("font_color", Color("#ffffff"))
+	_run_atk_button.add_theme_color_override("font_hover_color", Color("#ffffff"))
+	_run_atk_button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
+	_run_atk_button.add_theme_color_override("font_focus_color", Color("#ffffff"))
 	_apply_button_style(_run_atk_button, _make_style("#06162a", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
 	_run_atk_button.pressed.connect(_buy_run_atk_upgrade)
 	_run_upgrade_bar.add_child(_run_atk_button)
 	_run_gold_button = _make_button("", 0, 58)
 	_run_gold_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_run_gold_button.add_theme_color_override("font_color", Color("#ffffff"))
+	_run_gold_button.add_theme_color_override("font_hover_color", Color("#ffffff"))
+	_run_gold_button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
+	_run_gold_button.add_theme_color_override("font_focus_color", Color("#ffffff"))
 	_apply_button_style(_run_gold_button, _make_style("#06162a", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
 	_run_gold_button.pressed.connect(_buy_run_gold_upgrade)
 	_run_upgrade_bar.add_child(_run_gold_button)
@@ -1385,8 +1393,8 @@ func _build_pause_overlay() -> void:
 
 func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
-	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(326, 454))
-	card.add_theme_constant_override("separation", 9)
+	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(346, 560))
+	card.add_theme_constant_override("separation", 8)
 	card.add_child(_make_label(_txt("CHOOSE AN UPGRADE", "ESCOLHA UMA MELHORIA", "ELIGE UNA MEJORA", "強化を選択", "选择升级"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
 	_level_up_cards.add_theme_constant_override("separation", 6)
@@ -1402,7 +1410,7 @@ func _build_level_up_overlay() -> void:
 
 func _build_result_overlays() -> void:
 	_victory_overlay = _make_modal()
-	var victory_card := _make_modal_content(_victory_overlay, _tr("victory").to_upper())
+	var victory_card := _make_modal_content(_victory_overlay, _tr("victory").to_upper(), Vector2(346, 560))
 	_victory_title = _make_label(_txt("LEVEL 1 COMPLETE", "FASE 1 CONCLUÍDA", "NIVEL 1 COMPLETADO", "レベル1完了", "关卡1完成"), 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	victory_card.add_child(_victory_title)
 	_victory_rewards = VBoxContainer.new()
@@ -1412,15 +1420,15 @@ func _build_result_overlays() -> void:
 	victory_card.add_child(_victory_unlock_label)
 	_victory_double_button = _make_modal_button(_txt("DOUBLE REWARD - AD", "DOBRAR RECOMPENSA - AD", "DUPLICAR RECOMPENSA - ANUNCIO", "報酬2倍 - 広告", "奖励翻倍 - 广告"), _double_result_reward)
 	victory_card.add_child(_victory_double_button)
-	victory_card.add_child(_make_modal_button("VOLTAR AS FASES", _go_to_phase_select))
-	victory_card.add_child(_make_modal_button("VOLTAR AO MENU", _leave_to_menu_now))
+	victory_card.add_child(_make_modal_button(_txt("BACK TO LEVELS", "VOLTAR AS FASES", "VOLVER A NIVELES", "レベルへ戻る", "返回关卡"), _go_to_phase_select))
+	victory_card.add_child(_make_modal_button(_txt("BACK TO MENU", "VOLTAR AO MENU", "VOLVER AL MENU", "メニューへ戻る", "返回菜单"), _leave_to_menu_now))
 	victory_card.add_child(_make_modal_button(_txt("PLAY AGAIN", "JOGAR NOVAMENTE", "JUGAR DE NUEVO", "もう一度プレイ", "再玩一次"), _restart_level))
 	_victory_next_button = _make_modal_button("PROXIMA FASE", _go_to_next_phase)
 	victory_card.add_child(_victory_next_button)
 	add_child(_victory_overlay)
 
 	_defeat_overlay = _make_modal()
-	var defeat_card := _make_modal_content(_defeat_overlay, "GAME OVER")
+	var defeat_card := _make_modal_content(_defeat_overlay, "GAME OVER", Vector2(346, 560))
 	_defeat_title = _make_label(_txt("The ball was trapped by the rings.", "A bolinha foi presa pelos anéis.", "La bola quedó atrapada por los anillos.", "ボールがリングに閉じ込められました。", "小球被圆环困住了。"), 15, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	defeat_card.add_child(_defeat_title)
 	_defeat_summary = VBoxContainer.new()
@@ -1431,8 +1439,8 @@ func _build_result_overlays() -> void:
 	_defeat_revive_button = _make_modal_button(_txt("REVIVE WITH AD", "REVIVER COM ANÚNCIO", "REVIVIR CON ANUNCIO", "広告で復活", "观看广告复活"), _revive_with_ad)
 	defeat_card.add_child(_defeat_revive_button)
 	defeat_card.add_child(_make_modal_button("TENTAR DE NOVO", _restart_level))
-	defeat_card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
-	defeat_card.add_child(_make_modal_button("SAIR PARA MENU", _leave_to_menu_now))
+	defeat_card.add_child(_make_modal_button(_txt("EXIT TO LEVELS", "SAIR PARA FASES", "SALIR A NIVELES", "レベルへ戻る", "返回关卡"), _go_to_phase_select))
+	defeat_card.add_child(_make_modal_button(_txt("EXIT TO MENU", "SAIR PARA MENU", "SALIR AL MENU", "メニューへ戻る", "返回菜单"), _leave_to_menu_now))
 	add_child(_defeat_overlay)
 	_hide_all_overlays()
 
@@ -1448,15 +1456,15 @@ func _make_modal() -> PanelContainer:
 func _make_modal_content(overlay: Control, title: String, panel_size: Vector2 = Vector2(320, 260)) -> VBoxContainer:
 	var center := CenterContainer.new()
 	_fill(center)
-	center.offset_left = 12.0
-	center.offset_top = 24.0
-	center.offset_right = -12.0
-	center.offset_bottom = -24.0
+	center.offset_left = 8.0
+	center.offset_top = 10.0
+	center.offset_right = -8.0
+	center.offset_bottom = -10.0
 	var panel := PanelContainer.new()
 	var viewport := get_viewport_rect().size
 	var safe_size := Vector2(
-		min(panel_size.x, max(280.0, viewport.x - 28.0)),
-		min(panel_size.y, max(250.0, viewport.y - 88.0))
+		min(panel_size.x, max(286.0, viewport.x - 18.0)),
+		min(panel_size.y, max(270.0, viewport.y - 36.0))
 	)
 	panel.custom_minimum_size = safe_size
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -1464,10 +1472,10 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2 = 
 	panel.add_theme_stylebox_override("panel", _make_style("#16003bdd", 18, "#00f0ff66", 2, "#00f0ff55", 18))
 	center.add_child(panel)
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 18 if panel_size.y > 420.0 else 24)
-	margin.add_theme_constant_override("margin_top", 16 if panel_size.y > 420.0 else 22)
-	margin.add_theme_constant_override("margin_right", 18 if panel_size.y > 420.0 else 24)
-	margin.add_theme_constant_override("margin_bottom", 16 if panel_size.y > 420.0 else 22)
+	margin.add_theme_constant_override("margin_left", 14 if panel_size.y > 420.0 else 20)
+	margin.add_theme_constant_override("margin_top", 14 if panel_size.y > 420.0 else 20)
+	margin.add_theme_constant_override("margin_right", 14 if panel_size.y > 420.0 else 20)
+	margin.add_theme_constant_override("margin_bottom", 14 if panel_size.y > 420.0 else 20)
 	panel.add_child(margin)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1475,21 +1483,21 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2 = 
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 	margin.add_child(scroll)
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 10 if panel_size.y > 420.0 else 14)
+	column.add_theme_constant_override("separation", 8 if panel_size.y > 420.0 else 12)
 	scroll.add_child(column)
-	column.add_child(_make_label(title, 24 if panel_size.y > 420.0 else 26, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label(title, 22 if panel_size.y > 420.0 else 26, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	overlay.add_child(center)
 	return column
 
 
 func _make_modal_button(text: String, target: Callable) -> Button:
-	var button := _make_button(text, 0, 42)
+	var button := _make_button(text, 0, 46)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.clip_text = true
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -1546,6 +1554,10 @@ func _make_button(text: String, width: int, height: int) -> Button:
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 13)
 	button.add_theme_color_override("font_color", Color("#001018"))
+	button.add_theme_color_override("font_hover_color", Color("#001018"))
+	button.add_theme_color_override("font_pressed_color", Color("#001018"))
+	button.add_theme_color_override("font_focus_color", Color("#001018"))
+	button.add_theme_color_override("font_disabled_color", Color("#00101899"))
 	_apply_button_style(button, _make_style("#00f0ff", 13, "#ffffff33", 1, "#00f0ff88", 10))
 	return button
 
@@ -2376,8 +2388,12 @@ func _level_up_feedback(pt: String, en: String) -> String:
 func _make_level_up_button(upgrade: Dictionary) -> Button:
 	var id := String(upgrade["id"])
 	var current_level := int(current_upgrades.get(id, 0))
-	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 286, 62)
+	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 286, 70)
 	button.add_theme_color_override("font_color", Color("#ffffff"))
+	button.add_theme_color_override("font_hover_color", Color("#ffffff"))
+	button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
+	button.add_theme_color_override("font_focus_color", Color("#ffffff"))
+	button.add_theme_color_override("font_disabled_color", Color("#ffffff66"))
 	button.add_theme_font_size_override("font_size", 10)
 	button.clip_text = true
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
