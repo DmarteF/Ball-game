@@ -1253,21 +1253,21 @@ func _show_result(summary: Dictionary) -> void:
 		_result_title.text = _txt("NEON VICTORY", "VITÓRIA NEON", "VICTORIA NEON", "ネオン勝利", "霓虹胜利") if _winner == "win" else _txt("NEON DEFEAT", "DERROTA NEON", "DERROTA NEON", "ネオン敗北", "霓虹失败") if _winner == "loss" else _txt("LEFT LEAGUE", "SAÍDA DA LIGA", "SALIDA DE LIGA", "リーグ退出", "退出联赛")
 	for child in _result_details.get_children():
 		child.queue_free()
-	_result_details.add_child(_make_result_line("Tempo", "%ss" % int(summary.get("seconds", 0))))
+	_result_details.add_child(_make_result_line(_txt("Time", "Tempo", "Tiempo", "時間", "时间"), "%ss" % int(summary.get("seconds", 0))))
 	if not _finish_reason.is_empty():
-		_result_details.add_child(_make_result_line("Decisao", _finish_reason.capitalize()))
-	_result_details.add_child(_make_result_line("Voce", "%s aneis" % int(_player.get("rings_destroyed", 0))))
-	_result_details.add_child(_make_result_line("Rival", "%s aneis" % int(_rival.get("rings_destroyed", 0))))
-	_result_details.add_child(_make_result_line("Moedas", "+%s" % int(_result_reward.get("coins", 0))))
+		_result_details.add_child(_make_result_line(_txt("Decision", "Decisão", "Decisión", "判定", "判定"), _finish_reason.capitalize()))
+	_result_details.add_child(_make_result_line(_txt("You", "Você", "Tú", "あなた", "你"), _txt("%s rings", "%s anéis", "%s anillos", "%sリング", "%s圆环") % int(_player.get("rings_destroyed", 0))))
+	_result_details.add_child(_make_result_line(_txt("Rival", "Rival", "Rival", "ライバル", "对手"), _txt("%s rings", "%s anéis", "%s anillos", "%sリング", "%s圆环") % int(_rival.get("rings_destroyed", 0))))
+	_result_details.add_child(_make_result_line(_txt("Gold", "Ouro", "Oro", "ゴールド", "金币"), "+%s" % int(_result_reward.get("coins", 0))))
 	_result_details.add_child(_make_result_line("XP", "+%s" % int(_result_reward.get("xp", 0))))
 	if int(_result_reward.get("diamonds", 0)) > 0:
-		_result_details.add_child(_make_result_line("Diamantes", "+%s" % int(_result_reward.get("diamonds", 0))))
+		_result_details.add_child(_make_result_line(_txt("Diamonds", "Diamantes", "Diamantes", "ダイヤ", "钻石"), "+%s" % int(_result_reward.get("diamonds", 0))))
 	if _battle_kind == "boss":
 		var reward: Dictionary = _result_reward.get("reward", {})
 		_result_details.add_child(_make_result_line("Boss", String(_opponent.get("name", "Boss"))))
-		_result_details.add_child(_make_result_line("Recompensa", _boss_reward_label(reward)))
+		_result_details.add_child(_make_result_line(_txt("Reward", "Recompensa", "Recompensa", "報酬", "奖励"), _boss_reward_label(reward)))
 	else:
-		_result_details.add_child(_make_result_line("Trofeus", "%+d" % int(_result_reward.get("trophy_delta", 0))))
+		_result_details.add_child(_make_result_line(_txt("Trophies", "Troféus", "Trofeos", "トロフィー", "奖杯"), "%+d" % int(_result_reward.get("trophy_delta", 0))))
 		if not String(_result_reward.get("promotion_skin", "")).is_empty():
 			_result_details.add_child(_make_label(_txt("Skin unlocked: Starter Neon Champion", "Skin desbloqueada: Campeão Neon Inicial", "Skin desbloqueada: Campeón Neon Inicial", "スキン解除: スターターネオンチャンピオン", "皮肤解锁：初始霓虹冠军"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if _result_double_button:
@@ -1533,7 +1533,7 @@ func _build_control_overlay() -> void:
 
 func _build_pause_overlay() -> void:
 	_pause_overlay = _make_modal()
-	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"), Vector2(320, 250))
+	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"), Vector2(326, 310))
 	card.add_child(_make_modal_button(_tr("continue").to_upper(), _close_pause))
 	card.add_child(_make_modal_button("REINICIAR DUELO", _prepare_match))
 	card.add_child(_make_modal_button("SAIR", _quit_match))
@@ -1556,7 +1556,7 @@ func _build_level_up_overlay() -> void:
 
 func _build_result_overlay() -> void:
 	_result_overlay = _make_modal()
-	var card := _make_modal_content(_result_overlay, _txt("RESULT", "RESULTADO", "RESULTADO", "結果", "结果"), Vector2(346, 540))
+	var card := _make_modal_content(_result_overlay, _txt("RESULT", "RESULTADO", "RESULTADO", "結果", "结果"), Vector2(338, 500))
 	_result_title = _make_label("", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	card.add_child(_result_title)
 	_result_details = VBoxContainer.new()
@@ -1573,15 +1573,37 @@ func _build_result_overlay() -> void:
 
 func _build_revive_overlay() -> void:
 	_revive_overlay = _make_modal()
-	var card := _make_modal_content(_revive_overlay, "REVIVER", Vector2(326, 260))
+	var card := _make_modal_content(_revive_overlay, "REVIVER", Vector2(326, 286))
 	card.add_child(_make_label(_txt("Your ball was trapped. Watch a mock ad to continue this fight.", "Sua bolinha foi presa. Assista um anúncio mockado para continuar esta luta.", "Tu bola quedó atrapada. Mira un anuncio simulado para continuar esta pelea.", "ボールが閉じ込められました。モック広告で続行できます。", "你的小球被困住了。观看模拟广告继续战斗。"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	card.add_child(_make_modal_button("REVIVER COM ANUNCIO", _revive_with_ad))
 	card.add_child(_make_modal_button("ACEITAR DERROTA", _accept_loss))
 	add_child(_revive_overlay)
 
 
-func _make_result_line(label: String, value: String) -> Label:
-	return _make_label("%s: %s" % [label, value], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+func _make_result_line(label: String, value: String) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0, 34)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _make_style("#06162a", 10, "#00f0ff55", 1, "#00f0ff33", 5))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_bottom", 4)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.add_child(row)
+	var name_label := _make_label(label, 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	name_label.custom_minimum_size.x = 116
+	name_label.clip_text = false
+	row.add_child(name_label)
+	var value_label := _make_label(value, 14, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	value_label.clip_text = false
+	value_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(value_label)
+	return panel
 
 
 func _boss_reward_label(reward: Dictionary) -> String:
@@ -1869,17 +1891,18 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2) -
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	panel.add_theme_stylebox_override("panel", _make_style("#16003bdd", 18, "#00f0ff66", 2, "#00f0ff55", 18))
 	center.add_child(panel)
+	var is_large := panel_size.y > 420.0
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 14 if panel_size.y > 420.0 else 20)
-	margin.add_theme_constant_override("margin_top", 14 if panel_size.y > 420.0 else 18)
-	margin.add_theme_constant_override("margin_right", 14 if panel_size.y > 420.0 else 20)
-	margin.add_theme_constant_override("margin_bottom", 14 if panel_size.y > 420.0 else 18)
+	margin.add_theme_constant_override("margin_left", 12 if is_large else 18)
+	margin.add_theme_constant_override("margin_top", 12 if is_large else 16)
+	margin.add_theme_constant_override("margin_right", 12 if is_large else 18)
+	margin.add_theme_constant_override("margin_bottom", 12 if is_large else 16)
 	panel.add_child(margin)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if is_large else ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
 	scroll.scroll_deadzone = 2
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -1887,15 +1910,15 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2) -
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_theme_constant_override("separation", 8 if panel_size.y > 420.0 else 10)
+	content.add_theme_constant_override("separation", 7 if is_large else 8)
 	scroll.add_child(content)
-	content.add_child(_make_label(title, 22 if panel_size.y > 420.0 else 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	content.add_child(_make_label(title, 21 if is_large else 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	overlay.add_child(center)
 	return content
 
 
 func _make_modal_button(text: String, callback: Callable) -> Button:
-	var button := _make_button(text, 0, 46)
+	var button := _make_button(text, 0, 42)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.clip_text = true
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

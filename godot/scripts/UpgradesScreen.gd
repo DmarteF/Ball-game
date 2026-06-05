@@ -73,14 +73,14 @@ func _build_screen() -> void:
 	root.anchor_bottom = 1.0
 	var margin_x := 12.0 if _is_narrow_screen() else 20.0
 	root.offset_left = margin_x
-	root.offset_top = 36.0 if _is_narrow_screen() else 50.0
+	root.offset_top = 24.0 if _is_narrow_screen() else 42.0
 	root.offset_right = -margin_x
 	NeonBackButtonScript.reserve_footer_space(root)
-	root.add_theme_constant_override("separation", 10)
+	root.add_theme_constant_override("separation", 8 if _is_narrow_screen() else 10)
 	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 
-	root.add_child(_make_label(_loc("UPGRADES PERMANENTES"), 24 if _is_narrow_screen() else 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	root.add_child(_make_label("UPGRADE", 24 if _is_narrow_screen() else 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	NeonBackButtonScript.add_to(self, _go_back)
 	root.add_child(_make_resource_display())
 	_feedback_label = _make_label("", 13, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
@@ -95,7 +95,7 @@ func _build_screen() -> void:
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.mouse_filter = Control.MOUSE_FILTER_PASS
-	list.add_theme_constant_override("separation", 16)
+	list.add_theme_constant_override("separation", 12 if _is_narrow_screen() else 16)
 	scroll.add_child(list)
 	list.add_child(_make_upgrade_summary())
 	list.add_child(_make_label(_loc("MELHORIAS DISPONIVEIS"), 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
@@ -234,21 +234,21 @@ func _make_resource_display() -> HBoxContainer:
 
 func _make_resource_pill(icon_key: String, value: String, border: String) -> PanelContainer:
 	var box := PanelContainer.new()
-	box.custom_minimum_size = Vector2(106, 48)
+	box.custom_minimum_size = Vector2(82 if _is_narrow_screen() else 106, 40 if _is_narrow_screen() else 48)
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_stylebox_override("panel", _make_style("#ffffff22", 12, border, 2))
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_left", 8 if _is_narrow_screen() else 12)
+	margin.add_theme_constant_override("margin_top", 6 if _is_narrow_screen() else 8)
+	margin.add_theme_constant_override("margin_right", 8 if _is_narrow_screen() else 12)
+	margin.add_theme_constant_override("margin_bottom", 6 if _is_narrow_screen() else 8)
 	box.add_child(margin)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 8)
 	margin.add_child(row)
-	row.add_child(_make_icon(icon_key, 22))
-	var value_label := _make_label(value, 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	row.add_child(_make_icon(icon_key, 18 if _is_narrow_screen() else 22))
+	var value_label := _make_label(value, 17 if _is_narrow_screen() else 20, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	value_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	value_label.clip_text = false
 	value_label.custom_minimum_size.x = 34
@@ -269,23 +269,23 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12" if unlocked else "#ffffff0c", 16, "#ffffff22" if unlocked else "#55557755", 2))
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 16)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_right", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.add_theme_constant_override("margin_left", 12 if _is_narrow_screen() else 16)
+	margin.add_theme_constant_override("margin_top", 12 if _is_narrow_screen() else 16)
+	margin.add_theme_constant_override("margin_right", 12 if _is_narrow_screen() else 16)
+	margin.add_theme_constant_override("margin_bottom", 12 if _is_narrow_screen() else 16)
 	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
+	row.add_theme_constant_override("separation", 10 if _is_narrow_screen() else 16)
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(row)
 
 	var icon_box := PanelContainer.new()
-	icon_box.custom_minimum_size = Vector2(60, 60)
+	icon_box.custom_minimum_size = Vector2(48, 48) if _is_narrow_screen() else Vector2(60, 60)
 	icon_box.add_theme_stylebox_override("panel", _make_style("#ffffff22", 30))
 	var center := CenterContainer.new()
 	icon_box.add_child(center)
-	center.add_child(_make_icon(_upgrade_icon_key(id) if unlocked else "locked", 34))
+	center.add_child(_make_icon(_upgrade_icon_key(id) if unlocked else "locked", 28 if _is_narrow_screen() else 34))
 	row.add_child(icon_box)
 
 	var info := VBoxContainer.new()
@@ -293,7 +293,7 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 	info.mouse_filter = Control.MOUSE_FILTER_PASS
 	info.add_theme_constant_override("separation", 4)
 	row.add_child(info)
-	info.add_child(_make_label(_upgrade_name(id, String(upgrade["name"])), 18, "#ffffff" if unlocked else "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label(_upgrade_name(id, String(upgrade["name"])), 16 if _is_narrow_screen() else 18, "#ffffff" if unlocked else "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
 		info.add_child(_make_label(_upgrade_desc(id, String(upgrade.get("description", upgrade.get("desc", "")))), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	else:
@@ -315,8 +315,8 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 
 	if unlocked:
 		var actions := VBoxContainer.new()
-		actions.custom_minimum_size.x = 112 if _is_narrow_screen() else 132
-		actions.add_theme_constant_override("separation", 7)
+		actions.custom_minimum_size.x = 92 if _is_narrow_screen() else 132
+		actions.add_theme_constant_override("separation", 5 if _is_narrow_screen() else 7)
 		actions.mouse_filter = Control.MOUSE_FILTER_PASS
 		row.add_child(actions)
 		if is_maxed:
@@ -419,7 +419,7 @@ func _upgrade_value(id: String, level: int) -> String:
 func _make_upgrade_button(text: String, color: String, disabled: bool, action: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(0, 46)
+	button.custom_minimum_size = Vector2(0, 40 if _is_narrow_screen() else 46)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_PASS
