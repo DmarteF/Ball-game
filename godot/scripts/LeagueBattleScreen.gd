@@ -378,14 +378,14 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 
 func _update_rings(state: Dictionary, delta_steps: float) -> void:
 	var level := int(state.get("level", 1))
-	var pressure: float = min(0.65, float(int(state.get("rings_destroyed", 0))) * 0.006 + _elapsed * 0.0009)
+	var pressure: float = min(0.45, float(int(state.get("rings_destroyed", 0))) * 0.0035 + _elapsed * 0.00045)
 	for i in range(Array(state.get("rings", [])).size()):
 		var ring: Dictionary = state["rings"][i]
 		if String(ring.get("status", "")) != "active":
 			continue
 		var grace_multiplier := 0.32 if Time.get_ticks_msec() < int(ring.get("defeat_grace_until", 0)) else 1.0
 		ring["rotation"] = _normalize_angle(float(ring.get("rotation", 0.0)) + float(ring.get("rotation_speed", 0.004)) * delta_steps)
-		ring["radius"] = max(float(ring.get("min_radius", MIN_RING_RADIUS)), float(ring.get("radius", 0.0)) - float(ring.get("closing_speed", 0.008)) * delta_steps * (1.0 + pressure + float(level) * 0.014) * grace_multiplier)
+		ring["radius"] = max(float(ring.get("min_radius", MIN_RING_RADIUS)), float(ring.get("radius", 0.0)) - float(ring.get("closing_speed", 0.008)) * delta_steps * (1.0 + pressure + float(level) * 0.006) * grace_multiplier)
 		if int(ring.get("effect_until", 0)) > 0 and Time.get_ticks_msec() > int(ring.get("effect_until", 0)):
 			ring["effect_color"] = ""
 			ring["rotation_speed"] = float(ring.get("base_rotation_speed", ring.get("rotation_speed", 0.004)))
@@ -418,17 +418,18 @@ func _make_ring(state: Dictionary, radius: float, index: int) -> Dictionary:
 	var level := int(state.get("level", 1))
 	var destroyed := int(state.get("rings_destroyed", 0))
 	var quality := float(state.get("quality", 0.5))
-	var is_solid: bool = level >= 4 and index % max(8, 13 - min(5, level / 3)) == 0
+	var solid_every: int = max(4, 10 - min(5, floori(float(level) / 5.0 + float(destroyed) / 48.0)))
+	var is_solid: bool = level >= 4 and index % solid_every == 0
 	var direction: float = 1.0 if index % 2 == 0 else -1.0
-	var hp: int = floori((18.0 + float(level) * 2.7 + float(destroyed) * 0.22) * (1.0 + quality * 0.35) * (1.45 if is_solid else 1.0))
+	var hp: int = floori((30.0 + float(level) * 6.2 + float(destroyed) * 0.72) * (1.0 + quality * 0.42) * (1.82 if is_solid else 1.0))
 	var gap: float = 0.0 if is_solid else max(PI / 14.0, PI / (3.45 + float(level) * 0.07 + float(destroyed) * 0.003))
-	var rotation_speed: float = (0.0042 + float(level) * 0.00028 + quality * 0.0018) * randf_range(0.86, 1.18) * direction
+	var rotation_speed: float = (0.0042 + min(0.0075, float(level) * 0.00022 + quality * 0.0014)) * randf_range(0.86, 1.18) * direction
 	return {
 		"id": "%s_ring_%s" % [String(state.get("id", "arena")), index],
 		"type": "solid" if is_solid else "normal",
 		"radius": clampf(radius, MIN_RING_RADIUS, float(state.get("arena_radius", 100.0)) - 4.0),
 		"initial_radius": radius,
-		"closing_speed": 0.0067 + float(level) * 0.00046 + quality * 0.0015 + float(destroyed) * 0.000015,
+		"closing_speed": 0.0063 + min(0.0135, float(level) * 0.00022 + quality * 0.00085 + float(destroyed) * 0.000006),
 		"rotation": randf() * TWO_PI,
 		"rotation_speed": rotation_speed,
 		"base_rotation_speed": rotation_speed,

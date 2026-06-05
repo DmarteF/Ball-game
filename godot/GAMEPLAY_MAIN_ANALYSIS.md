@@ -128,7 +128,7 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - SFX foi remapeado por evento: `ring_hit`, `ring_crit`, `ring_break`, `ring_clear`, `reward_coin`, `xp`, `diamond`, `click`, `victory` e `defeat`.
 - Modo infinito foi conectado ao card `Modo Infinito`: gera aneis sem fim, escala dificuldade, salva recordes e mostra resumo de resultado.
 - Liga Neon foi convertida de tela visual para batalha versus: arena rival no topo, arena do jogador embaixo, bot, escolhas de upgrades temporarios, trofeus, temporada mensal e recompensas para vitoria/derrota/saida.
-- O infinito tambem usa pressao dinamica: limpezas rapidas aumentam `infinite_clear_pressure`, que fecha gaps, acelera rotacao/fechamento e aumenta densidade de aneis com clamp para nao sobrepor nem ficar injusto cedo demais.
+- O infinito tambem usa pressao dinamica: limpezas rapidas aumentam `infinite_clear_pressure`, mas o fechamento tem teto baixo. A dificuldade passa a vir principalmente de HP, resistencia, gaps menores e mais aneis solidos ao longo da run.
 - Conquistas/missoes recebem eventos reais de fase, infinito, aneis, perfects, compras, skins, diaria, roleta e recursos.
 - Conquistas adicionais da main foram vinculadas a perfects, diamantes, infinito por tempo/aneis/nivel, combo, criticos, efeitos de skin, colecao por raridade e abertura de baus. `GameState.gd` agora tem hooks publicos para conectar futuros sistemas sem duplicar logica.
 - Ritmo adaptativo dos aneis adicionado: `ring_spawn_delay`, streak de limpeza rapida e bonus por muitos aneis restantes aumentam o ritmo com clamp, e o estado reseta em restart/vitoria/proxima fase.
@@ -193,6 +193,7 @@ Atualizado nesta etapa:
 - gaps de aneis ativos e novos agora usam `_randomize_ring_gap_spaced`, que tenta separar angularmente as aberturas ja existentes;
 - o alinhamento automatico do gap para a direcao da bolinha foi removido das fases normais, evitando sequencias de aneis com abertura no mesmo lado;
 - o ultimo anel de fase normal permanece com `type = solid` e `gap_size = 0`;
+- fases altas distribuem aneis solidos extras ao longo da fila, mantendo 12 aneis ativos na tela e gerando o restante por fora conforme os aneis quebram;
 - o requisito de XP de rodada aumentou para reduzir a frequencia de level-up no modo normal;
 - a Liga Neon tambem aumentou o requisito de XP por level-up de arena;
 - a Liga Neon desenha a textura real da skin do rival e usa cache de textura para evitar recarregar asset a cada frame.

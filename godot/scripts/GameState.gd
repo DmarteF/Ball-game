@@ -627,11 +627,7 @@ func debug_unlock_all() -> void:
 		phases.append(phase)
 	data["unlocked_phases"] = phases
 	debug_unlock_all_upgrades()
-	var skins: Array = []
-	for skin in MainPortData.skins():
-		var skin_id := String(Dictionary(skin).get("id", ""))
-		if not skin_id.is_empty():
-			skins.append(skin_id)
+	var skins: Array = _all_known_skin_ids()
 	data["unlocked_skins"] = skins
 	data["new_skins"] = skins.duplicate()
 	refresh_unlocks(false)
@@ -694,15 +690,40 @@ func debug_max_all_upgrade_levels() -> void:
 
 
 func debug_unlock_all_skins() -> void:
+	var skins: Array = _all_known_skin_ids()
+	data["unlocked_skins"] = skins
+	data["new_skins"] = skins.duplicate()
+	migrate_save_to_skin_levels()
+	refresh_unlocks(false)
+	save_game()
+
+
+func _all_known_skin_ids() -> Array:
 	var skins: Array = []
-	for skin in MainPortData.skins():
+	for skin in MainPortData.SKINS:
 		var skin_id := String(Dictionary(skin).get("id", ""))
 		if not skin_id.is_empty() and not skins.has(skin_id):
 			skins.append(skin_id)
-	data["unlocked_skins"] = skins
-	data["new_skins"] = skins.duplicate()
-	refresh_unlocks(false)
-	save_game()
+	_append_skin_ids_from_dir(skins, "res://assets/skins")
+	_append_skin_ids_from_dir(skins, "res://assets/skins/generated")
+	if not skins.has("neon_blue"):
+		skins.push_front("neon_blue")
+	return skins
+
+
+func _append_skin_ids_from_dir(skins: Array, path: String) -> void:
+	var directory := DirAccess.open(path)
+	if directory == null:
+		return
+	directory.list_dir_begin()
+	var file_name := directory.get_next()
+	while file_name != "":
+		if not directory.current_is_dir() and file_name.ends_with(".png"):
+			var skin_id := file_name.trim_suffix(".png")
+			if not skin_id.is_empty() and not skins.has(skin_id):
+				skins.append(skin_id)
+		file_name = directory.get_next()
+	directory.list_dir_end()
 
 
 func debug_reset_daily_reward() -> void:

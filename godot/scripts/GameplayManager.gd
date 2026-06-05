@@ -4,6 +4,7 @@ const LevelData := preload("res://scripts/LevelData.gd")
 
 const PHASE_SELECT_SCENE := "res://scenes/PhaseSelect.tscn"
 const EVENT_SCENE := "res://scenes/Event.tscn"
+const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const BALL_RADIUS := 10.0
 const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
@@ -364,20 +365,19 @@ func _update_game(delta_steps: float) -> void:
 
 func _create_rings() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var count: int = int(gameplay_config["ring_count"])
+	var count: int = clampi(int(gameplay_config["ring_count"]), 1, LevelData.MAX_PHASE)
 	var min_radius: float = _playable_ring_min_radius()
 	var max_radius: float = _playable_ring_max_radius()
 	var available_radius: float = max(1.0, max_radius - min_radius)
 	var adaptive_min_spacing: float = MIN_RING_SPACING
-	var max_count_by_spacing: int = max(1, floori(available_radius / adaptive_min_spacing) + 1)
-	count = max(1, min(count, min(MAX_VISIBLE_RINGS, max_count_by_spacing)))
-	var spacing: float = available_radius / max(1.0, float(count - 1))
-	var difficulty: float = 1.0 + max(0, phase_id - 1) * 0.22
+	var visible_capacity: int = max(1, floori(available_radius / adaptive_min_spacing) + 1)
+	var initial_active_count: int = min(count, min(_target_active_ring_count(), visible_capacity))
+	var spacing: float = available_radius / max(1.0, float(initial_active_count - 1))
+	var durability_scale: float = 1.0 + float(max(0, phase_id - 1)) * 0.003
 	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
 	var palette: Array = RING_PALETTES[ring_palette_index]
 	# Normal phases always end with a solid ring; procedural modes keep using open rings.
-	var solid_indexes: Dictionary = {} if is_infinite or is_daily_challenge else { count - 1: true }
-	var initial_active_count: int = min(count, _target_active_ring_count())
+	var solid_indexes: Dictionary = {} if is_infinite or is_daily_challenge else _solid_ring_indexes_for_phase(count)
 	for i in range(count):
 		var progress := 0.0 if count == 1 else 1.0 - float(i) / float(count - 1)
 		var direction := 1.0 if i % 2 == 0 else -1.0
@@ -385,10 +385,10 @@ func _create_rings() -> Array[Dictionary]:
 		var inner_speed_bias := 1.35 - progress * 0.55
 		var speed_variation := 0.86 + float((i * 17 + phase_id * 11) % 23) / 100.0
 		var is_solid: bool = solid_indexes.has(i)
-		var hp: int = floori(float(gameplay_config["base_hp"]) * difficulty * (0.9 + progress * 1.55) * (1.45 if is_solid else 1.0))
+		var hp: int = floori(float(gameplay_config["base_hp"]) * durability_scale * (0.86 + progress * 0.64) * (1.75 if is_solid else 1.0))
 		var gap_size: float = max(PI / 13.0, phase_gap * (1.02 - progress * 0.14))
 		var status := "active" if i < initial_active_count else "queued"
-		var spawn_radius := max_radius - spacing * float(i)
+		var spawn_radius := max_radius - spacing * float(min(i, initial_active_count - 1))
 		if status != "active":
 			spawn_radius = max_radius
 		var ring := {
@@ -396,9 +396,9 @@ func _create_rings() -> Array[Dictionary]:
 			"type": "solid" if is_solid else "normal",
 			"radius": spawn_radius,
 			"initial_radius": spawn_radius,
-			"closing_speed": float(gameplay_config["closing_speed"]) * difficulty * (0.66 + progress * 0.34),
+			"closing_speed": min(0.055, float(gameplay_config["closing_speed"]) * (0.88 + progress * 0.16)),
 			"rotation": _normalize_angle(i * 0.61 + phase_id * 0.37 + pattern_shift),
-			"rotation_speed": float(gameplay_config["rotation_speed"]) * difficulty * inner_speed_bias * speed_variation * direction,
+			"rotation_speed": float(gameplay_config["rotation_speed"]) * inner_speed_bias * speed_variation * direction,
 			"gap_start": _normalize_angle(i * 0.83 + phase_id * 0.49 + pattern_shift),
 			"gap_size": 0.0 if is_solid else gap_size,
 			"hp": hp,
@@ -417,7 +417,55 @@ func _create_rings() -> Array[Dictionary]:
 		if status == "active":
 			ring = _randomize_ring_gap_spaced(ring, result)
 		result.append(ring)
+	if not is_infinite and not is_daily_challenge and not result.is_empty():
+		var final_index := result.size() - 1
+		var final_ring: Dictionary = result[final_index]
+		final_ring["type"] = "solid"
+		final_ring["gap_size"] = 0.0
+		final_ring["thickness"] = 7.0
+		final_ring["color"] = ["#ff3d00", "#ff0055", "#b000ff"][final_index % 3]
+		result[final_index] = final_ring
 	return result
+
+
+func _solid_ring_indexes_for_phase(count: int) -> Dictionary:
+	var indexes: Dictionary = {}
+	if count <= 0:
+		return indexes
+	indexes[count - 1] = true
+	var extra_solids := _solid_ring_count_for_phase(count) - 1
+	if extra_solids <= 0 or count <= 2:
+		return indexes
+	var stride := float(count - 1) / float(extra_solids + 1)
+	for n in range(extra_solids):
+		var wobble := ((phase_id * 5 + n * 7) % 5) - 2
+		var candidate := clampi(roundi(stride * float(n + 1)) + wobble, 0, count - 2)
+		candidate = _nearest_free_solid_index(candidate, indexes, count)
+		indexes[candidate] = true
+	return indexes
+
+
+func _solid_ring_count_for_phase(count: int) -> int:
+	if count <= 1 or phase_id <= 5:
+		return 1
+	var progress := clampf(float(phase_id - 1) / float(max(1, LevelData.MAX_PHASE - 1)), 0.0, 1.0)
+	var ratio := 0.07 + 0.32 * pow(progress, 0.82)
+	var milestone_bonus := (2 if phase_id >= 50 else 0) + (2 if phase_id >= 75 else 0) + (1 if phase_id >= 100 else 0)
+	return clampi(roundi(float(count) * ratio) + milestone_bonus, 1, count)
+
+
+func _nearest_free_solid_index(candidate: int, indexes: Dictionary, count: int) -> int:
+	var max_index: int = max(0, count - 2)
+	if not indexes.has(candidate):
+		return candidate
+	for offset in range(1, max_index + 1):
+		var lower := candidate - offset
+		if lower >= 0 and not indexes.has(lower):
+			return lower
+		var upper := candidate + offset
+		if upper <= max_index and not indexes.has(upper):
+			return upper
+	return max_index
 
 
 func _make_infinite_gameplay_config() -> Dictionary:
@@ -426,8 +474,8 @@ func _make_infinite_gameplay_config() -> Dictionary:
 	var pressure := clampf(infinite_clear_pressure, 0.0, 8.0)
 	return {
 		"ring_count": clampi(12 + floori(float(level_factor) * 0.25 + pressure * 0.22), 12, 18),
-		"base_hp": 18 + floori(float(level_factor) * 2.35 + pressure * 1.15) + floori(float(player_level) * 0.22),
-		"closing_speed": 0.0062 + min(0.020, float(level_factor) * 0.00050 + pressure * 0.00062),
+		"base_hp": 24 + floori(float(level_factor) * 4.8 + pressure * 2.4) + floori(float(player_level) * 0.28),
+		"closing_speed": 0.0064 + min(0.014, float(level_factor) * 0.00022 + pressure * 0.00035),
 		"rotation_speed": 0.0042 + min(0.012, float(level_factor) * 0.00032 + pressure * 0.00038),
 		"gap_size": max(PI / 13.2, PI / (3.42 + float(level_factor) * 0.054 + pressure * 0.074)),
 	}
@@ -482,11 +530,11 @@ func _refill_active_rings_now() -> void:
 	else:
 		target_count = min(target_count, int(gameplay_config.get("ring_count", TARGET_ACTIVE_RINGS)))
 	var attempts := 0
-	while _active_ring_count() < target_count and rings.size() < MAX_VISIBLE_RINGS + 6 and attempts < 16:
+	while _active_ring_count() < target_count and attempts < 32:
 		attempts += 1
 		if _queued_ring_count() > 0 and _activate_next_queued_ring():
 			continue
-		if not is_infinite or not _append_infinite_ring():
+		if not is_infinite or rings.size() >= MAX_VISIBLE_RINGS + 6 or not _append_infinite_ring():
 			break
 	_clamp_ring_spacing()
 
@@ -617,10 +665,10 @@ func _make_infinite_ring(index: int) -> Dictionary:
 	var palette: Array = RING_PALETTES[ring_palette_index]
 	var progress := clampf(float(_active_ring_count()) / 16.0, 0.0, 1.0)
 	var direction := 1.0 if index % 2 == 0 else -1.0
-	var solid_every: int = max(7, 12 - min(5, floori(float(infinite_level) / 3.0)))
+	var solid_every: int = max(5, 13 - min(8, floori(float(infinite_level) / 5.0 + float(rings_destroyed) / 42.0)))
 	var is_solid := infinite_level >= 4 and index % solid_every == 0
 	var base_hp := int(gameplay_config.get("base_hp", 20))
-	var hp := floori(float(base_hp) * (1.0 + progress * 0.75) * (1.42 if is_solid else 1.0))
+	var hp := floori(float(base_hp) * (1.0 + progress * 0.92 + float(rings_destroyed) * 0.006) * (1.75 if is_solid else 1.0))
 	var safe_spawn := _find_outer_spawn_radius(rings)
 	if not bool(safe_spawn.get("ok", false)):
 		return {}
@@ -1163,7 +1211,10 @@ func _build_hud() -> void:
 	var pause := _make_button(_txt("PAUSE", "PAUSAR", "PAUSA", "一時停止", "暂停"), 96, 40)
 	pause.pressed.connect(_open_pause)
 	top.add_child(pause)
-	_hud_phase = _make_label(_txt("LEVEL %s", "FASE %s", "NIVEL %s", "レベル%s", "关卡%s") % phase_id, 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	_hud_phase = _make_label(_txt("LEVEL %s", "FASE %s", "NIVEL %s", "レベル%s", "关卡%s") % phase_id, 25, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	_hud_phase.add_theme_color_override("font_shadow_color", Color("#00f0ffcc"))
+	_hud_phase.add_theme_constant_override("shadow_offset_x", 0)
+	_hud_phase.add_theme_constant_override("shadow_offset_y", 0)
 	top.add_child(_hud_phase)
 
 	_hud_resources = HBoxContainer.new()
@@ -1176,23 +1227,30 @@ func _build_hud() -> void:
 
 	_hud_timer_panel = PanelContainer.new()
 	_hud_timer_panel.visible = false
-	_hud_timer_panel.add_theme_stylebox_override("panel", _make_style("#06162add", 14, "#00f0ffaa", 2, "#00f0ff66", 10))
+	_hud_timer_panel.custom_minimum_size = Vector2(0, 44)
+	_hud_timer_panel.add_theme_stylebox_override("panel", _make_style("#06162af2", 14, "#00f0ff", 2, "#00f0ff99", 12))
 	var timer_margin := MarginContainer.new()
 	timer_margin.add_theme_constant_override("margin_left", 14)
 	timer_margin.add_theme_constant_override("margin_top", 7)
 	timer_margin.add_theme_constant_override("margin_right", 14)
 	timer_margin.add_theme_constant_override("margin_bottom", 7)
 	_hud_timer_panel.add_child(timer_margin)
-	_hud_timer_label = _make_label(_txt("TIME 00:00", "TEMPO 00:00", "TIEMPO 00:00", "時間 00:00", "时间 00:00"), 18, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
-	_hud_timer_label.add_theme_color_override("font_shadow_color", Color("#00f0ff88"))
+	_hud_timer_label = _make_label(_txt("TIME 00:00", "TEMPO 00:00", "TIEMPO 00:00", "時間 00:00", "时间 00:00"), 22, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_hud_timer_label.add_theme_color_override("font_shadow_color", Color("#00f0ffcc"))
 	_hud_timer_label.add_theme_constant_override("shadow_offset_x", 0)
 	_hud_timer_label.add_theme_constant_override("shadow_offset_y", 0)
 	timer_margin.add_child(_hud_timer_label)
 	hud.add_child(_hud_timer_panel)
 
-	_hud_meta = _make_label("", 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	_hud_meta = _make_label("", 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	_hud_meta.add_theme_color_override("font_shadow_color", Color("#000000cc"))
+	_hud_meta.add_theme_constant_override("shadow_offset_x", 1)
+	_hud_meta.add_theme_constant_override("shadow_offset_y", 1)
 	hud.add_child(_hud_meta)
-	_hud_xp = _make_label("", 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	_hud_xp = _make_label("", 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	_hud_xp.add_theme_color_override("font_shadow_color", Color("#00f0ffcc"))
+	_hud_xp.add_theme_constant_override("shadow_offset_x", 0)
+	_hud_xp.add_theme_constant_override("shadow_offset_y", 0)
 	hud.add_child(_hud_xp)
 	_hud_xp_bar = _make_progress_bar("#00f0ff")
 	hud.add_child(_hud_xp_bar)
@@ -1317,10 +1375,11 @@ func _update_control_overlay() -> void:
 
 func _build_pause_overlay() -> void:
 	_pause_overlay = _make_modal()
-	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"), Vector2(320, 300))
+	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"))
 	card.add_child(_make_modal_button(_tr("continue").to_upper(), _close_pause))
-	card.add_child(_make_modal_button(_txt("RESTART", "REINICIAR", "REINICIAR", "リスタート", "重新开始"), _restart_level))
-	card.add_child(_make_modal_button(_txt("EXIT TO LEVELS", "SAIR PARA FASES", "SALIR A NIVELES", "レベルへ戻る", "返回关卡"), _go_to_phase_select))
+	card.add_child(_make_modal_button("REINICIAR", _restart_level))
+	card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
+	card.add_child(_make_modal_button("SAIR PARA MENU", _go_to_menu))
 	add_child(_pause_overlay)
 
 
@@ -1343,7 +1402,7 @@ func _build_level_up_overlay() -> void:
 
 func _build_result_overlays() -> void:
 	_victory_overlay = _make_modal()
-	var victory_card := _make_modal_content(_victory_overlay, _tr("victory").to_upper(), Vector2(326, 430))
+	var victory_card := _make_modal_content(_victory_overlay, _tr("victory").to_upper())
 	_victory_title = _make_label(_txt("LEVEL 1 COMPLETE", "FASE 1 CONCLUÍDA", "NIVEL 1 COMPLETADO", "レベル1完了", "关卡1完成"), 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	victory_card.add_child(_victory_title)
 	_victory_rewards = VBoxContainer.new()
@@ -1353,14 +1412,15 @@ func _build_result_overlays() -> void:
 	victory_card.add_child(_victory_unlock_label)
 	_victory_double_button = _make_modal_button(_txt("DOUBLE REWARD - AD", "DOBRAR RECOMPENSA - AD", "DUPLICAR RECOMPENSA - ANUNCIO", "報酬2倍 - 広告", "奖励翻倍 - 广告"), _double_result_reward)
 	victory_card.add_child(_victory_double_button)
-	victory_card.add_child(_make_modal_button(_txt("BACK TO LEVELS", "VOLTAR ÀS FASES", "VOLVER A NIVELES", "レベルへ戻る", "返回关卡"), _go_to_phase_select))
+	victory_card.add_child(_make_modal_button("VOLTAR AS FASES", _go_to_phase_select))
+	victory_card.add_child(_make_modal_button("VOLTAR AO MENU", _leave_to_menu_now))
 	victory_card.add_child(_make_modal_button(_txt("PLAY AGAIN", "JOGAR NOVAMENTE", "JUGAR DE NUEVO", "もう一度プレイ", "再玩一次"), _restart_level))
-	_victory_next_button = _make_modal_button(_txt("NEXT LEVEL", "PRÓXIMA FASE", "SIGUIENTE NIVEL", "次のレベル", "下一关"), _go_to_next_phase)
+	_victory_next_button = _make_modal_button("PROXIMA FASE", _go_to_next_phase)
 	victory_card.add_child(_victory_next_button)
 	add_child(_victory_overlay)
 
 	_defeat_overlay = _make_modal()
-	var defeat_card := _make_modal_content(_defeat_overlay, _txt("GAME OVER", "FIM DE JOGO", "FIN DEL JUEGO", "ゲームオーバー", "游戏结束"), Vector2(326, 430))
+	var defeat_card := _make_modal_content(_defeat_overlay, "GAME OVER")
 	_defeat_title = _make_label(_txt("The ball was trapped by the rings.", "A bolinha foi presa pelos anéis.", "La bola quedó atrapada por los anillos.", "ボールがリングに閉じ込められました。", "小球被圆环困住了。"), 15, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	defeat_card.add_child(_defeat_title)
 	_defeat_summary = VBoxContainer.new()
@@ -1370,8 +1430,9 @@ func _build_result_overlays() -> void:
 	defeat_card.add_child(_defeat_double_button)
 	_defeat_revive_button = _make_modal_button(_txt("REVIVE WITH AD", "REVIVER COM ANÚNCIO", "REVIVIR CON ANUNCIO", "広告で復活", "观看广告复活"), _revive_with_ad)
 	defeat_card.add_child(_defeat_revive_button)
-	defeat_card.add_child(_make_modal_button(_txt("TRY AGAIN", "TENTAR DE NOVO", "INTENTAR DE NUEVO", "もう一度挑戦", "重试"), _restart_level))
-	defeat_card.add_child(_make_modal_button(_txt("EXIT TO LEVELS", "SAIR PARA FASES", "SALIR A NIVELES", "レベルへ戻る", "返回关卡"), _go_to_phase_select))
+	defeat_card.add_child(_make_modal_button("TENTAR DE NOVO", _restart_level))
+	defeat_card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
+	defeat_card.add_child(_make_modal_button("SAIR PARA MENU", _leave_to_menu_now))
 	add_child(_defeat_overlay)
 	_hide_all_overlays()
 
@@ -2110,9 +2171,9 @@ func _base_ring_spawn_delay() -> float:
 
 func _effective_ring_pacing() -> float:
 	var active := _active_ring_count()
-	var many_ring_bonus := clampf(float(max(0, active - 8)) * 0.01, 0.0, 0.12)
-	var delay_bonus := clampf((1.12 - ring_spawn_delay) * 0.12, 0.0, 0.08)
-	return clampf(ring_pacing_multiplier + many_ring_bonus + delay_bonus, 0.92, 1.34 if is_infinite else 1.42)
+	var many_ring_bonus := clampf(float(max(0, active - 8)) * 0.006, 0.0, 0.06)
+	var delay_bonus := clampf((1.12 - ring_spawn_delay) * 0.06, 0.0, 0.04)
+	return clampf(ring_pacing_multiplier + many_ring_bonus + delay_bonus, 0.90, 1.18 if is_infinite else 1.24)
 
 
 func _register_ring_clear() -> void:
@@ -2122,11 +2183,11 @@ func _register_ring_clear() -> void:
 	last_ring_clear_msec = now
 	ring_spawn_delay = clampf(ring_spawn_delay - 0.052 - float(max(0, _active_ring_count() - 10)) * 0.002, 0.42, _base_ring_spawn_delay())
 	if is_infinite:
-		var quick_bonus := 0.20 if elapsed_since_clear <= 1150 else 0.10
-		infinite_clear_pressure = clampf(infinite_clear_pressure + quick_bonus + float(max(0, rapid_clear_streak - 3)) * 0.018, 0.0, 8.0)
-		ring_pacing_multiplier = clampf(0.96 + rapid_clear_streak * 0.045 + infinite_clear_pressure * 0.018, 0.96, 1.42)
+		var quick_bonus := 0.12 if elapsed_since_clear <= 1150 else 0.06
+		infinite_clear_pressure = clampf(infinite_clear_pressure + quick_bonus + float(max(0, rapid_clear_streak - 3)) * 0.010, 0.0, 8.0)
+		ring_pacing_multiplier = clampf(0.94 + rapid_clear_streak * 0.018 + infinite_clear_pressure * 0.010, 0.94, 1.18)
 	else:
-		ring_pacing_multiplier = clampf(0.96 + rapid_clear_streak * 0.048, 0.96, 1.36)
+		ring_pacing_multiplier = clampf(0.94 + rapid_clear_streak * 0.020, 0.94, 1.20)
 
 
 func _combo_coin_multiplier() -> float:
@@ -2471,10 +2532,24 @@ func _go_to_phase_select() -> void:
 	get_tree().change_scene_to_file(EVENT_SCENE if is_daily_challenge else PHASE_SELECT_SCENE)
 
 
+func _go_to_menu() -> void:
+	_play_sfx("click")
+	if not finished and (rings_destroyed > 0 or run_coins > 0 or run_xp > 0 or infinite_elapsed > 2.0):
+		_finish_quit_reward()
+		return
+	_leave_to_menu_now()
+
+
 func _leave_to_phase_select_now() -> void:
 	if has_node("/root/AudioManager"):
 		AudioManager.play_context("menu")
 	get_tree().change_scene_to_file(EVENT_SCENE if is_daily_challenge else PHASE_SELECT_SCENE)
+
+
+func _leave_to_menu_now() -> void:
+	if has_node("/root/AudioManager"):
+		AudioManager.play_context("menu")
+	get_tree().change_scene_to_file(MENU_SCENE)
 
 
 func _finish_quit_reward() -> void:

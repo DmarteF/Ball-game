@@ -323,6 +323,7 @@ Pendencias da gameplay:
 - Upgrades temporarios agora aplicam efeitos reais quando desbloqueados: `burn`, `frost`, `ringRepulse` e `chainLightning`.
 - Recompensas de bau/chave por chance de fase estao documentadas em `LevelData.gd`, mas ainda nao sao concedidas.
 - Modo infinito esta jogavel a partir do card `Modo Infinito` quando a Fase 5 estiver liberada. Ele gera aneis continuamente, escala dificuldade, salva recordes e mostra resultado ao perder.
+- O balanceamento das fases altas foi ajustado para nao depender de fechamento exagerado: a dificuldade agora vem principalmente de HP, total de aneis e quantidade de aneis solidos. Fases mantem cerca de 12 aneis ativos e puxam novos aneis da fila por fora conforme os anteriores quebram.
 - Fases 2-50 usam a estrutura da main e desbloqueio sequencial, mas ainda precisam de verificacao visual fase a fase.
 
 ## 7.2 Efeitos, fisica e infinito
@@ -376,8 +377,8 @@ Modo infinito:
 - Requer Fase 5 liberada, seguindo a regra visual ja existente.
 - Gera aneis continuamente enquanto o jogador estiver vivo.
 - A dificuldade escala por tempo sobrevivido e aneis quebrados.
-- Escala HP, velocidade de fechamento, rotacao, tamanho do gap, densidade e padroes solidos.
-- Quando o jogador limpa aneis rapido demais, `infinite_clear_pressure` aumenta e acelera fechamento/rotacao, reduz gaps e eleva densidade dentro de limites seguros; a pressao decai com o tempo.
+- Escala principalmente HP, resistencia, tamanho do gap e padroes solidos, mantendo o fechamento com teto jogavel.
+- Quando o jogador limpa aneis rapido demais, `infinite_clear_pressure` aumenta levemente fechamento/rotacao e resistencia dentro de limites seguros; a pressao decai com o tempo.
 - Salva `infiniteRuns`, `bestInfiniteSeconds`, `bestInfiniteRings`, `bestInfiniteScore`, `bestCombo` e recursos ganhos.
 - Tela de resultado mostra tempo, aneis quebrados, moedas, XP, diamantes e novo recorde.
 

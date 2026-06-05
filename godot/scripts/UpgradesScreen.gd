@@ -80,7 +80,7 @@ func _build_screen() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 
-	root.add_child(_make_label(_txt("PERMANENT UPGRADES", "MELHORIAS PERMANENTES", "MEJORAS PERMANENTES", "永続強化", "永久升级"), 22 if _is_narrow_screen() else 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	root.add_child(_make_label(_loc("UPGRADES PERMANENTES"), 24 if _is_narrow_screen() else 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	NeonBackButtonScript.add_to(self, _go_back)
 	root.add_child(_make_resource_display())
 	_feedback_label = _make_label("", 13, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
@@ -98,7 +98,7 @@ func _build_screen() -> void:
 	list.add_theme_constant_override("separation", 16)
 	scroll.add_child(list)
 	list.add_child(_make_upgrade_summary())
-	list.add_child(_make_label(_txt("AVAILABLE UPGRADES", "MELHORIAS DISPONÍVEIS", "MEJORAS DISPONIBLES", "利用可能な強化", "可用升级"), 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	list.add_child(_make_label(_loc("MELHORIAS DISPONIVEIS"), 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var visible_upgrades := _visible_permanent_upgrade_list()
 	if visible_upgrades.is_empty():
 		list.add_child(_make_empty_upgrade_message())
@@ -222,7 +222,7 @@ func _title_from_id(id: String) -> String:
 
 
 func _make_resource_display() -> HBoxContainer:
-	var row: BoxContainer = VBoxContainer.new() if _is_narrow_screen() else HBoxContainer.new()
+	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_theme_constant_override("separation", 10)
@@ -243,7 +243,7 @@ func _make_resource_pill(icon_key: String, value: String, border: String) -> Pan
 	margin.add_theme_constant_override("margin_right", 12)
 	margin.add_theme_constant_override("margin_bottom", 8)
 	box.add_child(margin)
-	var row: BoxContainer = VBoxContainer.new() if _is_narrow_screen() else HBoxContainer.new()
+	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 8)
 	margin.add_child(row)
@@ -314,9 +314,8 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 			info.add_child(_make_label(_t("max"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	if unlocked:
-		var actions: BoxContainer = HBoxContainer.new() if _is_narrow_screen() else VBoxContainer.new()
-		if not _is_narrow_screen():
-			actions.custom_minimum_size.x = 132
+		var actions := VBoxContainer.new()
+		actions.custom_minimum_size.x = 112 if _is_narrow_screen() else 132
 		actions.add_theme_constant_override("separation", 7)
 		actions.mouse_filter = Control.MOUSE_FILTER_PASS
 		row.add_child(actions)
@@ -522,12 +521,7 @@ func _localize_effect_label(label: String) -> String:
 
 func _rebuild_upgrade_list() -> void:
 	for child in get_children():
-		remove_child(child)
 		child.queue_free()
-	call_deferred("_rebuild_upgrade_list_deferred")
-
-
-func _rebuild_upgrade_list_deferred() -> void:
 	_build_background()
 	_build_screen()
 

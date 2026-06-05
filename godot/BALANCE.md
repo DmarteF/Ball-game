@@ -29,6 +29,13 @@ Nivel do jogador usa `130 * nivel^1.50`, para evoluir rapido no inicio e desacel
 | 51-75 | Elite | 56-86 | Muito alto | Desafio longo | Skin/recompensa especial na fase 75 |
 | 76-100 | Final | 70-106 | Final | Pressao maxima justa | Skin/recompensa especial na fase 100 |
 
+Curva atualizada:
+- A velocidade de fechamento tem teto jogavel e cresce devagar: fase 1 fica perto de `0.0076`, fase 50 perto de `0.0317` e fase 100 perto de `0.0442`.
+- Fases altas ficam dificeis principalmente por HP/resistencia, total de aneis e quantidade de aneis solidos, nao por fechamento instantaneo.
+- Fases normais mantem 12 aneis ativos na tela e usam fila interna para o restante. Quando um anel quebra, outro entra por fora ate acabar a fase.
+- O ultimo anel de toda fase normal continua sempre solido/sem abertura.
+- Aneis solidos extras sao distribuidos pela fase: fases 1-5 usam apenas o anel final solido, enquanto fases 50+ e 75+ adicionam mais solidos em pontos espalhados.
+
 Cada fase concluida concede o ganho da run mais bonus fixo calculado por `LevelData.get_phase_config()`. As chances de drop crescem com a fase:
 
 | Faixa | Diamante | Chave | Bau |
