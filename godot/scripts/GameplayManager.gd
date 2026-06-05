@@ -111,6 +111,10 @@ var finished := false
 var particles: Array[Dictionary] = []
 var trail_points: Array[Dictionary] = []
 var floating_feedback: Array[Dictionary] = []
+var ring_flashes: Array[Dictionary] = []
+var screen_shake_time := 0.0
+var screen_shake_duration := 0.0
+var screen_shake_intensity := 0.0
 var temporary_upgrade: Dictionary = {}
 var ring_spawn_delay := 1.0
 var ring_pacing_multiplier := 1.0
@@ -208,10 +212,13 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	_update_arena_metrics()
 	_draw_arena()
+	var shake_offset := _screen_shake_offset()
+	draw_set_transform(shake_offset, 0.0, Vector2.ONE)
 	_draw_rings()
 	_draw_effects()
 	_draw_ball()
 	_draw_floating_feedback()
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _input(event: InputEvent) -> void:
@@ -641,14 +648,19 @@ func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2
 			_award_coins(perfect_coins)
 			_award_xp(perfect_xp)
 			_register_combo("Perfect", Color("#00f0ff"))
-			_spawn_particles(ball_position, Color("#b8f3ff"), 12, 110.0)
-			_spawn_floating("Perfect", ball_position + Vector2(10, -20), Color("#b8f3ff"))
+			_spawn_ring_flash(radius, Color("#b8f3ff"), 1.15, float(ring.get("thickness", 5.0)) + 5.0)
+			_spawn_particles(ball_position, Color(String(ring.get("color", "#b8f3ff"))), 14, 120.0)
+			_spawn_particles(ball_position, Color("#ffffff"), 6, 92.0)
+			_spawn_floating("PERFECT", ball_position + Vector2(10, -20), Color("#b8f3ff"), 18)
 			_spawn_floating("+%s GOLD  +%s XP" % [perfect_coins, perfect_xp], ball_position + Vector2(-46, 34), Color("#ffd700"))
+			_start_screen_shake(1.45, 0.16)
+			_trigger_haptic(24)
 			_play_sfx("ring_clear")
 			if randf() < min(0.18, 0.03 + _perfect_diamond_bonus()):
 				run_diamonds += 1
 				_play_sfx("diamond")
-				_spawn_floating("+1 DIAMANTE", ball_position + Vector2(16, 12), Color("#c084fc"))
+				_spawn_particles(ball_position, Color("#c084fc"), 10, 115.0)
+				_spawn_floating("+1 DIAMANTE", ball_position + Vector2(16, 12), Color("#c084fc"), 16)
 			_refill_active_rings_now()
 			return
 
@@ -691,9 +703,13 @@ func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next
 	run_score += damage
 	_track_dps(float(damage))
 	_spawn_particles(ball_position, Color(String(ring["color"])), 6, 70.0)
-	_spawn_floating("+%s%s" % [damage, " CRIT" if is_crit else ""], ball_position + Vector2(8, -12), Color("#ffd700") if is_crit else Color("#ffffff"))
+	_spawn_floating("+%s%s" % [damage, " CRITICO" if is_crit else ""], ball_position + Vector2(8, -12), Color("#ffd700") if is_crit else Color("#ffffff"), 16 if is_crit else 14)
 	if is_crit:
 		criticals += 1
+		_spawn_ring_flash(float(ring.get("radius", 0.0)), Color("#ffd700"), 0.82, float(ring.get("thickness", 5.0)) + 3.0)
+		_spawn_particles(ball_position, Color("#ffd700"), 10, 105.0)
+		_start_screen_shake(0.95, 0.10)
+		_trigger_haptic(16)
 	if new_hp <= 0:
 		rings_destroyed += 1
 		infinite_score += max(1, damage)
@@ -703,8 +719,12 @@ func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next
 		_register_combo("Break", Color("#ffd700"))
 		_award_coins(max(14, floori((34.0 if String(ring.get("type", "normal")) == "solid" else 24.0) * _gold_multiplier())))
 		_award_xp(floori(((32.0 if String(ring.get("type", "normal")) == "solid" else 20.0) + phase_id * 0.9 + randf() * (16.0 if String(ring.get("type", "normal")) == "solid" else 10.0)) * _xp_multiplier()))
-		_spawn_particles(ball_position, Color("#ffd700"), 18, 130.0)
-		_spawn_floating("Break!", ball_position + Vector2(-18, -28), Color("#ffd700"))
+		_spawn_ring_flash(float(ring.get("radius", 0.0)), Color(String(ring.get("color", "#ffd700"))), 0.95, float(ring.get("thickness", 5.0)) + 4.0)
+		_spawn_particles(ball_position, Color(String(ring.get("color", "#ffd700"))), 20, 135.0)
+		_spawn_particles(ball_position, Color("#ffd700"), 8, 105.0)
+		_spawn_floating("QUEBRA!", ball_position + Vector2(-18, -28), Color("#ffd700"), 17)
+		_start_screen_shake(1.10 if is_crit else 0.75, 0.13 if is_crit else 0.09)
+		_trigger_haptic(20 if is_crit else 12)
 		_play_sfx("ring_break")
 		_refill_active_rings_now()
 	else:
@@ -1002,6 +1022,14 @@ func _draw_ball() -> void:
 
 
 func _draw_effects() -> void:
+	for flash in ring_flashes:
+		var max_life: float = max(0.001, float(flash.get("max_life", 0.28)))
+		var life: float = clampf(float(flash.get("life", 0.0)) / max_life, 0.0, 1.0)
+		var radius: float = float(flash.get("radius", 0.0)) + (1.0 - life) * 8.0
+		var color_value = flash.get("color", Color("#00f0ff"))
+		var color: Color = color_value if typeof(color_value) == TYPE_COLOR else Color(String(color_value))
+		draw_arc(arena_center, radius, 0.0, TWO_PI, 150, Color(color, 0.44 * life), float(flash.get("thickness", 8.0)), true)
+		draw_arc(arena_center, radius + 4.0, 0.0, TWO_PI, 150, Color("#ffffff", 0.16 * life), 1.5, true)
 	for point in trail_points:
 		draw_circle(point["position"], float(point["size"]), Color(String(point.get("color", "#00f0ff")), float(point["life"]) * 0.22))
 	for particle in particles:
@@ -1010,7 +1038,7 @@ func _draw_effects() -> void:
 
 func _draw_floating_feedback() -> void:
 	for item in floating_feedback:
-		draw_string(_bold_font, item["position"], String(item["text"]), HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color(item["color"], float(item["life"])))
+		draw_string(_bold_font, item["position"], String(item["text"]), HORIZONTAL_ALIGNMENT_CENTER, -1, int(item.get("size", 14)), Color(item["color"], float(item["life"])))
 
 
 func _build_background() -> void:
@@ -2551,6 +2579,7 @@ func _update_arena_metrics() -> void:
 
 
 func _update_effects(delta: float) -> void:
+	screen_shake_time = max(0.0, screen_shake_time - delta)
 	for i in range(particles.size() - 1, -1, -1):
 		var particle := particles[i]
 		particle["position"] = Vector2(particle["position"]) + Vector2(particle["velocity"]) * delta
@@ -2574,6 +2603,13 @@ func _update_effects(delta: float) -> void:
 			floating_feedback.remove_at(i)
 		else:
 			floating_feedback[i] = item
+	for i in range(ring_flashes.size() - 1, -1, -1):
+		var flash := ring_flashes[i]
+		flash["life"] = float(flash["life"]) - delta * 1.5
+		if float(flash["life"]) <= 0.0:
+			ring_flashes.remove_at(i)
+		else:
+			ring_flashes[i] = flash
 
 
 func _add_trail_point() -> void:
@@ -2592,10 +2628,38 @@ func _spawn_particles(origin: Vector2, color: Color, amount: int, speed: float) 
 		particles = particles.slice(particles.size() - 90)
 
 
-func _spawn_floating(text: String, position: Vector2, color: Color) -> void:
-	floating_feedback.append({ "text": text, "position": position, "color": color, "life": 1.0 })
-	if floating_feedback.size() > 12:
+func _spawn_ring_flash(radius: float, color: Color, intensity := 1.0, thickness := 8.0) -> void:
+	ring_flashes.append({ "radius": radius, "color": color, "life": 0.28 * intensity, "max_life": 0.28 * intensity, "thickness": thickness })
+	if ring_flashes.size() > 8:
+		ring_flashes.pop_front()
+
+
+func _spawn_floating(text: String, position: Vector2, color: Color, size := 14) -> void:
+	floating_feedback.append({ "text": text, "position": position, "color": color, "life": 1.0, "size": size })
+	if floating_feedback.size() > 16:
 		floating_feedback.pop_front()
+
+
+func _start_screen_shake(intensity: float, duration: float) -> void:
+	if screen_shake_time <= 0.0:
+		screen_shake_intensity = 0.0
+		screen_shake_duration = 0.0
+	screen_shake_intensity = max(screen_shake_intensity, intensity)
+	screen_shake_duration = max(screen_shake_duration, duration)
+	screen_shake_time = max(screen_shake_time, duration)
+
+
+func _screen_shake_offset() -> Vector2:
+	if screen_shake_time <= 0.0 or screen_shake_duration <= 0.0:
+		return Vector2.ZERO
+	var fade := clampf(screen_shake_time / screen_shake_duration, 0.0, 1.0)
+	var angle := randf() * TWO_PI
+	return Vector2(cos(angle), sin(angle)) * screen_shake_intensity * fade
+
+
+func _trigger_haptic(duration_ms: int) -> void:
+	if OS.has_feature("android"):
+		Input.vibrate_handheld(duration_ms)
 
 
 func _setup_audio() -> void:

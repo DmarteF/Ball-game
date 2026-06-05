@@ -695,3 +695,58 @@ As dicas de primeira experiencia usam progresso real do jogador:
 - Primeira skin equipada: dica sobre Eventos, Desafios e Modo Infinito.
 
 As dicas sao discretas, clicaveis, nao bloqueiam a tela inicial e sao marcadas como concluidas por `GameState.mark_guided_hint_done()`.
+
+## Atualizacao - Impacto e satisfacao ao quebrar aneis
+
+Melhorias aplicadas em `GameplayManager.gd`:
+
+- Perfect Escape agora gera flash neon circular no raio do anel, particulas na cor do anel e brilho branco curto.
+- Quebra de anel gera flash no anel, particulas neon, texto `QUEBRA!`, recompensas flutuantes de moedas/XP e screen shake leve.
+- Critico gera texto `CRITICO`, particulas douradas, flash menor e shake um pouco mais forte.
+- Diamante ganho em Perfect gera particulas roxas e texto `+1 DIAMANTE`.
+- Combo continua usando a janela existente e exibe `Combo xN` sem criar spam excessivo.
+- Screen shake afeta somente a arena jogavel, sem deslocar HUD, overlays ou botoes.
+- Haptic/vibracao esta preparado para Android com `Input.vibrate_handheld()` quando o build roda em Android.
+
+Melhorias aplicadas em `LeagueBattleScreen.gd`:
+
+- Liga Neon e Boss usam o mesmo padrao visual: bursts neon, pontos radiais, textos flutuantes de moedas/XP, `PERFECT`, `CRITICO`, `QUEBRA!` e diamante.
+- Cada arena competitiva tem shake proprio, entao o impacto do jogador nao desloca a arena do rival/boss de forma confusa.
+- Boss usa intensidade um pouco maior em perfect/quebra para reforcar impacto sem exagerar.
+
+SFX usados:
+
+| Evento | SFX |
+| --- | --- |
+| Hit normal | `hit_light.mp3` |
+| Critico | `hit_heavy.mp3` |
+| Quebra/clear por dano | `ring_break.mp3` |
+| Perfect/passagem correta | `perfect.mp3` |
+| Diamante | `diamond_gain.mp3` |
+| Level up/revive/vitoria | SFX ja existentes do modo |
+
+Performance:
+
+- Particulas da arena principal continuam em array desenhado no `_draw`, com limite de 90 particulas.
+- Textos flutuantes foram limitados a 16 na arena principal e 10 por arena competitiva.
+- Flashes de anel sao dados leves desenhados por `draw_arc`, limitados a 8.
+- Liga/Boss usam bursts desenhados no canvas, sem instanciar novos nodes por impacto.
+- Nenhum SFX novo foi duplicado; os sons continuam disparados somente nos eventos corretos.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Particulas ao quebrar anel | Sim |
+| Flash neon | Sim |
+| Screen shake leve | Sim |
+| Texto flutuante de recompensa | Sim |
+| Perfect visual | Sim |
+| Critical visual | Sim |
+| Diamond visual | Sim |
+| Combo visual | Sim |
+| Funciona em fases | Sim |
+| Funciona no infinito | Sim |
+| Funciona no boss | Sim |
+| Funciona na Liga Neon | Sim |
+| Mantem performance | Sim |

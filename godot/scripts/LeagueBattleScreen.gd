@@ -272,6 +272,10 @@ func _make_arena(id: String, label: String, skin_id: String, quality: float, ai:
 		"effect_cooldowns": {},
 		"trail": [],
 		"bursts": [],
+		"floating": [],
+		"shake_time": 0.0,
+		"shake_duration": 0.0,
+		"shake_intensity": 0.0,
 	}
 
 
@@ -467,8 +471,13 @@ func _check_perfect_escape(state: Dictionary, prev_dist: float, next_dist: float
 			_award_arena_xp(state, perfect_xp)
 			if String(state.get("id", "")) == "player":
 				_play_sfx("clear")
+				_spawn_floating(state, "PERFECT", Vector2(state.get("ball", center)) + Vector2(8, -18), "#b8f3ff", 16)
+				_start_arena_shake(state, 1.35 if _battle_kind == "boss" else 1.05, 0.15)
+				_trigger_haptic(22)
 				if randf() < 0.035 + _perfect_bonus(state):
 					state["diamonds"] = int(state.get("diamonds", 0)) + 1
+					_spawn_floating(state, "+1 DIAMANTE", Vector2(state.get("ball", center)) + Vector2(12, 10), "#c084fc", 13)
+					_spawn_burst(state, Vector2(state.get("ball", center)), "#c084fc", "diamond")
 			_spawn_burst(state, Vector2(state.get("ball", center)), String(ring.get("color", "#00f0ff")), "clear")
 			return
 
@@ -503,14 +512,24 @@ func _check_ring_hit(state: Dictionary, prev_dist: float, next_dist: float, prev
 	state["score"] = int(state.get("score", 0)) + damage
 	if crit:
 		state["criticals"] = int(state.get("criticals", 0)) + 1
+		if String(state.get("id", "")) == "player":
+			_spawn_floating(state, "CRITICO", Vector2(state.get("ball", Vector2.ZERO)) + Vector2(10, -16), "#ffd700", 15)
+			_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), "#ffd700", "crit")
+			_start_arena_shake(state, 0.85, 0.10)
+			_trigger_haptic(14)
 	_award_arena_coins(state, max(4, floori(float(damage) * 0.90 * _gold_multiplier(state))))
 	_award_arena_xp(state, floori((24.0 if crit else 16.0) * _xp_multiplier(state)))
+	if String(state.get("id", "")) == "player":
+		_spawn_floating(state, "+%s" % damage, Vector2(state.get("ball", Vector2.ZERO)) + Vector2(8, -6), "#ffffff", 12)
 	if new_hp <= 0:
 		state["rings_destroyed"] = int(state.get("rings_destroyed", 0)) + 1
 		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), String(ring.get("color", "#00f0ff")), "break")
 		_award_arena_coins(state, max(12, floori((32.0 if String(ring.get("type", "normal")) == "solid" else 22.0) * _gold_multiplier(state))))
 		_award_arena_xp(state, floori((30.0 + randf() * 14.0) * _xp_multiplier(state)))
 		if String(state.get("id", "")) == "player":
+			_spawn_floating(state, "QUEBRA!", Vector2(state.get("ball", Vector2.ZERO)) + Vector2(-20, -28), "#ffd700", 15)
+			_start_arena_shake(state, 1.10 if _battle_kind == "boss" else 0.75, 0.12)
+			_trigger_haptic(16)
 			_play_sfx("break")
 	elif String(state.get("id", "")) == "player":
 		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), String(ring.get("color", "#00f0ff")), "hit")
@@ -865,7 +884,10 @@ func _get_run_upgrade_cost(state: Dictionary, type: String) -> int:
 
 
 func _award_arena_coins(state: Dictionary, amount: int) -> void:
-	state["coins"] = int(state.get("coins", 0)) + max(0, amount)
+	var value: int = max(0, amount)
+	state["coins"] = int(state.get("coins", 0)) + value
+	if String(state.get("id", "")) == "player" and value >= 8:
+		_spawn_floating(state, "+%s MOEDAS" % value, Vector2(state.get("ball", state.get("center", Vector2.ZERO))) + Vector2(8, 18), "#ffd700", 11)
 	if String(state.get("id", "")) == "player":
 		_update_run_upgrade_buttons()
 
@@ -874,6 +896,8 @@ func _award_arena_xp(state: Dictionary, amount: int) -> void:
 	var value: int = max(0, amount)
 	state["xp"] = int(state.get("xp", 0)) + value
 	state["total_xp"] = int(state.get("total_xp", 0)) + value
+	if String(state.get("id", "")) == "player" and value >= 8:
+		_spawn_floating(state, "+%s XP" % value, Vector2(state.get("ball", state.get("center", Vector2.ZERO))) + Vector2(-26, 18), "#00f0ff", 11)
 
 
 func _base_damage(state: Dictionary) -> int:
@@ -1036,6 +1060,10 @@ func _spawn_burst(state: Dictionary, position: Vector2, color: String, kind: Str
 		base_radius = 34.0
 	elif kind == "break":
 		base_radius = 28.0
+	elif kind == "crit":
+		base_radius = 30.0
+	elif kind == "diamond":
+		base_radius = 22.0
 	elif kind == "repulse":
 		base_radius = 42.0
 	bursts.append({
@@ -1051,7 +1079,40 @@ func _spawn_burst(state: Dictionary, position: Vector2, color: String, kind: Str
 	state["bursts"] = bursts
 
 
+func _spawn_floating(state: Dictionary, text: String, position: Vector2, color: String, size := 12) -> void:
+	var floating: Array = state.get("floating", [])
+	floating.append({ "text": text, "position": position, "color": color, "life": 1.0, "size": size })
+	while floating.size() > 10:
+		floating.pop_front()
+	state["floating"] = floating
+
+
+func _start_arena_shake(state: Dictionary, intensity: float, duration: float) -> void:
+	if float(state.get("shake_time", 0.0)) <= 0.0:
+		state["shake_intensity"] = 0.0
+		state["shake_duration"] = 0.0
+	state["shake_intensity"] = max(float(state.get("shake_intensity", 0.0)), intensity)
+	state["shake_duration"] = max(float(state.get("shake_duration", 0.0)), duration)
+	state["shake_time"] = max(float(state.get("shake_time", 0.0)), duration)
+
+
+func _arena_shake_offset(state: Dictionary) -> Vector2:
+	var time_left := float(state.get("shake_time", 0.0))
+	var duration := float(state.get("shake_duration", 0.0))
+	if time_left <= 0.0 or duration <= 0.0:
+		return Vector2.ZERO
+	var fade := clampf(time_left / duration, 0.0, 1.0)
+	var angle := randf() * TWO_PI
+	return Vector2(cos(angle), sin(angle)) * float(state.get("shake_intensity", 0.0)) * fade
+
+
+func _trigger_haptic(duration_ms: int) -> void:
+	if OS.has_feature("android"):
+		Input.vibrate_handheld(duration_ms)
+
+
 func _update_visual_effects(state: Dictionary, delta: float) -> void:
+	state["shake_time"] = max(0.0, float(state.get("shake_time", 0.0)) - delta)
 	var bursts: Array = state.get("bursts", [])
 	for i in range(bursts.size() - 1, -1, -1):
 		var burst: Dictionary = bursts[i]
@@ -1061,6 +1122,16 @@ func _update_visual_effects(state: Dictionary, delta: float) -> void:
 		else:
 			bursts[i] = burst
 	state["bursts"] = bursts
+	var floating: Array = state.get("floating", [])
+	for i in range(floating.size() - 1, -1, -1):
+		var item: Dictionary = floating[i]
+		item["position"] = Vector2(item.get("position", Vector2.ZERO)) + Vector2(0, -18) * delta
+		item["life"] = float(item.get("life", 1.0)) - delta * 0.95
+		if float(item.get("life", 0.0)) <= 0.0:
+			floating.remove_at(i)
+		else:
+			floating[i] = item
+	state["floating"] = floating
 
 
 func _safe_motion_angle(angle: float) -> float:
@@ -1231,6 +1302,8 @@ func _double_result_reward() -> void:
 
 
 func _draw_arena(state: Dictionary) -> void:
+	var shake_offset := _arena_shake_offset(state)
+	draw_set_transform(shake_offset, 0.0, Vector2.ONE)
 	var center: Vector2 = state.get("center", Vector2.ZERO)
 	var arena_radius := float(state.get("arena_radius", 100.0))
 	var is_player := String(state.get("id", "")) == "player"
@@ -1269,10 +1342,17 @@ func _draw_arena(state: Dictionary) -> void:
 		var position: Vector2 = burst.get("position", ball)
 		draw_arc(position, burst_radius, 0.0, TWO_PI, 44, Color(burst_color, 0.34 * life), 2.2, true)
 		draw_circle(position, max(3.0, burst_radius * 0.12), Color("#ffffff", 0.16 * life))
+		for dot in range(6):
+			var dot_angle := float(dot) / 6.0 * TWO_PI + (1.0 - life) * 0.8
+			var dot_pos := position + Vector2(cos(dot_angle), sin(dot_angle)) * burst_radius * (0.55 + (1.0 - life) * 0.35)
+			draw_circle(dot_pos, 1.6 + 1.8 * life, Color(burst_color, 0.42 * life))
 	var label_pos := center + Vector2(-arena_radius + 8.0, -arena_radius + 17.0)
 	draw_string(_bold_font, label_pos, String(state.get("label", "")).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, arena_radius * 2.0 - 16.0, 12, Color("#ffffff"))
 	var info := "Lv.%s  %s aneis  %s moedas" % [int(state.get("level", 1)), int(state.get("rings_destroyed", 0)), int(state.get("coins", 0))]
 	draw_string(_regular_font, center + Vector2(-arena_radius + 8.0, arena_radius - 9.0), info, HORIZONTAL_ALIGNMENT_LEFT, arena_radius * 2.0 - 16.0, 11, Color("#ffffffaa"))
+	for item in Array(state.get("floating", [])):
+		draw_string(_bold_font, Vector2(item.get("position", center)), String(item.get("text", "")), HORIZONTAL_ALIGNMENT_CENTER, -1, int(item.get("size", 12)), Color(String(item.get("color", "#ffffff")), float(item.get("life", 1.0))))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_skin_ball(state: Dictionary, ball: Vector2) -> void:
