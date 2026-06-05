@@ -371,7 +371,10 @@ func _create_rings() -> Array[Dictionary]:
 	var available_radius: float = max(1.0, max_radius - min_radius)
 	var adaptive_min_spacing: float = MIN_RING_SPACING
 	var visible_capacity: int = max(1, floori(available_radius / adaptive_min_spacing) + 1)
-	var initial_active_count: int = min(count, min(_target_active_ring_count(), visible_capacity))
+	var phase_final_ring_queued := not is_infinite and not is_daily_challenge and count > 1
+	var max_initial_active := count - 1 if phase_final_ring_queued else count
+	var initial_active_count: int = min(max_initial_active, min(_target_active_ring_count(), visible_capacity))
+	initial_active_count = max(1, initial_active_count)
 	var spacing: float = available_radius / max(1.0, float(initial_active_count - 1))
 	var durability_scale: float = 1.0 + float(max(0, phase_id - 1)) * 0.003
 	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
@@ -434,12 +437,12 @@ func _solid_ring_indexes_for_phase(count: int) -> Dictionary:
 		return indexes
 	indexes[count - 1] = true
 	var extra_solids := _solid_ring_count_for_phase(count) - 1
-	if extra_solids <= 0 or count <= 2:
+	if extra_solids <= 0 or count <= 3:
 		return indexes
 	var stride := float(count - 1) / float(extra_solids + 1)
 	for n in range(extra_solids):
 		var wobble := ((phase_id * 5 + n * 7) % 5) - 2
-		var candidate := clampi(roundi(stride * float(n + 1)) + wobble, 1, count - 2)
+		var candidate := clampi(roundi(stride * float(n + 1)) + wobble, 1, count - 3)
 		candidate = _nearest_free_solid_index(candidate, indexes, count)
 		indexes[candidate] = true
 	return indexes
@@ -456,7 +459,7 @@ func _solid_ring_count_for_phase(count: int) -> int:
 
 func _nearest_free_solid_index(candidate: int, indexes: Dictionary, count: int) -> int:
 	var min_index := 1
-	var max_index: int = max(min_index, count - 2)
+	var max_index: int = max(min_index, count - 3)
 	candidate = clampi(candidate, min_index, max_index)
 	if not indexes.has(candidate):
 		return candidate

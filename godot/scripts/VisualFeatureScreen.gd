@@ -446,6 +446,7 @@ func _dynamic_empty_desc(data: Dictionary) -> String:
 func _make_feature_card(data: Dictionary) -> PanelContainer:
 	var tone := String(data.get("tone", "#00f0ff"))
 	var card := _make_card("#ffffff12", tone + "77")
+	card.custom_minimum_size.y = 122 if _is_narrow_screen() else 96
 	var body := _card_body(card, 12)
 
 	var title_text := _phrase(String(data.get("title", ""))).strip_edges()
@@ -464,12 +465,14 @@ func _make_feature_card(data: Dictionary) -> PanelContainer:
 		button.pressed.connect(_handle_action.bind(String(data["action"])))
 	if _is_narrow_screen():
 		var top := HBoxContainer.new()
+		top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_theme_constant_override("separation", 10)
 		top.mouse_filter = Control.MOUSE_FILTER_PASS
 		body.add_child(top)
 		top.add_child(_make_icon(String(data.get("icon", "coin")), 38))
 		var column := VBoxContainer.new()
 		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.custom_minimum_size.x = 210
 		column.mouse_filter = Control.MOUSE_FILTER_PASS
 		column.add_theme_constant_override("separation", 4)
 		top.add_child(column)
@@ -488,12 +491,14 @@ func _make_feature_card(data: Dictionary) -> PanelContainer:
 		bottom.add_child(button)
 	else:
 		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 12)
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		body.add_child(row)
 		row.add_child(_make_icon(String(data.get("icon", "coin")), 46))
 		var column := VBoxContainer.new()
 		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.custom_minimum_size.x = 220
 		column.mouse_filter = Control.MOUSE_FILTER_PASS
 		column.add_theme_constant_override("separation", 4)
 		row.add_child(column)
@@ -1480,6 +1485,8 @@ func _make_card(bg: String = "#ffffff12", border: String = "#ffffff22") -> Panel
 
 func _card_body(card: PanelContainer, padding: int) -> VBoxContainer:
 	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	margin.add_theme_constant_override("margin_left", padding)
 	margin.add_theme_constant_override("margin_top", padding)
 	margin.add_theme_constant_override("margin_right", padding)
@@ -1487,6 +1494,8 @@ func _card_body(card: PanelContainer, padding: int) -> VBoxContainer:
 	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	var body := VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 8)
 	body.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(body)
@@ -1507,6 +1516,7 @@ func _make_icon(key: String, icon_size: int, tint: Color = Color.WHITE) -> Textu
 func _make_label(text: String, font_size: int, color: String, font: Font, alignment: HorizontalAlignment) -> Label:
 	var label := Label.new()
 	label.text = text
+	label.custom_minimum_size.y = max(18.0, float(font_size + 8))
 	label.horizontal_alignment = alignment
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.add_theme_font_override("font", font)
@@ -1514,7 +1524,7 @@ func _make_label(text: String, font_size: int, color: String, font: Font, alignm
 	label.add_theme_color_override("font_color", Color(color))
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.clip_text = true
+	label.clip_text = false
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	if font_size <= 13:
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -119,17 +119,16 @@ func _ready() -> void:
 	_build_top_bar()
 	_build_content()
 	_build_achievement_notice_overlay()
+	_build_more_button()
+	_build_more_modal()
+	resized.connect(_sync_modal_layout)
+	call_deferred("_sync_modal_layout")
 	call_deferred("_maybe_show_tutorial_or_hint")
 
 
 func _process(_delta: float) -> void:
 	if _achievement_notice_hide_at > 0 and Time.get_ticks_msec() >= _achievement_notice_hide_at:
 		_hide_achievement_notice()
-	_build_more_button()
-	_build_more_modal()
-
-	resized.connect(_sync_modal_layout)
-	call_deferred("_sync_modal_layout")
 
 
 func _build_background() -> void:
@@ -354,10 +353,14 @@ func _build_more_button() -> void:
 
 
 func _build_more_modal() -> void:
+	if _more_overlay != null and is_instance_valid(_more_overlay):
+		_more_overlay.queue_free()
+	_more_items.clear()
 	_more_overlay = ColorRect.new()
 	_fill(_more_overlay)
 	_more_overlay.color = Color("#000000cc")
 	_more_overlay.visible = false
+	_more_overlay.z_index = 95
 	_more_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_more_overlay)
 
@@ -405,6 +408,7 @@ func _build_more_modal() -> void:
 	close.add_theme_font_size_override("font_size", 13)
 	_apply_button_style(close, _make_style("#00f0ff", 12, "#ffffff33", 1, "#00f0ff99", 9))
 	close.pressed.connect(_hide_more_modal)
+	close.button_down.connect(_hide_more_modal)
 	header.add_child(close)
 
 	var grid := GridContainer.new()
@@ -991,11 +995,14 @@ func _sync_modal_layout() -> void:
 
 
 func _show_more_modal() -> void:
+	if _more_overlay == null or not is_instance_valid(_more_overlay):
+		_build_more_modal()
 	_more_overlay.visible = true
 
 
 func _hide_more_modal() -> void:
-	_more_overlay.visible = false
+	if _more_overlay != null and is_instance_valid(_more_overlay):
+		_more_overlay.visible = false
 
 
 func _open_placeholder() -> void:
