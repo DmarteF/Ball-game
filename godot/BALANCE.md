@@ -244,3 +244,46 @@ Justificativa:
 - Liga Neon revisada: sim
 - BALANCE.md criado/atualizado: sim
 - Evolucao de skins balanceada: sim
+- Evolucao de melhorias permanentes balanceada: sim
+
+## Evolucao de Melhorias Permanentes
+
+As melhorias permanentes desbloqueadas podem ser evoluidas com moedas ou diamantes. A mesma fonte (`GameState.upgrade_levels`) alimenta save, UI e calculos de gameplay.
+
+Formula central:
+- `GameState.get_upgrade_cost(upgrade_id, current_level, currency)`.
+- Moedas escalam por raridade, nivel de desbloqueio e nivel atual.
+- Diamantes usam o custo de moedas como base, com multiplicador por raridade para continuarem uma alternativa rapida, mas rara.
+
+Raridade:
+- Common: multiplicador 1.0.
+- Rare: multiplicador 1.55.
+- Epic: multiplicador 2.25.
+- Legendary: multiplicador 3.25.
+
+Escala de custo:
+- Base: `80 + unlockLevel * 24`.
+- Crescimento: `1.32 ^ current_level`.
+- Taxa leve apos nivel 10 para upgrades longos.
+- Moedas arredondam em blocos de 10.
+- Diamantes arredondam para cima.
+
+Efeitos e caps:
+- dano: cap seguro para nao trivializar aneis.
+- velocidade: cap para nao quebrar colisao.
+- moedas: cap de multiplicador para evitar inflacao absurda.
+- XP: cap de multiplicador para manter progressao.
+- critico: chance limitada.
+- perfect/diamante: chance baixa, diamante continua raro.
+- gelo/lentidao: chance limitada, sem travar aneis para sempre.
+- corrente/area/repulsao: cap para evitar limpar a tela inteira.
+
+Funcoes:
+- `get_upgrade_effect_value(upgrade_id, level)`.
+- `apply_upgrade_level_scaling(upgrade_data, level)`.
+- `clamp_upgrade_effect(upgrade_id, effect_value)`.
+
+Justificativa:
+- Os quatro upgrades iniciais podem ser evoluidos cedo.
+- Upgrades raros/epicos/lendarios sobem mais devagar.
+- Diamantes aceleram progresso, mas seguem caros o bastante para nao substituir moedas como caminho principal.

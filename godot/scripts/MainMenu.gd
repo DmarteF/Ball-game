@@ -170,18 +170,23 @@ func _build_top_bar() -> void:
 func _build_achievement_notice_overlay() -> void:
 	var pending := _pending_achievement_count()
 	if pending > 0:
+		var signature := _pending_achievement_signature()
+		if String(GameState.data.get("achievement_notice_seen_signature", "")) == signature:
+			return
 		var notice := _make_achievement_notice(pending)
 		_achievement_notice = notice
 		notice.anchor_left = 0.0
-		notice.anchor_top = 0.0
+		notice.anchor_top = 1.0
 		notice.anchor_right = 0.0
-		notice.anchor_bottom = 0.0
+		notice.anchor_bottom = 1.0
 		notice.offset_left = 18.0
-		notice.offset_top = 158.0
+		notice.offset_top = -146.0
 		notice.offset_right = 254.0
-		notice.offset_bottom = 198.0
+		notice.offset_bottom = -106.0
 		notice.z_index = 30
 		add_child(notice)
+		GameState.data["achievement_notice_seen_signature"] = signature
+		GameState.save_game()
 		_achievement_notice_hide_at = Time.get_ticks_msec() + 5200
 
 
@@ -244,6 +249,17 @@ func _pending_achievement_count() -> int:
 		if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
 			count += 1
 	return count
+
+
+func _pending_achievement_signature() -> String:
+	GameState._update_achievements(false)
+	var ids: Array[String] = []
+	for id in Dictionary(GameState.data.get("achievements", {})).keys():
+		var state: Dictionary = GameState.data["achievements"][id]
+		if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
+			ids.append(String(id))
+	ids.sort()
+	return "|".join(ids)
 
 
 func _make_achievement_notice(count: int) -> Button:

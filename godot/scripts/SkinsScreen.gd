@@ -78,6 +78,8 @@ var _filter_buttons: Array[Button] = []
 var _effect_filter_buttons: Array[Button] = []
 var _all_skin_data: Array = []
 var _detail_overlay: PanelContainer
+var _rarity_filters_expanded := false
+var _effect_filters_expanded := false
 
 
 func _ready() -> void:
@@ -257,7 +259,40 @@ func _make_collection_actions() -> HBoxContainer:
 	return row
 
 
-func _make_filters(kind: String) -> ScrollContainer:
+func _make_filters(kind: String) -> VBoxContainer:
+	var wrapper := VBoxContainer.new()
+	wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrapper.mouse_filter = Control.MOUSE_FILTER_PASS
+	wrapper.add_theme_constant_override("separation", 6)
+
+	var expanded := _rarity_filters_expanded if kind == "rarity" else _effect_filters_expanded
+	var selected := _filter if kind == "rarity" else _effect_filter
+	var title := _ui_text("Raridade", "Rarity") if kind == "rarity" else _ui_text("Efeito", "Effect")
+	var header := Button.new()
+	header.custom_minimum_size = Vector2(0, 42)
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.focus_mode = Control.FOCUS_NONE
+	header.mouse_filter = Control.MOUSE_FILTER_PASS
+	header.text = "%s: %s  %s" % [title, _filter_label(selected, selected, kind), "▲" if expanded else "▼"]
+	header.add_theme_font_override("font", _bold_font)
+	header.add_theme_font_size_override("font_size", 13)
+	header.add_theme_color_override("font_color", Color("#ffffff"))
+	_apply_button_style(header, _make_style("#ffffff12", 11, "#00f0ff66", 1, "#00f0ff33", 8))
+	header.pressed.connect(func() -> void:
+		if kind == "rarity":
+			_rarity_filters_expanded = not _rarity_filters_expanded
+		else:
+			_effect_filters_expanded = not _effect_filters_expanded
+		_rebuild_collection_content()
+	)
+	wrapper.add_child(header)
+	if not expanded:
+		if kind == "rarity":
+			_filter_buttons.clear()
+		else:
+			_effect_filter_buttons.clear()
+		return wrapper
+
 	var scroller := ScrollContainer.new()
 	scroller.custom_minimum_size.y = 42
 	scroller.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -304,7 +339,8 @@ func _make_filters(kind: String) -> ScrollContainer:
 		else:
 			_effect_filter_buttons.append(button)
 		row.add_child(button)
-	return scroller
+	wrapper.add_child(scroller)
+	return wrapper
 
 
 func _populate_skins() -> void:
@@ -364,13 +400,27 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(0, 286 if owned else 246)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 14, "#00ff88" if selected else rarity_color + "88", 2 if selected else 1))
+	var press_pos := Vector2.ZERO
+	var dragged := false
 	card.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed:
-			_show_skin_details(skin)
-		elif event is InputEventScreenTouch and event.pressed:
-			_show_skin_details(skin)
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				press_pos = event.position
+				dragged = false
+			elif not dragged:
+				_show_skin_details(skin)
+		elif event is InputEventScreenTouch:
+			if event.pressed:
+				press_pos = event.position
+				dragged = false
+			elif not dragged:
+				_show_skin_details(skin)
+		elif event is InputEventMouseMotion and event.position.distance_to(press_pos) > 10.0:
+			dragged = true
+		elif event is InputEventScreenDrag:
+			dragged = true
 	)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)

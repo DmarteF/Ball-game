@@ -143,6 +143,8 @@ func _make_language_card() -> PanelContainer:
 	grid.add_child(_make_language_button("Português", "pt"))
 	grid.add_child(_make_language_button("English", "en"))
 	grid.add_child(_make_language_button("Español", "es"))
+	grid.add_child(_make_language_button("日本語", "ja"))
+	grid.add_child(_make_language_button("中文", "zh"))
 	return card
 
 
@@ -211,6 +213,7 @@ func _make_debug_card() -> PanelContainer:
 		[_t("print_upgrade_state"), "#00f0ff", _print_upgrade_state],
 		[_t("unlock_next_upgrade"), "#00ff88", _unlock_next_upgrade],
 		[_t("unlock_all_upgrades"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_upgrades"), func() -> void: GameState.debug_unlock_all_upgrades())],
+		[_t("max_all_upgrades"), "#ffffff", func() -> void: _confirm_debug_action(_t("max_all_upgrades"), func() -> void: GameState.debug_max_all_upgrade_levels())],
 		[_t("lock_starter_upgrades"), "#ffb000", func() -> void: _confirm_debug_action(_t("lock_starter_upgrades"), func() -> void: GameState.debug_lock_all_except_starter_upgrades())],
 		[_t("reset_upgrade_levels"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_upgrade_levels"), func() -> void: GameState.debug_reset_upgrade_levels())],
 		[_t("unlock_all_skins"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_skins"), func() -> void: GameState.debug_unlock_all_skins())],
@@ -884,17 +887,20 @@ func _save_settings() -> void:
 
 
 func _t(key: String) -> String:
-	var pt := _language == "pt"
+	var pt := _language.begins_with("pt")
+	var es := _language.begins_with("es")
+	var ja := _language.begins_with("ja")
+	var zh := _language.begins_with("zh")
 	match key:
-		"settings_title": return "CONFIGURAÇÕES" if pt else "SETTINGS"
-		"audio": return "ÁUDIO" if pt else "AUDIO"
-		"music": return "Música" if pt else "Music"
-		"sfx": return "Efeitos" if pt else "Sound FX"
-		"muted": return "Mudo" if pt else "Muted"
-		"on": return "Ligado" if pt else "On"
-		"language": return "IDIOMA" if pt else "LANGUAGE"
-		"choose_language": return "Escolha o idioma da interface." if pt else "Choose the interface language."
-		"about": return "SOBRE" if pt else "ABOUT"
+		"settings_title": return "CONFIGURAÇÕES" if pt else "CONFIGURACIÓN" if es else "設定" if ja else "设置" if zh else "SETTINGS"
+		"audio": return "ÁUDIO" if pt else "AUDIO" if es else "オーディオ" if ja else "音频" if zh else "AUDIO"
+		"music": return "Música" if pt else "Música" if es else "音楽" if ja else "音乐" if zh else "Music"
+		"sfx": return "Efeitos" if pt else "Efectos" if es else "効果音" if ja else "音效" if zh else "Sound FX"
+		"muted": return "Mudo" if pt else "Silencio" if es else "ミュート" if ja else "静音" if zh else "Muted"
+		"on": return "Ligado" if pt else "Activado" if es else "オン" if ja else "开启" if zh else "On"
+		"language": return "IDIOMA" if pt else "IDIOMA" if es else "言語" if ja else "语言" if zh else "LANGUAGE"
+		"choose_language": return "Escolha o idioma da interface." if pt else "Elige el idioma de la interfaz." if es else "インターフェースの言語を選択します。" if ja else "选择界面语言。" if zh else "Choose the interface language."
+		"about": return "SOBRE" if pt else "ACERCA DE" if es else "情報" if ja else "关于" if zh else "ABOUT"
 		"about_text": return "Versão Godot 4 em migração fiel, mantendo o visual neon, controles mobile e estrutura preparada para Web." if pt else "Godot 4 faithful migration, keeping the neon look, mobile controls and Web-ready structure."
 		"save_progress": return "SAVE / PROGRESSO" if pt else "SAVE / PROGRESS"
 		"save_help": return "Exporte, importe ou restaure seu progresso com segurança. A importação cria backup automático antes de substituir o save atual." if pt else "Export, import or restore your progress safely. Import creates an automatic backup before replacing the current save."
@@ -960,6 +966,7 @@ func _t(key: String) -> String:
 		"print_upgrade_state": return "Print Upgrade State"
 		"unlock_next_upgrade": return "Liberar Próxima Melhoria" if pt else "Unlock Next Upgrade"
 		"unlock_all_upgrades": return "Liberar Todas as Melhorias" if pt else "Unlock All Upgrades"
+		"max_all_upgrades": return "Maximizar Todas as Melhorias" if pt else "Max All Upgrades"
 		"lock_starter_upgrades": return "Bloquear Exceto Starters" if pt else "Lock All Except Starter Upgrades"
 		"reset_upgrade_levels": return "Resetar Níveis de Melhorias" if pt else "Reset Upgrade Levels"
 		"unlock_all_skins": return "Liberar Todas as Skins" if pt else "Unlock All Skins"

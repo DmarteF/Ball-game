@@ -28,7 +28,8 @@ Este documento registra a auditoria da branch `main` usada para a etapa de port 
 - A main possui 34 upgrades temporarios em `upgrades.ts`.
 - Todos foram importados para `MainPortData.RUN_UPGRADES`.
 - O level-up agora sorteia do catalogo completo respeitando `unlocked_upgrades` e `maxLevel`.
-- A tela `UpgradesScreen.gd` mostra permanentes compraveis e lista os temporarios de rodada com estado bloqueado/liberado.
+- A tela `UpgradesScreen.gd` mostra somente upgrades desbloqueados como melhorias permanentes evoluiveis. Os temporarios de rodada permanecem no banco interno e aparecem apenas no level-up/gameplay quando desbloqueados.
+- A evolucao permanente usa `GameState.upgrade_levels`, com compra por moedas ou diamantes, nivel maximo, efeito atual/proximo e migracao para saves antigos.
 
 ## Efeitos
 
@@ -99,6 +100,7 @@ No Godot:
 | Todos os upgrades temporarios da main importados | Sim |
 | Custos/limites/desbloqueios de temporarios portados | Sim |
 | Compra/evolucao de permanentes funcionando | Sim |
+| Evolucao de permanentes com moedas/diamantes | Sim |
 | Efeitos aplicados na gameplay | Parcial avancado |
 | Ingles como padrao | Sim |
 | Portugues disponivel | Sim |
@@ -225,6 +227,46 @@ Pendências:
 - Implementar botão de dobrar recompensas no resultado de fase/infinito/Liga sem duplicar save.
 - Revisar visual da Liga Neon contra prints/main depois de testar no navegador.
 - Expandir tradução de nomes próprios de upgrades/skins somente se a branch main também traduzir esses nomes.
+
+## 7.8 Evolucao de melhorias permanentes
+
+Atualizado nesta etapa:
+
+- `GameState.get_upgrade_cost(upgrade_id, current_level, currency)` virou a formula unica de custo para moedas e diamantes.
+- `GameState.get_upgrade_effect_value(upgrade_id, level)` retorna valor numerico, texto e tipo do efeito atual.
+- `GameState.apply_upgrade_level_scaling(upgrade_data, level)` aplica a curva por nivel nos dados importados da main.
+- `GameState.clamp_upgrade_effect(upgrade_id, effect_value)` impede valores extremos de velocidade, critico, moedas, XP, gelo, area, corrente e repulsao.
+- `GameState.migrate_save_to_upgrade_levels()` prepara saves antigos que ainda nao tenham mapa de niveis.
+- `UpgradesScreen.gd` mostra nivel atual/maximo, efeito atual, proximo efeito, custo em moedas, custo em diamantes e estado MAX.
+- Configuracoes > Debug recebeu `Max All Upgrades`, mantendo confirmacao para a acao.
+
+Checklist desta etapa:
+
+| Item | Status |
+| --- | --- |
+| Fonte unica de custo | Sim |
+| Compra por moedas | Sim |
+| Compra por diamantes | Sim |
+| Efeito atual/proximo | Sim |
+| Caps de efeito | Sim |
+| Migracao de save | Sim |
+| Debug para maximizar upgrades | Sim |
+| Bloqueados escondidos da lista principal | Sim |
+| Temporarios nao tratados como permanentes | Sim |
+
+## 7.9 Skins, notificacao de conquistas e idiomas
+
+Atualizado nesta etapa:
+
+- `SkinsScreen.gd` recebeu filtros recolhiveis para raridade e efeito, mantendo os contadores de colecao no topo;
+- cards de skin diferenciam toque de arrasto, para que o jogador consiga rolar a tela sem abrir detalhe por acidente;
+- `MainMenu.gd` moveu a notificacao de conquistas pendentes para o rodape e salva uma assinatura das pendencias vistas;
+- `LocalizationManager.gd` passou a reconhecer `en`, `pt`, `es`, `ja` e `zh` para chaves compartilhadas;
+- `SettingsScreen.gd` mostra os cinco idiomas no seletor.
+
+Pendencia conhecida:
+
+- parte dos textos de gameplay, Liga, resultado e dados importados ainda esta hardcoded nos scripts. A base multilíngue esta pronta, mas a traducao 100% tela por tela precisa de uma rodada dedicada.
 
 ## 7.6 Port do efeito Controle
 

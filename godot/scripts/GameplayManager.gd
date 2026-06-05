@@ -24,7 +24,7 @@ const MIN_DIRECTION_COMPONENT := 0.24
 const RING_SPAWN_GRACE_MSEC := 1050
 const RING_REPOSITION_GRACE_MSEC := 520
 const CRUSH_CONFIRM_MSEC := 150
-const XP_BASE_REQUIREMENT := 130.0
+const XP_BASE_REQUIREMENT := 210.0
 const RUN_COIN_MULTIPLIER := 1.25
 const GLOBAL_COIN_CONVERSION_RATE := 0.82
 const PROFILE_XP_MULTIPLIER := 1.08
@@ -414,7 +414,7 @@ func _create_rings() -> Array[Dictionary]:
 			"closing_multiplier": 1.0,
 		}
 		if status == "active":
-			ring = _randomize_ring_gap(ring) if is_infinite else _align_ring_gap_to_ball(ring)
+			ring = _randomize_ring_gap_spaced(ring, result)
 		result.append(ring)
 	return result
 
@@ -516,7 +516,7 @@ func _activate_next_queued_ring() -> bool:
 			return false
 		ring["status"] = "active"
 		ring["radius"] = float(safe_spawn["radius"])
-		ring = _randomize_ring_gap(ring) if is_infinite else _align_ring_gap_to_ball(ring)
+		ring = _randomize_ring_gap_spaced(ring, rings)
 		ring["initial_radius"] = max(float(ring.get("initial_radius", ring["radius"])), float(ring["radius"]))
 		ring["spawned_at"] = Time.get_ticks_msec()
 		ring["defeat_grace_until"] = Time.get_ticks_msec() + RING_SPAWN_GRACE_MSEC
@@ -646,7 +646,7 @@ func _make_infinite_ring(index: int) -> Dictionary:
 		"closing_multiplier": 1.0,
 	}
 	ring["rotation"] = rotation
-	return _randomize_ring_gap(ring)
+	return _randomize_ring_gap_spaced(ring, rings)
 
 
 func _update_rings(delta_steps: float) -> void:
@@ -1711,6 +1711,32 @@ func _randomize_ring_gap(ring: Dictionary) -> Dictionary:
 	if String(ring.get("type", "normal")) == "solid":
 		return ring
 	ring["gap_start"] = _normalize_angle(randf() * TWO_PI - float(ring.get("rotation", 0.0)))
+	return ring
+
+
+func _randomize_ring_gap_spaced(ring: Dictionary, existing: Array = []) -> Dictionary:
+	if String(ring.get("type", "normal")) == "solid":
+		return ring
+	var best_angle := randf() * TWO_PI
+	var best_distance := -1.0
+	for attempt in range(10):
+		var candidate := _normalize_angle(randf() * TWO_PI + float(attempt) * 2.399963)
+		var nearest := TAU
+		for other in existing:
+			if typeof(other) != TYPE_DICTIONARY:
+				continue
+			var other_ring: Dictionary = other
+			if String(other_ring.get("status", "active")) != "active" or String(other_ring.get("type", "normal")) == "solid":
+				continue
+			var other_angle := _normalize_angle(float(other_ring.get("gap_start", 0.0)) + float(other_ring.get("rotation", 0.0)))
+			var distance: float = abs(_normalize_angle(candidate - other_angle))
+			nearest = min(nearest, min(distance, TAU - distance))
+		if nearest > best_distance:
+			best_distance = nearest
+			best_angle = candidate
+		if nearest >= 0.82:
+			break
+	ring["gap_start"] = _normalize_angle(best_angle - float(ring.get("rotation", 0.0)))
 	return ring
 
 

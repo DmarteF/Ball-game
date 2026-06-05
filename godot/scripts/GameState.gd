@@ -684,6 +684,15 @@ func debug_reset_upgrade_levels() -> void:
 	save_game()
 
 
+func debug_max_all_upgrade_levels() -> void:
+	_ensure_upgrade_state()
+	for upgrade in MainPortData.run_upgrades():
+		var id := String(upgrade.get("id", ""))
+		if is_upgrade_unlocked(id):
+			_set_upgrade_level(id, get_upgrade_max_level(id))
+	save_game()
+
+
 func debug_unlock_all_skins() -> void:
 	var skins: Array = []
 	for skin in MainPortData.skins():
@@ -994,11 +1003,15 @@ func _meets_unlock(rule: Dictionary, max_phase: int, profile_level: int) -> bool
 	return max_phase >= int(rule.get("phase", 999)) or profile_level >= int(rule.get("level", 999))
 
 
-func get_upgrade_cost(id: String) -> int:
+func migrate_save_to_upgrade_levels() -> void:
+	_ensure_upgrade_state()
+
+
+func get_upgrade_cost(id: String, current_level := -1, currency := "coins") -> int:
 	var definition: Dictionary = MainPortData.upgrade_by_id(id)
 	if definition.is_empty():
 		return 0
-	var level := get_upgrade_level(id)
+	var level := get_upgrade_level(id) if current_level < 0 else current_level
 	var rarity := String(definition.get("rarity", "common"))
 	var rarity_multiplier := 1.0
 	match rarity:
@@ -1010,7 +1023,110 @@ func get_upgrade_cost(id: String) -> int:
 			rarity_multiplier = 3.25
 	var base_cost := 80 + int(definition.get("unlockLevel", 1)) * 24
 	var late_tax: float = 1.0 + max(0.0, float(level - 10)) * 0.025
-	return floori(float(base_cost) * rarity_multiplier * pow(1.32, level) * late_tax)
+	var coin_cost := floori(float(base_cost) * rarity_multiplier * pow(1.32, level) * late_tax)
+	if currency == "diamonds":
+		var diamond_multiplier := 1.15
+		match rarity:
+			"rare":
+				diamond_multiplier = 1.25
+			"epic":
+				diamond_multiplier = 1.38
+			"legendary":
+				diamond_multiplier = 1.55
+		return max(1, ceili(float(coin_cost) / 120.0 * diamond_multiplier))
+	return max(1, int(ceil(float(coin_cost) / 10.0) * 10.0))
+
+
+func get_upgrade_effect_value(id: String, level := -1) -> Dictionary:
+	var data_source: Dictionary = MainPortData.upgrade_by_id(id)
+	if data_source.is_empty():
+		return { "id": id, "level": 0, "value": 0.0, "label": "Lv.0" }
+	var actual_level := get_upgrade_level(id) if level < 0 else clampi(level, 0, get_upgrade_max_level(id))
+	var scaled := apply_upgrade_level_scaling(data_source, actual_level)
+	scaled["id"] = id
+	scaled["level"] = actual_level
+	scaled["max_level"] = get_upgrade_max_level(id)
+	return scaled
+
+
+func apply_upgrade_level_scaling(upgrade_data: Dictionary, level: int) -> Dictionary:
+	var id := String(upgrade_data.get("id", ""))
+	var value := 0.0
+	match id:
+		"damage":
+			value = clamp_upgrade_effect(id, 0.15 * level)
+			return { "type": "damage", "value": value, "label": "+%s%% dano" % roundi(value * 100.0) }
+		"speed":
+			value = clamp_upgrade_effect(id, 0.20 * level)
+			return { "type": "speed", "value": value, "label": "+%s%% velocidade" % roundi(value * 100.0) }
+		"coinBoost":
+			value = clamp_upgrade_effect(id, 0.50 * level)
+			return { "type": "coins", "value": value, "label": "+%s%% moedas" % roundi(value * 100.0) }
+		"critical":
+			value = clamp_upgrade_effect(id, 0.05 * level)
+			return { "type": "critical", "value": value, "label": "+%s%% critico" % roundi(value * 100.0) }
+		"xpBoost":
+			value = clamp_upgrade_effect(id, 0.50 * level)
+			return { "type": "xp", "value": value, "label": "+%s%% XP" % roundi(value * 100.0) }
+		"perfectChance", "diamondInstinct":
+			value = clamp_upgrade_effect(id, 0.01 * level if id == "perfectChance" else 0.018 * level)
+			return { "type": "perfect", "value": value, "label": "+%.1f%% diamante/perfect" % (value * 100.0) }
+		"frost":
+			value = clamp_upgrade_effect(id, 0.18 + level * 0.035)
+			return { "type": "freeze", "value": value, "label": "%.1f%% chance gelo" % (value * 100.0) }
+		"timeFreeze", "chronoBreak", "slowField":
+			value = clamp_upgrade_effect(id, 0.08 + level * 0.035)
+			return { "type": "slow", "value": value, "label": "%.1f%% chance lentidao" % (value * 100.0) }
+		"ringRepulse":
+			value = clamp_upgrade_effect(id, 0.10 + level * 0.035)
+			return { "type": "repulse", "value": value, "label": "%.1f%% chance repulsao" % (value * 100.0) }
+		"chainLightning", "chainBreak":
+			value = clamp_upgrade_effect(id, 0.16 + level * 0.035)
+			return { "type": "chain", "value": value, "label": "%.1f%% corrente" % (value * 100.0) }
+		"shockwave", "voidPulse", "bomb":
+			value = clamp_upgrade_effect(id, 0.08 + level * 0.03)
+			return { "type": "area", "value": value, "label": "%.1f%% area" % (value * 100.0) }
+		"burn", "penetration", "laser", "laserCut", "multihit", "criticalOverload", "royalBreaker", "bossHunter", "trophyInstinct", "comboOverdrive", "magnetCoins", "secretMagnet", "ricochet", "bounce":
+			value = clamp_upgrade_effect(id, 0.06 * level)
+			return { "type": "bonus", "value": value, "label": "+%s%% bonus" % roundi(value * 100.0) }
+	value = clamp_upgrade_effect(id, 0.05 * level)
+	return { "type": "upgrade", "value": value, "label": "Lv.%s" % level }
+
+
+func clamp_upgrade_effect(id: String, effect_value: float) -> float:
+	match id:
+		"speed", "ricochet", "bounce":
+			return clampf(effect_value, 0.0, 1.80)
+		"critical", "criticalOverload":
+			return clampf(effect_value, 0.0, 0.35)
+		"perfectChance", "diamondInstinct":
+			return clampf(effect_value, 0.0, 0.08)
+		"frost", "timeFreeze", "chronoBreak", "slowField":
+			return clampf(effect_value, 0.0, 0.48)
+		"coinBoost", "magnetCoins", "secretMagnet":
+			return clampf(effect_value, 0.0, 4.0)
+		"xpBoost":
+			return clampf(effect_value, 0.0, 3.5)
+		"chainLightning", "chainBreak", "shockwave", "voidPulse", "bomb", "ringRepulse":
+			return clampf(effect_value, 0.0, 0.55)
+	return clampf(effect_value, 0.0, 4.5)
+
+
+func get_upgrade_upgrade_preview(id: String) -> Dictionary:
+	var level := get_upgrade_level(id)
+	var max_level := get_upgrade_max_level(id)
+	return {
+		"level": level,
+		"max_level": max_level,
+		"current": get_upgrade_effect_value(id, level),
+		"next": get_upgrade_effect_value(id, min(level + 1, max_level)),
+		"coins": get_upgrade_cost(id, level, "coins"),
+		"diamonds": get_upgrade_cost(id, level, "diamonds"),
+	}
+
+
+func get_upgrade_preview(id: String) -> Dictionary:
+	return get_upgrade_upgrade_preview(id)
 
 
 func get_upgrade_max_level(id: String) -> int:
@@ -1088,7 +1204,7 @@ func upgrade_with_coins(id: String) -> Dictionary:
 	var max_level := get_upgrade_max_level(id)
 	if level >= max_level:
 		return { "ok": false, "reason": "max" }
-	var cost := get_upgrade_cost(id)
+	var cost := get_upgrade_cost(id, level, "coins")
 	if int(data.get("coins", 0)) < cost:
 		return { "ok": false, "reason": "coins", "cost": cost }
 	data["coins"] = max(0, int(data.get("coins", 0)) - cost)
@@ -1097,7 +1213,7 @@ func upgrade_with_coins(id: String) -> Dictionary:
 	_progress_missions("upgradesBought", 1)
 	_update_achievements(false)
 	save_game()
-	return { "ok": true, "level": level + 1, "cost": cost }
+	return { "ok": true, "level": level + 1, "cost": cost, "currency": "coins" }
 
 
 func upgrade_with_diamonds(id: String) -> Dictionary:
@@ -1110,7 +1226,7 @@ func upgrade_with_diamonds(id: String) -> Dictionary:
 	var max_level := get_upgrade_max_level(id)
 	if level >= max_level:
 		return { "ok": false, "reason": "max" }
-	var cost: int = max(1, ceili(float(get_upgrade_cost(id)) / 120.0))
+	var cost := get_upgrade_cost(id, level, "diamonds")
 	if int(data.get("diamonds", 0)) < cost:
 		return { "ok": false, "reason": "diamonds", "cost": cost }
 	data["diamonds"] = max(0, int(data.get("diamonds", 0)) - cost)
@@ -1119,7 +1235,7 @@ func upgrade_with_diamonds(id: String) -> Dictionary:
 	_progress_missions("upgradesBought", 1)
 	_update_achievements(false)
 	save_game()
-	return { "ok": true, "level": level + 1, "cost": cost }
+	return { "ok": true, "level": level + 1, "cost": cost, "currency": "diamonds" }
 
 
 func apply_reward(reward: Dictionary, save_after := false) -> String:

@@ -155,6 +155,58 @@ Este documento registra a analise da gameplay da branch `main` antes dos ajustes
 - As 50 fases usam a mesma formula/dados da branch `main`, mas ainda precisam de comparacao visual fase a fase.
 - A Liga Neon precisa de comparacao visual fina com `frontend/app/league.tsx`, `frontend/app/compete.tsx` e `frontend/src/game/dualArena.ts`.
 
+## Evolucao de melhorias permanentes
+
+Atualizado nesta etapa:
+
+- a evolucao permanente usa os mesmos upgrades desbloqueados que ja alimentam a gameplay;
+- upgrades bloqueados nao entram no card de melhoria nem no sorteio de level-up;
+- upgrades temporarios escolhidos dentro da partida nao aparecem como permanentes;
+- efeitos permanentes passam por `get_upgrade_effect_value`, que calcula o valor pelo nivel salvo;
+- `apply_upgrade_level_scaling` transforma o dado base do upgrade em valor de gameplay;
+- `clamp_upgrade_effect` limita velocidade, critico, moedas, XP, gelo, repulsao, corrente e area para nao quebrar fases, infinito, Boss ou Liga Neon;
+- custos sao calculados por `get_upgrade_cost(upgrade_id, current_level, currency)`, aceitando moedas ou diamantes;
+- `upgrade_with_coins` e `upgrade_with_diamonds` salvam imediatamente apos a compra.
+
+Impacto na gameplay:
+
+- dano, velocidade, moedas, XP e critico melhoram de forma progressiva;
+- upgrades de gelo/lentidao continuam com duracao/chance limitada;
+- efeitos de corrente, area e repulsao seguem capados para evitar limpar todos os aneis automaticamente;
+- diamantes viram alternativa de evolucao, mas nao substituem moedas como caminho principal de progressao.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Custo por moedas centralizado | Sim |
+| Custo por diamantes centralizado | Sim |
+| Efeito atual/proximo calculado pelo nivel | Sim |
+| Caps de efeito aplicados | Sim |
+| Save de nivel permanente mantido | Sim |
+| Temporarios de rodada separados da evolucao permanente | Sim |
+
+## Ajustes de aneis, XP e Liga
+
+Atualizado nesta etapa:
+
+- gaps de aneis ativos e novos agora usam `_randomize_ring_gap_spaced`, que tenta separar angularmente as aberturas ja existentes;
+- o alinhamento automatico do gap para a direcao da bolinha foi removido das fases normais, evitando sequencias de aneis com abertura no mesmo lado;
+- o ultimo anel de fase normal permanece com `type = solid` e `gap_size = 0`;
+- o requisito de XP de rodada aumentou para reduzir a frequencia de level-up no modo normal;
+- a Liga Neon tambem aumentou o requisito de XP por level-up de arena;
+- a Liga Neon desenha a textura real da skin do rival e usa cache de textura para evitar recarregar asset a cada frame.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Gaps menos alinhados | Sim |
+| Ultimo anel solido nas fases | Sim |
+| Level-up de run mais controlado | Sim |
+| Level-up da Liga mais controlado | Sim |
+| Skin visual dos bots da Liga refletida na arena | Sim |
+
 ## Checklist obrigatoria
 
 | Item | Status |

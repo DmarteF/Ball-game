@@ -16,7 +16,7 @@ const PHYSICS_STEPS_PER_SECOND := 60.0
 const RING_SPAWN_GRACE_MSEC := 900
 const CRUSH_CONFIRM_MSEC := 150
 const MATCH_LIMIT_SECONDS := 60.0
-const XP_BASE := 30.0
+const XP_BASE := 52.0
 const BASE_BALL_SPEED := 2.25
 const MAX_UPGRADE_REROLLS := 3
 const REROLL_DIAMOND_COST := 15
@@ -96,6 +96,7 @@ var _result_double_button: Button
 var _result_retry_button: Button
 var _revive_overlay: Control
 var _battle_started_flash := 0.0
+var _skin_texture_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -1369,9 +1370,15 @@ func _draw_skin_ball(state: Dictionary, ball: Vector2) -> void:
 	}.get(rarity, 1.0))
 	draw_circle(ball, BALL_RADIUS + 10.0 * float(ring_scale), Color(primary, 0.15))
 	draw_circle(ball, BALL_RADIUS + 4.0, Color("#ffffff24"))
-	draw_circle(ball, BALL_RADIUS, primary)
-	draw_circle(ball + Vector2(BALL_RADIUS * 0.28, -BALL_RADIUS * 0.28), BALL_RADIUS * 0.46, secondary)
-	draw_arc(ball, BALL_RADIUS + 2.2, -0.35, PI * 1.45, 34, Color(secondary, 0.9), 2.0, true)
+	var texture := _skin_texture(String(state.get("skin", "neon_blue")))
+	if texture:
+		var icon_size := BALL_RADIUS * 2.8 * float(ring_scale)
+		var rect := Rect2(ball - Vector2(icon_size, icon_size) * 0.5, Vector2(icon_size, icon_size))
+		draw_texture_rect(texture, rect, false, Color.WHITE)
+	else:
+		draw_circle(ball, BALL_RADIUS, primary)
+		draw_circle(ball + Vector2(BALL_RADIUS * 0.28, -BALL_RADIUS * 0.28), BALL_RADIUS * 0.46, secondary)
+		draw_arc(ball, BALL_RADIUS + 2.2, -0.35, PI * 1.45, 34, Color(secondary, 0.9), 2.0, true)
 	if rarity in ["epic", "legendary", "mythic", "ultimate"]:
 		draw_arc(ball, BALL_RADIUS + 5.0, PI * 0.12, PI * 1.28, 36, Color(secondary, 0.42), 1.5, true)
 	if rarity in ["legendary", "mythic", "ultimate"]:
@@ -1713,10 +1720,14 @@ func _format_time(seconds: int) -> String:
 
 
 func _skin_texture(id: String) -> Texture2D:
+	if _skin_texture_cache.has(id):
+		return _skin_texture_cache[id]
 	var path := MainPortData.skin_asset_path(id)
 	if ResourceLoader.exists(path):
-		return load(path)
-	return load("res://assets/skins/neon_blue.png")
+		_skin_texture_cache[id] = load(path)
+	else:
+		_skin_texture_cache[id] = load("res://assets/skins/neon_blue.png")
+	return _skin_texture_cache[id]
 
 
 func _play_sfx(id: String) -> void:

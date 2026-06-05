@@ -290,7 +290,7 @@ func _skin_name(id: String) -> String:
 
 func _make_skin_icon(id: String, icon_size: int) -> TextureRect:
 	var icon := TextureRect.new()
-	var path := "res://assets/skins/%s.png" % id
+	var path := MainPortData.skin_asset_path(id)
 	icon.texture = load(path if ResourceLoader.exists(path) else "res://assets/skins/neon_blue.png")
 	icon.custom_minimum_size = Vector2(icon_size, icon_size)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

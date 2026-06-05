@@ -206,6 +206,56 @@ Ainda mockado/pendente:
 
 Observacao de seguranca: o relogio atual usa horario local do aparelho. Em Android/APK isso pode ser manipulado alterando o relogio do celular. A estrutura ficou preparada para futura validacao online, mas essa validacao ainda nao foi implementada.
 
+### Evolucao de melhorias permanentes
+
+Atualizado nesta etapa:
+
+- melhorias permanentes desbloqueadas agora podem subir de nivel com moedas ou diamantes;
+- a tela `Upgrades/Melhorias` mostra nivel atual, nivel maximo, efeito atual, proximo efeito, custo em moedas e custo em diamantes;
+- quando chega ao limite, o card mostra estado `MAX` e remove os botoes de compra;
+- upgrades bloqueados continuam escondidos da lista principal, mas permanecem no banco interno;
+- upgrades temporarios de rodada continuam fora da tela de melhorias permanentes;
+- a gameplay e o reroll continuam usando a mesma pool de upgrades desbloqueados salva no `GameState`;
+- `GameState.migrate_save_to_upgrade_levels()` garante que saves antigos recebam `upgrade_levels` sem perder progresso;
+- Debug em Configuracoes recebeu `Max All Upgrades`, `Reset Upgrade Levels`, `Add Coins` e `Add Diamonds`.
+
+Funcoes centrais:
+
+- `GameState.get_upgrade_cost(upgrade_id, current_level, currency)`;
+- `GameState.get_upgrade_effect_value(upgrade_id, level)`;
+- `GameState.apply_upgrade_level_scaling(upgrade_data, level)`;
+- `GameState.clamp_upgrade_effect(upgrade_id, effect_value)`;
+- `GameState.upgrade_with_coins(upgrade_id)`;
+- `GameState.upgrade_with_diamonds(upgrade_id)`.
+
+Checklist desta etapa:
+
+| Item | Status |
+| --- | --- |
+| Evoluir com moedas | Sim |
+| Evoluir com diamantes | Sim |
+| UI mostra nivel atual/maximo | Sim |
+| UI mostra efeito atual/proximo | Sim |
+| UI mostra custo por moeda/diamante | Sim |
+| Estado MAX visivel | Sim |
+| Save preserva `upgrade_levels` | Sim |
+| Migracao de save antigo preparada | Sim |
+| Debug para maximizar/resetar upgrades | Sim |
+| Temporarios de rodada nao aparecem como permanentes | Sim |
+
+### Ajustes de UI e gameplay de 2026-06-05
+
+Atualizado nesta etapa:
+
+- a tela Skins agora recolhe filtros de raridade e efeito em seletores com seta, reduzindo poluicao visual;
+- cards de skins so abrem detalhes ao toque/click solto sem arrasto, melhorando o scroll no celular;
+- a notificacao de conquistas pendentes aparece no rodape, registra a assinatura das pendencias e nao reaparece toda vez que o jogador volta ao menu;
+- gaps dos aneis passam por distribuicao aleatoria com separacao angular, evitando varias aberturas alinhadas;
+- o ultimo anel das fases normais continua sendo solido/sem abertura;
+- XP necessario para level-up de rodada foi aumentado no modo normal e na Liga para reduzir level-up rapido demais;
+- bots da Liga Neon passam a desenhar o sprite real da skin selecionada, incluindo assets em `assets/skins/generated`;
+- o seletor de idioma aceita ingles, portugues, espanhol, japones e chines. A cobertura central via `LocalizationManager` foi ampliada; textos hardcoded restantes ainda precisam de passagem tela por tela.
+
 ## 7. Gameplay - Fase 1
 
 Referencias analisadas na branch `main`:

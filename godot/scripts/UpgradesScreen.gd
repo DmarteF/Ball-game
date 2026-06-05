@@ -260,11 +260,12 @@ func _make_resource_pill(icon_key: String, value: String, border: String) -> Pan
 func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelContainer:
 	var id := String(upgrade["id"])
 	var unlocked := GameState.is_upgrade_unlocked(id)
-	var level := GameState.get_upgrade_level(id)
-	var max_level := GameState.get_upgrade_max_level(id)
-	var cost := GameState.get_upgrade_cost(id)
+	var preview := GameState.get_upgrade_preview(id)
+	var level := int(preview.get("level", 0))
+	var max_level := int(preview.get("max_level", GameState.get_upgrade_max_level(id)))
+	var coin_cost := int(preview.get("coins", 0))
+	var diamond_cost := int(preview.get("diamonds", 0))
 	var is_maxed := level >= max_level
-	var can_afford := int(GameState.data.get("coins", 0)) >= cost
 	var card := PanelContainer.new()
 	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12" if unlocked else "#ffffff0c", 16, "#ffffff22" if unlocked else "#55557755", 2))
@@ -304,31 +305,26 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 		locked.add_child(_make_icon("locked", 14))
 		locked.add_child(_make_label(String(upgrade.get("unlockRequirement", upgrade.get("unlock", "Upgrade bloqueado"))), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		info.add_child(locked)
-	info.add_child(_make_label("Nível: %s/%s" % [level, max_level], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label("%s: %s/%s" % [_t("upgrade_level"), level, max_level], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
-		info.add_child(_make_label(_upgrade_value_text(id, level, max_level), 11, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+		info.add_child(_make_label("%s: %s" % [_t("current_effect"), _effect_label(Dictionary(preview.get("current", {})))], 11, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		if not is_maxed:
-			info.add_child(_make_label("Custo para upar: %s moedas" % cost, 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+			info.add_child(_make_label("%s: %s" % [_t("next_level"), _effect_label(Dictionary(preview.get("next", {})))], 11, "#00ff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+			info.add_child(_make_label("%s: %s %s / %s %s" % [_t("cost"), coin_cost, _t("coins"), diamond_cost, _t("diamonds")], 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		else:
+			info.add_child(_make_label(_t("max"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
-	var buy := Button.new()
-	buy.custom_minimum_size = Vector2(86, 58)
-	buy.focus_mode = Control.FOCUS_NONE
-	buy.mouse_filter = Control.MOUSE_FILTER_PASS
-	buy.disabled = not unlocked or is_maxed
-	if is_maxed:
-		buy.text = "MAX"
-	elif unlocked:
-		buy.text = "UPAR\n%s" % cost
-	else:
-		buy.text = "LOCK"
-	buy.modulate.a = 1.0 if unlocked and not is_maxed else 0.5
-	buy.add_theme_font_override("font", _bold_font)
-	buy.add_theme_font_size_override("font_size", 13)
-	buy.add_theme_color_override("font_color", Color("#ffffff"))
-	_apply_button_style(buy, _make_style("#00aa77" if is_maxed else "#0088ff" if can_afford and unlocked else "#555555", 12, "#00000000", 0, "#00f0ff88" if unlocked and not is_maxed else "#00000000", 8))
-	if unlocked and not is_maxed:
-		buy.pressed.connect(_buy_upgrade.bind(id))
-	row.add_child(buy)
+	if unlocked:
+		var actions := VBoxContainer.new()
+		actions.custom_minimum_size.x = 112 if _is_narrow_screen() else 132
+		actions.add_theme_constant_override("separation", 7)
+		actions.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.add_child(actions)
+		if is_maxed:
+			actions.add_child(_make_upgrade_button(_t("max"), "#00aa77", true, Callable()))
+		else:
+			actions.add_child(_make_upgrade_button("%s\n%s" % [_t("upgrade_with_coins"), coin_cost], "#0088ff", false, _buy_upgrade.bind(id, "coins")))
+			actions.add_child(_make_upgrade_button("%s\n%s" % [_t("upgrade_with_diamonds"), diamond_cost], "#00aa77", false, _buy_upgrade.bind(id, "diamonds")))
 	return card
 
 
@@ -421,21 +417,67 @@ func _upgrade_value(id: String, level: int) -> String:
 	return "Lv.%s" % level
 
 
-func _buy_upgrade(id: String) -> void:
-	var result := GameState.purchase_permanent_upgrade(id)
+func _make_upgrade_button(text: String, color: String, disabled: bool, action: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(0, 46)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
+	button.disabled = disabled
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_font_size_override("font_size", 10 if _is_narrow_screen() else 11)
+	button.add_theme_color_override("font_color", Color("#ffffff"))
+	button.modulate.a = 0.55 if disabled else 1.0
+	_apply_button_style(button, _make_style(color if not disabled else "#555555", 12, "#00000000", 0, color + "88" if not disabled else "#00000000", 8))
+	if action.is_valid() and not disabled:
+		button.pressed.connect(action)
+	return button
+
+
+func _effect_label(effect: Dictionary) -> String:
+	return String(effect.get("label", "Lv.%s" % int(effect.get("level", 0))))
+
+
+func _buy_upgrade(id: String, currency := "coins") -> void:
+	var result := GameState.upgrade_with_diamonds(id) if currency == "diamonds" else GameState.upgrade_with_coins(id)
 	if bool(result.get("ok", false)):
 		_play_sfx("res://assets/sounds/button_confirm.mp3")
 		_rebuild_upgrade_list()
-		_play_feedback("Melhoria comprada! Lv.%s" % int(result.get("level", 0)), "#00ff88")
+		_play_feedback("%s! Lv.%s" % [_t("upgrade_improved"), int(result.get("level", 0))], "#00ff88")
 		return
 	var reason := String(result.get("reason", ""))
 	var text := "Upgrade bloqueado"
 	if reason == "coins":
-		text = "Moedas insuficientes: precisa de %s" % int(result.get("cost", GameState.get_upgrade_cost(id)))
+		text = "%s: %s" % [_t("not_enough_coins"), int(result.get("cost", GameState.get_upgrade_cost(id, GameState.get_upgrade_level(id), "coins")))]
+	elif reason == "diamonds":
+		text = "%s: %s" % [_t("not_enough_diamonds"), int(result.get("cost", GameState.get_upgrade_cost(id, GameState.get_upgrade_level(id), "diamonds")))]
 	elif reason == "max":
-		text = "Upgrade no nível máximo"
+		text = _t("max")
 	_play_feedback(text, "#ff6b9a")
 	_play_sfx("res://assets/sounds/button_error.mp3")
+
+
+func _t(key: String) -> String:
+	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
+	match key:
+		"upgrade_level": return "Nível da Melhoria" if pt else "Upgrade Level"
+		"level": return "Nível" if pt else "Level"
+		"max_level": return "Nível Máximo" if pt else "Max Level"
+		"upgrade_improved": return "Melhoria aprimorada" if pt else "Upgrade Improved"
+		"upgrade_with_coins": return "Melhorar com Moedas" if pt else "Upgrade with Coins"
+		"upgrade_with_diamonds": return "Melhorar com Diamantes" if pt else "Upgrade with Diamonds"
+		"current_effect": return "Efeito Atual" if pt else "Current Effect"
+		"next_level": return "Próximo Nível" if pt else "Next Level"
+		"max": return "Máximo" if pt else "Max"
+		"not_enough_coins": return "Moedas insuficientes" if pt else "Not enough coins"
+		"not_enough_diamonds": return "Diamantes insuficientes" if pt else "Not enough diamonds"
+		"cost": return "Custo" if pt else "Cost"
+		"coins": return "moedas" if pt else "coins"
+		"diamonds": return "diamantes" if pt else "diamonds"
+	return key
 
 
 func _rebuild_upgrade_list() -> void:
