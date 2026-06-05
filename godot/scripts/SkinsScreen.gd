@@ -362,7 +362,7 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	var is_new := owned and GameState.is_new_skin(String(skin["id"]))
 	var rarity_color := _rarity_color(String(skin["rarity"]))
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(0, 246)
+	card.custom_minimum_size = Vector2(0, 286 if owned else 246)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 14, "#00ff88" if selected else rarity_color + "88", 2 if selected else 1))
@@ -401,6 +401,8 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size.y = 30
 	column.add_child(desc)
+	if owned:
+		column.add_child(_make_skin_level_panel(String(skin["id"]), String(skin["rarity"])))
 
 	var effects := HBoxContainer.new()
 	effects.add_theme_constant_override("separation", 5)
@@ -420,7 +422,9 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		column.add_child(row)
 		row.add_child(_make_action("USANDO" if selected else "EQUIPAR", "#00f0ff", selected, _equip_skin.bind(String(skin["id"]))))
-		row.add_child(_make_action("EVOLUIR", "#00ff88", true))
+		row.add_child(_make_action(_ui_text("MELHORAR", "UPGRADE"), "#00ff88", GameState.is_skin_max_level(String(skin["id"])), func() -> void:
+			_show_skin_details(skin)
+		))
 	else:
 		column.add_child(_make_label("Revele em baús, fases ou conquistas", 11, "#ffffff77", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
@@ -894,6 +898,8 @@ func _show_skin_details(skin: Dictionary) -> void:
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size.y = 54
 	column.add_child(desc)
+	if owned:
+		column.add_child(_make_skin_upgrade_details(skin_id, rarity))
 	column.add_child(_make_label(_unlock_hint(String(skin.get("source", "")), rarity), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if owned:
 		var selected := String(GameState.data.get("equipped_skin", "neon_blue")) == skin_id
@@ -901,11 +907,111 @@ func _show_skin_details(skin: Dictionary) -> void:
 			_equip_skin(skin_id)
 			_detail_overlay.visible = false
 		))
+		if not GameState.is_skin_max_level(skin_id):
+			var upgrade_row := HBoxContainer.new()
+			upgrade_row.add_theme_constant_override("separation", 7)
+			upgrade_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			column.add_child(upgrade_row)
+			upgrade_row.add_child(_make_action(_ui_text("Melhorar com Moedas", "Upgrade with Coins"), "#ffd700", false, func() -> void:
+				_upgrade_skin_from_modal(skin, "coins")
+			))
+			upgrade_row.add_child(_make_action(_ui_text("Melhorar com Diamantes", "Upgrade with Diamonds"), "#00ff88", false, func() -> void:
+				_upgrade_skin_from_modal(skin, "diamonds")
+			))
 	column.add_child(_make_action(_ui_text("FECHAR", "CLOSE"), "#ffffff", false, func() -> void:
 		_detail_overlay.visible = false
 		_rebuild_collection_content()
 	))
 	_detail_overlay.visible = true
+
+
+func _make_skin_level_panel(skin_id: String, rarity: String) -> VBoxContainer:
+	var preview := GameState.get_skin_upgrade_preview(skin_id)
+	var level := int(preview.get("level", 1))
+	var max_level := int(preview.get("max_level", GameState.get_skin_max_level(skin_id)))
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 3)
+	column.mouse_filter = Control.MOUSE_FILTER_PASS
+	column.add_child(_make_label("%s %s/%s" % [_ui_text("Nível", "Level"), level, max_level], 11, _rarity_color(rarity), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var bar := ProgressBar.new()
+	bar.custom_minimum_size = Vector2(0, 9)
+	bar.show_percentage = false
+	bar.max_value = max_level
+	bar.value = level
+	bar.add_theme_stylebox_override("background", _make_style("#ffffff12", 5, "#ffffff22", 1))
+	bar.add_theme_stylebox_override("fill", _make_style(_rarity_color(rarity), 5, "#00000000", 0, _rarity_color(rarity), 4))
+	column.add_child(bar)
+	var cost_text := _ui_text("MAX", "MAX") if level >= max_level else "%s %s  •  %s ♦" % [int(preview.get("coins", 0)), _ui_text("moedas", "coins"), int(preview.get("diamonds", 0))]
+	column.add_child(_make_label(cost_text, 10, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return column
+
+
+func _make_skin_upgrade_details(skin_id: String, rarity: String) -> PanelContainer:
+	var preview := GameState.get_skin_upgrade_preview(skin_id)
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_stylebox_override("panel", _make_style("#ffffff10", 12, _rarity_color(rarity) + "66", 1))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	card.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 5)
+	margin.add_child(column)
+	var level := int(preview.get("level", 1))
+	var max_level := int(preview.get("max_level", 5))
+	column.add_child(_make_label("%s: %s/%s" % [_ui_text("Nível da Skin", "Skin Level"), level, max_level], 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label("%s: %s" % [_ui_text("Efeito Atual", "Current Effect"), _effect_preview_text(Dictionary(preview.get("current", {})))], 11, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	if level >= max_level:
+		column.add_child(_make_label(_ui_text("Máximo", "Max"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	else:
+		column.add_child(_make_label("%s: %s" % [_ui_text("Próximo Nível", "Next Level"), _effect_preview_text(Dictionary(preview.get("next", {})))], 11, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		column.add_child(_make_label("%s: %s %s / %s %s" % [_ui_text("Custo", "Cost"), int(preview.get("coins", 0)), _ui_text("moedas", "coins"), int(preview.get("diamonds", 0)), _ui_text("diamantes", "diamonds")], 11, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	return card
+
+
+func _effect_preview_text(effect: Dictionary) -> String:
+	var kind := String(effect.get("type", effect.get("effect", "trail")))
+	var chance := float(effect.get("chance", 0.0))
+	var value := float(effect.get("value", 0.0))
+	if chance > 0.0:
+		return "%s %.1f%% / %.2f" % [kind, chance * 100.0, value]
+	return "%s %.2f" % [kind, value]
+
+
+func _upgrade_skin_from_modal(skin: Dictionary, currency: String) -> void:
+	var skin_id := String(skin.get("id", ""))
+	var result := GameState.upgrade_skin_with_diamonds(skin_id) if currency == "diamonds" else GameState.upgrade_skin_with_coins(skin_id)
+	if bool(result.get("ok", false)):
+		_play_ui_sfx(true)
+		_show_skin_details(skin)
+		_show_upgrade_toast(_ui_text("Skin melhorada", "Skin upgraded"), "#00ff88")
+	else:
+		_play_ui_sfx(false)
+		var reason := String(result.get("reason", ""))
+		var message := _ui_text("Moedas insuficientes", "Not enough coins") if reason == "coins" else _ui_text("Diamantes insuficientes", "Not enough diamonds") if reason == "diamonds" else _ui_text("Máximo", "Max")
+		_show_upgrade_toast(message, "#ff6b9a")
+
+
+func _show_upgrade_toast(text: String, color: String) -> void:
+	var toast := _make_label(text, 13, color, _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	toast.modulate.a = 0.0
+	add_child(toast)
+	toast.anchor_left = 0.5
+	toast.anchor_right = 0.5
+	toast.anchor_top = 0.0
+	toast.anchor_bottom = 0.0
+	toast.offset_left = -150
+	toast.offset_right = 150
+	toast.offset_top = 76
+	toast.offset_bottom = 112
+	var tween := create_tween()
+	tween.tween_property(toast, "modulate:a", 1.0, 0.12)
+	tween.tween_interval(1.0)
+	tween.tween_property(toast, "modulate:a", 0.0, 0.2)
+	tween.tween_callback(toast.queue_free)
 
 
 func _effects_text(skin: Dictionary) -> String:

@@ -2822,10 +2822,13 @@ func _make_skin_profile(skin_id: String) -> Dictionary:
 	if not skin_def.is_empty():
 		var passive: Dictionary = skin_def.get("passive", {})
 		var rarity := String(skin_def.get("rarity", "common"))
+		var scaled_passive := GameState.get_skin_effect_value(skin_id)
 		profile["color"] = String(skin_def.get("primary", "#00f0ff"))
 		profile["trail_size"] = _rarity_trail_size(rarity)
-		var chance := float(passive.get("chance", _default_skin_chance(rarity)))
-		var value := float(passive.get("value", 0.0))
+		profile["level"] = int(scaled_passive.get("level", 1))
+		profile["max_level"] = int(scaled_passive.get("max_level", 5))
+		var chance := float(scaled_passive.get("chance", passive.get("chance", _default_skin_chance(rarity))))
+		var value := float(scaled_passive.get("value", passive.get("value", 0.0)))
 		match String(passive.get("type", "trail")):
 			"freeze_ring", "slow_ring":
 				profile.merge({ "effect": "freeze", "chance": chance, "value": max(0.34, value), "color": String(skin_def.get("primary", "#9be8ff")) }, true)
@@ -2878,8 +2881,11 @@ func _make_skin_profile(skin_id: String) -> Dictionary:
 func _apply_control_profile(profile: Dictionary, skin_id: String, _rarity: String) -> void:
 	if not MainPortData.skin_has_control(skin_id):
 		return
+	var level := GameState.get_skin_level(skin_id)
+	var max_level := GameState.get_skin_max_level(skin_id)
+	var progress := 0.0 if max_level <= 1 else float(level - 1) / float(max_level - 1)
 	profile["control"] = true
-	profile["control_strength"] = MainPortData.skin_control_strength(skin_id)
+	profile["control_strength"] = GameState.clamp_skin_effect("control", MainPortData.skin_control_strength(skin_id) * (1.0 + progress * 0.45))
 	profile["trail_size"] = max(float(profile.get("trail_size", 5.0)), 6.6 + float(profile["control_strength"]) * 3.5)
 	profile["effect"] = "trail"
 	profile["chance"] = 0.0

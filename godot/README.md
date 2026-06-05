@@ -1429,3 +1429,40 @@ Checklist visual:
 - Assets corretos aplicados: sim para referencias estaticas existentes.
 - Performance mantida: sim, sem novas particulas pesadas.
 - Tradução dos textos novos adicionada: nao aplicavel neste patch, nao foram criados fluxos textuais novos para jogador.
+
+## Atualizacao - Evolucao de Skins
+
+Foi adicionado o sistema de level para skins desbloqueadas.
+
+Arquivos principais:
+- `scripts/GameState.gd`: salva `skin_levels`, migra saves antigos, calcula custo, aplica escala de efeito e executa upgrade por moedas/diamantes.
+- `scripts/SkinsScreen.gd`: mostra nivel, nivel maximo, barra, efeito atual/proximo, custo e botoes de evolucao.
+- `scripts/GameplayManager.gd`: usa `GameState.get_skin_effect_value()` para aplicar o efeito da skin equipada escalado pelo nivel.
+- `scripts/SettingsScreen.gd`: adiciona debug para upar/maximizar/resetar niveis de skins.
+
+Regras:
+- Common max 5, Rare max 6, Epic max 7, Legendary max 8, Mythic max 9, Ultimate max 10.
+- Toda skin desbloqueada comeca no nivel 1.
+- Skins bloqueadas continuam ocultas como `???` e nao mostram evolucao.
+- Custo centralizado em `GameState.get_skin_upgrade_cost(rarity, current_level, currency)`.
+- Saves antigos sao migrados por `migrate_save_to_skin_levels()` sem resetar progresso.
+
+Checklist:
+- Skins têm nível: sim
+- Skins têm nível máximo: sim
+- Skin pode upar com moedas: sim
+- Skin pode upar com diamantes: sim
+- Upar skin aumenta o efeito real: sim
+- Efeito tem limite/cap: sim
+- Controle escala por nível sem virar joystick livre: sim
+- UI mostra nível da skin: sim
+- UI mostra efeito atual e próximo: sim
+- UI mostra custo em moedas e diamantes: sim
+- Skin bloqueada não mostra upgrade: sim
+- Save salva nível das skins: sim
+- Save antigo migra sem quebrar: sim
+- Custos centralizados: sim
+- Recursos insuficientes tratados: sim
+- Debug permite testar níveis de skin: sim
+- Traduções adicionadas: sim
+- BALANCE.md atualizado: sim

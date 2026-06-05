@@ -9,6 +9,30 @@ const TARGET_ACHIEVEMENT_COUNT := 100
 const SAVE_EXPORT_VERSION := 1
 const SAVE_EXPORT_FORMAT := "neon_idle_escape_godot_save"
 const STARTER_UPGRADE_IDS := ["damage", "speed", "coinBoost", "critical"]
+const SKIN_MAX_LEVEL_BY_RARITY := {
+	"common": 5,
+	"rare": 6,
+	"epic": 7,
+	"legendary": 8,
+	"mythic": 9,
+	"ultimate": 10,
+}
+const SKIN_UPGRADE_BASE_COSTS := {
+	"common": { "coins": 150, "diamonds": 2 },
+	"rare": { "coins": 400, "diamonds": 5 },
+	"epic": { "coins": 900, "diamonds": 10 },
+	"legendary": { "coins": 1800, "diamonds": 20 },
+	"mythic": { "coins": 3600, "diamonds": 40 },
+	"ultimate": { "coins": 8000, "diamonds": 90 },
+}
+const SKIN_UPGRADE_GROWTH := {
+	"common": 1.82,
+	"rare": 1.68,
+	"epic": 1.55,
+	"legendary": 1.48,
+	"mythic": 1.42,
+	"ultimate": 1.36,
+}
 
 const PERMANENT_UPGRADE_DEFS := {
 	"baseDamage": { "base_cost": 70, "max": 40, "phase": 1, "level": 1 },
@@ -611,6 +635,7 @@ func debug_unlock_all() -> void:
 	data["unlocked_skins"] = skins
 	data["new_skins"] = skins.duplicate()
 	refresh_unlocks(false)
+	migrate_save_to_skin_levels()
 	save_game()
 
 
@@ -883,6 +908,19 @@ func _sanitize_persistent_unlocks() -> void:
 		data["equipped_skin"] = "neon_blue"
 	if not cleaned_skins.has(String(data.get("favorite_skin", data.get("equipped_skin", "neon_blue")))):
 		data["favorite_skin"] = String(data.get("equipped_skin", "neon_blue"))
+	migrate_save_to_skin_levels()
+
+
+func migrate_save_to_skin_levels() -> void:
+	var levels: Dictionary = data.get("skin_levels", {})
+	if typeof(levels) != TYPE_DICTIONARY:
+		levels = {}
+	var cleaned_levels := {}
+	for skin_id in Array(data.get("unlocked_skins", [])):
+		var id := String(skin_id)
+		var max_level := get_skin_max_level(id)
+		cleaned_levels[id] = clampi(int(levels.get(id, 1)), 1, max_level)
+	data["skin_levels"] = cleaned_levels
 
 
 func _ensure_league_season() -> void:
@@ -2136,6 +2174,9 @@ func unlock_skin(id: String) -> void:
 		if not new_skins.has(id):
 			new_skins.append(id)
 		data["new_skins"] = new_skins
+	var skin_levels: Dictionary = data.get("skin_levels", {})
+	skin_levels[id] = clampi(int(skin_levels.get(id, 1)), 1, get_skin_max_level(id))
+	data["skin_levels"] = skin_levels
 	data["unlocked_skins"] = skins
 	data["stats"]["skins_unlocked"] = skins.size()
 	data["stats"]["skinsUnlocked"] = skins.size()
@@ -2168,6 +2209,174 @@ func mark_skin_seen(id: String) -> void:
 
 func clear_new_skins() -> void:
 	data["new_skins"] = []
+	save_game()
+
+
+func get_skin_level(id: String) -> int:
+	migrate_save_to_skin_levels()
+	return clampi(int(Dictionary(data.get("skin_levels", {})).get(id, 1)), 1, get_skin_max_level(id))
+
+
+func get_skin_max_level(id: String) -> int:
+	var rarity := _skin_rarity_from_id(id)
+	return int(SKIN_MAX_LEVEL_BY_RARITY.get(rarity, 5))
+
+
+func is_skin_max_level(id: String) -> bool:
+	return get_skin_level(id) >= get_skin_max_level(id)
+
+
+func get_skin_upgrade_cost(rarity: String, current_level: int, currency: String) -> int:
+	var normalized_rarity := rarity if SKIN_UPGRADE_BASE_COSTS.has(rarity) else "common"
+	var normalized_currency := "diamonds" if currency == "diamonds" else "coins"
+	var base: Dictionary = SKIN_UPGRADE_BASE_COSTS.get(normalized_rarity, SKIN_UPGRADE_BASE_COSTS["common"])
+	var growth := float(SKIN_UPGRADE_GROWTH.get(normalized_rarity, 1.75))
+	var raw := float(base.get(normalized_currency, 100)) * pow(growth, max(0, current_level - 1))
+	var rounded := int(ceil(raw / 10.0) * 10.0) if normalized_currency == "coins" else int(ceil(raw))
+	return max(1, rounded)
+
+
+func get_skin_upgrade_cost_for_id(id: String, currency: String) -> int:
+	if is_skin_max_level(id):
+		return 0
+	return get_skin_upgrade_cost(_skin_rarity_from_id(id), get_skin_level(id), currency)
+
+
+func upgrade_skin_with_coins(id: String) -> Dictionary:
+	return _upgrade_skin(id, "coins")
+
+
+func upgrade_skin_with_diamonds(id: String) -> Dictionary:
+	return _upgrade_skin(id, "diamonds")
+
+
+func _upgrade_skin(id: String, currency: String) -> Dictionary:
+	if not Array(data.get("unlocked_skins", [])).has(id):
+		return { "ok": false, "reason": "locked" }
+	var level := get_skin_level(id)
+	var max_level := get_skin_max_level(id)
+	if level >= max_level:
+		return { "ok": false, "reason": "max" }
+	var cost := get_skin_upgrade_cost_for_id(id, currency)
+	if currency == "diamonds":
+		if int(data.get("diamonds", 0)) < cost:
+			return { "ok": false, "reason": "diamonds" }
+		data["diamonds"] = max(0, int(data.get("diamonds", 0)) - cost)
+	else:
+		if int(data.get("coins", 0)) < cost:
+			return { "ok": false, "reason": "coins" }
+		data["coins"] = max(0, int(data.get("coins", 0)) - cost)
+	var levels: Dictionary = data.get("skin_levels", {})
+	levels[id] = level + 1
+	data["skin_levels"] = levels
+	save_game()
+	return { "ok": true, "level": level + 1, "max_level": max_level, "cost": cost, "currency": currency }
+
+
+func apply_skin_level_scaling(base_effect: Dictionary, level: int, rarity: String) -> Dictionary:
+	var scaled := base_effect.duplicate(true)
+	var max_level := int(SKIN_MAX_LEVEL_BY_RARITY.get(rarity, 5))
+	var progress := 0.0 if max_level <= 1 else float(clampi(level, 1, max_level) - 1) / float(max_level - 1)
+	var effect_type := String(scaled.get("effect", scaled.get("type", "trail")))
+	var chance := float(scaled.get("chance", 0.0))
+	var value := float(scaled.get("value", 0.0))
+	if chance > 0.0:
+		scaled["chance"] = clamp_skin_effect(effect_type + "_chance", chance * (1.0 + progress * 0.55))
+	if value != 0.0:
+		scaled["value"] = clamp_skin_effect(effect_type, value * (1.0 + progress * 0.70))
+	if scaled.has("control_strength"):
+		scaled["control_strength"] = clamp_skin_effect("control", float(scaled.get("control_strength", 0.0)) * (1.0 + progress * 0.45))
+	scaled["level_progress"] = progress
+	return scaled
+
+
+func clamp_skin_effect(effect_type: String, value: float) -> float:
+	match effect_type:
+		"crit", "crit_chance", "critical", "cosmic_critical":
+			return clampf(value, 0.0, 35.0)
+		"crit_chance_chance", "mega_crit_chance", "cosmic_critical_chance":
+			return clampf(value, 0.0, 0.35)
+		"phase", "phase_solid", "phase_chance":
+			return clampf(value, 0.0, 0.15)
+		"perfect", "perfect_chance":
+			return clampf(value, 0.0, 0.08)
+		"freeze", "freeze_ring", "slow_ring":
+			return clampf(value, 0.0, 0.68)
+		"freeze_chance", "freeze_ring_chance", "slow_ring_chance":
+			return clampf(value, 0.0, 0.34)
+		"speed":
+			return clampf(value, 0.0, 0.28)
+		"control":
+			return clampf(value, 0.0, 0.78)
+		"coin", "coin_on_hit":
+			return clampf(value, 0.0, 34.0)
+		"coin_multiplier":
+			return clampf(value, 0.0, 0.75)
+		"xp", "xp_multiplier":
+			return clampf(value, 0.0, 0.80)
+		"burn":
+			return clampf(value, 0.0, 1.35)
+		"chain", "chain_damage", "area", "area_damage", "repulse", "repel_ring":
+			return clampf(value, 0.0, 1.40 if not effect_type.contains("repulse") and not effect_type.contains("repel") else 40.0)
+	return value
+
+
+func get_skin_effect_value(skin_id: String, level := -1) -> Dictionary:
+	var skin := MainPortData.skin_by_id(skin_id)
+	if skin.is_empty():
+		return { "type": "trail", "chance": 0.0, "value": 0.0, "level": 1, "max_level": 5 }
+	var rarity := String(skin.get("rarity", "common"))
+	var actual_level := get_skin_level(skin_id) if level <= 0 else clampi(level, 1, get_skin_max_level(skin_id))
+	var passive: Dictionary = Dictionary(skin.get("passive", {})).duplicate(true)
+	passive["effect"] = String(passive.get("type", "trail"))
+	var scaled := apply_skin_level_scaling(passive, actual_level, rarity)
+	scaled["level"] = actual_level
+	scaled["max_level"] = get_skin_max_level(skin_id)
+	scaled["rarity"] = rarity
+	return scaled
+
+
+func get_skin_upgrade_preview(id: String) -> Dictionary:
+	var level := get_skin_level(id)
+	return {
+		"level": level,
+		"max_level": get_skin_max_level(id),
+		"current": get_skin_effect_value(id, level),
+		"next": get_skin_effect_value(id, min(level + 1, get_skin_max_level(id))),
+		"coins": get_skin_upgrade_cost_for_id(id, "coins"),
+		"diamonds": get_skin_upgrade_cost_for_id(id, "diamonds"),
+	}
+
+
+func debug_level_up_equipped_skin() -> void:
+	var id := String(data.get("equipped_skin", "neon_blue"))
+	var levels: Dictionary = data.get("skin_levels", {})
+	levels[id] = min(get_skin_max_level(id), get_skin_level(id) + 1)
+	data["skin_levels"] = levels
+	save_game()
+
+
+func debug_max_equipped_skin() -> void:
+	var id := String(data.get("equipped_skin", "neon_blue"))
+	var levels: Dictionary = data.get("skin_levels", {})
+	levels[id] = get_skin_max_level(id)
+	data["skin_levels"] = levels
+	save_game()
+
+
+func debug_max_all_skins() -> void:
+	var levels: Dictionary = data.get("skin_levels", {})
+	for id in Array(data.get("unlocked_skins", [])):
+		levels[String(id)] = get_skin_max_level(String(id))
+	data["skin_levels"] = levels
+	save_game()
+
+
+func debug_reset_skin_levels() -> void:
+	var levels := {}
+	for id in Array(data.get("unlocked_skins", [])):
+		levels[String(id)] = 1
+	data["skin_levels"] = levels
 	save_game()
 
 

@@ -847,3 +847,26 @@ Checklist:
 - Setas de controle nao aparecem sobre Level Up: sim
 - Boss/Liga com modais enquadrados: sim
 - Performance preservada: sim
+
+## Atualizacao - Efeitos de Skins por Nivel
+
+O efeito da skin equipada agora escala com o nivel salvo da skin.
+
+Implementacao:
+- `GameState.get_skin_effect_value(skin_id, level)` retorna tipo, chance, valor, raridade, nivel e maximo.
+- `GameplayManager.gd` usa esse resultado ao montar `skin_profile`.
+- Efeitos como gelo, fogo, corrente, area, moeda, XP, critico, perfect, velocidade, fase e repulsao recebem aumento gradual.
+- Skins com controle aumentam moderadamente a forca por nivel, com cap em `GameState.clamp_skin_effect("control", value)`.
+
+Caps principais:
+- Controle nunca vira joystick livre.
+- Freeze/slow nao trava aneis para sempre.
+- Phase solid fica limitado.
+- Perfect/diamante continua raro.
+- Area/corrente nao limpam a tela inteira de forma constante.
+
+Checklist:
+- Upar skin aumenta efeito real na gameplay: sim
+- Controle escala com limite: sim
+- Efeitos usam caps: sim
+- Save afeta imediatamente a skin equipada em novas partidas: sim

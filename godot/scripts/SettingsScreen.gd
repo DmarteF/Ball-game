@@ -214,6 +214,10 @@ func _make_debug_card() -> PanelContainer:
 		[_t("lock_starter_upgrades"), "#ffb000", func() -> void: _confirm_debug_action(_t("lock_starter_upgrades"), func() -> void: GameState.debug_lock_all_except_starter_upgrades())],
 		[_t("reset_upgrade_levels"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_upgrade_levels"), func() -> void: GameState.debug_reset_upgrade_levels())],
 		[_t("unlock_all_skins"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_skins"), func() -> void: GameState.debug_unlock_all_skins())],
+		[_t("level_up_equipped_skin"), "#00ff88", func() -> void: _debug_skin_action(func() -> void: GameState.debug_level_up_equipped_skin())],
+		[_t("max_equipped_skin"), "#00f0ff", func() -> void: _debug_skin_action(func() -> void: GameState.debug_max_equipped_skin())],
+		[_t("max_all_skins"), "#ffffff", func() -> void: _confirm_debug_action(_t("max_all_skins"), func() -> void: _debug_skin_action(func() -> void: GameState.debug_max_all_skins()))],
+		[_t("reset_skin_levels"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_skin_levels"), func() -> void: _debug_skin_action(func() -> void: GameState.debug_reset_skin_levels()))],
 		[_t("reset_daily"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily"), func() -> void: GameState.debug_reset_daily_reward())],
 		[_t("reset_daily_challenge"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily_challenge"), func() -> void: GameState.debug_reset_daily_challenge())],
 		[_t("reroll_daily_challenge"), "#00f0ff", func() -> void: _confirm_debug_action(_t("reroll_daily_challenge"), func() -> void: GameState.debug_randomize_daily_challenge_seed())],
@@ -445,6 +449,13 @@ func _debug_add_levels(amount: int) -> void:
 
 func _debug_add_xp(amount: int) -> void:
 	GameState.add_profile_xp(amount)
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _debug_skin_action(action: Callable) -> void:
+	if action.is_valid():
+		action.call()
 	_show_toast(_t("debug_done"))
 	_refresh_debug_labels()
 
@@ -952,6 +963,22 @@ func _t(key: String) -> String:
 		"lock_starter_upgrades": return "Bloquear Exceto Starters" if pt else "Lock All Except Starter Upgrades"
 		"reset_upgrade_levels": return "Resetar Níveis de Melhorias" if pt else "Reset Upgrade Levels"
 		"unlock_all_skins": return "Liberar Todas as Skins" if pt else "Unlock All Skins"
+		"level_up_equipped_skin": return "Upar Skin Equipada" if pt else "Level Up Equipped Skin"
+		"max_equipped_skin": return "Maximizar Skin Equipada" if pt else "Max Equipped Skin"
+		"max_all_skins": return "Maximizar Todas as Skins" if pt else "Max All Skins"
+		"reset_skin_levels": return "Resetar Níveis das Skins" if pt else "Reset Skin Levels"
+		"skin_level": return "Nível da Skin" if pt else "Skin Level"
+		"level": return "Nível" if pt else "Level"
+		"max_level": return "Nível Máximo" if pt else "Max Level"
+		"upgrade_skin": return "Melhorar Skin" if pt else "Upgrade Skin"
+		"upgrade_with_coins": return "Melhorar com Moedas" if pt else "Upgrade with Coins"
+		"upgrade_with_diamonds": return "Melhorar com Diamantes" if pt else "Upgrade with Diamonds"
+		"current_effect": return "Efeito Atual" if pt else "Current Effect"
+		"next_level": return "Próximo Nível" if pt else "Next Level"
+		"max": return "Máximo" if pt else "Max"
+		"not_enough_coins": return "Moedas insuficientes" if pt else "Not enough coins"
+		"not_enough_diamonds": return "Diamantes insuficientes" if pt else "Not enough diamonds"
+		"skin_upgraded": return "Skin melhorada" if pt else "Skin upgraded"
 		"reset_daily": return "Resetar Recompensa Diária" if pt else "Reset Daily Reward"
 		"reset_daily_challenge": return "Resetar Desafio Diário" if pt else "Reset Daily Challenge"
 		"reroll_daily_challenge": return "Trocar Seed do Desafio" if pt else "Change Challenge Seed"

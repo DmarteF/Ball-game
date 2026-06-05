@@ -189,6 +189,46 @@ Missoes diarias foram ajustadas para dar progresso util: XP, moedas e diamantes.
 - Liga Silver/Gold/Diamond/Legendary/Ultimate libera upgrades/skins;
 - Boss normal/forte/elite/impossivel libera upgrades e baus.
 
+## Evolucao de Skins
+
+Cada skin desbloqueada comeca no nivel 1 e pode ser evoluida com moedas ou diamantes. Diamantes sao alternativa mais rapida, mas continuam raros.
+
+| Raridade | Nivel maximo | Custo inicial moedas | Custo inicial diamantes | Crescimento |
+| --- | ---: | ---: | ---: | ---: |
+| Common | 5 | 150 | 2 | 1.82x |
+| Rare | 6 | 400 | 5 | 1.68x |
+| Epic | 7 | 900 | 10 | 1.55x |
+| Legendary | 8 | 1800 | 20 | 1.48x |
+| Mythic | 9 | 3600 | 40 | 1.42x |
+| Ultimate | 10 | 8000 | 90 | 1.36x |
+
+Formula central:
+- `GameState.get_skin_upgrade_cost(rarity, current_level, currency)`.
+- Moedas arredondam em blocos de 10.
+- Diamantes arredondam para cima.
+
+Escala de efeito:
+- `GameState.get_skin_effect_value(skin_id, level)` retorna o efeito ja escalado.
+- `GameState.apply_skin_level_scaling(base_effect, level, rarity)` aumenta chance/valor gradualmente ate o nivel maximo.
+- O aumento total fica em torno de +55% para chance e +70% para valor no nivel maximo, antes dos caps.
+
+Caps para nao desbalancear:
+- critico/chance pesada: ate 35%.
+- atravessar solido: ate 15%.
+- bonus de diamante/perfect: ate 8%.
+- slow/freeze: intensidade limitada e chance ate 34%.
+- controle: maximo 78%, sempre por carga, nunca joystick livre.
+- velocidade: ate 28%.
+- moeda por hit: ate 34.
+- multiplicador de moeda: ate 75%.
+- multiplicador de XP: ate 80%.
+- dano em area/corrente/queima/repulsao tem caps para evitar limpar a tela inteira sempre.
+
+Justificativa:
+- Skins comuns/raras podem ser evoluidas cedo com algumas partidas.
+- Epicas/lendarias exigem progresso real.
+- Miticas/ultimates sao investimento longo e cada nivel deve ser perceptivel, mas sem quebrar modos como infinito, Boss ou Liga Neon.
+
 ## Checklist
 
 - Balanceamento das 100 fases revisado: sim
@@ -203,3 +243,4 @@ Missoes diarias foram ajustadas para dar progresso util: XP, moedas e diamantes.
 - Boss revisado: sim
 - Liga Neon revisada: sim
 - BALANCE.md criado/atualizado: sim
+- Evolucao de skins balanceada: sim

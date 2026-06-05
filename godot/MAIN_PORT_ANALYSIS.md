@@ -451,3 +451,25 @@ Checklist:
 - Assets corretos aplicados: sim
 - Performance mantida: sim
 - Tradução dos textos novos adicionada: nao aplicavel
+
+## Atualizacao - Sistema de Evolucao de Skins
+
+O port Godot agora possui evolução visual/funcional de skins sem alterar upgrades permanentes.
+
+O que foi portado/adaptado:
+- Cada skin desbloqueada recebe nivel salvo em `skin_levels`.
+- Nivel maximo depende da raridade.
+- Evolucao pode usar moedas ou diamantes.
+- Tela Skins/Colecao mostra nivel, barra, custo e preview de efeito.
+- Modal de detalhes mostra efeito atual, proximo nivel e botoes de upgrade.
+- Gameplay usa o nivel real para escalar efeito da skin equipada.
+- Debug em Configuracoes permite testar rapidamente niveis de skins.
+
+Compatibilidade:
+- Saves sem `skin_levels` sao migrados para nivel 1 por skin desbloqueada.
+- Skins bloqueadas nao revelam asset real, nivel real ou upgrade.
+- O sistema nao remove skins, nao altera desbloqueios e nao reseta progresso.
+
+Pendencias futuras:
+- Criar animacao mais rica de evolucao de skin, caso queira mais impacto visual.
+- Adicionar shards/fragmentos como terceira moeda de evolucao se a economia futura pedir.
