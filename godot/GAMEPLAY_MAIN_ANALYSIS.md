@@ -684,3 +684,14 @@ Drops:
 Conquistas:
 - Novas recompensas de skins foram vinculadas a perfects, fases, combo, tempo no infinito e Liga Neon.
 - Skins duplicadas continuam sendo convertidas em diamantes por `GameState.apply_reward()`.
+
+## Atualizacao - Tutorial inicial
+
+O menu principal ganhou um tutorial inicial curto com 5 telas: Welcome, Progress, Upgrades, Skins e Modes. O tutorial aparece apenas quando `GameState.should_show_tutorial()` retorna verdadeiro e salva o estado em `tutorial.seen` / `tutorial.dont_show_again` no save local.
+
+As dicas de primeira experiencia usam progresso real do jogador:
+- Fase 1 concluida: dica para Melhorias.
+- Primeira melhoria comprada: dica para Skins.
+- Primeira skin equipada: dica sobre Eventos, Desafios e Modo Infinito.
+
+As dicas sao discretas, clicaveis, nao bloqueiam a tela inicial e sao marcadas como concluidas por `GameState.mark_guided_hint_done()`.

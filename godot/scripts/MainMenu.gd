@@ -92,6 +92,19 @@ var _more_items: Array = []
 var _opening_achievements := false
 var _achievement_notice: Button
 var _achievement_notice_hide_at := 0
+var _tutorial_overlay: Control
+var _tutorial_page := 0
+var _tutorial_dont_show := false
+var _guided_hint: Button
+var _guided_hint_id := ""
+
+const TUTORIAL_STEPS := [
+	{ "title_en": "Welcome", "title_pt": "Bem-vindo", "text_en": "Break rings by hitting their opening.", "text_pt": "Quebre os anéis acertando a abertura." },
+	{ "title_en": "Progress", "title_pt": "Progresso", "text_en": "Earn coins, XP, diamonds and chests.", "text_pt": "Ganhe moedas, XP, diamantes e baús." },
+	{ "title_en": "Upgrades", "title_pt": "Melhorias", "text_en": "Use upgrades to get stronger.", "text_pt": "Use melhorias para ficar mais forte." },
+	{ "title_en": "Skins", "title_pt": "Skins", "text_en": "Collect skins with special effects.", "text_pt": "Colecione skins com efeitos especiais." },
+	{ "title_en": "Modes", "title_pt": "Modos", "text_en": "Play levels, infinite mode, bosses, daily challenges and Neon League.", "text_pt": "Jogue fases, modo infinito, chefes, desafios diários e Liga Neon." },
+]
 
 
 func _ready() -> void:
@@ -106,6 +119,7 @@ func _ready() -> void:
 	_build_top_bar()
 	_build_content()
 	_build_achievement_notice_overlay()
+	call_deferred("_maybe_show_tutorial_or_hint")
 
 
 func _process(_delta: float) -> void:
@@ -734,6 +748,235 @@ func _fill(control: Control) -> void:
 
 func _sync_gradient_material(fill: Control, material: ShaderMaterial) -> void:
 	material.set_shader_parameter("rect_size", Vector2(max(fill.size.x, 1.0), max(fill.size.y, 1.0)))
+
+
+func _maybe_show_tutorial_or_hint() -> void:
+	if GameState.should_show_tutorial():
+		_show_tutorial_overlay()
+	else:
+		_show_guided_hint_if_needed()
+
+
+func _show_tutorial_overlay() -> void:
+	if is_instance_valid(_tutorial_overlay):
+		_tutorial_overlay.queue_free()
+	_tutorial_page = 0
+	_tutorial_dont_show = false
+	_tutorial_overlay = Control.new()
+	_fill(_tutorial_overlay)
+	_tutorial_overlay.z_index = 120
+	_tutorial_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_tutorial_overlay)
+	_render_tutorial_page()
+
+
+func _render_tutorial_page() -> void:
+	if not is_instance_valid(_tutorial_overlay):
+		return
+	for child in _tutorial_overlay.get_children():
+		child.queue_free()
+	var dim := ColorRect.new()
+	_fill(dim)
+	dim.color = Color("#03000acc")
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_tutorial_overlay.add_child(dim)
+	var center := CenterContainer.new()
+	_fill(center)
+	center.offset_left = 18
+	center.offset_top = 22
+	center.offset_right = -18
+	center.offset_bottom = -22
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tutorial_overlay.add_child(center)
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(326, 360)
+	card.add_theme_stylebox_override("panel", _make_style("#150724f2", 18, "#00f0ffaa", 2, "#00f0ff55", 18))
+	center.add_child(card)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	card.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	margin.add_child(column)
+	var step: Dictionary = TUTORIAL_STEPS[_tutorial_page]
+	var pt := _language().begins_with("pt")
+	var title := _make_label(String(step.get("title_pt" if pt else "title_en", "")), 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	title.add_theme_color_override("font_outline_color", Color("#00f0ff66"))
+	title.add_theme_constant_override("outline_size", 5)
+	column.add_child(title)
+	column.add_child(_make_label("%s / %s" % [_tutorial_page + 1, TUTORIAL_STEPS.size()], 12, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var icon_keys: Array[String] = ["play", "coin", "upgrades", "skins", "league"]
+	var icon_key: String = icon_keys[_tutorial_page]
+	var icon_holder := CenterContainer.new()
+	icon_holder.custom_minimum_size.y = 74
+	icon_holder.add_child(_make_icon(icon_key, 58, Color("#00f0ff")))
+	column.add_child(icon_holder)
+	var body := _make_label(String(step.get("text_pt" if pt else "text_en", "")), 17, "#ffffff", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.custom_minimum_size = Vector2(276, 64)
+	column.add_child(body)
+	var dont_show := _make_tutorial_button(_tutorial_label("dont_show"), "#ffd70022", "#ffd700aa", _toggle_tutorial_dont_show)
+	dont_show.custom_minimum_size.y = 40
+	column.add_child(dont_show)
+	var nav := HBoxContainer.new()
+	nav.add_theme_constant_override("separation", 8)
+	nav.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(nav)
+	var back := _make_tutorial_button(_tutorial_label("back"), "#ffffff12", "#ffffff55", _tutorial_back)
+	back.disabled = _tutorial_page <= 0
+	nav.add_child(back)
+	nav.add_child(_make_tutorial_button(_tutorial_label("skip"), "#ff005522", "#ff0055aa", _tutorial_skip))
+	var next_label := _tutorial_label("start") if _tutorial_page >= TUTORIAL_STEPS.size() - 1 else _tutorial_label("next")
+	nav.add_child(_make_tutorial_button(next_label, "#00f0ff", "#00f0ff", _tutorial_next_or_start))
+
+
+func _make_tutorial_button(text: String, bg: String, border: String, callback: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(0, 44)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_font_size_override("font_size", 12)
+	button.add_theme_color_override("font_color", Color("#001018") if bg == "#00f0ff" else Color("#ffffff"))
+	_apply_button_style(button, _make_style(bg, 12, border, 1, border.replace("aa", "55"), 8))
+	button.pressed.connect(callback)
+	return button
+
+
+func _toggle_tutorial_dont_show() -> void:
+	_tutorial_dont_show = true
+	GameState.set_tutorial_dont_show_again(true)
+	_close_tutorial_overlay()
+
+
+func _tutorial_back() -> void:
+	_tutorial_page = maxi(0, _tutorial_page - 1)
+	_render_tutorial_page()
+
+
+func _tutorial_skip() -> void:
+	GameState.mark_tutorial_seen(_tutorial_dont_show)
+	_close_tutorial_overlay()
+
+
+func _tutorial_next_or_start() -> void:
+	if _tutorial_page >= TUTORIAL_STEPS.size() - 1:
+		GameState.mark_tutorial_seen(_tutorial_dont_show)
+		_close_tutorial_overlay()
+		return
+	_tutorial_page += 1
+	_render_tutorial_page()
+
+
+func _close_tutorial_overlay() -> void:
+	if is_instance_valid(_tutorial_overlay):
+		_tutorial_overlay.queue_free()
+	_tutorial_overlay = null
+	call_deferred("_show_guided_hint_if_needed")
+
+
+func _show_guided_hint_if_needed() -> void:
+	if is_instance_valid(_guided_hint):
+		return
+	var hint_id := GameState.get_guided_hint_id()
+	if hint_id.is_empty():
+		return
+	_guided_hint_id = hint_id
+	_guided_hint = _make_guided_hint(hint_id)
+	_guided_hint.anchor_left = 0.0
+	_guided_hint.anchor_top = 1.0
+	_guided_hint.anchor_right = 1.0
+	_guided_hint.anchor_bottom = 1.0
+	_guided_hint.offset_left = 20.0
+	_guided_hint.offset_top = -158.0
+	_guided_hint.offset_right = -96.0
+	_guided_hint.offset_bottom = -96.0
+	_guided_hint.z_index = 35
+	add_child(_guided_hint)
+
+
+func _make_guided_hint(hint_id: String) -> Button:
+	var button := Button.new()
+	_clear_button_styles(button)
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_apply_button_style(button, _make_style("#00f0ff22", 14, "#00f0ffaa", 1, "#00f0ff66", 12))
+	button.pressed.connect(_activate_guided_hint)
+	var row := HBoxContainer.new()
+	_fill(row)
+	row.offset_left = 12
+	row.offset_right = -12
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 9)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(row)
+	row.add_child(_make_icon(_guided_hint_icon(hint_id), 28, Color("#00f0ff")))
+	var label := _make_label(_guided_hint_text(hint_id), 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(label)
+	return button
+
+
+func _activate_guided_hint() -> void:
+	var hint_id := _guided_hint_id
+	GameState.mark_guided_hint_done(hint_id)
+	if is_instance_valid(_guided_hint):
+		_guided_hint.queue_free()
+	_guided_hint = null
+	_guided_hint_id = ""
+	match hint_id:
+		"open_upgrades":
+			_open_scene(UPGRADES_SCENE)
+		"open_skins":
+			_open_scene(SKINS_SCENE)
+		"modes":
+			_open_scene(PHASE_SELECT_SCENE)
+
+
+func _guided_hint_icon(hint_id: String) -> String:
+	match hint_id:
+		"open_upgrades":
+			return "upgrades"
+		"open_skins":
+			return "skins"
+	return "play"
+
+
+func _guided_hint_text(hint_id: String) -> String:
+	var pt := _language().begins_with("pt")
+	match hint_id:
+		"open_upgrades":
+			return "Toque aqui para melhorar sua bolinha." if pt else "Tap here to upgrade your ball."
+		"open_skins":
+			return "Agora veja e equipe skins especiais." if pt else "Now check and equip special skins."
+		"modes":
+			return "Eventos, desafios e Infinito liberam novas recompensas." if pt else "Events, challenges and Infinite unlock more rewards."
+	return ""
+
+
+func _tutorial_label(id: String) -> String:
+	var pt := _language().begins_with("pt")
+	match id:
+		"next":
+			return "Próximo" if pt else "Next"
+		"back":
+			return "Voltar" if pt else "Back"
+		"skip":
+			return "Pular" if pt else "Skip"
+		"start":
+			return "Começar" if pt else "Start"
+		"dont_show":
+			return "Não mostrar novamente" if pt else "Don't show again"
+	return id
+
+
+func _language() -> String:
+	return String(GameState.get_setting("language", "en"))
 
 
 func _sync_modal_layout() -> void:

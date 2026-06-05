@@ -361,6 +361,17 @@ func default_save() -> Dictionary:
 			"master_muted": false,
 			"language": "en",
 		},
+		"tutorial": {
+			"seen": false,
+			"dont_show_again": false,
+			"completed_at": 0,
+			"debug_reset_available": true,
+			"guided_hints": {
+				"open_upgrades": false,
+				"open_skins": false,
+				"modes": false,
+			},
+		},
 		"last_exit_at": now,
 		"last_login_at": now,
 		"last_daily_reward_at": 0,
@@ -535,7 +546,30 @@ func _ensure_live_systems() -> void:
 		if not achievements.has(id):
 			achievements[id] = { "progress": 0, "completed": false, "claimed": false }
 	data["achievements"] = achievements
+	_ensure_tutorial_state()
 	_update_achievements(false)
+
+
+func _ensure_tutorial_state() -> void:
+	var tutorial: Dictionary = data.get("tutorial", {})
+	if tutorial.is_empty():
+		tutorial = {
+			"seen": false,
+			"dont_show_again": false,
+			"completed_at": 0,
+			"debug_reset_available": true,
+			"guided_hints": {},
+		}
+	var hints: Dictionary = tutorial.get("guided_hints", {})
+	for id in ["open_upgrades", "open_skins", "modes"]:
+		if not hints.has(id):
+			hints[id] = false
+	tutorial["guided_hints"] = hints
+	tutorial["seen"] = bool(tutorial.get("seen", false))
+	tutorial["dont_show_again"] = bool(tutorial.get("dont_show_again", false))
+	tutorial["completed_at"] = int(tutorial.get("completed_at", 0))
+	tutorial["debug_reset_available"] = bool(tutorial.get("debug_reset_available", true))
+	data["tutorial"] = tutorial
 
 
 func _sanitize_persistent_unlocks() -> void:
@@ -1519,6 +1553,75 @@ func equip_skin(id: String) -> bool:
 	_progress_missions("skinEquips", 1)
 	save_game()
 	return true
+
+
+func should_show_tutorial() -> bool:
+	_ensure_tutorial_state()
+	var tutorial: Dictionary = data.get("tutorial", {})
+	return not bool(tutorial.get("seen", false)) and not bool(tutorial.get("dont_show_again", false))
+
+
+func mark_tutorial_seen(dont_show_again := false) -> void:
+	_ensure_tutorial_state()
+	var tutorial: Dictionary = data.get("tutorial", {})
+	tutorial["seen"] = true
+	if dont_show_again:
+		tutorial["dont_show_again"] = true
+	tutorial["completed_at"] = TimeManager.get_now_timestamp() if has_node("/root/TimeManager") else int(Time.get_unix_time_from_system())
+	data["tutorial"] = tutorial
+	save_game()
+
+
+func set_tutorial_dont_show_again(enabled: bool) -> void:
+	_ensure_tutorial_state()
+	var tutorial: Dictionary = data.get("tutorial", {})
+	tutorial["dont_show_again"] = enabled
+	if enabled:
+		tutorial["seen"] = true
+		tutorial["completed_at"] = TimeManager.get_now_timestamp() if has_node("/root/TimeManager") else int(Time.get_unix_time_from_system())
+	data["tutorial"] = tutorial
+	save_game()
+
+
+func reset_tutorial_for_debug() -> void:
+	_ensure_tutorial_state()
+	data["tutorial"] = {
+		"seen": false,
+		"dont_show_again": false,
+		"completed_at": 0,
+		"debug_reset_available": true,
+		"guided_hints": {
+			"open_upgrades": false,
+			"open_skins": false,
+			"modes": false,
+		},
+	}
+	save_game()
+
+
+func get_guided_hint_id() -> String:
+	_ensure_tutorial_state()
+	var hints: Dictionary = data.get("tutorial", {}).get("guided_hints", {})
+	var stats: Dictionary = data.get("stats", {})
+	if int(data.get("max_unlocked_phase", 1)) >= 2 and not bool(hints.get("open_upgrades", false)):
+		return "open_upgrades"
+	if int(stats.get("upgradesBought", 0)) >= 1 and not bool(hints.get("open_skins", false)):
+		return "open_skins"
+	if int(stats.get("skinEquips", 0)) >= 1 and not bool(hints.get("modes", false)):
+		return "modes"
+	return ""
+
+
+func mark_guided_hint_done(id: String) -> void:
+	if id.is_empty():
+		return
+	_ensure_tutorial_state()
+	var tutorial: Dictionary = data.get("tutorial", {})
+	var hints: Dictionary = tutorial.get("guided_hints", {})
+	hints[id] = true
+	tutorial["guided_hints"] = hints
+	data["tutorial"] = tutorial
+	save_game()
 
 
 func upgrade_permanent(id: String) -> void:

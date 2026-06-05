@@ -1123,3 +1123,31 @@ Implementacao:
 - Roleta semanal inclui comuns, raras e epicas; roleta mensal inclui lendarias e pequena chance de miticas.
 - Conquistas novas liberam skins ligadas a Perfect, fases, modo infinito e Liga Neon.
 - Todas as skins ultimates possuem Controle por regra de raridade, com forca escalada por `CONTROL_STRENGTH_BY_RARITY`.
+
+## 7.23 Tutorial inicial e dicas guiadas
+
+Foi adicionado um tutorial inicial pulavel para a primeira abertura do jogo. Ele aparece como modal neon sobre o menu principal, antes da primeira interacao normal, e usa o idioma salvo em `settings.language` (`en` por padrao, `pt` quando Portugues estiver ativo).
+
+Como salva:
+- O estado fica dentro do save principal em `GameState.data["tutorial"]`, persistido por `SaveManager` em `user://neon_idle_escape_save.json`.
+- Campos principais: `seen`, `dont_show_again`, `completed_at` e `guided_hints`.
+- `GameState.should_show_tutorial()` decide se o modal aparece.
+- `GameState.mark_tutorial_seen()` salva ao clicar em Start ou Skip.
+- `GameState.set_tutorial_dont_show_again(true)` salva ao clicar em Don't show again / Não mostrar novamente.
+
+Dicas guiadas discretas:
+- Depois de concluir a Fase 1 (`max_unlocked_phase >= 2`), o menu mostra dica clicavel para abrir Melhorias.
+- Depois de comprar a primeira melhoria (`upgradesBought >= 1`), mostra dica para abrir Skins.
+- Depois de equipar a primeira skin (`skinEquips >= 1`), mostra dica sobre Eventos, Desafios e Modo Infinito, abrindo a selecao de jogo.
+- Cada dica é salva em `tutorial.guided_hints` e desaparece depois de clicada.
+
+Reset em debug:
+- Chame `GameState.reset_tutorial_for_debug()` pelo console/remote debug do Godot para reexibir o tutorial e as dicas guiadas.
+
+Checklist:
+- Tutorial aparece na primeira abertura: sim
+- Tutorial é pulável: sim
+- “Não mostrar novamente” funciona: sim
+- Tutorial respeita idioma: sim
+- Dicas pós-Fase 1 funcionam: sim
+- Tutorial salva no SaveManager: sim
