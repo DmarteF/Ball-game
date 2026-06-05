@@ -2,8 +2,8 @@ extends RefCounted
 
 const WIDTH := 180.0
 const HEIGHT := 52.0
-const BOTTOM_MARGIN := 22.0
-const CONTENT_BOTTOM_PADDING := 92.0
+const BOTTOM_MARGIN := 30.0
+const CONTENT_BOTTOM_PADDING := 124.0
 
 
 static func add_to(parent: Control, target: Callable) -> Button:
@@ -19,8 +19,9 @@ static func add_to(parent: Control, target: Callable) -> Button:
 	button.anchor_bottom = 1.0
 	button.offset_left = -WIDTH / 2.0
 	button.offset_right = WIDTH / 2.0
-	button.offset_top = -HEIGHT - BOTTOM_MARGIN
-	button.offset_bottom = -BOTTOM_MARGIN
+	var safe_bottom := _safe_bottom_margin(parent)
+	button.offset_top = -HEIGHT - safe_bottom
+	button.offset_bottom = -safe_bottom
 	var font := SystemFont.new()
 	font.font_names = PackedStringArray(["Arial", "Helvetica", "Noto Sans", "DejaVu Sans", "sans-serif"])
 	font.font_weight = 700
@@ -44,6 +45,13 @@ static func _label() -> String:
 
 static func reserve_footer_space(control: Control) -> void:
 	control.offset_bottom = -CONTENT_BOTTOM_PADDING
+
+
+static func _safe_bottom_margin(parent: Control) -> float:
+	var viewport_height := parent.get_viewport_rect().size.y if parent else 0.0
+	if viewport_height <= 680.0:
+		return 22.0
+	return BOTTOM_MARGIN
 
 
 static func _make_style(bg_color: String, radius: int, border_color: String, border_width: int, shadow_color: String, shadow_size: int) -> StyleBoxFlat:

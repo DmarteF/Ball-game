@@ -635,10 +635,13 @@ func _make_modal_root() -> Control:
 	_fill(center)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.offset_left = 12
+	center.offset_top = 24
 	center.offset_right = -12
+	center.offset_bottom = -24
 	overlay.add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(0, 0)
+	var viewport := get_viewport_rect().size
+	panel.custom_minimum_size = Vector2(min(340.0, max(280.0, viewport.x - 28.0)), min(520.0, max(260.0, viewport.y - 88.0)))
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	panel.add_theme_stylebox_override("panel", _make_style("#11102aee", 16, "#00f0ff88", 1, "#00f0ff55", 14))
@@ -649,10 +652,20 @@ func _make_modal_root() -> Control:
 	margin.add_theme_constant_override("margin_right", 16)
 	margin.add_theme_constant_override("margin_bottom", 16)
 	panel.add_child(margin)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 4
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	margin.add_child(scroll)
 	var body := VBoxContainer.new()
 	body.name = "ModalBody"
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 10)
-	margin.add_child(body)
+	scroll.add_child(body)
 	return overlay
 
 
@@ -741,6 +754,10 @@ func _make_label(text: String, font_size: int, color: String, font: Font, alignm
 	label.add_theme_color_override("font_color", Color(color))
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if font_size <= 13:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
 
 
@@ -750,6 +767,8 @@ func _make_flat_button(text: String, color: String, size: int) -> Button:
 	button.focus_mode = Control.FOCUS_NONE
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", size)
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.add_theme_color_override("font_color", Color(color))
 	_apply_button_style(button, _make_style("#00000000", 0))
 	return button
@@ -763,6 +782,8 @@ func _make_solid_button(text: String, bg: String, color: String, width: float, h
 	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 14)
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.add_theme_color_override("font_color", Color(color))
 	_apply_button_style(button, _make_style(bg, 10, "#ffffff22", 1))
 	return button
@@ -964,8 +985,8 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 6
-	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	scroll.scroll_deadzone = 4
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 func _is_narrow_screen() -> bool:

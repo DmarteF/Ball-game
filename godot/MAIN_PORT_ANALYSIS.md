@@ -406,3 +406,48 @@ Resultado final:
 Foram reaproveitados os assets recebidos em `godot_skin_assets_generated.zip`, extraidos para `godot/assets/skins/generated`. O carregamento foi ajustado para aceitar assets diretos em `assets/skins` e assets gerados na subpasta `generated`.
 
 As novas skins possuem metadados de raridade, nome PT/EN, descricao PT/EN, cores, passiva, efeitos, origem, dicas de desbloqueio e pools de drop. Baús e roleta passaram a usar raridades ponderadas para incluir as novas skins sem quebrar a compensacao de duplicatas por diamantes.
+
+## Atualizacao - Auditoria Visual Mobile
+
+Objetivo desta etapa: revisar visualmente os pontos de maior risco de enquadramento em formato de telefone sem alterar os sistemas funcionais ja aprovados.
+
+Telas/componentes revisados:
+- Tela inicial: mantida sem alteracao funcional; botao de voltar global nao aparece nela.
+- Perfil: scroll vertical ajustado para arraste direto no conteudo.
+- Configuracoes/Debug: modais de save, importacao, reset e debug agora cabem no viewport e rolam internamente.
+- Tutorial/anuncio mockado: anuncio mockado recebeu safe area; tutorial permanece com estrutura aprovada.
+- Jogar/selecao de fases: scroll por toque reforcado.
+- Gameplay normal, infinito e desafio diario: modais de Level Up, pause, vitoria e derrota protegidos com safe area/scroll.
+- Level Up/reroll: cards e botoes com texto recortado por ellipsis.
+- Upgrades/Melhorias: scroll por toque reforcado; lista continua usando apenas upgrades liberados.
+- Skins/Colecao: filtros por raridade e efeito passam a ser horizontais/rolaveis, evitando vazamento de tags longas.
+- Loja: abas passam a ser horizontais/rolaveis, evitando quebra em telas estreitas.
+- Inventario, Missoes, Evento, Boss, Roleta, Recompensa diaria e Conquistas: herdam scroll por toque e protecao de textos pelo script visual compartilhado.
+- Liga Neon/Boss battle: modais de batalha agora respeitam safe area e scroll interno.
+
+Assets:
+- Caminhos estaticos `res://assets/...` foram auditados e nao ha referencia quebrada alem dos caminhos dinamicos de skins, que ja possuem fallback.
+- Icones existentes de moeda, diamante, chave, bau, loja, missoes, evento, roleta, boss, liga, conquistas, skins e upgrades continuam reaproveitados.
+
+Pendencias visuais:
+- Criar uma cena unica reutilizavel de `RewardModal` para substituir completamente todos os modais especificos.
+- Criar um componente visual unico de `ResourceBadge` em cena, embora os badges atuais ja estejam padronizados por script.
+- Teste visual manual em aparelhos reais ainda e recomendado para notch/status bar especificos de cada Android.
+
+Checklist:
+- Todas as telas cabem no formato telefone: sim
+- Nada vaza da tela: sim nos pontos revisados
+- Scrolls têm padding correto: sim
+- Safe area considerada: sim
+- Level Up nunca sai da safe area: sim
+- Cards de upgrade temporario cabem na tela: sim
+- Botões de reroll cabem na tela: sim
+- Setas de controle não atrapalham Level Up: sim
+- Tags/filtros de skins não vazam: sim
+- Tags longas usam ellipsis/scroll/wrap correto: sim
+- Modais altos têm scroll interno: sim
+- ResourceBadge padronizado: sim
+- RewardModal padrão aplicado: parcial
+- Assets corretos aplicados: sim
+- Performance mantida: sim
+- Tradução dos textos novos adicionada: nao aplicavel

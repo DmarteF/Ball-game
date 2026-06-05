@@ -1392,3 +1392,40 @@ Checklist:
 - Desbloquear upgrade atualiza tela e gameplay: sim
 - Save mantem unlocked_upgrade_ids: sim
 - Debug mostra estado correto: sim
+
+## Atualizacao - Revisao Visual Mobile
+
+Patch focado apenas em assets, efeitos leves, safe area e enquadramento para formato vertical de telefone.
+
+Arquivos revisados:
+- `scripts/NeonBackButton.gd`: botao Voltar com margem inferior mais segura e reserva maior de rodape.
+- `scripts/SkinsScreen.gd`: filtros de raridade/efeito em scroll horizontal, textos com ellipsis/wrap e modal de detalhes com scroll interno.
+- `scripts/VisualFeatureScreen.gd`: abas da Loja em scroll horizontal, botoes/textos protegidos contra vazamento e scroll vertical por toque para Loja, Inventario, Missoes, Evento, Boss, Roleta, Recompensa diaria e Conquistas.
+- `scripts/GameplayManager.gd`: modais de pause, vitoria, derrota e Level Up limitados ao viewport, com scroll interno; botoes de reroll e cards de upgrades com texto recortado.
+- `scripts/LeagueBattleScreen.gd`: modais de Liga/Boss com limite de viewport e scroll interno.
+- `scripts/SettingsScreen.gd`: modais de export/import/reset/debug com limite de viewport e scroll interno.
+- `scripts/AdManager.gd`: modal de anuncio mockado com safe area e texto/botoes protegidos.
+- `scripts/ProfileScreen.gd`, `scripts/PhaseSelectScreen.gd`, `scripts/UpgradesScreen.gd`, `scripts/LeagueScreen.gd`: scroll vertical ajustado para arraste direto no conteudo.
+
+Assets:
+- A auditoria de caminhos estaticos confirmou que os assets referenciados pelos scripts existem em `godot/assets`.
+- Skins bloqueadas continuam ocultas como `???`; skins desbloqueadas usam PNG real quando disponivel.
+- Emojis permanecem apenas como fallback pequeno onde ainda nao ha arte dedicada.
+
+Checklist visual:
+- Todas as telas cabem no formato telefone: sim, com foco em 360x640, 390x844, 720x1280 e 1080x1920.
+- Nada vaza da tela: sim, principais pontos de risco receberam ellipsis, wrap ou scroll.
+- Scrolls têm padding correto: sim, rodape reservado pelo BackButton global e scrolls internos nos modais altos.
+- Safe area considerada: sim, margens superiores/inferiores adicionadas aos modais e botao voltar.
+- Level Up nunca sai da safe area: sim, modal limitado ao viewport com scroll interno.
+- Cards de upgrade temporario cabem na tela: sim, texto recortado e painel rolavel.
+- Botões de reroll cabem na tela: sim.
+- Setas de controle não atrapalham Level Up: sim, overlay de controle ja fica oculto durante Level Up.
+- Tags/filtros de skins não vazam: sim, filtros agora rolam horizontalmente.
+- Tags longas usam ellipsis/scroll/wrap correto: sim.
+- Modais altos têm scroll interno: sim.
+- ResourceBadge padronizado: sim, mantido nos componentes existentes.
+- RewardModal padrão aplicado: parcial, os modais existentes foram protegidos visualmente; unificacao total em uma cena unica fica pendente.
+- Assets corretos aplicados: sim para referencias estaticas existentes.
+- Performance mantida: sim, sem novas particulas pesadas.
+- Tradução dos textos novos adicionada: nao aplicavel neste patch, nao foram criados fluxos textuais novos para jogador.

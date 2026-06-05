@@ -257,13 +257,20 @@ func _make_collection_actions() -> HBoxContainer:
 	return row
 
 
-func _make_filters(kind: String) -> GridContainer:
-	var row := GridContainer.new()
-	row.columns = 2 if _is_narrow_screen() else 3
+func _make_filters(kind: String) -> ScrollContainer:
+	var scroller := ScrollContainer.new()
+	scroller.custom_minimum_size.y = 42
+	scroller.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroller.follow_focus = true
+	scroller.scroll_deadzone = 4
+	scroller.mouse_filter = Control.MOUSE_FILTER_STOP
+	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
-	row.add_theme_constant_override("h_separation", 8)
-	row.add_theme_constant_override("v_separation", 8)
+	row.add_theme_constant_override("separation", 8)
+	scroller.add_child(row)
 	if kind == "rarity":
 		_filter_buttons.clear()
 	else:
@@ -273,12 +280,14 @@ func _make_filters(kind: String) -> GridContainer:
 		var button := Button.new()
 		var filter_id := String(filter_data["id"])
 		button.text = _filter_label(filter_id, String(filter_data.get("label", filter_data.get("label_pt", filter_id))), kind)
-		button.custom_minimum_size = Vector2(96, 34)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size = Vector2(92 if _is_narrow_screen() else 110, 34)
+		button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		button.focus_mode = Control.FOCUS_NONE
 		button.mouse_filter = Control.MOUSE_FILTER_PASS
 		button.add_theme_font_override("font", _bold_font)
-		button.add_theme_font_size_override("font_size", 12)
+		button.add_theme_font_size_override("font_size", 11 if _is_narrow_screen() else 12)
+		button.clip_text = true
+		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		button.set_meta("filter_id", filter_id)
 		button.set_meta("filter_kind", kind)
 		_apply_filter_style(button, filter_id == (_filter if kind == "rarity" else _effect_filter))
@@ -295,7 +304,7 @@ func _make_filters(kind: String) -> GridContainer:
 		else:
 			_effect_filter_buttons.append(button)
 		row.add_child(button)
-	return row
+	return scroller
 
 
 func _populate_skins() -> void:
@@ -812,6 +821,8 @@ func _make_action(text: String, color: String, disabled: bool, action: Callable 
 	button.disabled = disabled
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 10)
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.add_theme_color_override("font_color", Color("#001018"))
 	_apply_button_style(button, _make_style(color, 8))
 	if action.is_valid() and not disabled:
@@ -839,9 +850,16 @@ func _show_skin_details(skin: Dictionary) -> void:
 		GameState.mark_skin_seen(skin_id)
 	var center := CenterContainer.new()
 	_fill(center)
+	center.offset_left = 12.0
+	center.offset_top = 24.0
+	center.offset_right = -12.0
+	center.offset_bottom = -24.0
 	_detail_overlay.add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(330, 470)
+	var viewport := get_viewport_rect().size
+	panel.custom_minimum_size = Vector2(min(330.0, max(280.0, viewport.x - 28.0)), min(470.0, max(260.0, viewport.y - 88.0)))
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var rarity := String(skin.get("rarity", "common"))
 	panel.add_theme_stylebox_override("panel", _make_style("#16003bee", 18, _rarity_color(rarity) + "aa", 2, _rarity_color(rarity) + "55", 14))
 	center.add_child(panel)
@@ -851,9 +869,19 @@ func _show_skin_details(skin: Dictionary) -> void:
 	margin.add_theme_constant_override("margin_right", 18)
 	margin.add_theme_constant_override("margin_bottom", 18)
 	panel.add_child(margin)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 4
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	margin.add_child(scroll)
 	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 10)
-	margin.add_child(column)
+	scroll.add_child(column)
 	var icon_box := CenterContainer.new()
 	icon_box.custom_minimum_size = Vector2(0, 116)
 	column.add_child(icon_box)
@@ -963,6 +991,10 @@ func _make_label(text: String, font_size: int, color: String, font: Font, alignm
 	label.add_theme_color_override("font_color", Color(color))
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if font_size <= 13:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
 
 
@@ -1032,8 +1064,8 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 6
-	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	scroll.scroll_deadzone = 4
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 func _is_narrow_screen() -> bool:

@@ -207,10 +207,13 @@ func _show_mock_ad(reason: String, callback: Callable) -> void:
 	center.anchor_right = 1.0
 	center.anchor_bottom = 1.0
 	center.offset_left = 18
+	center.offset_top = 24
 	center.offset_right = -18
+	center.offset_bottom = -24
 	overlay.add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(310, 230)
+	var viewport := root.get_viewport().get_visible_rect().size
+	panel.custom_minimum_size = Vector2(min(310.0, max(280.0, viewport.x - 36.0)), min(230.0, max(220.0, viewport.y - 88.0)))
 	panel.add_theme_stylebox_override("panel", _style("#11102aee", 18, "#00f0ff99", 2, "#00f0ff66", 14))
 	center.add_child(panel)
 	var margin := MarginContainer.new()
@@ -277,6 +280,8 @@ func _label(text: String, size: int, color: String, bold := false) -> Label:
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", Color(color))
 	if bold:
@@ -291,6 +296,8 @@ func _button(text: String, color: String) -> Button:
 	button.text = text
 	button.custom_minimum_size = Vector2(220, 48)
 	button.focus_mode = Control.FOCUS_NONE
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.add_theme_font_size_override("font_size", 14)
 	button.add_theme_color_override("font_color", Color(color))
 	button.add_theme_stylebox_override("normal", _style("#ffffff12", 12, color + "88", 1, color + "33", 8))

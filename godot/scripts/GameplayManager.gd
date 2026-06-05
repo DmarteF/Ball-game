@@ -1329,6 +1329,7 @@ func _build_level_up_overlay() -> void:
 	card.add_child(_level_up_cards)
 	var reroll_row := HBoxContainer.new()
 	reroll_row.add_theme_constant_override("separation", 6)
+	reroll_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.add_child(reroll_row)
 	reroll_row.add_child(_make_modal_button("REROLL AD", _reroll_upgrades_ad))
 	reroll_row.add_child(_make_modal_button("REROLL 10♦", _reroll_upgrades_diamond))
@@ -1381,8 +1382,19 @@ func _make_modal() -> PanelContainer:
 func _make_modal_content(overlay: Control, title: String, panel_size: Vector2 = Vector2(320, 260)) -> VBoxContainer:
 	var center := CenterContainer.new()
 	_fill(center)
+	center.offset_left = 12.0
+	center.offset_top = 24.0
+	center.offset_right = -12.0
+	center.offset_bottom = -24.0
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = panel_size
+	var viewport := get_viewport_rect().size
+	var safe_size := Vector2(
+		min(panel_size.x, max(280.0, viewport.x - 28.0)),
+		min(panel_size.y, max(250.0, viewport.y - 88.0))
+	)
+	panel.custom_minimum_size = safe_size
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	panel.add_theme_stylebox_override("panel", _make_style("#16003bdd", 18, "#00f0ff66", 2, "#00f0ff55", 18))
 	center.add_child(panel)
 	var margin := MarginContainer.new()
@@ -1391,10 +1403,20 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2 = 
 	margin.add_theme_constant_override("margin_right", 18 if panel_size.y > 420.0 else 24)
 	margin.add_theme_constant_override("margin_bottom", 16 if panel_size.y > 420.0 else 22)
 	panel.add_child(margin)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.scroll_deadzone = 4
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	margin.add_child(scroll)
 	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", 10 if panel_size.y > 420.0 else 14)
-	margin.add_child(column)
+	scroll.add_child(column)
 	column.add_child(_make_label(title, 24 if panel_size.y > 420.0 else 26, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	overlay.add_child(center)
 	return column
@@ -1403,6 +1425,8 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2 = 
 func _make_modal_button(text: String, target: Callable) -> Button:
 	var button := _make_button(text, 0, 42)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.pressed.connect(target)
 	return button
 
@@ -2263,6 +2287,8 @@ func _make_level_up_button(upgrade: Dictionary) -> Button:
 	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 286, 62)
 	button.add_theme_color_override("font_color", Color("#ffffff"))
 	button.add_theme_font_size_override("font_size", 10)
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_apply_button_style(button, _make_style("#16003bdd", 12, String(upgrade["color"]), 2, String(upgrade["color"]), 8))
 	var icon := _make_icon_texture(_upgrade_icon_key(id), 32)
 	icon.anchor_left = 0.0
@@ -2928,6 +2954,8 @@ func _make_label(text: String, font_size: int, color: String, font: Font, alignm
 	label.add_theme_color_override("font_color", Color(color))
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 

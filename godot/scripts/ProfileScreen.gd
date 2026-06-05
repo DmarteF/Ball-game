@@ -728,8 +728,8 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 6
-	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	scroll.scroll_deadzone = 4
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 func _is_narrow_screen() -> bool:

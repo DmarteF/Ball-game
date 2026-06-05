@@ -820,3 +820,30 @@ Checklist:
 - Desbloquear upgrade atualiza tela e gameplay: sim
 - Save mantem unlocked_upgrade_ids: sim
 - Debug mostra estado correto: sim
+
+## Atualizacao - Revisao Visual, Safe Area e Modais
+
+Esta etapa nao altera gameplay, economia, balanceamento, desbloqueios, anuncios, tutorial ou debug. O foco foi deixar os elementos sobrepostos e telas longas mais seguros em telefone vertical.
+
+Gameplay:
+- `GameplayManager.gd` agora limita modais de pause, Level Up, vitoria e derrota ao tamanho visivel do viewport.
+- O painel de Level Up usa scroll interno quando o texto de upgrades/reroll nao couber.
+- Botoes de reroll e cards de upgrade receberam ellipsis para impedir vazamento lateral.
+- O overlay de controle continua escondido durante Level Up para nao atrapalhar escolha de upgrade.
+
+Boss/Liga Neon:
+- `LeagueBattleScreen.gd` recebeu o mesmo tratamento de modal com safe area e scroll interno.
+- A revisao evita que resultado, revive, pause e Level Up dessas lutas saiam da tela em Android menor.
+
+Feedback visual:
+- Nao foram adicionadas particulas novas neste patch para preservar FPS.
+- Efeitos existentes de quebra, perfect, critico, diamante, combo e screen shake foram preservados.
+
+Checklist:
+- Level Up dentro da safe area: sim
+- Cards de upgrade temporario cabem: sim
+- Botoes de reroll cabem: sim
+- Modais de gameplay altos tem scroll interno: sim
+- Setas de controle nao aparecem sobre Level Up: sim
+- Boss/Liga com modais enquadrados: sim
+- Performance preservada: sim

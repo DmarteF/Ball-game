@@ -334,30 +334,38 @@ func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
 	return item
 
 
-func _make_shop_tabs() -> GridContainer:
-	var tabs := GridContainer.new()
-	tabs.columns = 2 if _is_narrow_screen() else 3
+func _make_shop_tabs() -> ScrollContainer:
+	var scroller := ScrollContainer.new()
+	scroller.custom_minimum_size.y = 46
+	scroller.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroller.follow_focus = true
+	scroller.scroll_deadzone = 4
+	scroller.mouse_filter = Control.MOUSE_FILTER_STOP
+	var tabs := HBoxContainer.new()
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs.mouse_filter = Control.MOUSE_FILTER_PASS
 	tabs.add_theme_constant_override("separation", 6)
-	tabs.add_theme_constant_override("h_separation", 6)
-	tabs.add_theme_constant_override("v_separation", 6)
+	scroller.add_child(tabs)
 	_shop_tab_buttons.clear()
 	for tab in SHOP_TABS:
 		tabs.add_child(_make_shop_tab_button(tab))
-	return tabs
+	return scroller
 
 
 func _make_shop_tab_button(tab: Dictionary) -> Button:
 	var active := String(tab["id"]) == _shop_tab
 	var button := Button.new()
 	button.text = _shop_tab_label(String(tab["id"]), String(tab["label"]))
-	button.custom_minimum_size.y = 42
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.custom_minimum_size = Vector2(112 if _is_narrow_screen() else 132, 42)
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 11)
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.set_meta("tab_id", String(tab["id"]))
 	_apply_shop_tab_style(button, active)
 	button.pressed.connect(func() -> void:
@@ -1358,6 +1366,8 @@ func _make_action_button(text: String, tone: String) -> Button:
 	button.text = text if not text.strip_edges().is_empty() else _tr("unavailable", "Indisponível")
 	button.add_theme_font_override("font", _bold_font)
 	button.add_theme_font_size_override("font_size", 11)
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.add_theme_color_override("font_color", Color("#001018"))
 	button.add_theme_color_override("font_disabled_color", Color("#ffffffcc"))
 	button.add_theme_color_override("font_pressed_color", Color("#001018"))
@@ -1411,6 +1421,10 @@ func _make_label(text: String, font_size: int, color: String, font: Font, alignm
 	label.add_theme_color_override("font_color", Color(color))
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if font_size <= 13:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
 
 
@@ -1498,8 +1512,8 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 6
-	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	scroll.scroll_deadzone = 4
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 func _is_narrow_screen() -> bool:
