@@ -2,6 +2,7 @@ extends Node
 
 const SAVE_PATH := "user://neon_idle_escape_save.json"
 const BACKUP_SAVE_PATH := "user://neon_idle_escape_save_backup.json"
+const IMPORT_BACKUP_SAVE_PATH := "user://neon_idle_escape_save_before_import.json"
 const SETTINGS_LEGACY_PATH := "user://settings.json"
 
 
@@ -33,6 +34,37 @@ func save_game(data: Dictionary) -> void:
 	var backup := FileAccess.open(BACKUP_SAVE_PATH, FileAccess.WRITE)
 	if backup != null:
 		backup.store_string(payload)
+
+
+func create_import_backup() -> bool:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return false
+	var current := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if current == null:
+		return false
+	var backup := FileAccess.open(IMPORT_BACKUP_SAVE_PATH, FileAccess.WRITE)
+	if backup == null:
+		return false
+	backup.store_string(current.get_as_text())
+	return true
+
+
+func read_current_save_text() -> String:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return ""
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return ""
+	return file.get_as_text()
+
+
+func write_export_file(text: String) -> String:
+	var path := "user://neon_idle_escape_save_export.json"
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return ""
+	file.store_string(text)
+	return ProjectSettings.globalize_path(path)
 
 
 func load_legacy_settings() -> Dictionary:

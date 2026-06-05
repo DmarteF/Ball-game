@@ -1156,3 +1156,42 @@ Checklist:
 ## Atualizacao - Colecao de Skins
 
 A tela `Skins` agora exibe colecao completa com porcentagem, total desbloqueado, total geral, contadores por raridade, contadores por efeito, filtros por raridade/efeito, tag `Nova`, botao `Limpar novas`, modal de detalhes e botao `Equipar melhor skin`. Skins bloqueadas continuam protegidas com `???`, sem revelar asset real nem efeito completo.
+
+## Atualizacao - Backup / Exportar / Importar Save
+
+A tela `Configurações` recebeu a seção `Save / Progresso`, implementada em `scripts/SettingsScreen.gd` usando funções centrais de `GameState.gd` e `SaveManager.gd`.
+
+Opções disponíveis:
+- `Export Save / Exportar Save`: gera um JSON completo com metadados e `save_data`.
+- `Copy Save Code / Copiar Código do Save`: copia o JSON para a área de transferência quando a plataforma permitir.
+- `Import Save / Importar Save`: abre campo para colar JSON/código, valida estrutura/versão e mostra confirmação antes de substituir.
+- `Paste Save Code / Colar Código do Save`: tenta iniciar o campo com o conteúdo da área de transferência.
+- `Reset Progress / Resetar Progresso`: exige confirmação dupla e digitar `RESET`.
+
+Formato do export:
+- `format`: `neon_idle_escape_godot_save`
+- `version`: versão interna do export (`1` nesta implementação)
+- `exported_at`: timestamp local
+- `exported_at_iso`: data/hora legível
+- `game`: `Neon Idle Escape`
+- `engine`: `Godot 4`
+- `save_data`: dicionário completo do progresso, incluindo recursos, fases, upgrades, skins, conquistas, missões, Liga Neon, boss, modo infinito, configurações, tutorial, idioma e áudio.
+
+Segurança:
+- Importação inválida não substitui o save atual.
+- Antes de importar ou resetar, o save atual é copiado para `user://neon_idle_escape_save_before_import.json`.
+- O backup automático normal continua em `user://neon_idle_escape_save_backup.json`.
+- Saves de versões futuras são recusados para evitar corrupção.
+- Em Web, copiar/colar pode depender da permissão do navegador; por isso o código também fica visível em campo de texto.
+
+Debug:
+- Em builds debug, a seção mostra botões para gerar save de teste e desbloquear tudo.
+- Esses botões usam `OS.is_debug_build()` e não devem aparecer em export release.
+
+Checklist:
+- Exportar save funciona: sim
+- Importar save funciona: sim
+- Validação de save: sim
+- Backup antes de importar: sim
+- Reset com confirmação dupla: sim
+- Configurações atualizadas: sim

@@ -15,6 +15,7 @@ var _bold_font: Font
 var _music_muted := false
 var _sfx_muted := false
 var _language := "en"
+var _active_modal: Control
 
 
 func _ready() -> void:
@@ -71,6 +72,7 @@ func _build_screen() -> void:
 
 	content.add_child(_make_audio_card())
 	content.add_child(_make_language_card())
+	content.add_child(_make_save_card())
 	content.add_child(_make_about_card())
 	content.add_child(_spacer(18))
 
@@ -126,6 +128,27 @@ func _make_language_card() -> PanelContainer:
 	return card
 
 
+func _make_save_card() -> PanelContainer:
+	var card := _make_card()
+	var body := _card_body(card)
+	body.add_child(_make_section_title(_t("save_progress")))
+	var text := _make_label(_t("save_help"), 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(text)
+	body.add_child(_make_save_button(_t("export_save"), "#00f0ff", _show_export_save))
+	body.add_child(_make_save_button(_t("import_save"), "#00ff88", _show_import_save))
+	body.add_child(_make_save_button(_t("copy_save"), "#ffd700", _copy_save_code))
+	body.add_child(_make_save_button(_t("paste_save"), "#ff5cff", _show_paste_save))
+	body.add_child(_make_save_button(_t("reset_progress"), "#ff3b6b", _show_reset_warning))
+	if OS.is_debug_build():
+		var debug_label := _make_label(_t("debug_tools"), 12, "#ffffff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+		body.add_child(debug_label)
+		body.add_child(_make_save_button(_t("debug_test_save"), "#ffffff", _debug_make_test_save))
+		body.add_child(_make_save_button(_t("debug_unlock_all"), "#ffffff", _debug_unlock_all))
+		body.add_child(_make_save_button(_t("debug_clear_save"), "#ff3b6b", _show_reset_warning))
+	return card
+
+
 func _make_about_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
@@ -135,6 +158,16 @@ func _make_about_card() -> PanelContainer:
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(text)
 	return card
+
+
+func _make_save_button(text: String, color: String, action: Callable) -> Button:
+	var button := _make_solid_button(text, "#ffffff12", color, 220, 50)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_stylebox_override("normal", _make_style("#ffffff12", 12, color + "88", 1, color + "33", 8))
+	button.add_theme_stylebox_override("hover", _make_style("#ffffff18", 12, color, 1, color + "44", 9))
+	button.add_theme_stylebox_override("pressed", _make_style("#ffffff22", 12, color, 1, color + "55", 10))
+	button.pressed.connect(action)
+	return button
 
 
 func _make_language_button(label: String, code: String) -> Button:
@@ -153,6 +186,264 @@ func _make_language_button(label: String, code: String) -> Button:
 		get_tree().reload_current_scene()
 	)
 	return button
+
+
+func _show_export_save() -> void:
+	var code := GameState.export_save_text()
+	var path := SaveManager.write_export_file(code)
+	var message := _t("export_ready")
+	if not path.is_empty():
+		message += "\n%s: %s" % [_t("saved_file"), path]
+	_show_code_modal(_t("export_save"), message, code, false, [])
+
+
+func _copy_save_code() -> void:
+	var code := GameState.export_save_text()
+	DisplayServer.clipboard_set(code)
+	_show_code_modal(_t("copy_save"), _t("copy_done"), code, false, [])
+
+
+func _show_import_save() -> void:
+	_show_import_editor("")
+
+
+func _show_paste_save() -> void:
+	_show_import_editor(DisplayServer.clipboard_get())
+
+
+func _show_import_editor(initial_text: String) -> void:
+	var import_button := Button.new()
+	import_button.text = _t("validate_import")
+	_style_modal_button(import_button, "#00ff88")
+	_show_code_modal(_t("import_save"), _t("paste_help"), initial_text, true, [import_button])
+	var editor := _active_modal.get_meta("code_editor") as TextEdit
+	import_button.pressed.connect(func() -> void:
+		_validate_import_text(editor.text)
+	)
+
+
+func _validate_import_text(text: String) -> void:
+	var validation := GameState.validate_import_save_text(text)
+	if not bool(validation.get("ok", false)):
+		_show_message_modal(_t("import_error"), _import_error_message(String(validation.get("reason", ""))), "#ff3b6b")
+		return
+	var preview: Dictionary = validation.get("preview", {})
+	var body := "%s\n\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s" % [
+		_t("import_confirm"),
+		_t("coins"), int(preview.get("coins", 0)),
+		_t("diamonds"), int(preview.get("diamonds", 0)),
+		_t("level"), int(preview.get("level", 1)),
+		_t("max_phase"), int(preview.get("max_phase", 1)),
+		_t("skins"), int(preview.get("skins", 0)),
+	]
+	var cancel := Button.new()
+	cancel.text = _t("cancel")
+	_style_modal_button(cancel, "#ffffff")
+	cancel.pressed.connect(_close_modal)
+	var confirm := Button.new()
+	confirm.text = _t("confirm_import")
+	_style_modal_button(confirm, "#00ff88")
+	confirm.pressed.connect(func() -> void:
+		var result := GameState.import_save_text(text)
+		if bool(result.get("ok", false)):
+			_load_settings()
+			_show_message_modal(_t("import_success"), _t("import_success_body"), "#00ff88")
+		else:
+			_show_message_modal(_t("import_error"), _import_error_message(String(result.get("reason", ""))), "#ff3b6b")
+	)
+	_show_message_modal(_t("import_save"), body, "#00ff88", [cancel, confirm])
+
+
+func _show_reset_warning() -> void:
+	var cancel := Button.new()
+	cancel.text = _t("cancel")
+	_style_modal_button(cancel, "#ffffff")
+	cancel.pressed.connect(_close_modal)
+	var next := Button.new()
+	next.text = _t("continue")
+	_style_modal_button(next, "#ff3b6b")
+	next.pressed.connect(_show_reset_type_confirm)
+	_show_message_modal(_t("reset_progress"), _t("reset_warning"), "#ff3b6b", [cancel, next])
+
+
+func _show_reset_type_confirm() -> void:
+	_close_modal()
+	var overlay := _make_modal_root()
+	var body := _modal_body(overlay, _t("reset_progress"), "#ff3b6b")
+	var label := _make_label(_t("reset_type_reset"), 14, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(label)
+	var input := LineEdit.new()
+	input.placeholder_text = "RESET"
+	input.custom_minimum_size.y = 48
+	input.add_theme_font_override("font", _bold_font)
+	input.add_theme_font_size_override("font_size", 16)
+	input.add_theme_color_override("font_color", Color("#ffffff"))
+	input.add_theme_color_override("caret_color", Color("#00f0ff"))
+	input.add_theme_stylebox_override("normal", _make_style("#050516", 10, "#ff3b6b88", 1))
+	input.add_theme_stylebox_override("focus", _make_style("#050516", 10, "#ff3b6b", 1, "#ff3b6b55", 8))
+	body.add_child(input)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	body.add_child(row)
+	var cancel := Button.new()
+	cancel.text = _t("cancel")
+	_style_modal_button(cancel, "#ffffff")
+	cancel.pressed.connect(_close_modal)
+	row.add_child(cancel)
+	var confirm := Button.new()
+	confirm.text = _t("confirm_reset")
+	_style_modal_button(confirm, "#ff3b6b")
+	confirm.pressed.connect(func() -> void:
+		if input.text.strip_edges() != "RESET":
+			_show_message_modal(_t("reset_progress"), _t("reset_need_reset"), "#ff3b6b")
+			return
+		GameState.reset_progress()
+		_load_settings()
+		_show_message_modal(_t("reset_progress"), _t("reset_done"), "#00ff88")
+	)
+	row.add_child(confirm)
+	add_child(overlay)
+	_active_modal = overlay
+	input.grab_focus()
+
+
+func _debug_make_test_save() -> void:
+	GameState.make_debug_save()
+	_show_message_modal(_t("debug_tools"), _t("debug_test_done"), "#00ff88")
+
+
+func _debug_unlock_all() -> void:
+	GameState.debug_unlock_all()
+	_show_message_modal(_t("debug_tools"), _t("debug_unlock_done"), "#00ff88")
+
+
+func _show_code_modal(title: String, message: String, code: String, editable: bool, extra_buttons: Array) -> void:
+	_close_modal()
+	var overlay := _make_modal_root()
+	var body := _modal_body(overlay, title, "#00f0ff")
+	var label := _make_label(message, 13, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(label)
+	var editor := TextEdit.new()
+	editor.text = code
+	editor.editable = editable
+	editor.custom_minimum_size = Vector2(0, 210 if _is_narrow_screen() else 260)
+	editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	editor.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	editor.add_theme_font_override("font", _regular_font)
+	editor.add_theme_font_size_override("font_size", 11)
+	editor.add_theme_color_override("font_color", Color("#ffffff"))
+	editor.add_theme_color_override("caret_color", Color("#00f0ff"))
+	editor.add_theme_stylebox_override("normal", _make_style("#030312", 10, "#00f0ff77", 1))
+	body.add_child(editor)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	body.add_child(row)
+	var close := Button.new()
+	close.text = _t("close")
+	_style_modal_button(close, "#ffffff")
+	close.pressed.connect(_close_modal)
+	row.add_child(close)
+	for button in extra_buttons:
+		row.add_child(button)
+	overlay.set_meta("code_editor", editor)
+	add_child(overlay)
+	_active_modal = overlay
+	if editable:
+		editor.grab_focus()
+
+
+func _show_message_modal(title: String, message: String, accent: String, buttons: Array = []) -> void:
+	_close_modal()
+	var overlay := _make_modal_root()
+	var body := _modal_body(overlay, title, accent)
+	var label := _make_label(message, 14, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(label)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	body.add_child(row)
+	if buttons.is_empty():
+		var close := Button.new()
+		close.text = _t("close")
+		_style_modal_button(close, accent)
+		close.pressed.connect(_close_modal)
+		row.add_child(close)
+	else:
+		for button in buttons:
+			row.add_child(button)
+	add_child(overlay)
+	_active_modal = overlay
+
+
+func _make_modal_root() -> Control:
+	var overlay := Control.new()
+	_fill(overlay)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	var shade := ColorRect.new()
+	_fill(shade)
+	shade.color = Color("#000000bb")
+	overlay.add_child(shade)
+	var center := CenterContainer.new()
+	_fill(center)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.offset_left = 12
+	center.offset_right = -12
+	overlay.add_child(center)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0, 0)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	panel.add_theme_stylebox_override("panel", _make_style("#11102aee", 16, "#00f0ff88", 1, "#00f0ff55", 14))
+	center.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 16)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_right", 16)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	panel.add_child(margin)
+	var body := VBoxContainer.new()
+	body.name = "ModalBody"
+	body.add_theme_constant_override("separation", 10)
+	margin.add_child(body)
+	return overlay
+
+
+func _modal_body(overlay: Control, title: String, accent: String) -> VBoxContainer:
+	var body := overlay.find_child("ModalBody", true, false) as VBoxContainer
+	body.add_child(_make_label(title, 20, accent, _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return body
+
+
+func _style_modal_button(button: Button, color: String) -> void:
+	button.custom_minimum_size = Vector2(120, 44)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_override("font", _bold_font)
+	button.add_theme_font_size_override("font_size", 13)
+	button.add_theme_color_override("font_color", Color(color))
+	button.add_theme_stylebox_override("normal", _make_style("#ffffff12", 11, color + "88", 1))
+	button.add_theme_stylebox_override("hover", _make_style("#ffffff18", 11, color, 1))
+	button.add_theme_stylebox_override("pressed", _make_style("#ffffff22", 11, color, 1))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+
+func _close_modal() -> void:
+	if _active_modal != null and is_instance_valid(_active_modal):
+		_active_modal.queue_free()
+	_active_modal = null
+
+
+func _import_error_message(reason: String) -> String:
+	match reason:
+		"empty": return _t("error_empty")
+		"json": return _t("error_json")
+		"format": return _t("error_format")
+		"version": return _t("error_version")
+		"data", "structure": return _t("error_structure")
+	return _t("error_unknown")
 
 
 func _make_card() -> PanelContainer:
@@ -327,6 +618,48 @@ func _t(key: String) -> String:
 		"choose_language": return "Escolha o idioma da interface." if pt else "Choose the interface language."
 		"about": return "SOBRE" if pt else "ABOUT"
 		"about_text": return "Versão Godot 4 em migração fiel, mantendo o visual neon, controles mobile e estrutura preparada para Web." if pt else "Godot 4 faithful migration, keeping the neon look, mobile controls and Web-ready structure."
+		"save_progress": return "SAVE / PROGRESSO" if pt else "SAVE / PROGRESS"
+		"save_help": return "Exporte, importe ou restaure seu progresso com segurança. A importação cria backup automático antes de substituir o save atual." if pt else "Export, import or restore your progress safely. Import creates an automatic backup before replacing the current save."
+		"export_save": return "Exportar Save" if pt else "Export Save"
+		"import_save": return "Importar Save" if pt else "Import Save"
+		"copy_save": return "Copiar Código do Save" if pt else "Copy Save Code"
+		"paste_save": return "Colar Código do Save" if pt else "Paste Save Code"
+		"reset_progress": return "Resetar Progresso" if pt else "Reset Progress"
+		"export_ready": return "Código do save gerado. Copie o texto abaixo e guarde em local seguro." if pt else "Save code generated. Copy the text below and keep it somewhere safe."
+		"saved_file": return "Arquivo local" if pt else "Local file"
+		"copy_done": return "Código copiado para a área de transferência quando disponível. Se o navegador bloquear, copie pelo campo abaixo." if pt else "Code copied to clipboard when available. If the browser blocks it, copy it from the field below."
+		"paste_help": return "Cole o JSON/código do save abaixo. O jogo validará antes de substituir seu progresso." if pt else "Paste the save JSON/code below. The game will validate it before replacing your progress."
+		"validate_import": return "Validar Importação" if pt else "Validate Import"
+		"import_confirm": return "Save válido encontrado. Confirme para substituir o progresso atual. Um backup automático será criado antes." if pt else "Valid save found. Confirm to replace current progress. An automatic backup will be created first."
+		"confirm_import": return "Confirmar Importação" if pt else "Confirm Import"
+		"import_success": return "Importação concluída" if pt else "Import Complete"
+		"import_success_body": return "Progresso importado com sucesso. Volte ao menu para ver tudo atualizado." if pt else "Progress imported successfully. Return to the menu to see everything updated."
+		"import_error": return "Importação inválida" if pt else "Invalid Import"
+		"reset_warning": return "Isso apagará todo o progresso. Esta ação cria um backup, mas substitui imediatamente o save atual. Deseja continuar?" if pt else "This will erase all progress. This action creates a backup, but immediately replaces the current save. Continue?"
+		"reset_type_reset": return "Confirmação final: digite RESET para apagar todo o progresso." if pt else "Final confirmation: type RESET to erase all progress."
+		"reset_need_reset": return "Digite RESET exatamente para confirmar." if pt else "Type RESET exactly to confirm."
+		"reset_done": return "Progresso resetado com segurança." if pt else "Progress safely reset."
+		"continue": return "Continuar" if pt else "Continue"
+		"confirm_reset": return "Confirmar Reset" if pt else "Confirm Reset"
+		"cancel": return "Cancelar" if pt else "Cancel"
+		"close": return "Fechar" if pt else "Close"
+		"coins": return "Moedas" if pt else "Coins"
+		"diamonds": return "Diamantes" if pt else "Diamonds"
+		"level": return "Nível" if pt else "Level"
+		"max_phase": return "Fase máxima" if pt else "Max phase"
+		"skins": return "Skins" if pt else "Skins"
+		"debug_tools": return "DEBUG" if pt else "DEBUG"
+		"debug_test_save": return "Gerar save de teste" if pt else "Generate test save"
+		"debug_unlock_all": return "Desbloquear tudo" if pt else "Unlock all"
+		"debug_clear_save": return "Limpar save" if pt else "Clear save"
+		"debug_test_done": return "Recursos de teste adicionados." if pt else "Test resources added."
+		"debug_unlock_done": return "Conteúdo desbloqueado no save de debug." if pt else "Content unlocked in debug save."
+		"error_empty": return "O campo está vazio." if pt else "The field is empty."
+		"error_json": return "JSON inválido ou corrompido." if pt else "Invalid or corrupted JSON."
+		"error_format": return "Formato de save não reconhecido." if pt else "Unknown save format."
+		"error_version": return "Este save é de uma versão mais nova do jogo." if pt else "This save is from a newer game version."
+		"error_structure": return "O save não possui a estrutura mínima esperada." if pt else "The save does not have the expected minimum structure."
+		"error_unknown": return "Não foi possível importar este save." if pt else "Could not import this save."
 	return key
 
 

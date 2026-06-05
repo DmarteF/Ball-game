@@ -6,6 +6,8 @@ const LevelData := preload("res://scripts/LevelData.gd")
 
 const MAX_PHASE := 100
 const TARGET_ACHIEVEMENT_COUNT := 100
+const SAVE_EXPORT_VERSION := 1
+const SAVE_EXPORT_FORMAT := "neon_idle_escape_godot_save"
 
 const PERMANENT_UPGRADE_DEFS := {
 	"baseDamage": { "base_cost": 70, "max": 40, "phase": 1, "level": 1 },
@@ -484,6 +486,127 @@ func save_game(emit_signal := true) -> void:
 	SaveManager.save_game(data)
 	if emit_signal:
 		changed.emit()
+
+
+func export_save_text() -> String:
+	var payload := {
+		"format": SAVE_EXPORT_FORMAT,
+		"version": SAVE_EXPORT_VERSION,
+		"exported_at": TimeManager.get_now_timestamp(),
+		"exported_at_iso": Time.get_datetime_string_from_system(false, true),
+		"game": "Neon Idle Escape",
+		"engine": "Godot 4",
+		"save_data": data.duplicate(true),
+	}
+	return JSON.stringify(payload, "\t")
+
+
+func validate_import_save_text(text: String) -> Dictionary:
+	var trimmed := text.strip_edges()
+	if trimmed.is_empty():
+		return { "ok": false, "reason": "empty" }
+	var parsed = JSON.parse_string(trimmed)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return { "ok": false, "reason": "json" }
+	var payload: Dictionary = parsed
+	var incoming: Dictionary = {}
+	if payload.has("save_data"):
+		if typeof(payload.get("save_data")) != TYPE_DICTIONARY:
+			return { "ok": false, "reason": "data" }
+		if String(payload.get("format", "")) != SAVE_EXPORT_FORMAT:
+			return { "ok": false, "reason": "format" }
+		if int(payload.get("version", 0)) > SAVE_EXPORT_VERSION:
+			return { "ok": false, "reason": "version" }
+		incoming = Dictionary(payload.get("save_data", {})).duplicate(true)
+	else:
+		incoming = payload.duplicate(true)
+	if not _looks_like_save_data(incoming):
+		return { "ok": false, "reason": "structure" }
+	var preview := {
+		"coins": int(incoming.get("coins", 0)),
+		"diamonds": int(incoming.get("diamonds", 0)),
+		"level": int(incoming.get("level", 1)),
+		"max_phase": int(incoming.get("max_unlocked_phase", 1)),
+		"skins": Array(incoming.get("unlocked_skins", [])).size(),
+		"achievements": Dictionary(incoming.get("achievements", {})).size(),
+	}
+	return { "ok": true, "data": incoming, "preview": preview }
+
+
+func import_save_text(text: String) -> Dictionary:
+	var validation := validate_import_save_text(text)
+	if not bool(validation.get("ok", false)):
+		return validation
+	SaveManager.create_import_backup()
+	data = _merge_defaults(default_save(), Dictionary(validation.get("data", {})).duplicate(true))
+	_migrate_legacy_settings()
+	_ensure_live_systems()
+	_sanitize_persistent_unlocks()
+	refresh_unlocks(false)
+	save_game()
+	return { "ok": true, "preview": validation.get("preview", {}) }
+
+
+func reset_progress() -> void:
+	SaveManager.create_import_backup()
+	data = default_save()
+	_ensure_live_systems()
+	_sanitize_persistent_unlocks()
+	refresh_unlocks(false)
+	save_game()
+
+
+func make_debug_save() -> void:
+	if not OS.is_debug_build():
+		return
+	data["coins"] = int(data.get("coins", 0)) + 25000
+	data["diamonds"] = int(data.get("diamonds", 0)) + 1000
+	data["keys"] = int(data.get("keys", 0)) + 20
+	data["legendary_keys"] = int(data.get("legendary_keys", 0)) + 3
+	data["xp"] = int(data.get("xp", 0)) + 5000
+	data["profile_xp"] = int(data.get("profile_xp", 0)) + 5000
+	data["level"] = max(20, int(data.get("level", 1)))
+	unlock_level(25)
+	save_game()
+
+
+func debug_unlock_all() -> void:
+	if not OS.is_debug_build():
+		return
+	data["max_unlocked_phase"] = MAX_PHASE
+	var phases: Array = []
+	for phase in range(1, MAX_PHASE + 1):
+		phases.append(phase)
+	data["unlocked_phases"] = phases
+	var upgrades: Array = []
+	for id in PERMANENT_UPGRADE_DEFS.keys():
+		upgrades.append(String(id))
+	for id in MainPortData.all_run_upgrade_ids():
+		if not upgrades.has(String(id)):
+			upgrades.append(String(id))
+	data["unlocked_upgrades"] = upgrades
+	data["explicit_unlocked_run_upgrades"] = MainPortData.all_run_upgrade_ids()
+	var skins: Array = []
+	for skin in MainPortData.skins():
+		var skin_id := String(Dictionary(skin).get("id", ""))
+		if not skin_id.is_empty():
+			skins.append(skin_id)
+	data["unlocked_skins"] = skins
+	data["new_skins"] = skins.duplicate()
+	refresh_unlocks(false)
+	save_game()
+
+
+func _looks_like_save_data(candidate: Dictionary) -> bool:
+	if not candidate.has("coins") or not candidate.has("diamonds"):
+		return false
+	if not candidate.has("unlocked_skins") or typeof(candidate.get("unlocked_skins")) != TYPE_ARRAY:
+		return false
+	if not candidate.has("settings") or typeof(candidate.get("settings")) != TYPE_DICTIONARY:
+		return false
+	if not candidate.has("stats") or typeof(candidate.get("stats")) != TYPE_DICTIONARY:
+		return false
+	return true
 
 
 func refresh_unlocks(emit_signal := true) -> void:
