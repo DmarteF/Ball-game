@@ -3,6 +3,7 @@ extends Control
 const LevelData := preload("res://scripts/LevelData.gd")
 
 const PHASE_SELECT_SCENE := "res://scenes/PhaseSelect.tscn"
+const EVENT_SCENE := "res://scenes/Event.tscn"
 const BALL_RADIUS := 10.0
 const INNER_RADIUS := 35.0
 const BASE_BALL_SPEED := 2.2
@@ -73,8 +74,10 @@ const MUSIC_PATH := "res://assets/music/gameplay.mp3"
 var phase_id := 1
 var game_mode := "phase"
 var is_infinite := false
+var is_daily_challenge := false
 var phase_config: Dictionary
 var gameplay_config: Dictionary
+var daily_challenge: Dictionary = {}
 var rings: Array[Dictionary] = []
 var ball_position := Vector2.ZERO
 var ball_velocity := Vector2.ZERO
@@ -184,9 +187,11 @@ func _ready() -> void:
 	_bold_font = _make_system_font(700)
 	game_mode = String(GameState.data.get("selected_mode", "phase"))
 	is_infinite = game_mode == "infinite"
-	phase_id = 1 if is_infinite else clampi(int(GameState.data.get("selected_phase", GameState.data.get("current_phase", 1))), 1, LevelData.MAX_PHASE)
+	is_daily_challenge = game_mode == "daily_challenge"
+	phase_id = 1 if is_infinite or is_daily_challenge else clampi(int(GameState.data.get("selected_phase", GameState.data.get("current_phase", 1))), 1, LevelData.MAX_PHASE)
 	phase_config = LevelData.get_phase_config(phase_id)
-	gameplay_config = _make_infinite_gameplay_config() if is_infinite else LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
+	daily_challenge = GameState.get_daily_challenge() if is_daily_challenge else {}
+	gameplay_config = _make_infinite_gameplay_config() if is_infinite else _make_daily_challenge_gameplay_config() if is_daily_challenge else LevelData.get_solo_gameplay_config(phase_id, int(GameState.data.get("level", 1)), int(GameState.data.get("permanent_upgrades", {}).get("slowRings", 0)))
 	_select_visual_palettes()
 	_load_skin_texture()
 	_setup_audio()
@@ -287,6 +292,9 @@ func _start_level() -> void:
 	crush_contact_started_msec = 0
 	if is_infinite:
 		gameplay_config = _make_infinite_gameplay_config()
+	elif is_daily_challenge:
+		daily_challenge = GameState.get_daily_challenge()
+		gameplay_config = _make_daily_challenge_gameplay_config()
 	_update_arena_metrics()
 	var start_angle: float = _safe_motion_angle(randf() * TWO_PI)
 	var speed: float = BASE_BALL_SPEED + min(0.62, float(phase_id - 1) * 0.08 + int(GameState.data.get("level", 1)) * 0.006)
@@ -332,7 +340,10 @@ func _update_game(delta_steps: float) -> void:
 			if crush_contact_started_msec <= 0:
 				crush_contact_started_msec = Time.get_ticks_msec()
 			elif Time.get_ticks_msec() - crush_contact_started_msec >= CRUSH_CONFIRM_MSEC:
-				_finish_defeat()
+				if is_daily_challenge:
+					_finish_daily_challenge(false)
+				else:
+					_finish_defeat()
 				return
 		else:
 			crush_contact_started_msec = 0
@@ -340,8 +351,12 @@ func _update_game(delta_steps: float) -> void:
 	_update_combo_timeout()
 	if is_infinite:
 		_update_infinite_mode(delta_seconds)
+	elif is_daily_challenge:
+		_update_daily_challenge_mode(delta_seconds)
 	else:
 		_update_phase_ring_queue()
+	if is_daily_challenge:
+		return
 	if not is_infinite and _active_ring_count() == 0 and _queued_ring_count() == 0:
 		_finish_victory()
 		return
@@ -360,7 +375,7 @@ func _create_rings() -> Array[Dictionary]:
 	var difficulty: float = 1.0 + max(0, phase_id - 1) * 0.22
 	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
 	var palette: Array = RING_PALETTES[ring_palette_index]
-	var solid_indexes: Dictionary = {} if is_infinite else { count - 1: true }
+	var solid_indexes: Dictionary = {} if is_infinite or is_daily_challenge else { count - 1: true }
 	var initial_active_count: int = min(count, _target_active_ring_count())
 	for i in range(count):
 		var progress := 0.0 if count == 1 else 1.0 - float(i) / float(count - 1)
@@ -417,6 +432,19 @@ func _make_infinite_gameplay_config() -> Dictionary:
 	}
 
 
+func _make_daily_challenge_gameplay_config() -> Dictionary:
+	var difficulty := int(daily_challenge.get("difficulty", 2))
+	var objective := int(daily_challenge.get("objective_rings", 30))
+	var seed := int(daily_challenge.get("seed", 1))
+	return {
+		"ring_count": objective,
+		"base_hp": 16 + difficulty * 6 + int(seed % 5),
+		"closing_speed": 0.0068 + difficulty * 0.0012,
+		"rotation_speed": 0.0046 + difficulty * 0.0009,
+		"gap_size": max(PI / 12.8, PI / (3.18 + difficulty * 0.22)),
+	}
+
+
 func _update_infinite_mode(delta_seconds: float) -> void:
 	infinite_elapsed += delta_seconds
 	infinite_clear_pressure = max(0.0, infinite_clear_pressure - delta_seconds * 0.18)
@@ -429,6 +457,17 @@ func _update_infinite_mode(delta_seconds: float) -> void:
 
 func _update_phase_ring_queue() -> void:
 	_refill_active_rings_now()
+
+
+func _update_daily_challenge_mode(delta_seconds: float) -> void:
+	infinite_elapsed += delta_seconds
+	_update_phase_ring_queue()
+	var objective := int(daily_challenge.get("objective_rings", 30))
+	var duration := int(daily_challenge.get("duration", 90))
+	if rings_destroyed >= objective or (_active_ring_count() == 0 and _queued_ring_count() == 0):
+		_finish_daily_challenge(true)
+	elif floori(infinite_elapsed) >= duration:
+		_finish_daily_challenge(false)
 
 
 func _refill_active_rings_now() -> void:
@@ -971,6 +1010,44 @@ func _finish_defeat() -> void:
 	queue_redraw()
 
 
+func _finish_daily_challenge(completed: bool) -> void:
+	if finished:
+		return
+	finished = true
+	_play_sfx("victory" if completed else "defeat")
+	var global_coins_reward := _global_coins_from_run(run_coins, best_combo, completed)
+	var profile_xp_reward := _run_profile_xp()
+	var score := rings_destroyed * 100 + floori(infinite_elapsed) * 8 + best_combo * 30 + (500 if completed else 0)
+	var summary := {
+		"seconds": floori(infinite_elapsed),
+		"rings": rings_destroyed,
+		"coins": global_coins_reward,
+		"xp": profile_xp_reward,
+		"diamonds": run_diamonds,
+		"score": score,
+		"best_combo": best_combo,
+		"criticals": criticals,
+		"skin_effects": skin_effects,
+		"run_upgrades": run_upgrades,
+		"run_level": run_level,
+		"completed": completed,
+		"new_record": score > int(daily_challenge.get("best_score", 0)),
+	}
+	var recorded := GameState.record_daily_challenge_run(summary)
+	pending_result_reward = { "coins": int(recorded.get("coins", global_coins_reward)), "xp": int(recorded.get("xp", profile_xp_reward)), "diamonds": 0, "manual_quit": false, "victory": completed }
+	_rebuild_defeat_summary(summary)
+	_defeat_title.text = "DESAFIO DIÁRIO CONCLUÍDO" if completed else "RESULTADO DO DESAFIO"
+	if completed and bool(recorded.get("reward_available", false)):
+		_defeat_summary.add_child(_make_label("Recompensa principal disponível na aba Evento.", 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	if _defeat_revive_button:
+		_defeat_revive_button.visible = false
+	if _defeat_double_button:
+		_defeat_double_button.visible = _can_double_result_reward()
+		_defeat_double_button.disabled = false
+	_defeat_overlay.visible = true
+	queue_redraw()
+
+
 func _revive_with_ad() -> void:
 	if revive_used or not finished:
 		return
@@ -1396,18 +1473,24 @@ func _make_progress_bar(fill_color: String) -> ProgressBar:
 
 func _update_hud() -> void:
 	var active: int = _active_ring_count()
-	_hud_phase.text = "INFINITO" if is_infinite else "FASE %s" % phase_id
+	_hud_phase.text = "DESAFIO DIÁRIO" if is_daily_challenge else "INFINITO" if is_infinite else "FASE %s" % phase_id
 	_set_resource_value("coins", run_coins)
 	_set_resource_value("gems", run_diamonds)
 	_set_resource_value("account", int(GameState.data.get("coins", 0)))
 	_set_resource_value("keys", int(GameState.data.get("keys", 0)))
-	var difficulty_text := "INFINITO Lv.%s" % infinite_level if is_infinite else String(phase_config["difficulty"]).to_upper()
+	var difficulty_text := "DIÁRIO %s" % String(daily_challenge.get("difficulty_label", "")) if is_daily_challenge else "INFINITO Lv.%s" % infinite_level if is_infinite else String(phase_config["difficulty"]).to_upper()
 	var combo_text := "   COMBO x%s" % combo if combo >= 2 else ""
 	if _hud_timer_panel and _hud_timer_label:
-		_hud_timer_panel.visible = is_infinite
-		_hud_timer_label.text = "TEMPO %s" % _format_time(floori(infinite_elapsed))
+		_hud_timer_panel.visible = is_infinite or is_daily_challenge
+		if is_daily_challenge:
+			var remaining: int = max(0, int(daily_challenge.get("duration", 90)) - floori(infinite_elapsed))
+			_hud_timer_label.text = "RESTA %s" % _format_time(remaining)
+		else:
+			_hud_timer_label.text = "TEMPO %s" % _format_time(floori(infinite_elapsed))
 	if is_infinite:
 		_hud_meta.text = "TEMPO %s   %s%s" % [_format_time(floori(infinite_elapsed)), difficulty_text, combo_text]
+	elif is_daily_challenge:
+		_hud_meta.text = "%s/%s ANÉIS   %s%s" % [rings_destroyed, int(daily_challenge.get("objective_rings", 30)), difficulty_text, combo_text]
 	else:
 		_hud_meta.text = "DIFICULDADE: %s%s" % [difficulty_text, combo_text]
 	var xp_needed := _run_xp_needed_for_level(run_level)
@@ -2334,13 +2417,13 @@ func _go_to_phase_select() -> void:
 		return
 	if has_node("/root/AudioManager"):
 		AudioManager.play_context("menu")
-	get_tree().change_scene_to_file(PHASE_SELECT_SCENE)
+	get_tree().change_scene_to_file(EVENT_SCENE if is_daily_challenge else PHASE_SELECT_SCENE)
 
 
 func _leave_to_phase_select_now() -> void:
 	if has_node("/root/AudioManager"):
 		AudioManager.play_context("menu")
-	get_tree().change_scene_to_file(PHASE_SELECT_SCENE)
+	get_tree().change_scene_to_file(EVENT_SCENE if is_daily_challenge else PHASE_SELECT_SCENE)
 
 
 func _finish_quit_reward() -> void:
@@ -2367,7 +2450,10 @@ func _finish_quit_reward() -> void:
 		"quit": true,
 	}
 	pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": diamonds, "manual_quit": true, "victory": false }
-	if is_infinite:
+	if is_daily_challenge:
+		summary["completed"] = false
+		GameState.record_daily_challenge_run(summary)
+	elif is_infinite:
 		GameState.record_mode_quit("infinite", summary)
 	else:
 		GameState.record_mode_quit("phase", summary)

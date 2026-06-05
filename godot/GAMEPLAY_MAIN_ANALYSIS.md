@@ -750,3 +750,38 @@ Checklist:
 | Funciona no boss | Sim |
 | Funciona na Liga Neon | Sim |
 | Mantem performance | Sim |
+
+## Atualizacao - Desafio Diario
+
+O Desafio Diario foi adicionado como modo curto dentro da aba Evento. Ele reutiliza a arena principal de `GameplayManager.gd`, mas roda com `selected_mode = "daily_challenge"`, timer visual e objetivo do dia.
+
+Regras atuais:
+- Seed diaria deterministica gerada a partir da data local `YYYY-MM-DD`.
+- Dificuldade varia de 1 a 5 conforme a seed.
+- Objetivo atual: quebrar aproximadamente 24 a 37 aneis em ate 90 segundos.
+- Pode ser jogado varias vezes no mesmo dia.
+- Primeira conclusao libera uma recompensa principal unica.
+- Tentativas extras entregam moedas/XP menores pelo desempenho.
+- Recompensa principal pode ser coletada normal ou dobrada com anuncio mockado via `AdManager`.
+
+Dados salvos:
+- `daily_challenge.records`: melhor pontuacao por dia.
+- `daily_challenge.days`: conclusao/coleta por dia.
+- `daily_challenge.last_result`: ultimo resultado para debug.
+
+Integracoes:
+- Missões: runs, aneis quebrados e moedas de partida.
+- Conquistas: jogar desafio, concluir desafio e pontuacao alta.
+- Evento: card `Desafio Diario` na aba Evento.
+- Debug: resetar desafio, trocar seed e simular proximo dia em Configuracoes.
+
+Checklist:
+- Desafio diario aparece na aba Evento/Desafio: sim
+- Seed diaria funcionando: sim
+- Reset diario funcionando: sim
+- Recompensa diaria unica funcionando: sim
+- Tentativas extras funcionando: sim
+- Modal de recompensa funcionando: sim
+- Dobrar recompensa com anuncio mock: sim
+- Integracao com missoes/conquistas: sim
+- Debug do desafio diario: sim

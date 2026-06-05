@@ -1306,3 +1306,44 @@ Checklist:
 - Limites por motivo funcionando: sim
 - Debug de anúncios: sim
 - Documentação adicionada: sim
+
+## Atualizacao - Desafio Diario
+
+O Desafio Diario foi implementado dentro da aba `Evento`, sem criar uma tela solta. A aba mostra o card `Daily Challenge / Desafio Diario` com data, dificuldade, seed do dia, melhor pontuacao, recompensa, status e tempo ate resetar.
+
+Arquivos principais:
+- `scripts/GameState.gd`: gera seed diaria, salva estado, recorde, conclusao e recompensa.
+- `scripts/GameplayManager.gd`: executa o modo `daily_challenge` usando a mesma arena das fases, com timer e objetivo curto.
+- `scripts/VisualFeatureScreen.gd`: mostra o card dentro da aba Evento e conecta Jogar/Coletar/Dobrar com anuncio.
+- `scripts/TimeManager.gd`: fornece `get_day_key()` e `get_seconds_until_next_day()`.
+- `scripts/SettingsScreen.gd`: adiciona debug para resetar desafio, trocar seed e simular proximo dia.
+
+Funcionamento:
+- A seed e baseada em `YYYY-MM-DD`, com calculo deterministico para Web/APK.
+- O desafio muda diariamente via `TimeManager.get_day_key()`.
+- Objetivo atual: quebrar uma quantidade diaria de aneis dentro de 90 segundos.
+- Pode ser jogado varias vezes no mesmo dia.
+- Cada tentativa entrega recompensa pequena de moedas/XP conforme desempenho.
+- A recompensa principal fica disponivel ao concluir o desafio e so pode ser coletada uma vez por dia.
+- A coleta pode ser normal ou dobrada com anuncio mockado via `AdManager.show_rewarded_ad("daily_bonus", ...)`.
+- Recordes diarios salvos: pontuacao, aneis quebrados, tempo e conclusao.
+
+Integracoes:
+- Missões recebem progresso por `runsPlayed`, `ringsDestroyed` e `runCoins`.
+- Conquistas novas usam `dailyChallengeRuns`, `dailyChallengeCompletions` e `dailyChallengeBestScore`.
+- O save local preserva `daily_challenge.records`, `daily_challenge.days` e `daily_challenge.last_result`.
+
+Debug:
+- Ative o modo debug em Configuracoes tocando 4 vezes no emoji discreto.
+- Opcoes adicionadas: resetar Desafio Diario, trocar seed do desafio e simular proximo dia.
+
+Checklist:
+- Desafio diario aparece na aba Evento/Desafio: sim
+- Seed diaria funcionando: sim
+- Reset diario funcionando: sim
+- Recompensa diaria unica funcionando: sim
+- Tentativas extras funcionando: sim
+- Modal de recompensa funcionando: sim
+- Dobrar recompensa com anuncio mock: sim
+- Integracao com missoes/conquistas: sim
+- Debug do desafio diario: sim

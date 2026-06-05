@@ -20,6 +20,25 @@ func get_week_key(timestamp: int = get_now_timestamp()) -> String:
 	return "week_%s" % week
 
 
+func get_day_key(timestamp: int = get_now_timestamp()) -> String:
+	var date := Time.get_datetime_dict_from_unix_time(timestamp)
+	return "%04d-%02d-%02d" % [int(date.year), int(date.month), int(date.day)]
+
+
+func get_seconds_until_next_day(timestamp: int = get_now_timestamp()) -> int:
+	var date := Time.get_datetime_dict_from_unix_time(timestamp)
+	var start_date := {
+		"year": int(date.year),
+		"month": int(date.month),
+		"day": int(date.day),
+		"hour": 0,
+		"minute": 0,
+		"second": 0,
+	}
+	var start := int(Time.get_unix_time_from_datetime_dict(start_date))
+	return max(0, start + SECONDS_PER_DAY - timestamp)
+
+
 func get_last_login_timestamp() -> int:
 	return int(GameState.data.get("last_login_at", 0))
 

@@ -2,7 +2,7 @@ extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const SETTINGS_PATH := "user://settings.json"
-const BUILD_VERSION := "1.0.11"
+const BUILD_VERSION := "1.0.12"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
@@ -211,6 +211,9 @@ func _make_debug_card() -> PanelContainer:
 		[_t("unlock_all_upgrades"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_upgrades"), func() -> void: GameState.debug_unlock_all_upgrades())],
 		[_t("unlock_all_skins"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_skins"), func() -> void: GameState.debug_unlock_all_skins())],
 		[_t("reset_daily"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily"), func() -> void: GameState.debug_reset_daily_reward())],
+		[_t("reset_daily_challenge"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily_challenge"), func() -> void: GameState.debug_reset_daily_challenge())],
+		[_t("reroll_daily_challenge"), "#00f0ff", func() -> void: _confirm_debug_action(_t("reroll_daily_challenge"), func() -> void: GameState.debug_randomize_daily_challenge_seed())],
+		[_t("next_daily_challenge"), "#00ff88", func() -> void: _confirm_debug_action(_t("next_daily_challenge"), func() -> void: GameState.debug_simulate_next_daily_challenge_day())],
 		[_t("reset_wheel"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_wheel"), func() -> void: GameState.debug_reset_wheel_timer())],
 		[_t("reset_tutorial"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_tutorial"), func() -> void: GameState.reset_tutorial_for_debug())],
 		[_t("export_debug_save"), "#00f0ff", _show_export_save],
@@ -479,6 +482,7 @@ func _refresh_debug_labels() -> void:
 	var runtime: Dictionary = GameState.data.get("runtime_debug", {})
 	var wheel: Dictionary = GameState.data.get("wheel", {})
 	var daily: Dictionary = GameState.data.get("daily_missions", {})
+	var challenge: Dictionary = GameState.get_daily_challenge()
 	var current_music := "-"
 	var music_context := "-"
 	if has_node("/root/AudioManager"):
@@ -492,6 +496,7 @@ func _refresh_debug_labels() -> void:
 		"%s: %s / %s" % [_t("current_music"), music_context, current_music],
 		"%s: %s" % [_t("build_version"), BUILD_VERSION],
 		"%s: %s / %s" % [_t("seed"), String(wheel.get("day_key", "")), String(daily.get("day_key", ""))],
+		"%s: %s" % [_t("daily_challenge_seed"), String(challenge.get("seed", ""))],
 		"%s: %s  %s: %s  %s: %s  XP: %s  %s: %s" % [
 			_t("coins"), int(GameState.data.get("coins", 0)),
 			_t("diamonds"), int(GameState.data.get("diamonds", 0)),
@@ -899,6 +904,10 @@ func _t(key: String) -> String:
 		"unlock_all_upgrades": return "Liberar Todas as Melhorias" if pt else "Unlock All Upgrades"
 		"unlock_all_skins": return "Liberar Todas as Skins" if pt else "Unlock All Skins"
 		"reset_daily": return "Resetar Recompensa Diária" if pt else "Reset Daily Reward"
+		"reset_daily_challenge": return "Resetar Desafio Diário" if pt else "Reset Daily Challenge"
+		"reroll_daily_challenge": return "Trocar Seed do Desafio" if pt else "Change Challenge Seed"
+		"next_daily_challenge": return "Simular Próximo Dia" if pt else "Simulate Next Day"
+		"daily_challenge_seed": return "Seed do desafio" if pt else "Challenge seed"
 		"reset_wheel": return "Resetar Timer da Roleta" if pt else "Reset Wheel Timer"
 		"reset_tutorial": return "Resetar Tutorial" if pt else "Reset Tutorial"
 		"export_debug_save": return "Exportar Save Debug" if pt else "Export Debug Save"

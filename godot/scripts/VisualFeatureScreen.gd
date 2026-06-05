@@ -3,6 +3,7 @@ extends Control
 @export var screen_id := "shop"
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
+const GAME_SCENE := "res://scenes/GameScene.tscn"
 const BATTLE_SCENE := "res://scenes/LeagueBattle.tscn"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
@@ -545,6 +546,8 @@ func _populate_wheel(data: Dictionary) -> void:
 func _populate_event() -> void:
 	var event: Dictionary = GameState.get_weekly_event()
 	_content.add_child(_make_event_header(event))
+	_content.add_child(_make_section_title("DESAFIO DE HOJE" if _language() == "pt" else "TODAY'S CHALLENGE"))
+	_populate_daily_challenge()
 	_content.add_child(_make_section_title("OBJETIVOS DA SEMANA" if _language() == "pt" else "WEEKLY GOALS"))
 	for task_value in Array(event.get("tasks", [])):
 		var task: Dictionary = task_value
@@ -576,6 +579,50 @@ func _populate_event() -> void:
 		"action": "event:%s" % String(final.get("id", "final_skin")) if final_completed and not final_claimed else "",
 		"disabled": not final_completed or final_claimed,
 	}))
+
+
+func _populate_daily_challenge() -> void:
+	var challenge: Dictionary = GameState.get_daily_challenge()
+	var completed := bool(challenge.get("completed", false))
+	var claimed := bool(challenge.get("claimed", false))
+	var status := "Coletado" if claimed else "Disponível para coletar" if completed else "Disponível"
+	if _language() == "en":
+		status = "Completed" if claimed else "Reward available" if completed else "Available"
+	var desc := "%s: %s • %s: %s • %s: %s\n%s: %s • %s: %s • %s: %s" % [
+		_tr("date", "Data"), String(challenge.get("date", "")),
+		_tr("difficulty", "Dificuldade"), String(challenge.get("difficulty_label", "")),
+		_tr("seed", "Seed"), String(challenge.get("seed", "")),
+		_tr("best_score", "Melhor pontuação"), int(challenge.get("best_score", 0)),
+		_tr("reward", "Recompensa"), _daily_reward_label(Dictionary(challenge.get("reward", {}))),
+		_tr("time_until_reset", "Tempo até resetar"), _format_remaining(int(challenge.get("seconds_until_reset", 0))),
+	]
+	_content.add_child(_make_feature_card({
+		"title": _tr("daily_challenge", "Desafio Diário"),
+		"desc": desc,
+		"icon": "event",
+		"button": "play",
+		"tone": "#00ff88",
+		"progress": float(int(challenge.get("best_rings", 0))) / max(1.0, float(int(challenge.get("objective_rings", 30)))),
+		"action": "daily_challenge_start",
+	}))
+	_content.add_child(_make_feature_card({
+		"title": _tr("today_challenge_status", "Status do desafio"),
+		"desc": "%s • %s/%s anéis • %ss" % [status, int(challenge.get("best_rings", 0)), int(challenge.get("objective_rings", 30)), int(challenge.get("duration", 90))],
+		"icon": "chest_rare" if completed and not claimed else "gem",
+		"button": "claim" if completed and not claimed else "done" if claimed else "locked",
+		"tone": "#ffd700",
+		"action": "daily_challenge_claim" if completed and not claimed else "",
+		"disabled": not completed or claimed,
+	}))
+	if completed and not claimed:
+		_content.add_child(_make_feature_card({
+			"title": _tr("double_reward", "Dobrar recompensa"),
+			"desc": _tr("double_reward_desc", "Assista um anúncio de teste para coletar a recompensa diária em dobro."),
+			"icon": "wheel",
+			"button": "watch_ad",
+			"tone": "#00f0ff",
+			"action": "daily_challenge_claim_ad",
+		}))
 
 
 func _make_event_header(event: Dictionary) -> PanelContainer:
@@ -750,6 +797,22 @@ func _handle_action(action: String) -> void:
 		result = GameState.claim_all_achievements()
 	elif action.begins_with("event:"):
 		result = GameState.claim_weekly_event_reward(action.trim_prefix("event:"))
+	elif action == "daily_challenge_start":
+		result = GameState.start_daily_challenge()
+		if bool(result.get("ok", false)):
+			_play_sfx("res://assets/sounds/button_confirm.mp3")
+			get_tree().change_scene_to_file(GAME_SCENE)
+			return
+	elif action == "daily_challenge_claim":
+		result = GameState.claim_daily_challenge_reward(false)
+	elif action == "daily_challenge_claim_ad":
+		AdManager.show_rewarded_ad("daily_bonus", func(ok: bool) -> void:
+			if ok:
+				_complete_rewarded_action(action)
+			else:
+				_show_feedback(_tr("ad_cancelled", "Anúncio cancelado"), false)
+		)
+		return
 	elif action.begins_with("boss_start:"):
 		result = GameState.start_boss_battle(action.trim_prefix("boss_start:"))
 		if bool(result.get("ok", false)):
@@ -799,6 +862,8 @@ func _complete_rewarded_action_async(action: String) -> void:
 		if bool(result.get("ok", false)):
 			_animate_wheel(Dictionary(result.get("reward", {})))
 			await get_tree().create_timer(2.25).timeout
+	elif action == "daily_challenge_claim_ad":
+		result = GameState.claim_daily_challenge_reward(true)
 	else:
 		result = GameState.shop_claim(action)
 	_play_sfx("res://assets/sounds/button_confirm.mp3" if bool(result.get("ok", false)) else "res://assets/sounds/button_error.mp3")
@@ -898,6 +963,8 @@ func _tr(key: String, fallback := "") -> String:
 func _button_text(key: String) -> String:
 	var normalized := key.to_lower().replace(" ", "_")
 	match normalized:
+		"play", "jogar":
+			return _tr("play", "Jogar" if _language() == "pt" else "Play")
 		"comprar", "buy":
 			return _tr("buy", "Comprar" if _language() == "pt" else "Buy")
 		"abrir", "open":
@@ -929,6 +996,10 @@ func _failure_label(reason: String) -> String:
 	match reason:
 		"coins", "diamonds", "keys", "legendary_key":
 			return _tr("insufficient")
+		"already_claimed":
+			return _tr("used")
+		"not_ready":
+			return _tr("unavailable")
 		"free_used":
 			return _tr("used")
 		"ad_limit":
@@ -1159,6 +1230,21 @@ func _reward_label(reward: Dictionary) -> String:
 			var upgrade_name := String(upgrade.get("name", upgrade_id))
 			return "Upgrade: %s" % upgrade_name
 	return String(reward.get("type", "Reward"))
+
+
+func _daily_reward_label(reward: Dictionary) -> String:
+	var parts: Array[String] = []
+	if int(reward.get("coins", 0)) > 0:
+		parts.append("%s moedas" % int(reward.get("coins", 0)) if _language() == "pt" else "%s coins" % int(reward.get("coins", 0)))
+	if int(reward.get("xp", 0)) > 0:
+		parts.append("%s XP" % int(reward.get("xp", 0)))
+	if int(reward.get("diamonds", 0)) > 0:
+		parts.append("%s diamantes" % int(reward.get("diamonds", 0)) if _language() == "pt" else "%s diamonds" % int(reward.get("diamonds", 0)))
+	if int(reward.get("keys", 0)) > 0:
+		parts.append("%s chaves" % int(reward.get("keys", 0)) if _language() == "pt" else "%s keys" % int(reward.get("keys", 0)))
+	if reward.has("chest_type"):
+		parts.append("baú %s" % String(reward.get("chest_type", "rare")) if _language() == "pt" else "%s chest" % String(reward.get("chest_type", "rare")))
+	return ", ".join(parts)
 
 
 func _skin_reward_status(reward: Dictionary) -> String:

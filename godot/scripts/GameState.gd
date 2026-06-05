@@ -83,6 +83,9 @@ const ACHIEVEMENTS := [
 ]
 
 const MODE_REWARD_ACHIEVEMENTS := [
+	{ "id": "daily_challenge_first", "name": "Daily Challenger", "name_pt": "Desafiante Diário", "desc": "Play one Daily Challenge.", "desc_pt": "Jogue um Desafio Diário.", "metric": "dailyChallengeRuns", "required": 1, "reward": { "type": "coins", "amount": 500 }, "rarity": "common" },
+	{ "id": "daily_challenge_clear", "name": "Daily Clear", "name_pt": "Diário Concluído", "desc": "Complete one Daily Challenge.", "desc_pt": "Conclua um Desafio Diário.", "metric": "dailyChallengeCompletions", "required": 1, "reward": { "type": "diamonds", "amount": 16 }, "rarity": "rare" },
+	{ "id": "daily_challenge_score", "name": "Seed Breaker", "name_pt": "Quebrador de Seed", "desc": "Reach 3500 score in Daily Challenge.", "desc_pt": "Alcance 3500 pontos no Desafio Diário.", "metric": "dailyChallengeBestScore", "required": 3500, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
 	{ "id": "league_match_3", "name": "League Regular", "name_pt": "Frequente da Liga", "desc": "Play 3 Neon League matches.", "desc_pt": "Jogue 3 partidas da Liga Neon.", "metric": "leagueMatches", "required": 3, "reward": { "type": "coins", "amount": 750 }, "rarity": "common" },
 	{ "id": "league_win_3", "name": "League Spark", "name_pt": "Faísca da Liga", "desc": "Win 3 Neon League matches.", "desc_pt": "Vença 3 partidas da Liga Neon.", "metric": "leagueWins", "required": 3, "reward": { "type": "diamonds", "amount": 22 }, "rarity": "rare" },
 	{ "id": "league_gold_reward", "name": "Gold Division", "name_pt": "Divisão Ouro", "desc": "Reach Gold in Neon League.", "desc_pt": "Alcance a Liga Ouro.", "metric": "leagueGoldReached", "required": 1, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
@@ -403,6 +406,13 @@ func default_save() -> Dictionary:
 			"last_opponent_id": "",
 		},
 		"wheel": { "day_key": "", "free_used": false, "ad_spins_used": 0, "last_reward": {} },
+		"daily_challenge": {
+			"day_key": "",
+			"seed_override": "",
+			"records": {},
+			"days": {},
+			"last_result": {},
+		},
 		"ads": {
 			"mock_enabled": true,
 			"completed": {},
@@ -455,6 +465,10 @@ func default_save() -> Dictionary:
 			"bossImpossibleWins": 0,
 			"bossBestLevelIndex": 0,
 			"daily_rewards_collected": 0,
+			"dailyChallengeRuns": 0,
+			"dailyChallengeCompletions": 0,
+			"dailyChallengeBestScore": 0,
+			"dailyChallengeBestRings": 0,
 			"phaseWins": 0,
 			"wheelSpins": 0,
 			"storePurchases": 0,
@@ -737,6 +751,7 @@ func _ensure_live_systems() -> void:
 		data["wheel"] = { "day_key": day_key, "free_used": false, "ad_spins_used": 0, "last_reward": {} }
 	if String(data.get("daily_missions", {}).get("day_key", "")) != day_key:
 		data["daily_missions"] = _create_daily_missions(day_key)
+	_ensure_daily_challenge_state()
 	_ensure_boss_state()
 	_ensure_league_season()
 	var achievements: Dictionary = data.get("achievements", {})
@@ -1328,6 +1343,160 @@ func claim_weekly_event_reward(reward_id: String) -> Dictionary:
 	return { "ok": true, "reward": reward, "text": text }
 
 
+func get_daily_challenge() -> Dictionary:
+	_ensure_daily_challenge_state()
+	var now := TimeManager.get_now_timestamp()
+	var day_key := TimeManager.get_day_key(now)
+	var daily: Dictionary = data.get("daily_challenge", {})
+	var seed_text := String(daily.get("seed_override", ""))
+	var seed := _stable_daily_seed(day_key if seed_text.is_empty() else seed_text)
+	var difficulty := 1 + int(seed % 5)
+	var objective_rings := 22 + difficulty * 2 + int((seed / 7) % 5)
+	var duration := 90
+	var reward := {
+		"type": "bundle",
+		"coins": 420 + difficulty * 120,
+		"xp": 180 + difficulty * 70,
+		"diamonds": 2 + difficulty,
+		"keys": 1 if difficulty >= 4 else 0,
+	}
+	if difficulty >= 5:
+		reward["chest_type"] = "rare"
+	var days: Dictionary = daily.get("days", {})
+	var day_state: Dictionary = days.get(day_key, {})
+	var records: Dictionary = daily.get("records", {})
+	var record: Dictionary = records.get(day_key, {})
+	return {
+		"id": "daily_challenge_%s" % day_key,
+		"day_key": day_key,
+		"title": "Desafio Diário",
+		"title_en": "Daily Challenge",
+		"date": day_key,
+		"seed": seed,
+		"difficulty": difficulty,
+		"difficulty_label": _daily_challenge_difficulty_label(difficulty),
+		"duration": duration,
+		"objective_rings": objective_rings,
+		"best_score": int(record.get("score", 0)),
+		"best_rings": int(record.get("rings", 0)),
+		"best_seconds": int(record.get("seconds", 0)),
+		"completed": bool(day_state.get("completed", false)),
+		"claimed": bool(day_state.get("claimed", false)),
+		"reward": reward,
+		"seconds_until_reset": TimeManager.get_seconds_until_next_day(now),
+	}
+
+
+func start_daily_challenge() -> Dictionary:
+	var challenge := get_daily_challenge()
+	data["selected_mode"] = "daily_challenge"
+	data["selected_phase"] = 1
+	data["pending_daily_challenge"] = challenge
+	save_game()
+	return { "ok": true, "text": "Desafio iniciado", "scene": "game" }
+
+
+func record_daily_challenge_run(summary: Dictionary) -> Dictionary:
+	_ensure_daily_challenge_state()
+	var challenge := get_daily_challenge()
+	var day_key := String(challenge.get("day_key", TimeManager.get_day_key()))
+	var completed := bool(summary.get("completed", false))
+	var rings_value := int(summary.get("rings", 0))
+	var seconds := int(summary.get("seconds", 0))
+	var score := int(summary.get("score", 0))
+	var coins: int = max(25, int(summary.get("coins", 0)) + rings_value * 8 + seconds * 2)
+	var xp: int = max(20, int(summary.get("xp", 0)) + rings_value * 4 + seconds)
+	data["coins"] = int(data.get("coins", 0)) + coins
+	add_profile_xp(xp)
+	var daily: Dictionary = data.get("daily_challenge", {})
+	var records: Dictionary = daily.get("records", {})
+	var previous: Dictionary = records.get(day_key, {})
+	if score > int(previous.get("score", 0)):
+		records[day_key] = { "score": score, "rings": rings_value, "seconds": seconds, "completed": completed }
+	daily["records"] = records
+	var days: Dictionary = daily.get("days", {})
+	var day_state: Dictionary = days.get(day_key, {})
+	if completed:
+		day_state["completed"] = true
+		if not day_state.has("claimed"):
+			day_state["claimed"] = false
+	days[day_key] = day_state
+	daily["days"] = days
+	daily["last_result"] = summary.duplicate(true)
+	data["daily_challenge"] = daily
+	var stats: Dictionary = data.get("stats", {})
+	stats["runs_played"] = int(stats.get("runs_played", 0)) + 1
+	stats["runsPlayed"] = int(stats.get("runsPlayed", 0)) + 1
+	stats["dailyChallengeRuns"] = int(stats.get("dailyChallengeRuns", 0)) + 1
+	stats["dailyChallengeCompletions"] = int(stats.get("dailyChallengeCompletions", 0)) + (1 if completed else 0)
+	stats["dailyChallengeBestScore"] = max(int(stats.get("dailyChallengeBestScore", 0)), score)
+	stats["dailyChallengeBestRings"] = max(int(stats.get("dailyChallengeBestRings", 0)), rings_value)
+	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_value
+	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_value
+	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	data["stats"] = stats
+	_progress_missions("runsPlayed", 1)
+	_progress_missions("ringsDestroyed", rings_value)
+	_progress_missions("runCoins", coins)
+	_update_achievements(false)
+	save_game()
+	return { "coins": coins, "xp": xp, "completed": completed, "reward_available": completed and not bool(day_state.get("claimed", false)) }
+
+
+func claim_daily_challenge_reward(double_reward := false) -> Dictionary:
+	var challenge := get_daily_challenge()
+	var day_key := String(challenge.get("day_key", TimeManager.get_day_key()))
+	var daily: Dictionary = data.get("daily_challenge", {})
+	var days: Dictionary = daily.get("days", {})
+	var day_state: Dictionary = days.get(day_key, {})
+	if not bool(day_state.get("completed", false)):
+		return { "ok": false, "reason": "not_ready" }
+	if bool(day_state.get("claimed", false)):
+		return { "ok": false, "reason": "already_claimed" }
+	var reward := Dictionary(challenge.get("reward", {})).duplicate(true)
+	var multiplier := 2 if double_reward else 1
+	var summary := _apply_daily_challenge_bundle(reward, multiplier)
+	day_state["claimed"] = true
+	day_state["claimed_at"] = TimeManager.get_now_timestamp()
+	day_state["doubled"] = double_reward
+	days[day_key] = day_state
+	daily["days"] = days
+	data["daily_challenge"] = daily
+	data["last_reward_text"] = summary
+	_update_achievements(false)
+	save_game()
+	return { "ok": true, "reward": reward, "text": summary, "doubled": double_reward }
+
+
+func debug_reset_daily_challenge() -> void:
+	_ensure_daily_challenge_state()
+	var daily: Dictionary = data.get("daily_challenge", {})
+	var day_key := TimeManager.get_day_key()
+	var days: Dictionary = daily.get("days", {})
+	days.erase(day_key)
+	daily["days"] = days
+	daily["last_result"] = {}
+	data["daily_challenge"] = daily
+	save_game()
+
+
+func debug_randomize_daily_challenge_seed() -> void:
+	_ensure_daily_challenge_state()
+	var daily: Dictionary = data.get("daily_challenge", {})
+	daily["seed_override"] = "debug_%s_%s" % [TimeManager.get_day_key(), randi()]
+	data["daily_challenge"] = daily
+	save_game()
+
+
+func debug_simulate_next_daily_challenge_day() -> void:
+	_ensure_daily_challenge_state()
+	var daily: Dictionary = data.get("daily_challenge", {})
+	daily["seed_override"] = "debug_next_day_%s" % randi()
+	daily["last_result"] = {}
+	data["daily_challenge"] = daily
+	save_game()
+
+
 func _weekly_event_state(event_id: String) -> Dictionary:
 	var events: Dictionary = data.get("events", {})
 	var state: Dictionary = events.get(event_id, {})
@@ -1336,6 +1505,68 @@ func _weekly_event_state(event_id: String) -> Dictionary:
 		events[event_id] = state
 		data["events"] = events
 	return state
+
+
+func _ensure_daily_challenge_state() -> void:
+	var daily: Dictionary = data.get("daily_challenge", {})
+	if daily.is_empty():
+		daily = { "day_key": "", "seed_override": "", "records": {}, "days": {}, "last_result": {} }
+	if not daily.has("seed_override"):
+		daily["seed_override"] = ""
+	if not daily.has("records"):
+		daily["records"] = {}
+	if not daily.has("days"):
+		daily["days"] = {}
+	if not daily.has("last_result"):
+		daily["last_result"] = {}
+	daily["day_key"] = TimeManager.get_day_key()
+	data["daily_challenge"] = daily
+
+
+func _daily_challenge_difficulty_label(difficulty: int) -> String:
+	match clampi(difficulty, 1, 5):
+		1:
+			return "Fácil"
+		2:
+			return "Normal"
+		3:
+			return "Médio"
+		4:
+			return "Difícil"
+	return "Elite"
+
+
+func _stable_daily_seed(text: String) -> int:
+	var value := 2166136261
+	for i in range(text.length()):
+		value = int((value ^ text.unicode_at(i)) * 16777619) & 0x7fffffff
+	return max(1, value)
+
+
+func _apply_daily_challenge_bundle(reward: Dictionary, multiplier: int) -> String:
+	var coins := int(reward.get("coins", 0)) * multiplier
+	var xp := int(reward.get("xp", 0)) * multiplier
+	var diamonds := int(reward.get("diamonds", 0)) * multiplier
+	var keys := int(reward.get("keys", 0)) * multiplier
+	var parts: Array[String] = []
+	if coins > 0:
+		data["coins"] = int(data.get("coins", 0)) + coins
+		parts.append("+%s moedas" % coins)
+	if xp > 0:
+		add_profile_xp(xp)
+		parts.append("+%s XP" % xp)
+	if diamonds > 0:
+		data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
+		_increment_stat("diamondsFound", diamonds, false)
+		parts.append("+%s diamantes" % diamonds)
+	if keys > 0:
+		data["keys"] = int(data.get("keys", 0)) + keys
+		parts.append("+%s chaves" % keys)
+	if reward.has("chest_type"):
+		var chest_type := String(reward.get("chest_type", "rare"))
+		add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, multiplier)
+		parts.append("+%s baú %s" % [multiplier, chest_type])
+	return "Recompensa diária: %s" % ", ".join(parts)
 
 
 func _event_metric_value(metric: String) -> int:
