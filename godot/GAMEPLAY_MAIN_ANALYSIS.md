@@ -785,3 +785,38 @@ Checklist:
 - Dobrar recompensa com anuncio mock: sim
 - Integracao com missoes/conquistas: sim
 - Debug do desafio diario: sim
+
+## Atualizacao - Upgrades 34/34 da Main
+
+Foi corrigida a fonte de verdade dos upgrades para coincidir com `frontend/src/game/upgrades.ts` da branch main.
+
+Banco:
+- Total: 34 upgrades.
+- Starter upgrades: `damage`, `speed`, `coinBoost`, `critical`.
+- O banco completo fica em `MainPortData.RUN_UPGRADES`.
+- `UpgradeDatabase.gd` e `UpgradeManager.gd` expõem APIs centrais para leitura, desbloqueio e upgrade.
+
+Fluxo:
+- `GameState.unlocked_upgrade_ids` guarda somente IDs liberados do banco de 34.
+- `GameState.upgrade_levels` guarda os níveis comprados.
+- `GameState.get_unlocked_upgrades()` alimenta a tela Melhorias.
+- `GameState.get_gameplay_upgrade_pool()` alimenta level-up e reroll durante gameplay.
+- Como as duas telas usam a mesma lista, liberar um upgrade atualiza automaticamente UI e sorteio de partida.
+
+Comportamento:
+- Bloqueados ficam ocultos na lista de Melhorias.
+- Bloqueados ficam fora da pool de level-up.
+- Bloqueados continuam no banco interno para serem desbloqueados por conquistas, fases, liga, boss, baus, roleta ou debug.
+- O painel de level-up nao repete upgrades no mesmo painel.
+
+Checklist:
+- Banco total tem 34 upgrades: sim
+- Starter upgrades sao damage, speed, coinBoost e critical: sim
+- Tela Melhorias mostra X/34: sim
+- Bloqueados nao aparecem na lista: sim
+- Bloqueados continuam existindo internamente: sim
+- Gameplay usa a mesma lista liberada: sim
+- Reroll usa apenas liberados: sim
+- Desbloquear upgrade atualiza tela e gameplay: sim
+- Save mantem unlocked_upgrade_ids: sim
+- Debug mostra estado correto: sim

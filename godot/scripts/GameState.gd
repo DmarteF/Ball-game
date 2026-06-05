@@ -8,6 +8,7 @@ const MAX_PHASE := 100
 const TARGET_ACHIEVEMENT_COUNT := 100
 const SAVE_EXPORT_VERSION := 1
 const SAVE_EXPORT_FORMAT := "neon_idle_escape_godot_save"
+const STARTER_UPGRADE_IDS := ["damage", "speed", "coinBoost", "critical"]
 
 const PERMANENT_UPGRADE_DEFS := {
 	"baseDamage": { "base_cost": 70, "max": 40, "phase": 1, "level": 1 },
@@ -360,8 +361,10 @@ func default_save() -> Dictionary:
 		"favorite_skin": "neon_blue",
 		"skin_levels": { "neon_blue": 1 },
 		"skin_fragments": {},
-		"unlocked_upgrades": ["baseDamage", "baseSpeed", "coinMultiplier", "critChance", "damage", "speed", "coinBoost", "critical", "xpBoost", "perfectChance"],
+		"unlocked_upgrade_ids": ["damage", "speed", "coinBoost", "critical"],
+		"unlocked_upgrades": ["damage", "speed", "coinBoost", "critical"],
 		"explicit_unlocked_run_upgrades": [],
+		"upgrade_levels": {},
 		"permanent_upgrades": {},
 		"settings": {
 			"audio_muted": false,
@@ -599,14 +602,7 @@ func debug_unlock_all() -> void:
 	for phase in range(1, MAX_PHASE + 1):
 		phases.append(phase)
 	data["unlocked_phases"] = phases
-	var upgrades: Array = []
-	for id in PERMANENT_UPGRADE_DEFS.keys():
-		upgrades.append(String(id))
-	for id in MainPortData.all_run_upgrade_ids():
-		if not upgrades.has(String(id)):
-			upgrades.append(String(id))
-	data["unlocked_upgrades"] = upgrades
-	data["explicit_unlocked_run_upgrades"] = MainPortData.all_run_upgrade_ids()
+	debug_unlock_all_upgrades()
 	var skins: Array = []
 	for skin in MainPortData.skins():
 		var skin_id := String(Dictionary(skin).get("id", ""))
@@ -631,14 +627,35 @@ func debug_unlock_all_levels() -> void:
 
 func debug_unlock_all_upgrades() -> void:
 	var upgrades: Array = []
-	for id in PERMANENT_UPGRADE_DEFS.keys():
-		upgrades.append(String(id))
 	for id in MainPortData.all_run_upgrade_ids():
-		if not upgrades.has(String(id)):
-			upgrades.append(String(id))
-	data["unlocked_upgrades"] = upgrades
-	data["explicit_unlocked_run_upgrades"] = MainPortData.all_run_upgrade_ids()
+		upgrades.append(String(id))
+	data["unlocked_upgrade_ids"] = upgrades
+	data["unlocked_upgrades"] = upgrades.duplicate()
+	data["explicit_unlocked_run_upgrades"] = upgrades.duplicate()
 	refresh_unlocks(false)
+	save_game()
+
+
+func debug_lock_all_except_starter_upgrades() -> void:
+	var starters := _starter_upgrade_ids()
+	data["unlocked_upgrade_ids"] = starters.duplicate()
+	data["unlocked_upgrades"] = starters.duplicate()
+	data["explicit_unlocked_run_upgrades"] = []
+	save_game()
+
+
+func debug_unlock_next_upgrade() -> Dictionary:
+	for upgrade in MainPortData.run_upgrades():
+		var id := String(upgrade.get("id", ""))
+		if not is_upgrade_unlocked(id):
+			unlock_upgrade(id)
+			return { "ok": true, "id": id, "name": String(upgrade.get("name", id)) }
+	return { "ok": false, "reason": "all_unlocked" }
+
+
+func debug_reset_upgrade_levels() -> void:
+	data["upgrade_levels"] = {}
+	data["permanent_upgrades"] = {}
 	save_game()
 
 
@@ -679,6 +696,22 @@ func update_runtime_debug(info: Dictionary) -> void:
 	data["runtime_debug"] = info
 
 
+func debug_upgrade_state() -> Dictionary:
+	_ensure_upgrade_state()
+	var unlocked := get_unlocked_upgrade_ids()
+	var pool_ids: Array[String] = []
+	for upgrade in get_gameplay_upgrade_pool():
+		pool_ids.append(String(upgrade.get("id", "")))
+	return {
+		"total_upgrades": MainPortData.all_run_upgrade_ids().size(),
+		"unlocked_count": unlocked.size(),
+		"locked_count": get_locked_upgrades().size(),
+		"unlocked_upgrade_ids": unlocked,
+		"gameplay_pool_ids": pool_ids,
+		"upgrade_levels": Dictionary(data.get("upgrade_levels", {})).duplicate(true),
+	}
+
+
 func _looks_like_save_data(candidate: Dictionary) -> bool:
 	if not candidate.has("coins") or not candidate.has("diamonds"):
 		return false
@@ -692,24 +725,12 @@ func _looks_like_save_data(candidate: Dictionary) -> bool:
 
 
 func refresh_unlocks(emit_signal := true) -> void:
-	var unlocked: Array = data.get("unlocked_upgrades", [])
-	unlocked = _clean_released_upgrade_unlocks(unlocked)
-	var max_phase := int(data.get("max_unlocked_phase", data.get("current_phase", 1)))
-	var profile_level := int(data.get("level", 1))
-	for id in PERMANENT_UPGRADE_DEFS.keys():
-		if _meets_unlock(PERMANENT_UPGRADE_DEFS[id], max_phase, profile_level) and not unlocked.has(id):
-			unlocked.append(id)
-	var explicit_temp_ids: Array = data.get("explicit_unlocked_run_upgrades", [])
-	for id in MainPortData.auto_run_upgrade_ids():
-		if MainPortData.is_released_run_upgrade(String(id)) and not unlocked.has(id):
-			unlocked.append(id)
-	for id in explicit_temp_ids:
-		if MainPortData.is_run_upgrade_defined(String(id)) and not unlocked.has(id):
-			unlocked.append(id)
-	data["unlocked_upgrades"] = unlocked
+	_ensure_upgrade_state()
 
 	var skins: Array = data.get("unlocked_skins", [])
 	var new_skins: Array = data.get("new_skins", [])
+	var max_phase := int(data.get("max_unlocked_phase", data.get("current_phase", 1)))
+	var profile_level := int(data.get("level", 1))
 	for id in SKIN_UNLOCK_MILESTONES.keys():
 		if _meets_unlock(SKIN_UNLOCK_MILESTONES[id], max_phase, profile_level) and not skins.has(id):
 			skins.append(id)
@@ -726,23 +747,77 @@ func refresh_unlocks(emit_signal := true) -> void:
 
 
 func _clean_released_upgrade_unlocks(unlocked: Array) -> Array:
-	var released_temp_ids := MainPortData.released_run_upgrade_ids()
-	var auto_temp_ids := MainPortData.auto_run_upgrade_ids()
-	var explicit_temp_ids: Array = data.get("explicit_unlocked_run_upgrades", [])
 	var cleaned: Array = []
 	for value in unlocked:
 		var id := String(value)
 		if cleaned.has(id):
 			continue
-		if PERMANENT_UPGRADE_DEFS.has(id):
-			cleaned.append(id)
-		elif MainPortData.is_run_upgrade_defined(id) and explicit_temp_ids.has(id):
-			cleaned.append(id)
-		elif released_temp_ids.has(id) and explicit_temp_ids.has(id):
-			cleaned.append(id)
-		elif released_temp_ids.has(id) and auto_temp_ids.has(id):
+		if MainPortData.is_run_upgrade_defined(id):
 			cleaned.append(id)
 	return cleaned
+
+
+func _starter_upgrade_ids() -> Array:
+	var result: Array = []
+	for id in STARTER_UPGRADE_IDS:
+		if MainPortData.is_run_upgrade_defined(String(id)) and not result.has(String(id)):
+			result.append(String(id))
+	return result
+
+
+func _ensure_upgrade_state() -> void:
+	var cleaned := _starter_upgrade_ids()
+	var source: Array = []
+	if data.has("unlocked_upgrade_ids"):
+		source = Array(data.get("unlocked_upgrade_ids", []))
+	else:
+		source = Array(data.get("explicit_unlocked_run_upgrades", []))
+		if source.is_empty():
+			source = _starter_upgrade_ids()
+	for value in source:
+		var id := String(value)
+		if MainPortData.is_run_upgrade_defined(id) and not cleaned.has(id):
+			cleaned.append(id)
+	data["unlocked_upgrade_ids"] = cleaned
+	data["unlocked_upgrades"] = cleaned.duplicate()
+	var explicit: Array = []
+	for value in Array(data.get("explicit_unlocked_run_upgrades", [])):
+		var id := String(value)
+		if MainPortData.is_run_upgrade_defined(id) and not STARTER_UPGRADE_IDS.has(id) and not explicit.has(id):
+			explicit.append(id)
+	data["explicit_unlocked_run_upgrades"] = explicit
+
+	var levels: Dictionary = data.get("upgrade_levels", {})
+	var legacy: Dictionary = data.get("permanent_upgrades", {})
+	var migrated := {
+		"damage": int(legacy.get("baseDamage", 0)),
+		"speed": int(legacy.get("baseSpeed", 0)),
+		"coinBoost": int(legacy.get("coinMultiplier", 0)),
+		"critical": int(legacy.get("critChance", 0)),
+		"xpBoost": int(legacy.get("xpBoost", 0)),
+		"perfectChance": int(legacy.get("perfectChance", 0)),
+		"frost": int(legacy.get("slowRings", 0)),
+	}
+	for id in migrated.keys():
+		if int(migrated[id]) > 0 and int(levels.get(id, 0)) <= 0:
+			levels[id] = int(migrated[id])
+	var cleaned_levels := {}
+	for upgrade in MainPortData.run_upgrades():
+		var id := String(upgrade.get("id", ""))
+		var max_level := int(upgrade.get("maxLevel", 1))
+		var level := clampi(int(levels.get(id, 0)), 0, max_level)
+		if level > 0:
+			cleaned_levels[id] = level
+	data["upgrade_levels"] = cleaned_levels
+	data["permanent_upgrades"] = {
+		"baseDamage": int(cleaned_levels.get("damage", 0)),
+		"baseSpeed": int(cleaned_levels.get("speed", 0)),
+		"coinMultiplier": int(cleaned_levels.get("coinBoost", 0)),
+		"critChance": int(cleaned_levels.get("critical", 0)),
+		"xpBoost": int(cleaned_levels.get("xpBoost", 0)),
+		"perfectChance": int(cleaned_levels.get("perfectChance", 0)),
+		"slowRings": int(cleaned_levels.get("frost", 0)),
+	}
 
 
 func _ensure_live_systems() -> void:
@@ -751,6 +826,7 @@ func _ensure_live_systems() -> void:
 		data["wheel"] = { "day_key": day_key, "free_used": false, "ad_spins_used": 0, "last_reward": {} }
 	if String(data.get("daily_missions", {}).get("day_key", "")) != day_key:
 		data["daily_missions"] = _create_daily_missions(day_key)
+	_ensure_upgrade_state()
 	_ensure_daily_challenge_state()
 	_ensure_boss_state()
 	_ensure_league_season()
@@ -787,24 +863,7 @@ func _ensure_tutorial_state() -> void:
 
 
 func _sanitize_persistent_unlocks() -> void:
-	var valid_upgrades: Array[String] = []
-	for id in PERMANENT_UPGRADE_DEFS.keys():
-		valid_upgrades.append(String(id))
-	for id in MainPortData.all_run_upgrade_ids():
-		valid_upgrades.append(String(id))
-	var cleaned_upgrades: Array = []
-	for value in Array(data.get("unlocked_upgrades", [])):
-		var upgrade_id := String(value)
-		if valid_upgrades.has(upgrade_id) and not cleaned_upgrades.has(upgrade_id):
-			cleaned_upgrades.append(upgrade_id)
-	data["unlocked_upgrades"] = cleaned_upgrades
-
-	var cleaned_explicit: Array = []
-	for value in Array(data.get("explicit_unlocked_run_upgrades", [])):
-		var upgrade_id := String(value)
-		if MainPortData.is_run_upgrade_defined(upgrade_id) and not cleaned_explicit.has(upgrade_id):
-			cleaned_explicit.append(upgrade_id)
-	data["explicit_unlocked_run_upgrades"] = cleaned_explicit
+	_ensure_upgrade_state()
 
 	var cleaned_skins: Array = []
 	for value in Array(data.get("unlocked_skins", [])):
@@ -898,41 +957,54 @@ func _meets_unlock(rule: Dictionary, max_phase: int, profile_level: int) -> bool
 
 
 func get_upgrade_cost(id: String) -> int:
-	var definition: Dictionary = PERMANENT_UPGRADE_DEFS.get(id, {})
+	var definition: Dictionary = MainPortData.upgrade_by_id(id)
 	if definition.is_empty():
 		return 0
-	var level := int(data.get("permanent_upgrades", {}).get(id, 0))
+	var level := get_upgrade_level(id)
+	var rarity := String(definition.get("rarity", "common"))
+	var rarity_multiplier := 1.0
+	match rarity:
+		"rare":
+			rarity_multiplier = 1.55
+		"epic":
+			rarity_multiplier = 2.25
+		"legendary":
+			rarity_multiplier = 3.25
+	var base_cost := 80 + int(definition.get("unlockLevel", 1)) * 24
 	var late_tax: float = 1.0 + max(0.0, float(level - 10)) * 0.025
-	return floori(float(definition["base_cost"]) * pow(1.32, level) * late_tax)
+	return floori(float(base_cost) * rarity_multiplier * pow(1.32, level) * late_tax)
 
 
 func get_upgrade_max_level(id: String) -> int:
-	return int(PERMANENT_UPGRADE_DEFS.get(id, {}).get("max", 10))
+	return int(MainPortData.upgrade_by_id(id).get("maxLevel", 0))
+
+
+func get_upgrade_level(id: String) -> int:
+	_ensure_upgrade_state()
+	return int(data.get("upgrade_levels", {}).get(id, 0))
 
 
 func is_upgrade_unlocked(id: String) -> bool:
-	return Array(data.get("unlocked_upgrades", [])).has(id)
+	_ensure_upgrade_state()
+	return Array(data.get("unlocked_upgrade_ids", [])).has(id)
 
 
-func available_run_upgrade_ids() -> Array[String]:
-	refresh_unlocks(false)
-	var unlocked: Array = data.get("unlocked_upgrades", [])
+func get_all_upgrades() -> Array[Dictionary]:
+	return MainPortData.run_upgrades()
+
+
+func get_unlocked_upgrade_ids() -> Array[String]:
+	_ensure_upgrade_state()
 	var result: Array[String] = []
-	for upgrade in MainPortData.run_upgrades():
-		var id := String(upgrade.get("id", ""))
-		if id.is_empty():
-			continue
-		if not MainPortData.is_run_upgrade_defined(id):
-			continue
-		if not unlocked.has(id):
-			continue
-		if not result.has(id):
+	for value in Array(data.get("unlocked_upgrade_ids", [])):
+		var id := String(value)
+		if MainPortData.is_run_upgrade_defined(id) and not result.has(id):
 			result.append(id)
 	return result
 
 
-func available_run_upgrades() -> Array[Dictionary]:
-	var ids := available_run_upgrade_ids()
+func get_unlocked_upgrades() -> Array[Dictionary]:
+	var ids := get_unlocked_upgrade_ids()
 	var result: Array[Dictionary] = []
 	for upgrade in MainPortData.run_upgrades():
 		var id := String(upgrade.get("id", ""))
@@ -941,14 +1013,40 @@ func available_run_upgrades() -> Array[Dictionary]:
 	return result
 
 
+func get_locked_upgrades() -> Array[Dictionary]:
+	var unlocked := get_unlocked_upgrade_ids()
+	var result: Array[Dictionary] = []
+	for upgrade in MainPortData.run_upgrades():
+		var id := String(upgrade.get("id", ""))
+		if not unlocked.has(id):
+			result.append(Dictionary(upgrade).duplicate(true))
+	return result
+
+
+func get_gameplay_upgrade_pool() -> Array[Dictionary]:
+	return get_unlocked_upgrades()
+
+
+func available_run_upgrade_ids() -> Array[String]:
+	return get_unlocked_upgrade_ids()
+
+
+func available_run_upgrades() -> Array[Dictionary]:
+	return get_gameplay_upgrade_pool()
+
+
 func purchase_permanent_upgrade(id: String) -> Dictionary:
-	refresh_unlocks(false)
-	if not PERMANENT_UPGRADE_DEFS.has(id):
+	return upgrade_with_coins(id)
+
+
+func upgrade_with_coins(id: String) -> Dictionary:
+	_ensure_upgrade_state()
+	if not MainPortData.is_run_upgrade_defined(id):
 		return { "ok": false, "reason": "invalid" }
 	if not is_upgrade_unlocked(id):
 		return { "ok": false, "reason": "locked" }
-	var upgrades: Dictionary = data.get("permanent_upgrades", {})
-	var level := int(upgrades.get(id, 0))
+	var levels: Dictionary = data.get("upgrade_levels", {})
+	var level := int(levels.get(id, 0))
 	var max_level := get_upgrade_max_level(id)
 	if level >= max_level:
 		return { "ok": false, "reason": "max" }
@@ -956,8 +1054,29 @@ func purchase_permanent_upgrade(id: String) -> Dictionary:
 	if int(data.get("coins", 0)) < cost:
 		return { "ok": false, "reason": "coins", "cost": cost }
 	data["coins"] = max(0, int(data.get("coins", 0)) - cost)
-	upgrades[id] = level + 1
-	data["permanent_upgrades"] = upgrades
+	_set_upgrade_level(id, level + 1)
+	_increment_stat("upgradesBought", 1, false)
+	_progress_missions("upgradesBought", 1)
+	_update_achievements(false)
+	save_game()
+	return { "ok": true, "level": level + 1, "cost": cost }
+
+
+func upgrade_with_diamonds(id: String) -> Dictionary:
+	_ensure_upgrade_state()
+	if not MainPortData.is_run_upgrade_defined(id):
+		return { "ok": false, "reason": "invalid" }
+	if not is_upgrade_unlocked(id):
+		return { "ok": false, "reason": "locked" }
+	var level := get_upgrade_level(id)
+	var max_level := get_upgrade_max_level(id)
+	if level >= max_level:
+		return { "ok": false, "reason": "max" }
+	var cost: int = max(1, ceili(float(get_upgrade_cost(id)) / 120.0))
+	if int(data.get("diamonds", 0)) < cost:
+		return { "ok": false, "reason": "diamonds", "cost": cost }
+	data["diamonds"] = max(0, int(data.get("diamonds", 0)) - cost)
+	_set_upgrade_level(id, level + 1)
 	_increment_stat("upgradesBought", 1, false)
 	_progress_missions("upgradesBought", 1)
 	_update_achievements(false)
@@ -1033,22 +1152,43 @@ func add_inventory_item(id: String, item_type: String, label: String, icon: Stri
 
 
 func unlock_upgrade(id: String) -> bool:
+	_ensure_upgrade_state()
 	if id.is_empty():
 		return false
-	if not MainPortData.is_run_upgrade_defined(id) and not PERMANENT_UPGRADE_DEFS.has(id):
+	if not MainPortData.is_run_upgrade_defined(id):
 		return false
-	if MainPortData.is_run_upgrade_defined(id):
-		var explicit: Array = data.get("explicit_unlocked_run_upgrades", [])
-		if not explicit.has(id):
-			explicit.append(id)
-			data["explicit_unlocked_run_upgrades"] = explicit
-	var unlocked: Array = data.get("unlocked_upgrades", [])
+	var unlocked: Array = data.get("unlocked_upgrade_ids", [])
 	if unlocked.has(id):
 		return false
 	unlocked.append(id)
-	data["unlocked_upgrades"] = unlocked
+	data["unlocked_upgrade_ids"] = unlocked
+	data["unlocked_upgrades"] = unlocked.duplicate()
+	var explicit: Array = data.get("explicit_unlocked_run_upgrades", [])
+	if not STARTER_UPGRADE_IDS.has(id) and not explicit.has(id):
+		explicit.append(id)
+	data["explicit_unlocked_run_upgrades"] = explicit
 	save_game()
 	return true
+
+
+func _set_upgrade_level(id: String, level: int) -> void:
+	var levels: Dictionary = data.get("upgrade_levels", {})
+	var max_level := get_upgrade_max_level(id)
+	level = clampi(level, 0, max_level)
+	if level <= 0:
+		levels.erase(id)
+	else:
+		levels[id] = level
+	data["upgrade_levels"] = levels
+	data["permanent_upgrades"] = {
+		"baseDamage": int(levels.get("damage", 0)),
+		"baseSpeed": int(levels.get("speed", 0)),
+		"coinMultiplier": int(levels.get("coinBoost", 0)),
+		"critChance": int(levels.get("critical", 0)),
+		"xpBoost": int(levels.get("xpBoost", 0)),
+		"perfectChance": int(levels.get("perfectChance", 0)),
+		"slowRings": int(levels.get("frost", 0)),
+	}
 
 
 func open_chest(chest_id: String) -> Dictionary:

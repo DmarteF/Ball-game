@@ -2,7 +2,7 @@ extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const SETTINGS_PATH := "user://settings.json"
-const BUILD_VERSION := "1.0.12"
+const BUILD_VERSION := "1.0.13"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
@@ -208,7 +208,11 @@ func _make_debug_card() -> PanelContainer:
 	]))
 	body.add_child(_make_debug_grid([
 		[_t("unlock_all_levels"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_levels"), func() -> void: GameState.debug_unlock_all_levels())],
+		[_t("print_upgrade_state"), "#00f0ff", _print_upgrade_state],
+		[_t("unlock_next_upgrade"), "#00ff88", _unlock_next_upgrade],
 		[_t("unlock_all_upgrades"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_upgrades"), func() -> void: GameState.debug_unlock_all_upgrades())],
+		[_t("lock_starter_upgrades"), "#ffb000", func() -> void: _confirm_debug_action(_t("lock_starter_upgrades"), func() -> void: GameState.debug_lock_all_except_starter_upgrades())],
+		[_t("reset_upgrade_levels"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_upgrade_levels"), func() -> void: GameState.debug_reset_upgrade_levels())],
 		[_t("unlock_all_skins"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_skins"), func() -> void: GameState.debug_unlock_all_skins())],
 		[_t("reset_daily"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily"), func() -> void: GameState.debug_reset_daily_reward())],
 		[_t("reset_daily_challenge"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily_challenge"), func() -> void: GameState.debug_reset_daily_challenge())],
@@ -471,6 +475,26 @@ func _toggle_force_ad_success() -> void:
 func _toggle_force_ad_failure() -> void:
 	AdManager.set_force_failure(not AdManager.is_force_failure())
 	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _print_upgrade_state() -> void:
+	var state := GameState.debug_upgrade_state()
+	var lines := [
+		"total_upgrades: %s" % int(state.get("total_upgrades", 0)),
+		"unlocked_count: %s" % int(state.get("unlocked_count", 0)),
+		"locked_count: %s" % int(state.get("locked_count", 0)),
+		"unlocked_upgrade_ids: %s" % JSON.stringify(state.get("unlocked_upgrade_ids", [])),
+		"gameplay_pool_ids: %s" % JSON.stringify(state.get("gameplay_pool_ids", [])),
+		"upgrade_levels: %s" % JSON.stringify(state.get("upgrade_levels", {})),
+	]
+	_show_message_modal(_t("print_upgrade_state"), "\n".join(lines), "#00f0ff")
+	_refresh_debug_labels()
+
+
+func _unlock_next_upgrade() -> void:
+	var result := GameState.debug_unlock_next_upgrade()
+	_show_toast(String(result.get("name", result.get("reason", "OK"))))
 	_refresh_debug_labels()
 
 
@@ -901,7 +925,11 @@ func _t(key: String) -> String:
 		"add_1_level": return "+1 nível" if pt else "+1 level"
 		"add_10_levels": return "+10 níveis" if pt else "+10 levels"
 		"unlock_all_levels": return "Liberar Todas as Fases" if pt else "Unlock All Levels"
+		"print_upgrade_state": return "Print Upgrade State"
+		"unlock_next_upgrade": return "Liberar Próxima Melhoria" if pt else "Unlock Next Upgrade"
 		"unlock_all_upgrades": return "Liberar Todas as Melhorias" if pt else "Unlock All Upgrades"
+		"lock_starter_upgrades": return "Bloquear Exceto Starters" if pt else "Lock All Except Starter Upgrades"
+		"reset_upgrade_levels": return "Resetar Níveis de Melhorias" if pt else "Reset Upgrade Levels"
 		"unlock_all_skins": return "Liberar Todas as Skins" if pt else "Unlock All Skins"
 		"reset_daily": return "Resetar Recompensa Diária" if pt else "Reset Daily Reward"
 		"reset_daily_challenge": return "Resetar Desafio Diário" if pt else "Reset Daily Challenge"

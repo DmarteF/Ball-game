@@ -197,8 +197,6 @@ const AUTO_RUN_UPGRADE_IDS := [
 	"speed",
 	"coinBoost",
 	"critical",
-	"xpBoost",
-	"perfectChance",
 ]
 
 const LEAGUE_RANKS := [

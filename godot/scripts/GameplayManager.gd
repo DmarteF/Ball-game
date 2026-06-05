@@ -2145,7 +2145,7 @@ func _open_level_up() -> void:
 
 func _get_safe_upgrade_options(exclude_ids: Array[String] = [], allow_repeats := true) -> Array[Dictionary]:
 	GameState.refresh_unlocks(false)
-	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
+	var unlocked: Array = GameState.available_run_upgrade_ids()
 	var pool: Array = GameState.available_run_upgrades()
 	var filtered: Array[Dictionary] = []
 	var fallback: Array[Dictionary] = []
@@ -2162,12 +2162,6 @@ func _get_safe_upgrade_options(exclude_ids: Array[String] = [], allow_repeats :=
 	fallback.shuffle()
 	while filtered.size() < 3 and not fallback.is_empty():
 		filtered.append(fallback.pop_front())
-	if allow_repeats and not filtered.is_empty():
-		var seed_options: Array[Dictionary] = []
-		for upgrade in filtered:
-			seed_options.append(upgrade.duplicate(true))
-		while filtered.size() < 3:
-			filtered.append(seed_options[randi() % seed_options.size()].duplicate(true))
 	return filtered.slice(0, min(3, filtered.size()))
 
 

@@ -832,7 +832,7 @@ func _upgrade_choices(state: Dictionary, player_only: bool) -> Array[Dictionary]
 		var copy := upgrade.duplicate(true)
 		options.append(copy)
 	options.shuffle()
-	while options.size() < 3 and not options.is_empty():
+	while not player_only and options.size() < 3 and not options.is_empty():
 		options.append(Dictionary(options[randi() % options.size()]).duplicate(true))
 	return options.slice(0, min(3, options.size()))
 

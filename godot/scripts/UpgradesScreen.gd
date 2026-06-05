@@ -65,7 +65,7 @@ func _build_background() -> void:
 
 
 func _build_screen() -> void:
-	_ensure_available_permanent_unlocks()
+	GameState.refresh_unlocks(false)
 	var root := VBoxContainer.new()
 	root.anchor_left = 0.0
 	root.anchor_top = 0.0
@@ -97,21 +97,13 @@ func _build_screen() -> void:
 	list.mouse_filter = Control.MOUSE_FILTER_PASS
 	list.add_theme_constant_override("separation", 16)
 	scroll.add_child(list)
-	list.add_child(_make_label("PERMANENTES DISPONIVEIS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	list.add_child(_make_upgrade_summary())
+	list.add_child(_make_label("MELHORIAS DISPONIVEIS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var visible_upgrades := _visible_permanent_upgrade_list()
 	if visible_upgrades.is_empty():
 		list.add_child(_make_empty_upgrade_message())
 	for upgrade in visible_upgrades:
 		list.add_child(_make_upgrade_card(upgrade))
-
-	var visible_temp_upgrades := _visible_run_upgrade_list()
-	list.add_child(_make_label("TEMPORARIAS DE PARTIDA LIBERADAS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	if visible_temp_upgrades.is_empty():
-		list.add_child(_make_empty_temp_upgrade_message())
-	for upgrade in visible_temp_upgrades:
-		list.add_child(_make_temp_upgrade_card(upgrade))
-
-	list.add_child(_make_upgrade_summary())
 
 
 func _ensure_available_permanent_unlocks() -> void:
@@ -129,11 +121,7 @@ func _ensure_available_permanent_unlocks() -> void:
 
 
 func _visible_permanent_upgrade_list() -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	for upgrade in _permanent_upgrade_list():
-		if _is_permanent_upgrade_available(String(upgrade["id"])):
-			result.append(upgrade)
-	return result
+	return GameState.get_unlocked_upgrades()
 
 
 func _is_permanent_upgrade_available(id: String) -> bool:
@@ -146,12 +134,7 @@ func _is_permanent_upgrade_available(id: String) -> bool:
 
 
 func _visible_run_upgrade_list() -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	for upgrade in GameState.available_run_upgrades():
-		var copy: Dictionary = upgrade.duplicate(true)
-		copy["kind"] = "run"
-		result.append(copy)
-	return result
+	return GameState.get_gameplay_upgrade_pool()
 
 
 func _is_run_upgrade_available_for_player(id: String) -> bool:
@@ -159,22 +142,7 @@ func _is_run_upgrade_available_for_player(id: String) -> bool:
 
 
 func _locked_upgrade_list() -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	for upgrade in _permanent_upgrade_list():
-		if not _is_permanent_upgrade_available(String(upgrade["id"])):
-			var copy: Dictionary = upgrade.duplicate(true)
-			copy["kind"] = "permanent"
-			result.append(copy)
-	for upgrade in MainPortData.run_upgrades():
-		var id := String(upgrade.get("id", ""))
-		if id.is_empty() or _is_run_upgrade_available_for_player(id):
-			continue
-		if bool(upgrade.get("secret", false)):
-			continue
-		var copy: Dictionary = upgrade.duplicate(true)
-		copy["kind"] = "run"
-		result.append(copy)
-	return result
+	return GameState.get_locked_upgrades()
 
 
 func _make_empty_upgrade_message() -> PanelContainer:
@@ -204,12 +172,9 @@ func _make_empty_temp_upgrade_message() -> PanelContainer:
 
 
 func _make_upgrade_summary() -> PanelContainer:
-	var available_permanent_count := _visible_permanent_upgrade_list().size()
+	var total_count := GameState.get_all_upgrades().size()
+	var available_permanent_count := GameState.get_unlocked_upgrades().size()
 	var locked_count := _locked_upgrade_list().size()
-	var unlocked_temp_names: Array[String] = []
-	var released_temp_upgrades := _visible_run_upgrade_list()
-	for upgrade in released_temp_upgrades:
-		unlocked_temp_names.append(String(upgrade.get("name", upgrade.get("id", ""))))
 	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
@@ -222,12 +187,9 @@ func _make_upgrade_summary() -> PanelContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 4)
 	margin.add_child(column)
-	column.add_child(_make_label(("Permanentes disponíveis: %s" if pt else "Available permanent upgrades: %s") % available_permanent_count, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("Melhorias disponíveis: %s/%s" if pt else "Available upgrades: %s/%s") % [available_permanent_count, total_count], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label(("Melhorias bloqueadas: %s" if pt else "Locked upgrades: %s") % locked_count, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label(("Temporárias liberadas: %s" if pt else "Released run upgrades: %s") % unlocked_temp_names.size(), 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
-	if not unlocked_temp_names.is_empty():
-		column.add_child(_make_label(("Liberadas: %s" if pt else "Unlocked: %s") % ", ".join(unlocked_temp_names), 11, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label("Desbloqueie avançando, abrindo baús e concluindo conquistas." if pt else "Unlocked by progress, chests and achievements.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("A gameplay sorteia exatamente essa mesma lista liberada." if pt else "Gameplay rolls exactly this same unlocked list.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -297,8 +259,8 @@ func _make_resource_pill(icon_key: String, value: String, border: String) -> Pan
 
 func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelContainer:
 	var id := String(upgrade["id"])
-	var unlocked := _is_permanent_upgrade_available(id)
-	var level := int(GameState.data.get("permanent_upgrades", {}).get(id, 0))
+	var unlocked := GameState.is_upgrade_unlocked(id)
+	var level := GameState.get_upgrade_level(id)
 	var max_level := GameState.get_upgrade_max_level(id)
 	var cost := GameState.get_upgrade_cost(id)
 	var is_maxed := level >= max_level
@@ -323,7 +285,7 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 	icon_box.add_theme_stylebox_override("panel", _make_style("#ffffff22", 30))
 	var center := CenterContainer.new()
 	icon_box.add_child(center)
-	center.add_child(_make_icon(String(upgrade["icon"]) if unlocked else "locked", 34))
+	center.add_child(_make_icon(_upgrade_icon_key(id) if unlocked else "locked", 34))
 	row.add_child(icon_box)
 
 	var info := VBoxContainer.new()
@@ -333,14 +295,14 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 	row.add_child(info)
 	info.add_child(_make_label(String(upgrade["name"]), 18, "#ffffff" if unlocked else "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
-		info.add_child(_make_label(String(upgrade["desc"]), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+		info.add_child(_make_label(String(upgrade.get("description", upgrade.get("desc", ""))), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	else:
 		if locked_preview:
-			info.add_child(_make_label(String(upgrade["desc"]), 13, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+			info.add_child(_make_label(String(upgrade.get("description", upgrade.get("desc", ""))), 13, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		var locked := HBoxContainer.new()
 		locked.add_theme_constant_override("separation", 5)
 		locked.add_child(_make_icon("locked", 14))
-		locked.add_child(_make_label(String(upgrade.get("unlock", "Upgrade bloqueado")), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+		locked.add_child(_make_label(String(upgrade.get("unlockRequirement", upgrade.get("unlock", "Upgrade bloqueado"))), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		info.add_child(locked)
 	info.add_child(_make_label("Nível: %s/%s" % [level, max_level], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:

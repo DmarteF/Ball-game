@@ -1347,3 +1347,48 @@ Checklist:
 - Dobrar recompensa com anuncio mock: sim
 - Integracao com missoes/conquistas: sim
 - Debug do desafio diario: sim
+
+## Atualizacao - Sistema Definitivo de Upgrades
+
+O sistema de upgrades foi corrigido para usar a branch `main` como fonte de verdade, especificamente `frontend/src/game/upgrades.ts`.
+
+Fonte atual:
+- `scripts/MainPortData.gd`: banco portado com os 34 upgrades originais.
+- `scripts/UpgradeDatabase.gd`: API de leitura do banco completo.
+- `scripts/UpgradeManager.gd`: API central para telas/debug/gameplay.
+- `scripts/GameState.gd`: save canonico com `unlocked_upgrade_ids` e `upgrade_levels`.
+
+Regras aplicadas:
+- Total correto: 34 upgrades.
+- Starters corretos: `damage`, `speed`, `coinBoost`, `critical`.
+- Estado inicial: 4/34 liberados e 30 bloqueados.
+- Bloqueados continuam existindo internamente, mas nao aparecem na tela de Melhorias e nao entram no sorteio de gameplay.
+- Tela Melhorias usa `GameState.get_unlocked_upgrades()`.
+- Level-up/reroll usa `GameState.get_gameplay_upgrade_pool()`, que retorna a mesma lista liberada.
+- O painel de level-up nao mostra upgrade bloqueado, inexistente ou duplicado no mesmo painel.
+- Ao liberar um upgrade por conquista, bau, roleta, boss, liga ou debug, ele entra automaticamente na tela e na pool de gameplay.
+
+Save:
+- `unlocked_upgrade_ids`: IDs liberados do banco de 34.
+- `upgrade_levels`: nivel persistente de cada upgrade liberado/upado.
+- `unlocked_upgrades` continua espelhado por compatibilidade com saves antigos.
+- `permanent_upgrades` continua espelhado para manter compatibilidade com os calculos antigos de dano/velocidade/moedas/XP.
+
+Debug em Configuracoes:
+- Print Upgrade State.
+- Unlock Next Upgrade.
+- Unlock All Upgrades.
+- Lock All Except Starter Upgrades.
+- Reset Upgrade Levels.
+
+Checklist:
+- Banco total tem 34 upgrades: sim
+- Starter upgrades sao damage, speed, coinBoost e critical: sim
+- Tela Melhorias mostra X/34: sim
+- Bloqueados nao aparecem na lista: sim
+- Bloqueados continuam existindo internamente: sim
+- Gameplay usa a mesma lista liberada: sim
+- Reroll usa apenas liberados: sim
+- Desbloquear upgrade atualiza tela e gameplay: sim
+- Save mantem unlocked_upgrade_ids: sim
+- Debug mostra estado correto: sim
