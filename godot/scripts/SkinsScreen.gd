@@ -229,7 +229,6 @@ func _make_collection_summary() -> PanelContainer:
 	var locked: int = max(0, _all_skin_data.size() - unlocked)
 	var percent := 0 if _all_skin_data.is_empty() else roundi(float(unlocked) / float(_all_skin_data.size()) * 100.0)
 	var new_count := Array(GameState.data.get("new_skins", [])).size()
-	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
 	var margin := MarginContainer.new()
@@ -241,10 +240,10 @@ func _make_collection_summary() -> PanelContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 3)
 	margin.add_child(column)
-	column.add_child(_make_label("COLEÇÃO" if pt else "COLLECTION", 13, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(_ui_text("COLEÇÃO", "COLLECTION", "COLECCIÓN", "コレクション", "收藏"), 13, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label("%s/%s skins" % [unlocked, _all_skin_data.size()], 24, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label("%s%% %s" % [percent, "completo" if pt else "complete"], 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label(("Bloqueadas: %s  •  Novas: %s" if pt else "Locked: %s  •  New: %s") % [locked, new_count], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("%s%% %s" % [percent, _ui_text("completo", "complete", "completo", "完了", "完成")], 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(_ui_text("Bloqueadas: %s  •  Novas: %s", "Locked: %s  •  New: %s", "Bloqueadas: %s  •  Nuevas: %s", "ロック中: %s  •  新着: %s", "未解锁：%s  •  新：%s") % [locked, new_count], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -252,8 +251,8 @@ func _make_collection_actions() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
-	var best := _make_action(_ui_text("EQUIPAR MELHOR SKIN", "EQUIP BEST SKIN"), "#00f0ff", false, _equip_best_skin)
-	var clear := _make_action(_ui_text("LIMPAR NOVAS", "CLEAR NEW"), "#ffd700", Array(GameState.data.get("new_skins", [])).is_empty(), _clear_new_tags)
+	var best := _make_action(_ui_text("EQUIPAR MELHOR SKIN", "EQUIP BEST SKIN", "EQUIPAR MEJOR SKIN", "最強スキン装備", "装备最佳皮肤"), "#00f0ff", false, _equip_best_skin)
+	var clear := _make_action(_ui_text("LIMPAR NOVAS", "CLEAR NEW", "LIMPIAR NUEVAS", "新着をクリア", "清除新标记"), "#ffd700", Array(GameState.data.get("new_skins", [])).is_empty(), _clear_new_tags)
 	row.add_child(best)
 	row.add_child(clear)
 	return row
@@ -360,34 +359,16 @@ func _populate_skins() -> void:
 
 
 func _filter_label(id: String, fallback: String, kind := "rarity") -> String:
-	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	if kind == "effect":
-		for item in EFFECT_FILTERS:
-			if String(item.get("id", "")) == id:
-				return String(item.get("label_pt" if pt else "label_en", fallback))
-		return fallback
-	if not pt:
-		match id:
-			"all": return "All"
-			"common": return "Common"
-			"rare": return "Rare"
-			"epic": return "Epic"
-			"legendary": return "Legendary"
-			"mythic": return "Mythic"
-			"ultimate": return "Ultimate"
-			"owned": return "Owned"
-			"locked": return "Locked"
-		return fallback
+		if id == "all":
+			return _ui_text("Todos", "All", "Todos", "すべて", "全部")
+		return LocalizationManager.effect_name(id) if has_node("/root/LocalizationManager") else fallback
 	match id:
-		"all": return "Todas"
-		"common": return "Comuns"
-		"rare": return "Raras"
-		"epic": return "Épicas"
-		"legendary": return "Lendárias"
-		"mythic": return "Míticas"
-		"ultimate": return "Ultimate"
-		"owned": return "Obtidas"
-		"locked": return "Bloqueadas"
+		"all": return _ui_text("Todas", "All", "Todas", "すべて", "全部")
+		"owned": return _ui_text("Obtidas", "Owned", "Obtenidas", "所持", "已拥有")
+		"locked": return _ui_text("Bloqueadas", "Locked", "Bloqueadas", "ロック中", "未解锁")
+		"common", "rare", "epic", "legendary", "mythic", "ultimate":
+			return LocalizationManager.rarity_name(id) if has_node("/root/LocalizationManager") else fallback
 	return fallback
 
 
@@ -464,19 +445,19 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	else:
 		effects.add_child(_make_effect_badge("???", rarity_color))
 
-	column.add_child(_make_label(("EQUIPADA" if selected else "DESBLOQUEADA") if owned else _unlock_hint(String(skin.get("source", "")), String(skin["rarity"])), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label((_ui_text("EQUIPADA", "EQUIPPED", "EQUIPADA", "装備中", "已装备") if selected else _ui_text("DESBLOQUEADA", "UNLOCKED", "DESBLOQUEADA", "解除済み", "已解锁")) if owned else _unlock_hint(String(skin.get("source", "")), String(skin["rarity"])), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	if owned:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 7)
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		column.add_child(row)
-		row.add_child(_make_action("USANDO" if selected else "EQUIPAR", "#00f0ff", selected, _equip_skin.bind(String(skin["id"]))))
-		row.add_child(_make_action(_ui_text("MELHORAR", "UPGRADE"), "#00ff88", GameState.is_skin_max_level(String(skin["id"])), func() -> void:
+		row.add_child(_make_action(_ui_text("USANDO", "USING", "USANDO", "使用中", "使用中") if selected else _ui_text("EQUIPAR", "EQUIP", "EQUIPAR", "装備", "装备"), "#00f0ff", selected, _equip_skin.bind(String(skin["id"]))))
+		row.add_child(_make_action(_ui_text("MELHORAR", "UPGRADE", "MEJORAR", "強化", "升级"), "#00ff88", GameState.is_skin_max_level(String(skin["id"])), func() -> void:
 			_show_skin_details(skin)
 		))
 	else:
-		column.add_child(_make_label("Revele em baús, fases ou conquistas", 11, "#ffffff77", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		column.add_child(_make_label(_ui_text("Revele em baús, fases ou conquistas", "Reveal in chests, levels or achievements", "Revélala en cofres, niveles o logros", "宝箱・レベル・実績で解放", "可通过宝箱、关卡或成就解锁"), 11, "#ffffff77", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -569,14 +550,14 @@ func _source_hint_from_skin(skin: Dictionary) -> String:
 func _source_hint_from_id(id: String, rarity: String) -> String:
 	var lower := id.to_lower()
 	if _contains_any(lower, ["league", "emperor", "champion"]):
-		return _ui_text("Recompensa da Liga Neon", "Neon League reward")
+		return _ui_text("Recompensa da Liga Neon", "Neon League reward", "Recompensa de Liga Neon", "ネオンリーグ報酬", "霓虹联赛奖励")
 	if _contains_any(lower, ["boss", "phoenix", "dragon", "guardian"]):
-		return _ui_text("Recompensa de Boss", "Boss reward")
+		return _ui_text("Recompensa de Boss", "Boss reward", "Recompensa de Boss", "ボス報酬", "Boss奖励")
 	if _contains_any(lower, ["event", "codex"]):
-		return _ui_text("Recompensa de evento", "Event reward")
+		return _ui_text("Recompensa de evento", "Event reward", "Recompensa de evento", "イベント報酬", "活动奖励")
 	if rarity in ["mythic", "ultimate"]:
-		return _ui_text("Conquista, evento ou baú raro", "Achievement, event or rare chest")
-	return _ui_text("Obtida em baús", "Found in chests")
+		return _ui_text("Conquista, evento ou baú raro", "Achievement, event or rare chest", "Logro, evento o cofre raro", "実績・イベント・レア宝箱", "成就、活动或稀有宝箱")
+	return _ui_text("Obtida em baús", "Found in chests", "Obtenida en cofres", "宝箱から入手", "可从宝箱获得")
 
 
 func _name_from_id(id: String) -> String:
@@ -604,26 +585,26 @@ func _rarity_from_id(id: String) -> String:
 func _description_from_id(id: String) -> String:
 	var effects := _effects_from_id(id)
 	if effects.has("Congela") or effects.has("Lentidão"):
-		return "Reduz temporariamente a rotação dos anéis durante a gameplay."
+		return _ui_text("Reduz temporariamente a rotação dos anéis durante a gameplay.", "Temporarily slows ring rotation during gameplay.", "Reduce temporalmente la rotación de los anillos.", "ゲーム中にリング回転を一時的に遅くします。", "游戏中暂时减慢圆环旋转。")
 	if effects.has("Queima"):
-		return "Aplica dano extra e efeito quente nos impactos."
+		return _ui_text("Aplica dano extra e efeito quente nos impactos.", "Adds extra damage and a hot impact effect.", "Añade daño extra y efecto ardiente.", "追加ダメージと炎の衝撃効果。", "增加额外伤害和灼热效果。")
 	if effects.has("Corrente"):
-		return "Pode atingir outro anel próximo com energia elétrica."
+		return _ui_text("Pode atingir outro anel próximo com energia elétrica.", "Can hit another nearby ring with electricity.", "Puede golpear otro anillo cercano con electricidad.", "近くの別リングへ電撃が連鎖します。", "可用电流击中附近另一个圆环。")
 	if effects.has("Área") or effects.has("Gravidade"):
-		return "Causa dano em área ou pulso gravitacional nos anéis próximos."
+		return _ui_text("Causa dano em área ou pulso gravitacional nos anéis próximos.", "Deals area or gravity pulse damage to nearby rings.", "Causa daño de área o pulso gravitatorio.", "周囲のリングへ範囲/重力ダメージ。", "对附近圆环造成范围或重力脉冲伤害。")
 	if effects.has("Fase"):
-		return "Pode atravessar parte sólida por chance."
+		return _ui_text("Pode atravessar parte sólida por chance.", "Can sometimes phase through solid parts.", "Puede atravesar partes sólidas por probabilidad.", "確率で固い部分をすり抜けます。", "有概率穿过实体部分。")
 	if effects.has("Repulsão"):
-		return "Pode empurrar anéis perigosos para fora."
+		return _ui_text("Pode empurrar anéis perigosos para fora.", "Can push dangerous rings outward.", "Puede empujar anillos peligrosos hacia fuera.", "危険なリングを外へ押し出せます。", "可将危险圆环向外推开。")
 	if effects.has("Moedas"):
-		return "Aumenta ganhos de moedas durante ou ao fim da rodada."
+		return _ui_text("Aumenta ganhos de moedas durante ou ao fim da rodada.", "Increases coin gains during or after the run.", "Aumenta monedas durante o al final.", "ラン中/終了時のコイン獲得増加。", "提高本局或结算金币收益。")
 	if effects.has("XP"):
-		return "Aumenta ganhos de XP."
+		return _ui_text("Aumenta ganhos de XP.", "Increases XP gains.", "Aumenta ganancias de XP.", "XP獲得量増加。", "提高经验收益。")
 	if effects.has("Velocidade"):
-		return "Deixa a bolinha mais rápida e ativa."
+		return _ui_text("Deixa a bolinha mais rápida e ativa.", "Makes the ball faster and more active.", "Hace la bola más rápida y activa.", "ボールがより速く活発になります。", "让小球更快更活跃。")
 	if effects.has("Crítico"):
-		return "Melhora chance ou dano crítico."
-	return "Skin importada da branch main com brilho/trilha próprios."
+		return _ui_text("Melhora chance ou dano crítico.", "Improves critical chance or damage.", "Mejora probabilidad o daño crítico.", "クリティカル率/ダメージ上昇。", "提高暴击率或暴击伤害。")
+	return _ui_text("Skin importada da branch main com brilho/trilha próprios.", "Skin imported from main with its own glow/trail.", "Skin importada de main con brillo/rastro propio.", "mainから移植された専用グロー/軌跡付きスキン。", "从 main 移植，带有专属光效/轨迹。")
 
 
 func _effects_from_id(id: String) -> Array[String]:
@@ -726,7 +707,7 @@ func _make_effect_badge(text: String, color: String) -> PanelContainer:
 	margin.add_theme_constant_override("margin_right", 6)
 	margin.add_theme_constant_override("margin_bottom", 3)
 	badge.add_child(margin)
-	margin.add_child(_make_label(text, 9, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	margin.add_child(_make_label(LocalizationManager.effect_name(text) if has_node("/root/LocalizationManager") else text, 9, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return badge
 
 
@@ -860,8 +841,8 @@ func _unlock_hint(source: String, rarity: String) -> String:
 	if not source.is_empty():
 		return source
 	if rarity in ["legendary", "mythic", "ultimate"]:
-		return _ui_text("Recompensa da Liga Neon, Boss, evento ou baú", "Neon League, Boss, event or chest reward")
-	return _ui_text("Obtida em baús, fases ou conquistas", "Found in chests, levels or achievements")
+		return _ui_text("Recompensa da Liga Neon, Boss, evento ou baú", "Neon League, Boss, event or chest reward", "Recompensa de Liga Neon, Boss, evento o cofre", "ネオンリーグ・ボス・イベント・宝箱報酬", "霓虹联赛、Boss、活动或宝箱奖励")
+	return _ui_text("Obtida em baús, fases ou conquistas", "Found in chests, levels or achievements", "Obtenida en cofres, niveles o logros", "宝箱・レベル・実績で入手", "可从宝箱、关卡或成就获得")
 
 
 func _make_action(text: String, color: String, disabled: bool, action: Callable = Callable()) -> Button:
@@ -944,7 +925,7 @@ func _show_skin_details(skin: Dictionary) -> void:
 	column.add_child(_make_label(_rarity_name(rarity), 13, _rarity_color(rarity), _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	var effect_text := _effects_text(skin) if owned else "???"
 	column.add_child(_make_label(effect_text, 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	var desc := _make_label(String(skin.get("desc", "")) if owned else _ui_text("Asset oculto até desbloquear.", "Asset hidden until unlocked."), 12, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var desc := _make_label(String(skin.get("desc", "")) if owned else _ui_text("Asset oculto até desbloquear.", "Asset hidden until unlocked.", "Asset oculto hasta desbloquear.", "解除までアセット非表示。", "解锁前隐藏资源。"), 12, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size.y = 54
 	column.add_child(desc)
@@ -953,7 +934,7 @@ func _show_skin_details(skin: Dictionary) -> void:
 	column.add_child(_make_label(_unlock_hint(String(skin.get("source", "")), rarity), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if owned:
 		var selected := String(GameState.data.get("equipped_skin", "neon_blue")) == skin_id
-		column.add_child(_make_action(_ui_text("USANDO", "USING") if selected else _ui_text("EQUIPAR", "EQUIP"), "#00f0ff", selected, func() -> void:
+		column.add_child(_make_action(_ui_text("USANDO", "USING", "USANDO", "使用中", "使用中") if selected else _ui_text("EQUIPAR", "EQUIP", "EQUIPAR", "装備", "装备"), "#00f0ff", selected, func() -> void:
 			_equip_skin(skin_id)
 			_detail_overlay.visible = false
 		))
@@ -962,13 +943,13 @@ func _show_skin_details(skin: Dictionary) -> void:
 			upgrade_row.add_theme_constant_override("separation", 7)
 			upgrade_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			column.add_child(upgrade_row)
-			upgrade_row.add_child(_make_action(_ui_text("Melhorar com Moedas", "Upgrade with Coins"), "#ffd700", false, func() -> void:
+			upgrade_row.add_child(_make_action(_ui_text("Melhorar com Moedas", "Upgrade with Coins", "Mejorar con Monedas", "コインで強化", "用金币升级"), "#ffd700", false, func() -> void:
 				_upgrade_skin_from_modal(skin, "coins")
 			))
-			upgrade_row.add_child(_make_action(_ui_text("Melhorar com Diamantes", "Upgrade with Diamonds"), "#00ff88", false, func() -> void:
+			upgrade_row.add_child(_make_action(_ui_text("Melhorar com Diamantes", "Upgrade with Diamonds", "Mejorar con Diamantes", "ダイヤで強化", "用钻石升级"), "#00ff88", false, func() -> void:
 				_upgrade_skin_from_modal(skin, "diamonds")
 			))
-	column.add_child(_make_action(_ui_text("FECHAR", "CLOSE"), "#ffffff", false, func() -> void:
+	column.add_child(_make_action(_ui_text("FECHAR", "CLOSE", "CERRAR", "閉じる", "关闭"), "#ffffff", false, func() -> void:
 		_detail_overlay.visible = false
 		_rebuild_collection_content()
 	))
@@ -982,7 +963,7 @@ func _make_skin_level_panel(skin_id: String, rarity: String) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 3)
 	column.mouse_filter = Control.MOUSE_FILTER_PASS
-	column.add_child(_make_label("%s %s/%s" % [_ui_text("Nível", "Level"), level, max_level], 11, _rarity_color(rarity), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("%s %s/%s" % [_ui_text("Nível", "Level", "Nivel", "レベル", "等级"), level, max_level], 11, _rarity_color(rarity), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var bar := ProgressBar.new()
 	bar.custom_minimum_size = Vector2(0, 9)
 	bar.show_percentage = false
@@ -991,7 +972,7 @@ func _make_skin_level_panel(skin_id: String, rarity: String) -> VBoxContainer:
 	bar.add_theme_stylebox_override("background", _make_style("#ffffff12", 5, "#ffffff22", 1))
 	bar.add_theme_stylebox_override("fill", _make_style(_rarity_color(rarity), 5, "#00000000", 0, _rarity_color(rarity), 4))
 	column.add_child(bar)
-	var cost_text := _ui_text("MAX", "MAX") if level >= max_level else "%s %s  •  %s ♦" % [int(preview.get("coins", 0)), _ui_text("moedas", "coins"), int(preview.get("diamonds", 0))]
+	var cost_text := _ui_text("MAX", "MAX", "MAX", "最大", "满级") if level >= max_level else "%s %s  •  %s ♦" % [int(preview.get("coins", 0)), _ui_text("moedas", "coins", "monedas", "コイン", "金币"), int(preview.get("diamonds", 0))]
 	column.add_child(_make_label(cost_text, 10, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return column
 
@@ -1012,13 +993,13 @@ func _make_skin_upgrade_details(skin_id: String, rarity: String) -> PanelContain
 	margin.add_child(column)
 	var level := int(preview.get("level", 1))
 	var max_level := int(preview.get("max_level", 5))
-	column.add_child(_make_label("%s: %s/%s" % [_ui_text("Nível da Skin", "Skin Level"), level, max_level], 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	column.add_child(_make_label("%s: %s" % [_ui_text("Efeito Atual", "Current Effect"), _effect_preview_text(Dictionary(preview.get("current", {})))], 11, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label("%s: %s/%s" % [_ui_text("Nível da Skin", "Skin Level", "Nivel de Skin", "スキンレベル", "皮肤等级"), level, max_level], 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label("%s: %s" % [_ui_text("Efeito Atual", "Current Effect", "Efecto Actual", "現在の効果", "当前效果"), _effect_preview_text(Dictionary(preview.get("current", {})))], 11, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if level >= max_level:
-		column.add_child(_make_label(_ui_text("Máximo", "Max"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		column.add_child(_make_label(_ui_text("Máximo", "Max", "Máximo", "最大", "满级"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
-		column.add_child(_make_label("%s: %s" % [_ui_text("Próximo Nível", "Next Level"), _effect_preview_text(Dictionary(preview.get("next", {})))], 11, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-		column.add_child(_make_label("%s: %s %s / %s %s" % [_ui_text("Custo", "Cost"), int(preview.get("coins", 0)), _ui_text("moedas", "coins"), int(preview.get("diamonds", 0)), _ui_text("diamantes", "diamonds")], 11, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		column.add_child(_make_label("%s: %s" % [_ui_text("Próximo Nível", "Next Level", "Siguiente Nivel", "次のレベル", "下一级"), _effect_preview_text(Dictionary(preview.get("next", {})))], 11, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		column.add_child(_make_label("%s: %s %s / %s %s" % [_ui_text("Custo", "Cost", "Costo", "コスト", "花费"), int(preview.get("coins", 0)), _ui_text("moedas", "coins", "monedas", "コイン", "金币"), int(preview.get("diamonds", 0)), _ui_text("diamantes", "diamonds", "diamantes", "ダイヤ", "钻石")], 11, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return card
 
 
@@ -1027,8 +1008,8 @@ func _effect_preview_text(effect: Dictionary) -> String:
 	var chance := float(effect.get("chance", 0.0))
 	var value := float(effect.get("value", 0.0))
 	if chance > 0.0:
-		return "%s %.1f%% / %.2f" % [kind, chance * 100.0, value]
-	return "%s %.2f" % [kind, value]
+		return "%s %.1f%% / %.2f" % [LocalizationManager.effect_name(kind) if has_node("/root/LocalizationManager") else kind, chance * 100.0, value]
+	return "%s %.2f" % [LocalizationManager.effect_name(kind) if has_node("/root/LocalizationManager") else kind, value]
 
 
 func _upgrade_skin_from_modal(skin: Dictionary, currency: String) -> void:
@@ -1037,11 +1018,11 @@ func _upgrade_skin_from_modal(skin: Dictionary, currency: String) -> void:
 	if bool(result.get("ok", false)):
 		_play_ui_sfx(true)
 		_show_skin_details(skin)
-		_show_upgrade_toast(_ui_text("Skin melhorada", "Skin upgraded"), "#00ff88")
+		_show_upgrade_toast(_ui_text("Skin melhorada", "Skin upgraded", "Skin mejorada", "スキン強化完了", "皮肤已升级"), "#00ff88")
 	else:
 		_play_ui_sfx(false)
 		var reason := String(result.get("reason", ""))
-		var message := _ui_text("Moedas insuficientes", "Not enough coins") if reason == "coins" else _ui_text("Diamantes insuficientes", "Not enough diamonds") if reason == "diamonds" else _ui_text("Máximo", "Max")
+		var message := _ui_text("Moedas insuficientes", "Not enough coins", "Monedas insuficientes", "コイン不足", "金币不足") if reason == "coins" else _ui_text("Diamantes insuficientes", "Not enough diamonds", "Diamantes insuficientes", "ダイヤ不足", "钻石不足") if reason == "diamonds" else _ui_text("Máximo", "Max", "Máximo", "最大", "满级")
 		_show_upgrade_toast(message, "#ff6b9a")
 
 
@@ -1068,7 +1049,7 @@ func _effects_text(skin: Dictionary) -> String:
 	var effects: Array = skin.get("effects", [])
 	var parts: Array[String] = []
 	for effect in effects:
-		parts.append(String(effect))
+		parts.append(LocalizationManager.effect_name(String(effect)) if has_node("/root/LocalizationManager") else String(effect))
 	return " • ".join(parts)
 
 
@@ -1085,8 +1066,8 @@ func _play_ui_sfx(ok: bool) -> void:
 		AudioManager.play_sfx("res://assets/sounds/button_confirm.mp3" if ok else "res://assets/sounds/button_error.mp3", -6.0)
 
 
-func _ui_text(pt: String, en: String) -> String:
-	return pt if String(GameState.get_setting("language", "en")).begins_with("pt") else en
+func _ui_text(pt: String, en: String, es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
 
 
 func _refresh_filters() -> void:
@@ -1113,14 +1094,7 @@ func _rarity_color(rarity: String) -> String:
 
 
 func _rarity_name(rarity: String) -> String:
-	match rarity:
-		"common": return "COMUM"
-		"rare": return "RARO"
-		"epic": return "ÉPICO"
-		"legendary": return "LENDÁRIO"
-		"mythic": return "MÍTICO"
-		"ultimate": return "ULTIMATE"
-	return rarity.to_upper()
+	return (LocalizationManager.rarity_name(rarity) if has_node("/root/LocalizationManager") else rarity).to_upper()
 
 
 func _is_owned(skin_id: String) -> bool:

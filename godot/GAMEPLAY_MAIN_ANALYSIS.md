@@ -922,3 +922,25 @@ Checklist:
 - Controle escala com limite: sim
 - Efeitos usam caps: sim
 - Save afeta imediatamente a skin equipada em novas partidas: sim
+
+## Atualizacao - Localizacao do Jogo
+
+A localizacao foi ampliada para cobrir os textos jogaveis e de interface em ingles, portugues, espanhol, japones e chines. A fonte principal fica em `LocalizationManager.gd`, com helpers chamados pelas telas e modos.
+
+Cobertura neste patch:
+- tutorial inicial e dicas guiadas;
+- menu principal e menu completo;
+- selecao de fases, modo infinito e desafio diario;
+- HUD, pausa, level up, vitoria, derrota e recompensas;
+- Liga Neon e batalha contra boss;
+- loja, inventario, missoes, evento, roleta, recompensa diaria, conquistas;
+- upgrades, raridades, efeitos, requisitos e recompensas;
+- anuncios mockados e seus motivos.
+
+Checklist:
+- Gameplay traduzida: sim
+- Modos traduzidos: sim
+- HUD traduzido: sim
+- Resultados traduzidos: sim
+- Upgrades traduzidos: sim
+- Conquistas dinamicas com fallback traduzido: sim

@@ -256,7 +256,7 @@ func _populate_content(data: Dictionary) -> void:
 		_content.add_child(_make_section_title(_shop_section_label(String(_current_shop_tab()["id"]), String(_current_shop_tab()["section"]))))
 		for card_data in _current_shop_tab()["cards"]:
 			_content.add_child(_make_feature_card(card_data))
-		_content.add_child(_make_section_title("STORED CHESTS" if _language() == "en" else "BAÚS GUARDADOS"))
+		_content.add_child(_make_section_title(_txt("STORED CHESTS", "BAÚS GUARDADOS", "COFRES GUARDADOS", "保存された宝箱", "已保存宝箱")))
 		_content.add_child(_make_inventory_summary())
 	elif screen_id == "inventory":
 		_populate_inventory()
@@ -417,14 +417,14 @@ func _make_empty_state(title: String, desc: String, icon_key: String) -> PanelCo
 
 func _dynamic_empty_title(data: Dictionary) -> String:
 	if screen_id == "boss":
-		return ("Boss available" if _language() == "en" else "Boss disponível") if TimeManager.is_boss_available() else ("No boss available" if _language() == "en" else "Nenhum boss disponível")
+		return _txt("Boss available", "Boss disponível", "Boss disponible", "ボス挑戦可能", "Boss可挑战") if TimeManager.is_boss_available() else _txt("No boss available", "Nenhum boss disponível", "No hay Boss disponible", "利用可能なボスはいません", "暂无可挑战Boss")
 	if screen_id == "daily_reward":
-		return ("Reward available" if _language() == "en" else "Recompensa disponível") if TimeManager.can_claim_daily_reward() else ("Daily reward already claimed" if _language() == "en" else "Recompensa diária já coletada")
+		return _txt("Reward available", "Recompensa disponível", "Recompensa disponible", "報酬を受け取れます", "奖励可领取") if TimeManager.can_claim_daily_reward() else _txt("Daily reward already claimed", "Recompensa diária já coletada", "Recompensa diaria ya cobrada", "デイリー報酬は受け取り済み", "每日奖励已领取")
 	if screen_id == "event":
-		return "No active event" if _language() == "en" else "Nenhum evento ativo"
+		return _txt("No active event", "Nenhum evento ativo", "No hay evento activo", "開催中のイベントはありません", "暂无活动")
 	if screen_id == "achievements":
-		return "No achievements unlocked" if _language() == "en" else "Nenhuma conquista desbloqueada"
-	return String(data["empty_title"])
+		return _txt("No achievements unlocked", "Nenhuma conquista desbloqueada", "Ningún logro desbloqueado", "解除済み実績はありません", "暂无已解锁成就")
+	return _phrase(String(data["empty_title"]))
 
 
 func _make_feature_card(data: Dictionary) -> PanelContainer:
@@ -432,9 +432,9 @@ func _make_feature_card(data: Dictionary) -> PanelContainer:
 	var card := _make_card("#ffffff12", tone + "77")
 	var body := _card_body(card, 12)
 
-	var title := _make_label(String(data["title"]), 17 if _is_narrow_screen() else 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var title := _make_label(_phrase(String(data["title"])), 17 if _is_narrow_screen() else 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var desc := _make_label(String(data["desc"]), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var desc := _make_label(_phrase(String(data["desc"])), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var button := _make_action_button(_button_text(String(data.get("button", "view"))), tone)
 	button.disabled = bool(data.get("disabled", false))
@@ -521,10 +521,10 @@ func _make_inventory_summary() -> Control:
 func _populate_daily_reward(data: Dictionary) -> void:
 	var can_claim := TimeManager.can_claim_daily_reward()
 	var streak := int(GameState.data.get("daily_streak", TimeManager.get_daily_streak()))
-	_content.add_child(_make_section_title("7 DAY STREAK" if _language() == "en" else "SEQUÊNCIA DE 7 DIAS"))
+	_content.add_child(_make_section_title(_txt("7 DAY STREAK", "SEQUÊNCIA DE 7 DIAS", "RACHA DE 7 DÍAS", "7日連続", "7天连续")))
 	for i in range(data["cards"].size()):
 		var card: Dictionary = data["cards"][i].duplicate()
-		card["title"] = "Day %s" % (i + 1) if _language() == "en" else "Dia %s" % (i + 1)
+		card["title"] = _txt("Day %s", "Dia %s", "Día %s", "%s日目", "第%s天") % (i + 1)
 		card["button"] = "claim" if can_claim and i == clampi(streak, 0, 6) else "done" if i < streak else "wait"
 		card["action"] = "daily_claim" if can_claim and i == clampi(streak, 0, 6) else ""
 		_content.add_child(_make_feature_card(card))
@@ -554,9 +554,9 @@ func _populate_wheel(data: Dictionary) -> void:
 func _populate_event() -> void:
 	var event: Dictionary = GameState.get_weekly_event()
 	_content.add_child(_make_event_header(event))
-	_content.add_child(_make_section_title("DESAFIO DE HOJE" if _language() == "pt" else "TODAY'S CHALLENGE"))
+	_content.add_child(_make_section_title(_txt("TODAY'S CHALLENGE", "DESAFIO DE HOJE", "DESAFÍO DE HOY", "今日のチャレンジ", "今日挑战")))
 	_populate_daily_challenge()
-	_content.add_child(_make_section_title("OBJETIVOS DA SEMANA" if _language() == "pt" else "WEEKLY GOALS"))
+	_content.add_child(_make_section_title(_txt("WEEKLY GOALS", "OBJETIVOS DA SEMANA", "OBJETIVOS SEMANALES", "週間目標", "每周目标")))
 	for task_value in Array(event.get("tasks", [])):
 		var task: Dictionary = task_value
 		var completed := bool(task.get("completed", false))
@@ -576,7 +576,7 @@ func _populate_event() -> void:
 	var final: Dictionary = event.get("final", {})
 	var final_completed := bool(final.get("completed", false))
 	var final_claimed := bool(final.get("claimed", false))
-	_content.add_child(_make_section_title("RECOMPENSA FINAL" if _language() == "pt" else "FINAL REWARD"))
+	_content.add_child(_make_section_title(_txt("FINAL REWARD", "RECOMPENSA FINAL", "RECOMPENSA FINAL", "最終報酬", "最终奖励")))
 	_content.add_child(_make_feature_card({
 		"title": String(final.get("title", "")),
 		"desc": "%s/%s • %s" % [int(final.get("progress", 0)), int(final.get("target", 1)), _reward_label(Dictionary(final.get("reward", {})))],
@@ -593,9 +593,7 @@ func _populate_daily_challenge() -> void:
 	var challenge: Dictionary = GameState.get_daily_challenge()
 	var completed := bool(challenge.get("completed", false))
 	var claimed := bool(challenge.get("claimed", false))
-	var status := "Coletado" if claimed else "Disponível para coletar" if completed else "Disponível"
-	if _language() == "en":
-		status = "Completed" if claimed else "Reward available" if completed else "Available"
+	var status := _txt("Completed", "Coletado", "Completado", "完了", "已完成") if claimed else _txt("Reward available", "Disponível para coletar", "Recompensa disponible", "報酬受取可能", "奖励可领取") if completed else _txt("Available", "Disponível", "Disponible", "利用可能", "可用")
 	var desc := "%s: %s • %s: %s • %s: %s\n%s: %s • %s: %s • %s: %s" % [
 		_tr("date", "Data"), String(challenge.get("date", "")),
 		_tr("difficulty", "Dificuldade"), String(challenge.get("difficulty_label", "")),
@@ -615,7 +613,7 @@ func _populate_daily_challenge() -> void:
 	}))
 	_content.add_child(_make_feature_card({
 		"title": _tr("today_challenge_status", "Status do desafio"),
-		"desc": "%s • %s/%s anéis • %ss" % [status, int(challenge.get("best_rings", 0)), int(challenge.get("objective_rings", 30)), int(challenge.get("duration", 90))],
+		"desc": "%s • %s/%s %s • %ss" % [status, int(challenge.get("best_rings", 0)), int(challenge.get("objective_rings", 30)), _txt("rings", "anéis", "anillos", "リング", "圆环"), int(challenge.get("duration", 90))],
 		"icon": "chest_rare" if completed and not claimed else "gem",
 		"button": "claim" if completed and not claimed else "done" if claimed else "locked",
 		"tone": "#ffd700",
@@ -650,7 +648,7 @@ func _make_event_header(event: Dictionary) -> PanelContainer:
 	var desc := _make_label(String(event.get("desc", "")), 13, "#ffffffbb", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	copy.add_child(desc)
-	copy.add_child(_make_label("Termina em %s" % _format_remaining(int(event.get("seconds_remaining", 0))), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	copy.add_child(_make_label(_txt("Ends in %s", "Termina em %s", "Termina en %s", "終了まで %s", "剩余 %s") % _format_remaining(int(event.get("seconds_remaining", 0))), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -658,14 +656,14 @@ func _populate_boss() -> void:
 	var boss := _current_boss_data()
 	_content.add_child(_make_boss_header(boss))
 	_content.add_child(_make_feature_card({
-		"title": "Tentativas diárias" if _language() == "pt" else "Daily attempts",
-		"desc": "Cada dificuldade pode ser enfrentada uma vez por dia. A batalha usa duas arenas como a Liga Neon: Boss em cima, você embaixo." if _language() == "pt" else "Each difficulty can be attempted once per day. Battle uses two arenas like Neon League: Boss above, you below.",
+		"title": _txt("Daily attempts", "Tentativas diárias", "Intentos diarios", "デイリー挑戦", "每日挑战次数"),
+		"desc": _txt("Each difficulty can be attempted once per day. Battle uses two arenas like Neon League: Boss above, you below.", "Cada dificuldade pode ser enfrentada uma vez por dia. A batalha usa duas arenas como a Liga Neon: Boss em cima, você embaixo.", "Cada dificultad se puede intentar una vez al día. La batalla usa dos arenas como Liga Neon: Boss arriba, tú abajo.", "各難易度は1日1回挑戦できます。ネオンリーグ同様、上がボス、下があなたの2アリーナです。", "每个难度每天可挑战一次。战斗使用类似霓虹联赛的双竞技场：Boss在上，你在下。"),
 		"icon": "boss",
 		"button": "done",
 		"tone": "#ff8800",
 		"disabled": true,
 	}))
-	_content.add_child(_make_section_title("NÍVEIS DO BOSS" if _language() == "pt" else "BOSS LEVELS"))
+	_content.add_child(_make_section_title(_txt("BOSS LEVELS", "NÍVEIS DO BOSS", "NIVELES DE BOSS", "ボスレベル", "Boss等级")))
 	var unlocked := int(GameState.data.get("max_unlocked_phase", 1)) >= 5 or int(GameState.data.get("level", 1)) >= 5
 	for level_data in _boss_level_data():
 		var card := Dictionary(level_data).duplicate(true)
@@ -691,13 +689,13 @@ func _make_boss_header(boss: Dictionary) -> PanelContainer:
 	copy.add_theme_constant_override("separation", 4)
 	copy.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(copy)
-	copy.add_child(_make_label("BOSS MENSAL", 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	copy.add_child(_make_label(_txt("MONTHLY BOSS", "BOSS MENSAL", "BOSS MENSUAL", "月間ボス", "月度Boss"), 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	copy.add_child(_make_label(String(boss.get("name", "Fênix Solar")).to_upper(), 22, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var desc := _make_label(String(boss.get("desc", "")), 13, "#ffffffbb", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	copy.add_child(desc)
-	copy.add_child(_make_label("Passiva: %s" % String(boss.get("passive", "")), 12, "#ffcc66", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	copy.add_child(_make_label("Reset diario: %s • Reset mensal: %s" % [_format_remaining(_seconds_until_next_day()), _format_remaining(_seconds_until_next_month())], 11, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	copy.add_child(_make_label(_txt("Passive: %s", "Passiva: %s", "Pasiva: %s", "パッシブ: %s", "被动：%s") % String(boss.get("passive", "")), 12, "#ffcc66", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	copy.add_child(_make_label(_txt("Daily reset: %s • Monthly reset: %s", "Reset diário: %s • Reset mensal: %s", "Reset diario: %s • Reset mensual: %s", "日次リセット: %s • 月次リセット: %s", "每日重置：%s • 每月重置：%s") % [_format_remaining(_seconds_until_next_day()), _format_remaining(_seconds_until_next_month())], 11, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -705,21 +703,21 @@ func _current_boss_data() -> Dictionary:
 	var month := int(Time.get_datetime_dict_from_system().get("month", 6))
 	match month:
 		6:
-			return { "name": "Fênix Solar", "skin": "neon_phoenix", "desc": "Um Boss que renasce em anéis sólidos.", "passive": "Quebras sólidas dão mais moedas ao Boss." }
+			return { "name": _txt("Solar Phoenix", "Fênix Solar", "Fénix Solar", "太陽フェニックス", "太阳凤凰"), "skin": "neon_phoenix", "desc": _txt("A Boss that is reborn in solid rings.", "Um Boss que renasce em anéis sólidos.", "Un Boss que renace en anillos sólidos.", "固いリングの中で蘇るボス。", "会在实体圆环中重生的Boss。"), "passive": _txt("Solid breaks give the Boss more coins.", "Quebras sólidas dão mais moedas ao Boss.", "Las roturas sólidas dan más monedas al Boss.", "ソリッド破壊でボスのコインが増える。", "实体破坏会让Boss获得更多金币。") }
 		7:
-			return { "name": "Dragão Astral", "skin": "astral_dragon", "desc": "Pressiona a arena com anéis orbitais.", "passive": "Quanto maior o combo, maior a rotação." }
+			return { "name": _txt("Astral Dragon", "Dragão Astral", "Dragón Astral", "星界ドラゴン", "星界巨龙"), "skin": "astral_dragon", "desc": _txt("Pressures the arena with orbital rings.", "Pressiona a arena com anéis orbitais.", "Presiona la arena con anillos orbitales.", "軌道リングでアリーナに圧力をかける。", "用轨道圆环压迫竞技场。"), "passive": _txt("The higher the combo, the faster the rotation.", "Quanto maior o combo, maior a rotação.", "Cuanto mayor el combo, mayor la rotación.", "コンボが高いほど回転が速くなる。", "连击越高，旋转越快。") }
 		8:
-			return { "name": "Guardião Dimensional", "skin": "dimensional_guardian", "desc": "Alterna padrões de fase e repulsão.", "passive": "A arena muda de ritmo em ciclos." }
-	return { "name": "Fênix Solar", "skin": "neon_phoenix", "desc": "Um Boss que renasce em anéis sólidos.", "passive": "Quebras sólidas dão mais moedas ao Boss." }
+			return { "name": _txt("Dimensional Guardian", "Guardião Dimensional", "Guardián Dimensional", "次元ガーディアン", "次元守卫"), "skin": "dimensional_guardian", "desc": _txt("Alternates phase and repulse patterns.", "Alterna padrões de fase e repulsão.", "Alterna patrones de fase y repulsión.", "位相と反発パターンを切り替える。", "交替使用相位和排斥模式。"), "passive": _txt("The arena changes rhythm in cycles.", "A arena muda de ritmo em ciclos.", "La arena cambia de ritmo en ciclos.", "アリーナが周期的にリズムを変える。", "竞技场会周期性改变节奏。") }
+	return { "name": _txt("Solar Phoenix", "Fênix Solar", "Fénix Solar", "太陽フェニックス", "太阳凤凰"), "skin": "neon_phoenix", "desc": _txt("A Boss that is reborn in solid rings.", "Um Boss que renasce em anéis sólidos.", "Un Boss que renace en anillos sólidos.", "固いリングの中で蘇るボス。", "会在实体圆环中重生的Boss。"), "passive": _txt("Solid breaks give the Boss more coins.", "Quebras sólidas dão mais moedas ao Boss.", "Las roturas sólidas dan más monedas al Boss.", "ソリッド破壊でボスのコインが増える。", "实体破坏会让Boss获得更多金币。") }
 
 
 func _boss_level_data() -> Array[Dictionary]:
 	return [
-		{ "id": "normal", "title": "Normal", "desc": "Entrada diária do Boss", "icon": "boss", "tone": "#00f0ff", "reward": { "type": "coins", "amount": 220 } },
-		{ "id": "strong", "title": "Forte", "desc": "Boss com rotação elevada", "icon": "boss", "tone": "#00ff88", "reward": { "type": "diamonds", "amount": 8 } },
-		{ "id": "elite", "title": "Elite", "desc": "Arena mais agressiva", "icon": "boss", "tone": "#b000ff", "reward": { "type": "keys", "amount": 1 } },
-		{ "id": "legendary", "title": "Lendário", "desc": "Recompensa rara e baú especial", "icon": "boss", "tone": "#ffd700", "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
-		{ "id": "impossible", "title": "Impossível", "desc": "Desafio visual máximo", "icon": "boss", "tone": "#ff0055", "reward": { "type": "chest", "chest_type": "epic", "amount": 1 } },
+		{ "id": "normal", "title": _txt("Normal", "Normal", "Normal", "ノーマル", "普通"), "desc": _txt("Daily Boss entry", "Entrada diária do Boss", "Entrada diaria del Boss", "デイリーボス入門", "每日Boss入门"), "icon": "boss", "tone": "#00f0ff", "reward": { "type": "coins", "amount": 220 } },
+		{ "id": "strong", "title": _txt("Strong", "Forte", "Fuerte", "強い", "强力"), "desc": _txt("Boss with higher rotation", "Boss com rotação elevada", "Boss con rotación elevada", "回転が速いボス", "旋转更快的Boss"), "icon": "boss", "tone": "#00ff88", "reward": { "type": "diamonds", "amount": 8 } },
+		{ "id": "elite", "title": _txt("Elite", "Elite", "Élite", "エリート", "精英"), "desc": _txt("More aggressive arena", "Arena mais agressiva", "Arena más agresiva", "より攻撃的なアリーナ", "更激烈的竞技场"), "icon": "boss", "tone": "#b000ff", "reward": { "type": "keys", "amount": 1 } },
+		{ "id": "legendary", "title": _txt("Legendary", "Lendário", "Legendario", "レジェンド", "传奇"), "desc": _txt("Rare reward and special chest", "Recompensa rara e baú especial", "Recompensa rara y cofre especial", "レア報酬と特別な宝箱", "稀有奖励和特殊宝箱"), "icon": "boss", "tone": "#ffd700", "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
+		{ "id": "impossible", "title": _txt("Impossible", "Impossível", "Imposible", "不可能", "不可能"), "desc": _txt("Maximum visual challenge", "Desafio visual máximo", "Desafío visual máximo", "最大級のビジュアルチャレンジ", "最高视觉挑战"), "icon": "boss", "tone": "#ff0055", "reward": { "type": "chest", "chest_type": "epic", "amount": 1 } },
 	]
 
 
@@ -752,8 +750,8 @@ func _populate_achievements() -> void:
 		if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
 			pending_claims += 1
 	_content.add_child(_make_feature_card({
-		"title": "Coletar tudo" if _language() == "pt" else "Claim all",
-		"desc": ("%s conquista(s) prontas para coletar." % pending_claims) if pending_claims > 0 else ("Nenhuma conquista pendente." if _language() == "pt" else "No pending achievements."),
+		"title": _txt("Claim all", "Coletar tudo", "Cobrar todo", "すべて受け取る", "全部领取"),
+		"desc": (_txt("%s achievement reward(s) ready to claim.", "%s conquista(s) prontas para coletar.", "%s recompensa(s) de logro listas para cobrar.", "%s個の実績報酬を受け取れます。", "%s个成就奖励可领取。") % pending_claims) if pending_claims > 0 else _txt("No pending achievements.", "Nenhuma conquista pendente.", "No hay logros pendientes.", "保留中の実績はありません。", "没有待领取成就。"),
 		"icon": "achievements",
 		"button": "claim" if pending_claims > 0 else "done",
 		"tone": "#ffd700",
@@ -780,15 +778,17 @@ func _populate_achievements() -> void:
 
 
 func _localized_definition_title(definition: Dictionary) -> String:
-	return String(definition.get("title_pt", definition.get("title", ""))) if _language() == "pt" else String(definition.get("title", ""))
+	if _language() == "pt":
+		return String(definition.get("title_pt", definition.get("title", "")))
+	return _phrase(String(definition.get("title", "")))
 
 
 func _localized_achievement_name(achievement: Dictionary) -> String:
-	return String(achievement.get("name_pt", achievement.get("name", ""))) if _language() == "pt" else String(achievement.get("name", ""))
+	return LocalizationManager.achievement_name(achievement) if has_node("/root/LocalizationManager") else String(achievement.get("name", ""))
 
 
 func _localized_achievement_desc(achievement: Dictionary) -> String:
-	return String(achievement.get("desc_pt", achievement.get("desc", ""))) if _language() == "pt" else String(achievement.get("desc", ""))
+	return LocalizationManager.achievement_desc(achievement) if has_node("/root/LocalizationManager") else String(achievement.get("desc", ""))
 
 
 func _handle_action(action: String) -> void:
@@ -959,6 +959,8 @@ func _play_sfx(path: String) -> void:
 
 
 func _language() -> String:
+	if has_node("/root/LocalizationManager"):
+		return LocalizationManager.current_language()
 	return String(GameState.get_setting("language", "en"))
 
 
@@ -966,6 +968,55 @@ func _tr(key: String, fallback := "") -> String:
 	if has_node("/root/LocalizationManager"):
 		return LocalizationManager.tr_key(key, fallback)
 	return fallback if not fallback.is_empty() else key
+
+
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
+
+
+func _phrase(value: String) -> String:
+	match value:
+		"Pacote inicial": return _txt("Starter Pack", "Pacote inicial", "Paquete inicial", "スターターパック", "新手礼包")
+		"Moedas, diamantes e chaves para acelerar o começo.": return _txt("Coins, diamonds and keys to speed up the start.", "Moedas, diamantes e chaves para acelerar o começo.", "Monedas, diamantes y llaves para acelerar el inicio.", "序盤を加速するコイン、ダイヤ、鍵。", "金币、钻石和钥匙，帮助快速开局。")
+		"Diamantes": return _tr("diamonds")
+		"Pacote médio de diamantes para skins e baús.": return _txt("Medium diamond pack for skins and chests.", "Pacote médio de diamantes para skins e baús.", "Paquete mediano de diamantes para skins y cofres.", "スキンと宝箱用の中型ダイヤパック。", "用于皮肤和宝箱的中型钻石礼包。")
+		"Baús": return _tr("chests")
+		"Pacote visual com baús comum, raro e épico.": return _txt("Visual pack with common, rare and epic chests.", "Pacote visual com baús comum, raro e épico.", "Paquete visual con cofres común, raro y épico.", "コモン、レア、エピック宝箱のビジュアルパック。", "包含普通、稀有和史诗宝箱的视觉礼包。")
+		"Recompensa por anúncio": return _txt("Ad Reward", "Recompensa por anúncio", "Recompensa por anuncio", "広告報酬", "广告奖励")
+		"Assista um anúncio mockado para ganhar moedas.": return _txt("Watch a mock ad to earn coins.", "Assista um anúncio mockado para ganhar moedas.", "Mira un anuncio simulado para ganar monedas.", "モック広告を見てコインを獲得。", "观看模拟广告获得金币。")
+		"Oferta especial": return _txt("Special Offer", "Oferta especial", "Oferta especial", "特別オファー", "特别优惠")
+		"Bundle visual temporário preparado para eventos.": return _txt("Temporary visual bundle prepared for events.", "Bundle visual temporário preparado para eventos.", "Bundle visual temporal preparado para eventos.", "イベント用の一時ビジュアルバンドル。", "为活动准备的临时视觉礼包。")
+		"Inventário vazio": return _tr("inventory_empty")
+		"Nenhuma missão disponível": return _txt("No missions available", "Nenhuma missão disponível", "No hay misiones disponibles", "利用可能なミッションはありません", "暂无可用任务")
+		"Nenhum evento ativo": return _txt("No active event", "Nenhum evento ativo", "No hay evento activo", "開催中のイベントはありません", "暂无活动")
+		"Giro grátis": return _tr("free_spin")
+		"1 giro visual disponível hoje.": return _txt("1 visual spin available today.", "1 giro visual disponível hoje.", "1 giro visual disponible hoy.", "本日1回のビジュアルスピンが利用可能。", "今日可进行1次视觉转盘。")
+		"Prêmios": return _tr("rewards")
+		"Moedas, diamantes, chaves, baús e efeitos.": return _txt("Coins, diamonds, keys, chests and effects.", "Moedas, diamantes, chaves, baús e efeitos.", "Monedas, diamantes, llaves, cofres y efectos.", "コイン、ダイヤ、鍵、宝箱、効果。", "金币、钻石、钥匙、宝箱和效果。")
+		"Nenhum boss disponível": return _txt("No boss available", "Nenhum boss disponível", "No hay Boss disponible", "利用可能なボスはいません", "暂无可挑战Boss")
+		"Liga indisponível": return _txt("League unavailable", "Liga indisponível", "Liga no disponible", "リーグ利用不可", "联赛不可用")
+		"Nenhuma conquista desbloqueada": return _txt("No achievement unlocked", "Nenhuma conquista desbloqueada", "Ningún logro desbloqueado", "解除済み実績はありません", "暂无已解锁成就")
+		"Baú Comum": return _txt("Common Chest", "Baú Comum", "Cofre Común", "コモン宝箱", "普通宝箱")
+		"Baú Raro": return _txt("Rare Chest", "Baú Raro", "Cofre Raro", "レア宝箱", "稀有宝箱")
+		"Baú Épico": return _txt("Epic Chest", "Baú Épico", "Cofre Épico", "エピック宝箱", "史诗宝箱")
+		"Baú Lendário": return _txt("Legendary Chest", "Baú Lendário", "Cofre Legendario", "レジェンド宝箱", "传奇宝箱")
+		"Recompensas básicas, moedas e chance de skin comum.": return _txt("Basic rewards, coins and common skin chance.", "Recompensas básicas, moedas e chance de skin comum.", "Recompensas básicas, monedas y probabilidad de skin común.", "基本報酬、コイン、コモンスキンのチャンス。", "基础奖励、金币和普通皮肤概率。")
+		"Chance maior de diamantes, itens raros e efeitos.": return _txt("Higher chance of diamonds, rare items and effects.", "Chance maior de diamantes, itens raros e efeitos.", "Mayor probabilidad de diamantes, objetos raros y efectos.", "ダイヤ、レアアイテム、効果の確率が高い。", "更高概率获得钻石、稀有物品和效果。")
+		"Recompensas melhores e chance de skins épicas.": return _txt("Better rewards and epic skin chance.", "Recompensas melhores e chance de skins épicas.", "Mejores recompensas y probabilidad de skins épicas.", "より良い報酬とエピックスキンのチャンス。", "更好奖励和史诗皮肤概率。")
+		"Skins lendárias, diamantes e itens especiais.": return _txt("Legendary skins, diamonds and special items.", "Skins lendárias, diamantes e itens especiais.", "Skins legendarias, diamantes y objetos especiales.", "レジェンドスキン、ダイヤ、特別アイテム。", "传奇皮肤、钻石和特殊物品。")
+		"Pacote pequeno de diamantes": return _txt("Small Diamond Pack", "Pacote pequeno de diamantes", "Paquete pequeño de diamantes", "小ダイヤパック", "小钻石礼包")
+		"Pacote médio de diamantes": return _txt("Medium Diamond Pack", "Pacote médio de diamantes", "Paquete mediano de diamantes", "中ダイヤパック", "中钻石礼包")
+		"Oferta diária": return _txt("Daily Offer", "Oferta diária", "Oferta diaria", "デイリーオファー", "每日优惠")
+		"Diamantes grátis": return _txt("Free Diamonds", "Diamantes grátis", "Diamantes gratis", "無料ダイヤ", "免费钻石")
+		"Recompensa mockada por anúncio.": return _txt("Mock ad reward.", "Recompensa mockada por anúncio.", "Recompensa simulada por anuncio.", "モック広告報酬。", "模拟广告奖励。")
+		"Pacote de chaves": return _txt("Key Pack", "Pacote de chaves", "Paquete de llaves", "鍵パック", "钥匙礼包")
+		"Chaves lendárias": return _txt("Legendary Keys", "Chaves lendárias", "Llaves legendarias", "レジェンド鍵", "传奇钥匙")
+		"Chave grátis": return _txt("Free Key", "Chave grátis", "Llave gratis", "無料鍵", "免费钥匙")
+		"Moedas grátis": return _txt("Free Coins", "Moedas grátis", "Monedas gratis", "無料コイン", "免费金币")
+		"Baú comum grátis": return _txt("Free Common Chest", "Baú comum grátis", "Cofre común gratis", "無料コモン宝箱", "免费普通宝箱")
+		"Dobrar offline": return _txt("Double Offline", "Dobrar offline", "Duplicar offline", "オフライン2倍", "离线翻倍")
+		"Preparado para dobrar recompensas AFK.": return _txt("Prepared to double AFK rewards.", "Preparado para dobrar recompensas AFK.", "Preparado para duplicar recompensas AFK.", "AFK報酬2倍用に準備済み。", "已准备离线奖励翻倍。")
+	return LocalizationManager.phrase(value) if has_node("/root/LocalizationManager") else value
 
 
 func _button_text(key: String) -> String:
@@ -1018,65 +1069,37 @@ func _failure_label(reason: String) -> String:
 
 
 func _screen_title() -> String:
-	if _language() == "pt":
-		match screen_id:
-			"shop": return "LOJA"
-			"inventory": return "INVENTÁRIO"
-			"missions": return "MISSÕES"
-			"event": return "EVENTO"
-			"wheel": return "ROLETA"
-			"daily_reward": return "RECOMPENSA DIÁRIA"
-			"boss": return "BOSS"
-			"league": return "LIGA NEON"
-			"achievements": return "CONQUISTAS"
-	else:
-		match screen_id:
-			"shop": return "SHOP"
-			"inventory": return "INVENTORY"
-			"missions": return "MISSIONS"
-			"event": return "EVENT"
-			"wheel": return "WHEEL"
-			"daily_reward": return "DAILY REWARD"
-			"boss": return "BOSS"
-			"league": return "NEON LEAGUE"
-			"achievements": return "ACHIEVEMENTS"
-	return String(SCREEN_DATA.get(screen_id, {}).get("title", screen_id)).to_upper()
+	match screen_id:
+		"shop": return _tr("shop").to_upper()
+		"inventory": return _tr("inventory").to_upper()
+		"missions": return _tr("missions").to_upper()
+		"event": return _tr("event").to_upper()
+		"wheel": return _tr("wheel").to_upper()
+		"daily_reward": return _tr("daily_reward").to_upper()
+		"boss": return _tr("boss").to_upper()
+		"league": return _tr("league").to_upper()
+		"achievements": return _tr("achievements").to_upper()
+	return _phrase(String(SCREEN_DATA.get(screen_id, {}).get("title", screen_id))).to_upper()
 
 
 func _shop_tab_label(id: String, fallback: String) -> String:
-	if _language() == "pt":
-		match id:
-			"chests": return _tr("chests")
-			"gems": return _tr("diamonds")
-			"keys": return _tr("keys")
-			"specials": return _tr("rewards")
-			"free": return _tr("free_chest")
-		return fallback
 	match id:
-		"chests": return "Chests"
-		"gems": return "Diamonds"
-		"keys": return "Keys"
-		"specials": return "Rewards"
-		"free": return "Free Chest"
-	return fallback
+		"chests": return _tr("chests")
+		"gems": return _tr("diamonds")
+		"keys": return _tr("keys")
+		"specials": return _tr("rewards")
+		"free": return _tr("free_chest")
+	return _phrase(fallback)
 
 
 func _shop_section_label(id: String, fallback: String) -> String:
-	if _language() == "en":
-		match id:
-			"chests": return "BUY CHESTS"
-			"gems": return "DIAMOND PACKS"
-			"keys": return "KEYS"
-			"specials": return "SPECIAL OFFERS"
-			"free": return "FREE REWARDS"
-		return fallback
 	match id:
-		"chests": return "COMPRAR BAÚS"
-		"gems": return "PACOTES DE DIAMANTES"
-		"keys": return "CHAVES"
-		"specials": return "OFERTAS ESPECIAIS"
-		"free": return "RECOMPENSAS GRÁTIS"
-	return fallback
+		"chests": return _txt("BUY CHESTS", "COMPRAR BAÚS", "COMPRAR COFRES", "宝箱購入", "购买宝箱")
+		"gems": return _txt("DIAMOND PACKS", "PACOTES DE DIAMANTES", "PAQUETES DE DIAMANTES", "ダイヤパック", "钻石礼包")
+		"keys": return _tr("keys").to_upper()
+		"specials": return _txt("SPECIAL OFFERS", "OFERTAS ESPECIAIS", "OFERTAS ESPECIALES", "特別オファー", "特别优惠")
+		"free": return _txt("FREE REWARDS", "RECOMPENSAS GRÁTIS", "RECOMPENSAS GRATIS", "無料報酬", "免费奖励")
+	return _phrase(fallback)
 
 
 func _make_wheel_visual(data: Dictionary) -> PanelContainer:
@@ -1212,22 +1235,22 @@ func _make_skin_preview(skin_id: String, preview_size: int) -> TextureRect:
 
 func _reward_label(reward: Dictionary) -> String:
 	if reward.has("coins") or reward.has("diamonds") or reward.has("chests") or reward.has("skins"):
-		return "Várias recompensas" if _language() == "pt" else "Multiple rewards"
+		return _txt("Multiple rewards", "Várias recompensas", "Varias recompensas", "複数報酬", "多种奖励")
 	var amount := int(reward.get("amount", 1))
 	match String(reward.get("type", "")):
 		"coins":
-			return "+%s %s" % [amount, "coins" if _language() == "en" else "moedas"]
+			return "+%s %s" % [amount, _txt("coins", "moedas", "monedas", "コイン", "金币")]
 		"diamonds", "gems":
 			return "+%s %s" % [amount, _tr("diamonds")]
 		"keys":
 			return "+%s %s" % [amount, _tr("keys")]
 		"legendaryKeys", "legendary_keys":
-			return "+%s %s" % [amount, "legendary keys" if _language() == "en" else "chaves lendárias"]
+			return "+%s %s" % [amount, _txt("legendary keys", "chaves lendárias", "llaves legendarias", "レジェンド鍵", "传奇钥匙")]
 		"xp", "profileXp", "profile_xp":
 			return "+%s XP" % amount
 		"chest":
 			var chest_type := String(reward.get("chest_type", reward.get("chestType", "common"))).capitalize()
-			return "+%s %s %s" % [amount, chest_type, "Chest" if _language() == "en" else "Baú"]
+			return "+%s %s %s" % [amount, chest_type, _tr("chests")]
 		"skin":
 			var skin_id := String(reward.get("skin_id", reward.get("skinId", "")))
 			var skin := MainPortData.skin_by_id(skin_id) if has_node("/root/MainPortData") else {}
@@ -1236,30 +1259,34 @@ func _reward_label(reward: Dictionary) -> String:
 			var upgrade_id := String(reward.get("upgrade_id", reward.get("upgradeId", reward.get("id", ""))))
 			var upgrade := MainPortData.upgrade_by_id(upgrade_id) if has_node("/root/MainPortData") else {}
 			var upgrade_name := String(upgrade.get("name", upgrade_id))
-			return "Upgrade: %s" % upgrade_name
+			return "%s: %s" % [_t_or_text("Upgrade", "Melhoria", "Mejora", "強化", "升级"), upgrade_name]
 	return String(reward.get("type", "Reward"))
 
 
 func _daily_reward_label(reward: Dictionary) -> String:
 	var parts: Array[String] = []
 	if int(reward.get("coins", 0)) > 0:
-		parts.append("%s moedas" % int(reward.get("coins", 0)) if _language() == "pt" else "%s coins" % int(reward.get("coins", 0)))
+		parts.append("%s %s" % [int(reward.get("coins", 0)), _txt("coins", "moedas", "monedas", "コイン", "金币")])
 	if int(reward.get("xp", 0)) > 0:
 		parts.append("%s XP" % int(reward.get("xp", 0)))
 	if int(reward.get("diamonds", 0)) > 0:
-		parts.append("%s diamantes" % int(reward.get("diamonds", 0)) if _language() == "pt" else "%s diamonds" % int(reward.get("diamonds", 0)))
+		parts.append("%s %s" % [int(reward.get("diamonds", 0)), _tr("diamonds")])
 	if int(reward.get("keys", 0)) > 0:
-		parts.append("%s chaves" % int(reward.get("keys", 0)) if _language() == "pt" else "%s keys" % int(reward.get("keys", 0)))
+		parts.append("%s %s" % [int(reward.get("keys", 0)), _tr("keys")])
 	if reward.has("chest_type"):
-		parts.append("baú %s" % String(reward.get("chest_type", "rare")) if _language() == "pt" else "%s chest" % String(reward.get("chest_type", "rare")))
+		parts.append("%s %s" % [String(reward.get("chest_type", "rare")), _tr("chests")])
 	return ", ".join(parts)
 
 
 func _skin_reward_status(reward: Dictionary) -> String:
 	if reward.has("converted_from_skin"):
-		return "Duplicate skin • Converted to diamonds" if _language() == "en" else "Skin repetida • Convertida em diamantes"
+		return _txt("Duplicate skin • Converted to diamonds", "Skin repetida • Convertida em diamantes", "Skin duplicada • Convertida en diamantes", "重複スキン • ダイヤに変換", "重复皮肤 • 已转为钻石")
 	var rarity := String(reward.get("rarity", "common")).capitalize()
-	return "%s • %s" % ["New skin unlocked" if _language() == "en" else "Nova skin desbloqueada", rarity]
+	return "%s • %s" % [_txt("New skin unlocked", "Nova skin desbloqueada", "Nueva skin desbloqueada", "新スキン解除", "新皮肤已解锁"), rarity]
+
+
+func _t_or_text(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return _txt(en, pt, es, ja, zh)
 
 
 func _skin_reward_color(reward: Dictionary) -> String:

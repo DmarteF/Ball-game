@@ -886,6 +886,10 @@ func _save_settings() -> void:
 		AudioManager.apply_audio_settings()
 
 
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
+
+
 func _t(key: String) -> String:
 	var pt := _language.begins_with("pt")
 	var es := _language.begins_with("es")
@@ -901,18 +905,18 @@ func _t(key: String) -> String:
 		"language": return "IDIOMA" if pt else "IDIOMA" if es else "言語" if ja else "语言" if zh else "LANGUAGE"
 		"choose_language": return "Escolha o idioma da interface." if pt else "Elige el idioma de la interfaz." if es else "インターフェースの言語を選択します。" if ja else "选择界面语言。" if zh else "Choose the interface language."
 		"about": return "SOBRE" if pt else "ACERCA DE" if es else "情報" if ja else "关于" if zh else "ABOUT"
-		"about_text": return "Versão Godot 4 em migração fiel, mantendo o visual neon, controles mobile e estrutura preparada para Web." if pt else "Godot 4 faithful migration, keeping the neon look, mobile controls and Web-ready structure."
-		"save_progress": return "SAVE / PROGRESSO" if pt else "SAVE / PROGRESS"
-		"save_help": return "Exporte, importe ou restaure seu progresso com segurança. A importação cria backup automático antes de substituir o save atual." if pt else "Export, import or restore your progress safely. Import creates an automatic backup before replacing the current save."
-		"export_save": return "Exportar Save" if pt else "Export Save"
-		"import_save": return "Importar Save" if pt else "Import Save"
-		"copy_save": return "Copiar Código do Save" if pt else "Copy Save Code"
-		"paste_save": return "Colar Código do Save" if pt else "Paste Save Code"
-		"reset_progress": return "Resetar Progresso" if pt else "Reset Progress"
+		"about_text": return _txt("Godot 4 faithful migration, keeping the neon look, mobile controls and Web-ready structure.", "Versão Godot 4 em migração fiel, mantendo o visual neon, controles mobile e estrutura preparada para Web.", "Migración fiel a Godot 4, manteniendo el visual neon, controles móviles y estructura lista para Web.", "Godot 4への忠実な移行版。ネオン演出、モバイル操作、Web対応構成を維持しています。", "Godot 4忠实迁移版，保留霓虹视觉、移动控制和Web就绪结构。")
+		"save_progress": return _txt("SAVE / PROGRESS", "SAVE / PROGRESSO", "SAVE / PROGRESO", "セーブ / 進行", "存档 / 进度")
+		"save_help": return _txt("Export, import or restore your progress safely. Import creates an automatic backup before replacing the current save.", "Exporte, importe ou restaure seu progresso com segurança. A importação cria backup automático antes de substituir o save atual.", "Exporta, importa o restaura tu progreso con seguridad. La importación crea un backup automático antes de reemplazar el save actual.", "進行状況を安全にエクスポート、インポート、復元できます。インポート前に自動バックアップを作成します。", "安全导出、导入或恢复进度。导入前会自动备份当前存档。")
+		"export_save": return _txt("Export Save", "Exportar Save", "Exportar Save", "セーブをエクスポート", "导出存档")
+		"import_save": return _txt("Import Save", "Importar Save", "Importar Save", "セーブをインポート", "导入存档")
+		"copy_save": return _txt("Copy Save Code", "Copiar Código do Save", "Copiar Código del Save", "セーブコードをコピー", "复制存档代码")
+		"paste_save": return _txt("Paste Save Code", "Colar Código do Save", "Pegar Código del Save", "セーブコードを貼り付け", "粘贴存档代码")
+		"reset_progress": return _txt("Reset Progress", "Resetar Progresso", "Resetear Progreso", "進行をリセット", "重置进度")
 		"export_ready": return "Código do save gerado. Copie o texto abaixo e guarde em local seguro." if pt else "Save code generated. Copy the text below and keep it somewhere safe."
 		"saved_file": return "Arquivo local" if pt else "Local file"
-		"copy_done": return "Código copiado para a área de transferência quando disponível. Se o navegador bloquear, copie pelo campo abaixo." if pt else "Code copied to clipboard when available. If the browser blocks it, copy it from the field below."
-		"paste_help": return "Cole o JSON/código do save abaixo. O jogo validará antes de substituir seu progresso." if pt else "Paste the save JSON/code below. The game will validate it before replacing your progress."
+		"copy_done": return _txt("Code copied to clipboard when available. If the browser blocks it, copy it from the field below.", "Código copiado para a área de transferência quando disponível. Se o navegador bloquear, copie pelo campo abaixo.", "Código copiado al portapapeles cuando esté disponible. Si el navegador lo bloquea, copia desde el campo de abajo.", "利用可能な場合はクリップボードにコピーしました。ブラウザがブロックした場合は下の欄からコピーしてください。", "可用时已复制到剪贴板。如浏览器阻止，请从下方字段复制。")
+		"paste_help": return _txt("Paste the save JSON/code below. The game will validate it before replacing your progress.", "Cole o JSON/código do save abaixo. O jogo validará antes de substituir seu progresso.", "Pega el JSON/código del save abajo. El juego lo validará antes de reemplazar tu progreso.", "セーブJSON/コードを下に貼り付けてください。置換前に検証します。", "请在下方粘贴存档JSON/代码。游戏会先验证再替换进度。")
 		"validate_import": return "Validar Importação" if pt else "Validate Import"
 		"import_confirm": return "Save válido encontrado. Confirme para substituir o progresso atual. Um backup automático será criado antes." if pt else "Valid save found. Confirm to replace current progress. An automatic backup will be created first."
 		"confirm_import": return "Confirmar Importação" if pt else "Confirm Import"
@@ -938,20 +942,20 @@ func _t(key: String) -> String:
 		"debug_clear_save": return "Limpar save" if pt else "Clear save"
 		"debug_test_done": return "Recursos de teste adicionados." if pt else "Test resources added."
 		"debug_unlock_done": return "Conteúdo desbloqueado no save de debug." if pt else "Content unlocked in debug save."
-		"debug_mode": return "MODO DEBUG" if pt else "DEBUG MODE"
-		"debug_enabled_toast": return "Debug ativado" if pt else "Debug enabled"
-		"debug_disabled_toast": return "Debug desativado" if pt else "Debug disabled"
+		"debug_mode": return _txt("DEBUG MODE", "MODO DEBUG", "MODO DEBUG", "デバッグモード", "调试模式")
+		"debug_enabled_toast": return _txt("Debug enabled", "Debug ativado", "Debug activado", "デバッグ有効", "调试已启用")
+		"debug_disabled_toast": return _txt("Debug disabled", "Debug desativado", "Debug desactivado", "デバッグ無効", "调试已停用")
 		"debug_already_enabled": return "Debug já está ativo" if pt else "Debug already enabled"
 		"debug_done": return "Ação debug aplicada" if pt else "Debug action applied"
 		"debug_confirm_body": return "Esta ação altera bastante o progresso. Confirmar?" if pt else "This action changes progress significantly. Confirm?"
 		"fps": return "FPS" if pt else "FPS"
-		"active_rings": return "Anéis ativos" if pt else "Active rings"
-		"active_particles": return "Partículas ativas" if pt else "Active particles"
-		"current_mode": return "Modo atual" if pt else "Current mode"
-		"equipped_skin": return "Skin equipada" if pt else "Equipped skin"
-		"current_music": return "Música atual" if pt else "Current music"
-		"build_version": return "Versão do build" if pt else "Build version"
-		"seed": return "Seed roleta/desafio" if pt else "Wheel/daily seed"
+		"active_rings": return _txt("Active rings", "Anéis ativos", "Anillos activos", "アクティブリング", "活跃圆环")
+		"active_particles": return _txt("Active particles", "Partículas ativas", "Partículas activas", "アクティブ粒子", "活跃粒子")
+		"current_mode": return _txt("Current mode", "Modo atual", "Modo actual", "現在のモード", "当前模式")
+		"equipped_skin": return _txt("Equipped skin", "Skin equipada", "Skin equipada", "装備中スキン", "已装备皮肤")
+		"current_music": return _txt("Current music", "Música atual", "Música actual", "現在の音楽", "当前音乐")
+		"build_version": return _txt("Build version", "Versão do build", "Versión del build", "ビルド版", "构建版本")
+		"seed": return _txt("Wheel/daily seed", "Seed roleta/desafio", "Seed ruleta/desafío", "ルーレット/デイリーSeed", "转盘/每日种子")
 		"add_1k_coins": return "+1.000 moedas" if pt else "+1,000 coins"
 		"add_10k_coins": return "+10.000 moedas" if pt else "+10,000 coins"
 		"add_100_diamonds": return "+100 diamantes" if pt else "+100 diamonds"

@@ -190,14 +190,14 @@ func _prepare_match() -> void:
 	_rival = _make_arena("rival", String(_opponent.get("name", "Rival")), String(rival_skin.get("id", "neon_blue")), float(_opponent.get("quality", 0.45)), true)
 	_player = _make_arena("player", String(GameState.data.get("nickname", "Voce")), String(GameState.data.get("equipped_skin", "neon_blue")), 1.0, false)
 	_layout_arenas()
-	_status_label.text = "BOSS %s" % _boss_level_id.to_upper() if _battle_kind == "boss" else "LIGA %s" % String(rank.get("name", "Bronze")).to_upper()
-	_meta_label.text = "Duelo diario - %s" % String(_opponent.get("name", "Boss")) if _battle_kind == "boss" else "Temporada %s - %s trofeus" % [TimeManager.get_month_key(), trophies]
+	_status_label.text = "BOSS %s" % _boss_level_id.to_upper() if _battle_kind == "boss" else "%s %s" % [_tr("league").to_upper(), String(rank.get("name", "Bronze")).to_upper()]
+	_meta_label.text = _txt("Daily duel - %s", "Duelo diário - %s", "Duelo diario - %s", "デイリー決闘 - %s", "每日对决 - %s") % String(_opponent.get("name", "Boss")) if _battle_kind == "boss" else _txt("Season %s - %s trophies", "Temporada %s - %s troféus", "Temporada %s - %s trofeos", "シーズン%s - %sトロフィー", "赛季%s - %s奖杯") % [TimeManager.get_month_key(), trophies]
 	_hide_overlays()
 	if _result_double_button:
-		_result_double_button.text = "DOBRAR RECOMPENSA - AD"
+		_result_double_button.text = _txt("DOUBLE REWARD - AD", "DOBRAR RECOMPENSA - AD", "DUPLICAR RECOMPENSA - ANUNCIO", "報酬2倍 - 広告", "奖励翻倍 - 广告")
 		_result_double_button.disabled = false
 	if _result_retry_button:
-		_result_retry_button.text = "VOLTAR AO BOSS" if _battle_kind == "boss" else "JOGAR NOVAMENTE"
+		_result_retry_button.text = _txt("BACK TO BOSS", "VOLTAR AO BOSS", "VOLVER AL BOSS", "ボスに戻る", "返回Boss") if _battle_kind == "boss" else _txt("PLAY AGAIN", "JOGAR NOVAMENTE", "JUGAR DE NUEVO", "もう一度プレイ", "再玩一次")
 	_update_status()
 	_update_run_upgrade_buttons()
 	queue_redraw()
@@ -727,7 +727,7 @@ func _render_player_upgrade_choices() -> void:
 	for child in _level_up_cards.get_children():
 		child.queue_free()
 	if _current_upgrade_choices.is_empty():
-		_level_up_cards.add_child(_make_label("Todas as melhorias chegaram ao limite.", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		_level_up_cards.add_child(_make_label(_txt("All upgrades reached their limit.", "Todas as melhorias chegaram ao limite.", "Todas las mejoras llegaron al límite.", "すべての強化が上限です。", "所有升级已达上限。"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
 		for upgrade in _current_upgrade_choices:
 			var id := String(upgrade.get("id", ""))
@@ -1247,9 +1247,9 @@ func _finish_match(result: String, reason: String = "") -> void:
 
 func _show_result(summary: Dictionary) -> void:
 	if _battle_kind == "boss":
-		_result_title.text = "BOSS DERROTADO" if _winner == "win" else "DERROTA NO BOSS" if _winner == "loss" else "SAIDA DO BOSS"
+		_result_title.text = _txt("BOSS DEFEATED", "BOSS DERROTADO", "BOSS DERROTADO", "ボス撃破", "Boss已击败") if _winner == "win" else _txt("BOSS DEFEAT", "DERROTA NO BOSS", "DERROTA ANTE BOSS", "ボス敗北", "Boss战失败") if _winner == "loss" else _txt("LEFT BOSS", "SAÍDA DO BOSS", "SALIDA DEL BOSS", "ボス退出", "退出Boss")
 	else:
-		_result_title.text = "VITORIA NEON" if _winner == "win" else "DERROTA NEON" if _winner == "loss" else "SAIDA DA LIGA"
+		_result_title.text = _txt("NEON VICTORY", "VITÓRIA NEON", "VICTORIA NEON", "ネオン勝利", "霓虹胜利") if _winner == "win" else _txt("NEON DEFEAT", "DERROTA NEON", "DERROTA NEON", "ネオン敗北", "霓虹失败") if _winner == "loss" else _txt("LEFT LEAGUE", "SAÍDA DA LIGA", "SALIDA DE LIGA", "リーグ退出", "退出联赛")
 	for child in _result_details.get_children():
 		child.queue_free()
 	_result_details.add_child(_make_result_line("Tempo", "%ss" % int(summary.get("seconds", 0))))
@@ -1268,7 +1268,7 @@ func _show_result(summary: Dictionary) -> void:
 	else:
 		_result_details.add_child(_make_result_line("Trofeus", "%+d" % int(_result_reward.get("trophy_delta", 0))))
 		if not String(_result_reward.get("promotion_skin", "")).is_empty():
-			_result_details.add_child(_make_label("Skin desbloqueada: Campeao Neon Inicial", 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+			_result_details.add_child(_make_label(_txt("Skin unlocked: Starter Neon Champion", "Skin desbloqueada: Campeão Neon Inicial", "Skin desbloqueada: Campeón Neon Inicial", "スキン解除: スターターネオンチャンピオン", "皮肤解锁：初始霓虹冠军"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if _result_double_button:
 		_result_double_button.visible = _winner != "quit"
 		_result_double_button.disabled = _result_doubled
@@ -1297,7 +1297,7 @@ func _double_result_reward() -> void:
 		_result_reward["diamonds"] = diamonds * 2
 		if _result_double_button:
 			_result_double_button.disabled = true
-			_result_double_button.text = "RECOMPENSA DOBRADA"
+			_result_double_button.text = _txt("REWARD DOUBLED", "RECOMPENSA DOBRADA", "RECOMPENSA DUPLICADA", "報酬2倍", "奖励已翻倍")
 		_show_result({ "seconds": floori(_elapsed) })
 	)
 
@@ -1431,13 +1431,13 @@ func _build_hud() -> void:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)
 	hud.add_child(top)
-	var pause := _make_button("PAUSAR", 96, 40)
+	var pause := _make_button(_txt("PAUSE", "PAUSAR", "PAUSA", "一時停止", "暂停"), 96, 40)
 	pause.pressed.connect(_open_pause)
 	top.add_child(pause)
 	var title_box := VBoxContainer.new()
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title_box)
-	_status_label = _make_label("LIGA NEON", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	_status_label = _make_label(_tr("league").to_upper(), 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
 	title_box.add_child(_status_label)
 	_meta_label = _make_label("", 11, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
 	title_box.add_child(_meta_label)
@@ -1516,7 +1516,7 @@ func _build_control_overlay() -> void:
 	var center := VBoxContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
-	_control_indicator = _make_label("CONTROLE", 11, "#00f0ffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_control_indicator = _make_label(_txt("CONTROL", "CONTROLE", "CONTROL", "操作", "控制"), 11, "#00f0ffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_control_indicator.add_theme_color_override("font_shadow_color", Color("#00f0ff77"))
 	_control_indicator.add_theme_constant_override("shadow_offset_x", 0)
 	_control_indicator.add_theme_constant_override("shadow_offset_y", 0)
@@ -1532,8 +1532,8 @@ func _build_control_overlay() -> void:
 
 func _build_pause_overlay() -> void:
 	_pause_overlay = _make_modal()
-	var card := _make_modal_content(_pause_overlay, "PAUSA", Vector2(320, 250))
-	card.add_child(_make_modal_button("CONTINUAR", _close_pause))
+	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"), Vector2(320, 250))
+	card.add_child(_make_modal_button(_tr("continue").to_upper(), _close_pause))
 	card.add_child(_make_modal_button("REINICIAR DUELO", _prepare_match))
 	card.add_child(_make_modal_button("SAIR", _quit_match))
 	add_child(_pause_overlay)
@@ -1543,7 +1543,7 @@ func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
 	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(326, 438))
 	card.add_theme_constant_override("separation", 8)
-	card.add_child(_make_label("Escolha uma melhoria para sua arena.", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	card.add_child(_make_label(_txt("Choose an upgrade for your arena.", "Escolha uma melhoria para sua arena.", "Elige una mejora para tu arena.", "自分のアリーナ強化を選択。", "为你的竞技场选择升级。"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
 	_level_up_cards.add_theme_constant_override("separation", 6)
 	card.add_child(_level_up_cards)
@@ -1555,17 +1555,17 @@ func _build_level_up_overlay() -> void:
 
 func _build_result_overlay() -> void:
 	_result_overlay = _make_modal()
-	var card := _make_modal_content(_result_overlay, "RESULTADO", Vector2(334, 420))
+	var card := _make_modal_content(_result_overlay, _txt("RESULT", "RESULTADO", "RESULTADO", "結果", "结果"), Vector2(334, 420))
 	_result_title = _make_label("", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	card.add_child(_result_title)
 	_result_details = VBoxContainer.new()
 	_result_details.add_theme_constant_override("separation", 8)
 	card.add_child(_result_details)
-	_result_double_button = _make_modal_button("DOBRAR RECOMPENSA - AD", _double_result_reward)
+	_result_double_button = _make_modal_button(_txt("DOUBLE REWARD - AD", "DOBRAR RECOMPENSA - AD", "DUPLICAR RECOMPENSA - ANUNCIO", "報酬2倍 - 広告", "奖励翻倍 - 广告"), _double_result_reward)
 	card.add_child(_result_double_button)
-	_result_retry_button = _make_modal_button("JOGAR NOVAMENTE", _retry_or_return)
+	_result_retry_button = _make_modal_button(_txt("PLAY AGAIN", "JOGAR NOVAMENTE", "JUGAR DE NUEVO", "もう一度プレイ", "再玩一次"), _retry_or_return)
 	card.add_child(_result_retry_button)
-	card.add_child(_make_modal_button("VOLTAR", _go_to_mode_menu))
+	card.add_child(_make_modal_button(_tr("back").to_upper(), _go_to_mode_menu))
 	card.add_child(_make_modal_button("MENU", _go_to_menu))
 	add_child(_result_overlay)
 
@@ -1573,7 +1573,7 @@ func _build_result_overlay() -> void:
 func _build_revive_overlay() -> void:
 	_revive_overlay = _make_modal()
 	var card := _make_modal_content(_revive_overlay, "REVIVER", Vector2(326, 260))
-	card.add_child(_make_label("Sua bolinha foi presa. Assista um anuncio mockado para continuar esta luta.", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	card.add_child(_make_label(_txt("Your ball was trapped. Watch a mock ad to continue this fight.", "Sua bolinha foi presa. Assista um anúncio mockado para continuar esta luta.", "Tu bola quedó atrapada. Mira un anuncio simulado para continuar esta pelea.", "ボールが閉じ込められました。モック広告で続行できます。", "你的小球被困住了。观看模拟广告继续战斗。"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	card.add_child(_make_modal_button("REVIVER COM ANUNCIO", _revive_with_ad))
 	card.add_child(_make_modal_button("ACEITAR DERROTA", _accept_loss))
 	add_child(_revive_overlay)
@@ -1673,11 +1673,11 @@ func _refresh_control_input() -> void:
 func _update_status() -> void:
 	if _player.is_empty() or _rival.is_empty():
 		return
-	_player_label.text = "VOCE - Lv.%s - %s aneis - %s moedas" % [int(_player.get("level", 1)), int(_player.get("rings_destroyed", 0)), int(_player.get("coins", 0))]
-	_rival_label.text = "%s - Lv.%s - %s aneis" % [String(_rival.get("label", "Rival")).to_upper(), int(_rival.get("level", 1)), int(_rival.get("rings_destroyed", 0))]
+	_player_label.text = "%s - Lv.%s - %s %s - %s %s" % [_txt("YOU", "VOCÊ", "TÚ", "あなた", "你"), int(_player.get("level", 1)), int(_player.get("rings_destroyed", 0)), _txt("rings", "anéis", "anillos", "リング", "圆环"), int(_player.get("coins", 0)), _txt("coins", "moedas", "monedas", "コイン", "金币")]
+	_rival_label.text = "%s - Lv.%s - %s %s" % [String(_rival.get("label", "Rival")).to_upper(), int(_rival.get("level", 1)), int(_rival.get("rings_destroyed", 0)), _txt("rings", "anéis", "anillos", "リング", "圆环")]
 	if _meta_label:
 		var remaining: int = max(0, ceili(MATCH_LIMIT_SECONDS - _elapsed))
-		_meta_label.text = "TEMPO %s   VOCE %s x %s RIVAL" % [_format_time(remaining), int(_player.get("rings_destroyed", 0)), int(_rival.get("rings_destroyed", 0))]
+		_meta_label.text = "%s   %s %s x %s %s" % [_txt("TIME %s", "TEMPO %s", "TIEMPO %s", "時間 %s", "时间 %s") % _format_time(remaining), _txt("YOU", "VOCÊ", "TÚ", "あなた", "你"), int(_player.get("rings_destroyed", 0)), int(_rival.get("rings_destroyed", 0)), _txt("RIVAL", "RIVAL", "RIVAL", "ライバル", "对手")]
 	_set_resource_value("coins", int(_player.get("coins", 0)))
 	_set_resource_value("gems", int(_player.get("diamonds", 0)))
 	_set_resource_value("xp_total", int(_player.get("total_xp", 0)))
@@ -1695,8 +1695,8 @@ func _update_run_upgrade_buttons() -> void:
 		return
 	var atk_cost := _get_run_upgrade_cost(_player, "atk")
 	var gold_cost := _get_run_upgrade_cost(_player, "gold")
-	_run_atk_button.text = "ATK Lv.%s\n%s MOEDAS" % [int(_player.get("atk", 0)), atk_cost]
-	_run_gold_button.text = "GOLD Lv.%s\n%s MOEDAS" % [int(_player.get("gold", 0)), gold_cost]
+	_run_atk_button.text = "ATK Lv.%s\n%s %s" % [int(_player.get("atk", 0)), atk_cost, _txt("COINS", "MOEDAS", "MONEDAS", "コイン", "金币")]
+	_run_gold_button.text = "GOLD Lv.%s\n%s %s" % [int(_player.get("gold", 0)), gold_cost, _txt("COINS", "MOEDAS", "MONEDAS", "コイン", "金币")]
 	_run_atk_button.disabled = int(_player.get("coins", 0)) < atk_cost or _finished
 	_run_gold_button.disabled = int(_player.get("coins", 0)) < gold_cost or _finished
 
@@ -1711,7 +1711,7 @@ func _update_control_overlay() -> void:
 		_control_right_down = false
 		_control_input = 0.0
 	if _control_indicator:
-		_control_indicator.text = "CONTROLE %s%%" % roundi(float(_player.get("control_strength", 0.0)) * 100.0)
+		_control_indicator.text = _txt("CONTROL %s%%", "CONTROLE %s%%", "CONTROL %s%%", "操作 %s%%", "控制 %s%%") % roundi(float(_player.get("control_strength", 0.0)) * 100.0)
 
 
 func _format_time(seconds: int) -> String:
@@ -1914,6 +1914,14 @@ func _make_button(text: String, width: int, height: int) -> Button:
 	button.add_theme_color_override("font_disabled_color", Color("#ffffff66"))
 	_apply_button_style(button, _make_style("#06162add", 13, "#00f0ffaa", 2, "#00f0ff66", 8))
 	return button
+
+
+func _tr(key: String, fallback := "") -> String:
+	return LocalizationManager.tr_key(key, fallback) if has_node("/root/LocalizationManager") else (fallback if not fallback.is_empty() else key)
+
+
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
 
 
 func _make_label(text: String, font_size: int, color: String, font: Font, alignment: HorizontalAlignment) -> Label:

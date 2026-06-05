@@ -80,7 +80,7 @@ func _build_screen() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 
-	root.add_child(_make_label("UPGRADES PERMANENTES", 24 if _is_narrow_screen() else 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	root.add_child(_make_label(_loc("UPGRADES PERMANENTES"), 24 if _is_narrow_screen() else 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	NeonBackButtonScript.add_to(self, _go_back)
 	root.add_child(_make_resource_display())
 	_feedback_label = _make_label("", 13, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
@@ -98,7 +98,7 @@ func _build_screen() -> void:
 	list.add_theme_constant_override("separation", 16)
 	scroll.add_child(list)
 	list.add_child(_make_upgrade_summary())
-	list.add_child(_make_label("MELHORIAS DISPONIVEIS", 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	list.add_child(_make_label(_loc("MELHORIAS DISPONIVEIS"), 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var visible_upgrades := _visible_permanent_upgrade_list()
 	if visible_upgrades.is_empty():
 		list.add_child(_make_empty_upgrade_message())
@@ -154,7 +154,7 @@ func _make_empty_upgrade_message() -> PanelContainer:
 	margin.add_theme_constant_override("margin_right", 16)
 	margin.add_theme_constant_override("margin_bottom", 18)
 	card.add_child(margin)
-	margin.add_child(_make_label("Nenhuma melhoria permanente disponivel ainda.", 14, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	margin.add_child(_make_label(_txt("No permanent upgrades available yet.", "Nenhuma melhoria permanente disponivel ainda.", "Aún no hay mejoras permanentes disponibles.", "利用可能な永続強化はまだありません。", "暂无可用永久升级。"), 14, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return card
 
 
@@ -167,7 +167,7 @@ func _make_empty_temp_upgrade_message() -> PanelContainer:
 	margin.add_theme_constant_override("margin_right", 16)
 	margin.add_theme_constant_override("margin_bottom", 18)
 	card.add_child(margin)
-	margin.add_child(_make_label("Nenhuma melhoria temporaria liberada ainda.", 14, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	margin.add_child(_make_label(_txt("No temporary upgrades unlocked yet.", "Nenhuma melhoria temporaria liberada ainda.", "Aún no hay mejoras temporales desbloqueadas.", "一時強化はまだ解除されていません。", "暂无已解锁临时升级。"), 14, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return card
 
 
@@ -175,7 +175,6 @@ func _make_upgrade_summary() -> PanelContainer:
 	var total_count := GameState.get_all_upgrades().size()
 	var available_permanent_count := GameState.get_unlocked_upgrades().size()
 	var locked_count := _locked_upgrade_list().size()
-	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
 	var margin := MarginContainer.new()
@@ -187,9 +186,9 @@ func _make_upgrade_summary() -> PanelContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 4)
 	margin.add_child(column)
-	column.add_child(_make_label(("Melhorias disponíveis: %s/%s" if pt else "Available upgrades: %s/%s") % [available_permanent_count, total_count], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label(("Melhorias bloqueadas: %s" if pt else "Locked upgrades: %s") % locked_count, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label("A gameplay sorteia exatamente essa mesma lista liberada." if pt else "Gameplay rolls exactly this same unlocked list.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(_txt("Available upgrades: %s/%s", "Melhorias disponíveis: %s/%s", "Mejoras disponibles: %s/%s", "利用可能な強化: %s/%s", "可用升级：%s/%s") % [available_permanent_count, total_count], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(_txt("Locked upgrades: %s", "Melhorias bloqueadas: %s", "Mejoras bloqueadas: %s", "ロック中の強化: %s", "未解锁升级：%s") % locked_count, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(_txt("Gameplay rolls exactly this same unlocked list.", "A gameplay sorteia exatamente essa mesma lista liberada.", "La partida sortea exactamente esta misma lista desbloqueada.", "ゲーム内抽選はこの解除済みリストだけを使います。", "游戏内只会从这份已解锁列表中抽取。"), 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -201,10 +200,10 @@ func _permanent_upgrade_list() -> Array[Dictionary]:
 		var definition: Dictionary = source[id]
 		result.append({
 			"id": String(id),
-			"name": String(metadata.get("name", _title_from_id(String(id)))),
-			"desc": String(metadata.get("desc", "Melhoria permanente")),
+			"name": _upgrade_name(String(id), String(metadata.get("name", _title_from_id(String(id))))),
+			"desc": _upgrade_desc(String(id), String(metadata.get("desc", "Melhoria permanente"))),
 			"icon": String(metadata.get("icon", "key")),
-			"unlock": String(metadata.get("unlock", "Desbloqueia na fase %s ou perfil nível %s" % [int(definition.get("phase", 1)), int(definition.get("level", 1))])),
+			"unlock": _upgrade_unlock(String(metadata.get("unlock", "Desbloqueia na fase %s ou perfil nível %s" % [int(definition.get("phase", 1)), int(definition.get("level", 1))]))),
 		})
 	if result.is_empty():
 		for upgrade in LEGACY_PERMANENT_UPGRADES:
@@ -294,16 +293,16 @@ func _make_upgrade_card(upgrade: Dictionary, locked_preview := false) -> PanelCo
 	info.mouse_filter = Control.MOUSE_FILTER_PASS
 	info.add_theme_constant_override("separation", 4)
 	row.add_child(info)
-	info.add_child(_make_label(String(upgrade["name"]), 18, "#ffffff" if unlocked else "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label(_upgrade_name(id, String(upgrade["name"])), 18, "#ffffff" if unlocked else "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
-		info.add_child(_make_label(String(upgrade.get("description", upgrade.get("desc", ""))), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+		info.add_child(_make_label(_upgrade_desc(id, String(upgrade.get("description", upgrade.get("desc", "")))), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	else:
 		if locked_preview:
-			info.add_child(_make_label(String(upgrade.get("description", upgrade.get("desc", ""))), 13, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+			info.add_child(_make_label(_upgrade_desc(id, String(upgrade.get("description", upgrade.get("desc", "")))), 13, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		var locked := HBoxContainer.new()
 		locked.add_theme_constant_override("separation", 5)
 		locked.add_child(_make_icon("locked", 14))
-		locked.add_child(_make_label(String(upgrade.get("unlockRequirement", upgrade.get("unlock", "Upgrade bloqueado"))), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+		locked.add_child(_make_label(_upgrade_unlock(String(upgrade.get("unlockRequirement", upgrade.get("unlock", "Upgrade bloqueado")))), 14, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 		info.add_child(locked)
 	info.add_child(_make_label("%s: %s/%s" % [_t("upgrade_level"), level, max_level], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if unlocked:
@@ -438,7 +437,7 @@ func _make_upgrade_button(text: String, color: String, disabled: bool, action: C
 
 
 func _effect_label(effect: Dictionary) -> String:
-	return String(effect.get("label", "Lv.%s" % int(effect.get("level", 0))))
+	return _localize_effect_label(String(effect.get("label", "Lv.%s" % int(effect.get("level", 0)))))
 
 
 func _buy_upgrade(id: String, currency := "coins") -> void:
@@ -461,23 +460,63 @@ func _buy_upgrade(id: String, currency := "coins") -> void:
 
 
 func _t(key: String) -> String:
-	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
+	var lang := LocalizationManager.current_language() if has_node("/root/LocalizationManager") else String(GameState.get_setting("language", "en"))
 	match key:
-		"upgrade_level": return "Nível da Melhoria" if pt else "Upgrade Level"
-		"level": return "Nível" if pt else "Level"
-		"max_level": return "Nível Máximo" if pt else "Max Level"
-		"upgrade_improved": return "Melhoria aprimorada" if pt else "Upgrade Improved"
-		"upgrade_with_coins": return "Melhorar com Moedas" if pt else "Upgrade with Coins"
-		"upgrade_with_diamonds": return "Melhorar com Diamantes" if pt else "Upgrade with Diamonds"
-		"current_effect": return "Efeito Atual" if pt else "Current Effect"
-		"next_level": return "Próximo Nível" if pt else "Next Level"
-		"max": return "Máximo" if pt else "Max"
-		"not_enough_coins": return "Moedas insuficientes" if pt else "Not enough coins"
-		"not_enough_diamonds": return "Diamantes insuficientes" if pt else "Not enough diamonds"
-		"cost": return "Custo" if pt else "Cost"
-		"coins": return "moedas" if pt else "coins"
-		"diamonds": return "diamantes" if pt else "diamonds"
+		"upgrade_level": return _txt("Upgrade Level", "Nível da Melhoria", "Nivel de Mejora", "強化レベル", "升级等级")
+		"level": return _txt("Level", "Nível", "Nivel", "レベル", "等级")
+		"max_level": return _txt("Max Level", "Nível Máximo", "Nivel Máximo", "最大レベル", "最高等级")
+		"upgrade_improved": return _txt("Upgrade Improved", "Melhoria aprimorada", "Mejora aumentada", "強化しました", "升级成功")
+		"upgrade_with_coins": return _txt("Upgrade with Coins", "Melhorar com Moedas", "Mejorar con Monedas", "コインで強化", "用金币升级")
+		"upgrade_with_diamonds": return _txt("Upgrade with Diamonds", "Melhorar com Diamantes", "Mejorar con Diamantes", "ダイヤで強化", "用钻石升级")
+		"current_effect": return _txt("Current Effect", "Efeito Atual", "Efecto Actual", "現在の効果", "当前效果")
+		"next_level": return _txt("Next Level", "Próximo Nível", "Siguiente Nivel", "次のレベル", "下一级")
+		"max": return _txt("Max", "Máximo", "Máximo", "最大", "满级")
+		"not_enough_coins": return _txt("Not enough coins", "Moedas insuficientes", "Monedas insuficientes", "コイン不足", "金币不足")
+		"not_enough_diamonds": return _txt("Not enough diamonds", "Diamantes insuficientes", "Diamantes insuficientes", "ダイヤ不足", "钻石不足")
+		"cost": return _txt("Cost", "Custo", "Costo", "コスト", "花费")
+		"coins": return _txt("coins", "moedas", "monedas", "コイン", "金币")
+		"diamonds": return _txt("diamonds", "diamantes", "diamantes", "ダイヤ", "钻石")
 	return key
+
+
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
+
+
+func _loc(value: String) -> String:
+	return LocalizationManager.phrase(value) if has_node("/root/LocalizationManager") else value
+
+
+func _upgrade_name(id: String, fallback: String) -> String:
+	return LocalizationManager.upgrade_name(id, fallback) if has_node("/root/LocalizationManager") else fallback
+
+
+func _upgrade_desc(id: String, fallback: String) -> String:
+	return LocalizationManager.upgrade_description(id, fallback) if has_node("/root/LocalizationManager") else fallback
+
+
+func _upgrade_unlock(value: String) -> String:
+	return LocalizationManager.upgrade_unlock_requirement(value) if has_node("/root/LocalizationManager") else value
+
+
+func _localize_effect_label(label: String) -> String:
+	var output := label
+	var replacements := {
+		"dano": _txt("damage", "dano", "daño", "ダメージ", "伤害"),
+		"velocidade": _txt("speed", "velocidade", "velocidad", "速度", "速度"),
+		"moedas": _txt("coins", "moedas", "monedas", "コイン", "金币"),
+		"critico": _txt("critical", "crítico", "crítico", "クリティカル", "暴击"),
+		"diamante/perfect": _txt("diamond/perfect", "diamante/perfect", "diamante/perfect", "ダイヤ/Perfect", "钻石/Perfect"),
+		"chance gelo": _txt("ice chance", "chance gelo", "prob. hielo", "氷確率", "冰冻概率"),
+		"chance lentidao": _txt("slow chance", "chance lentidão", "prob. lentitud", "減速確率", "减速概率"),
+		"chance repulsao": _txt("repulse chance", "chance repulsão", "prob. repulsión", "反発確率", "排斥概率"),
+		"corrente": _txt("chain", "corrente", "cadena", "連鎖", "连锁"),
+		"area": _txt("area", "área", "área", "範囲", "范围"),
+		"bonus": _txt("bonus", "bônus", "bono", "ボーナス", "加成"),
+	}
+	for source in replacements.keys():
+		output = output.replace(String(source), String(replacements[source]))
+	return output
 
 
 func _rebuild_upgrade_list() -> void:

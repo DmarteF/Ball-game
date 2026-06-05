@@ -64,7 +64,7 @@ func _build_screen() -> void:
 	var header := VBoxContainer.new()
 	header.add_theme_constant_override("separation", 4)
 	root.add_child(header)
-	header.add_child(_make_label("LIGA NEON", 26 if _is_narrow_screen() else 31, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	header.add_child(_make_label(_tr("league").to_upper(), 26 if _is_narrow_screen() else 31, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -91,9 +91,9 @@ func _make_summary(player: Dictionary) -> PanelContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_card_margin(card).add_child(row)
-	row.add_child(_make_summary_cell("Sua posição", "#%s/%s" % [_player_index + 1, _standings.size()]))
-	row.add_child(_make_summary_cell("Troféus", _format_int(int(player.get("trophies", 0)))))
-	row.add_child(_make_summary_cell("Temporada", "%sd" % _days_remaining_in_month()))
+	row.add_child(_make_summary_cell(_txt("Your position", "Sua posição", "Tu posición", "あなたの順位", "你的排名"), "#%s/%s" % [_player_index + 1, _standings.size()]))
+	row.add_child(_make_summary_cell(_txt("Trophies", "Troféus", "Trofeos", "トロフィー", "奖杯"), _format_int(int(player.get("trophies", 0)))))
+	row.add_child(_make_summary_cell(_txt("Season", "Temporada", "Temporada", "シーズン", "赛季"), "%sd" % _days_remaining_in_month()))
 	return card
 
 
@@ -121,13 +121,13 @@ func _make_division_panel(player: Dictionary) -> PanelContainer:
 	top.add_theme_constant_override("separation", 8)
 	body.add_child(top)
 	top.add_child(_make_label(String(rank.get("name", "Bronze")), 18, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	top.add_child(_make_label("Divisão máxima" if next_rank.is_empty() else "%s troféus até %s" % [_format_int(missing), String(next_rank.get("name", ""))], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT))
+	top.add_child(_make_label(_txt("Max division", "Divisão máxima", "División máxima", "最高ディビジョン", "最高段位") if next_rank.is_empty() else _txt("%s trophies to %s", "%s troféus até %s", "%s trofeos hasta %s", "%sトロフィーで%s", "%s奖杯到%s") % [_format_int(missing), String(next_rank.get("name", ""))], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT))
 	body.add_child(_make_progress_bar(progress, "#00ff88"))
-	var compete := _make_solid_button("COMPETIR", "#00f0ff", "#001018", 0, 48)
+	var compete := _make_solid_button(_txt("COMPETE", "COMPETIR", "COMPETIR", "参戦", "竞争"), "#00f0ff", "#001018", 0, 48)
 	compete.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	compete.pressed.connect(_open_battle)
 	body.add_child(compete)
-	_notice_label = _make_label("Duelo em duas arenas: voce embaixo, rival em cima.", 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_notice_label = _make_label(_txt("Two-arena duel: you below, rival above.", "Duelo em duas arenas: você embaixo, rival em cima.", "Duelo en dos arenas: tú abajo, rival arriba.", "2アリーナ対決: あなたは下、ライバルは上。", "双竞技场对决：你在下，对手在上。"), 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_notice_label)
 	return card
@@ -150,8 +150,8 @@ func _make_podium_card(entry: Dictionary, index: int) -> PanelContainer:
 	body.add_theme_constant_override("separation", 4)
 	_card_margin(card, 10).add_child(body)
 	body.add_child(_make_label(["1", "2", "3"][index], 24, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	body.add_child(_make_label("Você" if bool(entry.get("is_player", false)) else String(entry.get("name", "")), 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	body.add_child(_make_label("%s troféus" % _format_int(int(entry.get("trophies", 0))), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	body.add_child(_make_label(_txt("You", "Você", "Tú", "あなた", "你") if bool(entry.get("is_player", false)) else String(entry.get("name", "")), 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	body.add_child(_make_label(_txt("%s trophies", "%s troféus", "%s trofeos", "%sトロフィー", "%s奖杯") % _format_int(int(entry.get("trophies", 0))), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return card
 
 
@@ -160,15 +160,15 @@ func _make_reward_card(player: Dictionary) -> PanelContainer:
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 5)
 	_card_margin(card).add_child(body)
-	body.add_child(_make_label("Recompensa estimada", 15, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	var reward_text := "Skin especial + gemas + baú da divisão" if _player_index == 0 else "Gemas e baú raro/épico" if _player_index < 3 else "Moedas, fragmentos e chave comum" if _player_index < 10 else "Participação com moedas/XP"
+	body.add_child(_make_label(_txt("Estimated reward", "Recompensa estimada", "Recompensa estimada", "予想報酬", "预计奖励"), 15, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var reward_text := _txt("Special skin + gems + division chest", "Skin especial + gemas + baú da divisão", "Skin especial + gemas + cofre de división", "特別スキン + ジェム + ディビジョン宝箱", "特殊皮肤 + 宝石 + 段位宝箱") if _player_index == 0 else _txt("Gems and rare/epic chest", "Gemas e baú raro/épico", "Gemas y cofre raro/épico", "ジェムとレア/エピック宝箱", "宝石和稀有/史诗宝箱") if _player_index < 3 else _txt("Coins, fragments and common key", "Moedas, fragmentos e chave comum", "Monedas, fragmentos y llave común", "コイン、欠片、コモン鍵", "金币、碎片和普通钥匙") if _player_index < 10 else _txt("Participation with coins/XP", "Participação com moedas/XP", "Participación con monedas/XP", "参加報酬: コイン/XP", "参与奖励：金币/经验")
 	body.add_child(_make_label(reward_text, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	body.add_child(_make_label("Vitória futura: +36 troféus base • Derrota futura: -18 troféus base.", 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	body.add_child(_make_label(_txt("Future win: +36 base trophies • Future loss: -18 base trophies.", "Vitória futura: +36 troféus base • Derrota futura: -18 troféus base.", "Victoria futura: +36 trofeos base • Derrota futura: -18 trofeos base.", "今後の勝利: 基本+36トロフィー • 敗北: 基本-18トロフィー", "未来胜利：基础+36奖杯 • 失败：基础-18奖杯"), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if String(player.get("division_id", "bronze")) == "bronze":
-		body.add_child(_make_label("Primeira promoção do Bronze libera a skin ultimate Campeão Neon Inicial.", 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		body.add_child(_make_label(_txt("First promotion out of Bronze unlocks the starter Ultimate Neon Champion skin.", "Primeira promoção do Bronze libera a skin ultimate Campeão Neon Inicial.", "La primera promoción desde Bronce desbloquea la skin Ultimate Campeón Neon Inicial.", "ブロンズ初昇格でスターターUltimateネオンチャンピオンを解除。", "首次脱离青铜可解锁初始终极霓虹冠军皮肤。"), 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if _player_index > 0:
 		var above := _standings[_player_index - 1]
-		body.add_child(_make_label("Faltam %s troféus para subir uma posição." % _format_int(int(above.get("trophies", 0)) - int(player.get("trophies", 0))), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+		body.add_child(_make_label(_txt("%s trophies to climb one position.", "Faltam %s troféus para subir uma posição.", "Faltan %s trofeos para subir una posición.", "あと%sトロフィーで順位アップ。", "还差%s奖杯提升一名。") % _format_int(int(above.get("trophies", 0)) - int(player.get("trophies", 0))), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -192,8 +192,8 @@ func _make_ranking_row(entry: Dictionary, index: int) -> PanelContainer:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 2)
 	row.add_child(info)
-	info.add_child(_make_label("%s%s" % [String(entry.get("name", "")), " (Você)" if is_player else ""], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	info.add_child(_make_label("%s • Fase %s • Comp %sV" % [String(entry.get("skin_name", "Neon Blue")), int(entry.get("max_phase", 1)), int(entry.get("wins", 0))], 11, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label("%s%s" % [String(entry.get("name", "")), " (%s)" % _txt("You", "Você", "Tú", "あなた", "你") if is_player else ""], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label("%s • %s %s • %s %sV" % [String(entry.get("skin_name", "Neon Blue")), _txt("Level", "Fase", "Nivel", "レベル", "关卡"), int(entry.get("max_phase", 1)), _txt("Comp", "Comp", "Comp", "対戦", "竞技"), int(entry.get("wins", 0))], 11, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var score := VBoxContainer.new()
 	score.add_theme_constant_override("separation", 1)
 	score.custom_minimum_size.x = 78
@@ -206,7 +206,7 @@ func _make_ranking_row(entry: Dictionary, index: int) -> PanelContainer:
 func _make_player_dock(player: Dictionary) -> PanelContainer:
 	var card := _make_card("#00f0ff", "#00f0ff")
 	var margin := _card_margin(card, 12)
-	margin.add_child(_make_label("Minha posição #%s/%s • %s troféus • %s" % [_player_index + 1, _standings.size(), _format_int(int(player.get("trophies", 0))), String(player.get("division", "Bronze"))], 13, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	margin.add_child(_make_label(_txt("My position #%s/%s • %s trophies • %s", "Minha posição #%s/%s • %s troféus • %s", "Mi posición #%s/%s • %s trofeos • %s", "自分の順位 #%s/%s • %sトロフィー • %s", "我的排名 #%s/%s • %s奖杯 • %s") % [_player_index + 1, _standings.size(), _format_int(int(player.get("trophies", 0))), String(player.get("division", "Bronze"))], 13, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return card
 
 
@@ -341,6 +341,14 @@ func _card_margin(card: PanelContainer, amount := 12) -> MarginContainer:
 	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	return margin
+
+
+func _tr(key: String, fallback := "") -> String:
+	return LocalizationManager.tr_key(key, fallback) if has_node("/root/LocalizationManager") else (fallback if not fallback.is_empty() else key)
+
+
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
 
 
 func _make_label(text: String, font_size: int, color: String, font: Font, alignment: HorizontalAlignment) -> Label:

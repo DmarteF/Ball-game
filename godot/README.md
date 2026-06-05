@@ -1516,3 +1516,38 @@ Checklist:
 - Debug permite testar níveis de skin: sim
 - Traduções adicionadas: sim
 - BALANCE.md atualizado: sim
+
+## Atualizacao - Localizacao Completa do Patch
+
+Este patch ampliou a localizacao do projeto Godot para ingles, portugues, espanhol, japones e chines.
+
+Arquivos principais:
+- `scripts/LocalizationManager.gd`: fonte central para idiomas, botoes globais, raridades, efeitos, requisitos de desbloqueio, conquistas e os 34 upgrades.
+- `scripts/MainMenu.gd`: menu principal, tutorial inicial e dicas guiadas usam idioma salvo.
+- `scripts/PhaseSelectScreen.gd`: selecao de fases, modo infinito, dificuldade e estado bloqueado localizados.
+- `scripts/UpgradesScreen.gd`: contador, cards e os 34 upgrades usam a mesma base traduzida.
+- `scripts/SkinsScreen.gd`: colecao, filtros, raridades, efeitos, modais e estados de equipar/desbloquear traduzidos.
+- `scripts/VisualFeatureScreen.gd`: loja, inventario, missoes, evento, desafio diario, boss, roleta, recompensa diaria e conquistas usam textos localizados.
+- `scripts/GameplayManager.gd`: HUD, pausa, level up, resultado, modo infinito e desafio diario localizados.
+- `scripts/LeagueScreen.gd` e `scripts/LeagueBattleScreen.gd`: Liga Neon, batalha da liga/boss, timer, recompensas e resultado localizados.
+- `scripts/ProfileScreen.gd` e `scripts/SettingsScreen.gd`: perfil, avatar, estatisticas, save/import/export, audio, idioma e debug com localizacao ampliada.
+- `scripts/AdManager.gd`: anuncio mockado e motivos de anuncio traduzidos.
+
+Observacoes:
+- Nomes proprios de skins e alguns nomes de produto permanecem como nomes de marca quando isso preserva melhor a identidade visual.
+- Conquistas geradas dinamicamente por fase, tempo e aneis usam fallback por padrao de texto em EN/PT/ES/JA/ZH.
+- O idioma padrao continua ingles em save novo; portugues, espanhol, japones e chines podem ser escolhidos em Configuracoes.
+
+Checklist:
+- Menus principais traduzidos: sim
+- Botões globais traduzidos: sim
+- Upgrades traduzidos: sim, 34/34
+- Raridades e efeitos traduzidos: sim
+- Skins/colecao traduzidas: sim
+- Loja e abas traduzidas: sim
+- Evento/desafio diario traduzidos: sim
+- Boss traduzido: sim
+- Liga Neon traduzida: sim
+- Gameplay/HUD/resultados traduzidos: sim
+- Perfil e Configuracoes traduzidos: sim
+- Anuncio mock traduzido: sim

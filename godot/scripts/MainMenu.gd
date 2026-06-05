@@ -99,11 +99,11 @@ var _guided_hint: Button
 var _guided_hint_id := ""
 
 const TUTORIAL_STEPS := [
-	{ "title_en": "Welcome", "title_pt": "Bem-vindo", "text_en": "Break rings by hitting their opening.", "text_pt": "Quebre os anéis acertando a abertura." },
-	{ "title_en": "Progress", "title_pt": "Progresso", "text_en": "Earn coins, XP, diamonds and chests.", "text_pt": "Ganhe moedas, XP, diamantes e baús." },
-	{ "title_en": "Upgrades", "title_pt": "Melhorias", "text_en": "Use upgrades to get stronger.", "text_pt": "Use melhorias para ficar mais forte." },
-	{ "title_en": "Skins", "title_pt": "Skins", "text_en": "Collect skins with special effects.", "text_pt": "Colecione skins com efeitos especiais." },
-	{ "title_en": "Modes", "title_pt": "Modos", "text_en": "Play levels, infinite mode, bosses, daily challenges and Neon League.", "text_pt": "Jogue fases, modo infinito, chefes, desafios diários e Liga Neon." },
+	{ "en_title": "Welcome", "pt_title": "Bem-vindo", "es_title": "Bienvenido", "ja_title": "ようこそ", "zh_title": "欢迎", "en_text": "Break rings by hitting their opening.", "pt_text": "Quebre os anéis acertando a abertura.", "es_text": "Rompe anillos acertando su abertura.", "ja_text": "開口部を狙ってリングを壊しましょう。", "zh_text": "击中开口来击破圆环。" },
+	{ "en_title": "Progress", "pt_title": "Progresso", "es_title": "Progreso", "ja_title": "進行", "zh_title": "进度", "en_text": "Earn coins, XP, diamonds and chests.", "pt_text": "Ganhe moedas, XP, diamantes e baús.", "es_text": "Gana monedas, XP, diamantes y cofres.", "ja_text": "コイン、XP、ダイヤ、宝箱を獲得。", "zh_text": "获得金币、经验、钻石和宝箱。" },
+	{ "en_title": "Upgrades", "pt_title": "Melhorias", "es_title": "Mejoras", "ja_title": "強化", "zh_title": "升级", "en_text": "Use upgrades to get stronger.", "pt_text": "Use melhorias para ficar mais forte.", "es_text": "Usa mejoras para hacerte más fuerte.", "ja_text": "強化でさらに強くなりましょう。", "zh_text": "使用升级变得更强。" },
+	{ "en_title": "Skins", "pt_title": "Skins", "es_title": "Skins", "ja_title": "スキン", "zh_title": "皮肤", "en_text": "Collect skins with special effects.", "pt_text": "Colecione skins com efeitos especiais.", "es_text": "Colecciona skins con efectos especiales.", "ja_text": "特殊効果つきスキンを集めましょう。", "zh_text": "收集带特殊效果的皮肤。" },
+	{ "en_title": "Modes", "pt_title": "Modos", "es_title": "Modos", "ja_title": "モード", "zh_title": "模式", "en_text": "Play levels, infinite mode, bosses, daily challenges and Neon League.", "pt_text": "Jogue fases, modo infinito, chefes, desafios diários e Liga Neon.", "es_text": "Juega niveles, modo infinito, bosses, desafíos diarios y Liga Neon.", "ja_text": "レベル、無限、ボス、デイリー、ネオンリーグで遊べます。", "zh_text": "游玩关卡、无限模式、Boss、每日挑战和霓虹联赛。" },
 ]
 
 
@@ -289,8 +289,7 @@ func _make_achievement_notice(count: int) -> Button:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(row)
 	row.add_child(_make_icon("achievements", 24, Color("#ffd700")))
-	var language := String(GameState.get_setting("language", "en"))
-	var detail := "%s rewards pending" % count if not language.begins_with("pt") else "%s recompensas pendentes" % count
+	var detail := _txt("%s rewards pending", "%s recompensas pendentes", "%s recompensas pendientes", "%s個の報酬待ち", "%s个奖励待领取") % count
 	var label := _make_label(detail, 11, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.clip_text = true
@@ -574,41 +573,23 @@ func _make_more_item(item: Dictionary) -> Button:
 
 
 func _menu_label(key: String) -> String:
-	var language := String(GameState.get_setting("language", "en"))
-	var pt := language.begins_with("pt")
 	match key:
-		"more":
-			return "Mais" if pt else "More"
-		"menu":
-			return "Menu"
-		"close":
-			return "Fechar" if pt else "Close"
-		"play":
-			return "Jogar" if pt else "Play"
-		"upgrades":
-			return "Melhorias" if pt else "Upgrades"
-		"skins":
-			return "Skins"
-		"shop":
-			return "Loja" if pt else "Shop"
-		"inventory":
-			return "Inventário" if pt else "Inventory"
-		"missions":
-			return "Missões" if pt else "Missions"
-		"event":
-			return "Evento" if pt else "Event"
-		"wheel":
-			return "Roleta" if pt else "Wheel"
-		"daily_reward":
-			return "Recompensa diária" if pt else "Daily Reward"
-		"boss":
-			return "Boss"
-		"league":
-			return "Liga Neon" if pt else "Neon League"
-		"achievements":
-			return "Conquistas" if pt else "Achievements"
-		"settings":
-			return "Configurações" if pt else "Settings"
+		"more": return _txt("More", "Mais", "Más", "もっと", "更多")
+		"menu": return _txt("Menu", "Menu", "Menú", "メニュー", "菜单")
+		"close": return _tr("close")
+		"play": return _tr("play")
+		"upgrades": return _tr("upgrades")
+		"skins": return _tr("skins")
+		"shop": return _tr("shop")
+		"inventory": return _tr("inventory")
+		"missions": return _tr("missions")
+		"event": return _tr("event")
+		"wheel": return _tr("wheel")
+		"daily_reward": return _tr("daily_reward")
+		"boss": return _tr("boss")
+		"league": return _tr("league")
+		"achievements": return _tr("achievements")
+		"settings": return _tr("settings")
 	return key
 
 
@@ -818,8 +799,8 @@ func _render_tutorial_page() -> void:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 	var step: Dictionary = TUTORIAL_STEPS[_tutorial_page]
-	var pt := _language().begins_with("pt")
-	var title := _make_label(String(step.get("title_pt" if pt else "title_en", "")), 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var lang := _language()
+	var title := _make_label(String(step.get("%s_title" % lang, step.get("en_title", ""))), 28, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	title.add_theme_color_override("font_outline_color", Color("#00f0ff66"))
 	title.add_theme_constant_override("outline_size", 5)
 	column.add_child(title)
@@ -830,7 +811,7 @@ func _render_tutorial_page() -> void:
 	icon_holder.custom_minimum_size.y = 74
 	icon_holder.add_child(_make_icon(icon_key, 58, Color("#00f0ff")))
 	column.add_child(icon_holder)
-	var body := _make_label(String(step.get("text_pt" if pt else "text_en", "")), 17, "#ffffff", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var body := _make_label(String(step.get("%s_text" % lang, step.get("en_text", ""))), 17, "#ffffff", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.custom_minimum_size = Vector2(276, 64)
 	column.add_child(body)
@@ -964,35 +945,33 @@ func _guided_hint_icon(hint_id: String) -> String:
 
 
 func _guided_hint_text(hint_id: String) -> String:
-	var pt := _language().begins_with("pt")
 	match hint_id:
-		"open_upgrades":
-			return "Toque aqui para melhorar sua bolinha." if pt else "Tap here to upgrade your ball."
-		"open_skins":
-			return "Agora veja e equipe skins especiais." if pt else "Now check and equip special skins."
-		"modes":
-			return "Eventos, desafios e Infinito liberam novas recompensas." if pt else "Events, challenges and Infinite unlock more rewards."
+		"open_upgrades": return _txt("Tap here to upgrade your ball.", "Toque aqui para melhorar sua bolinha.", "Toca aquí para mejorar tu bola.", "ここをタップしてボールを強化。", "点这里升级你的球。")
+		"open_skins": return _txt("Now check and equip special skins.", "Agora veja e equipe skins especiais.", "Ahora mira y equipa skins especiales.", "特別なスキンを確認して装備しましょう。", "现在查看并装备特殊皮肤。")
+		"modes": return _txt("Events, challenges and Infinite unlock more rewards.", "Eventos, desafios e Infinito liberam novas recompensas.", "Eventos, desafíos e Infinito desbloquean más recompensas.", "イベント、チャレンジ、無限で報酬が増えます。", "活动、挑战和无限模式会解锁更多奖励。")
 	return ""
 
 
 func _tutorial_label(id: String) -> String:
-	var pt := _language().begins_with("pt")
 	match id:
-		"next":
-			return "Próximo" if pt else "Next"
-		"back":
-			return "Voltar" if pt else "Back"
-		"skip":
-			return "Pular" if pt else "Skip"
-		"start":
-			return "Começar" if pt else "Start"
-		"dont_show":
-			return "Não mostrar novamente" if pt else "Don't show again"
+		"next": return _txt("Next", "Próximo", "Siguiente", "次へ", "下一步")
+		"back": return _tr("back")
+		"skip": return _txt("Skip", "Pular", "Saltar", "スキップ", "跳过")
+		"start": return _txt("Start", "Começar", "Comenzar", "開始", "开始")
+		"dont_show": return _txt("Don't show again", "Não mostrar novamente", "No mostrar de nuevo", "今後表示しない", "不再显示")
 	return id
 
 
 func _language() -> String:
-	return String(GameState.get_setting("language", "en"))
+	return LocalizationManager.current_language() if has_node("/root/LocalizationManager") else String(GameState.get_setting("language", "en"))
+
+
+func _tr(key: String, fallback := "") -> String:
+	return LocalizationManager.tr_key(key, fallback) if has_node("/root/LocalizationManager") else (fallback if not fallback.is_empty() else key)
+
+
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
 
 
 func _sync_modal_layout() -> void:

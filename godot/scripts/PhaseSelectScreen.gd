@@ -51,7 +51,7 @@ func _build_screen() -> void:
 	root.add_theme_constant_override("separation", 10)
 	add_child(root)
 
-	root.add_child(_make_label("SELECIONAR FASE", 28 if _is_narrow_screen() else 32, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	root.add_child(_make_label(_loc("SELECIONAR FASE"), 28 if _is_narrow_screen() else 32, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	NeonBackButtonScript.add_to(self, _go_back)
 
 	var scroll := ScrollContainer.new()
@@ -80,10 +80,10 @@ func _make_infinite_card() -> Button:
 		button.pressed.connect(_open_infinite)
 	var body := _make_card_body(button, "#00ff8888" if infinite_unlocked else "#333333", "#00f0ff33" if infinite_unlocked else "#222222")
 	body.add_child(_make_circle_icon("infinite", "", "#ffffff22"))
-	var info := _make_phase_info("Modo Infinito", "ESPECIAL", "PROGRESSÃO INFINITA", not infinite_unlocked)
+	var info := _make_phase_info(_loc("Modo Infinito"), _loc("ESPECIAL"), _loc("PROGRESSÃO INFINITA"), not infinite_unlocked)
 	body.add_child(info)
 	if not infinite_unlocked:
-		body.add_child(_make_lock_overlay("FASE 5"))
+		body.add_child(_make_lock_overlay("%s 5" % _loc("FASE")))
 	return button
 
 
@@ -98,9 +98,9 @@ func _make_phase_card(phase: Dictionary) -> Button:
 	var color := String(phase["color"])
 	var body := _make_card_body(button, color + "88" if unlocked else "#333333", color + "44" if unlocked else "#222222")
 	body.add_child(_make_circle_icon("", str(phase["id"]), "#ffffff22"))
-	body.add_child(_make_phase_info(String(phase["name"]), String(phase["difficulty"]), "ANÉIS: %s-%s" % [phase["ring_min"], phase["ring_max"]], not unlocked))
+	body.add_child(_make_phase_info(_phase_name(int(phase["id"])), _difficulty_name(String(phase["difficulty"])), "%s: %s-%s" % [_loc("ANÉIS"), phase["ring_min"], phase["ring_max"]], not unlocked))
 	if not unlocked:
-		body.add_child(_make_lock_overlay("BLOQUEADA"))
+		body.add_child(_make_lock_overlay(_loc("BLOQUEADA")))
 	return button
 
 
@@ -161,7 +161,7 @@ func _make_phase_info(title: String, difficulty: String, stats: String, locked: 
 	row.add_theme_constant_override("separation", 3 if _is_narrow_screen() else 16)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info.add_child(row)
-	row.add_child(_make_label("DIFICULDADE: %s" % difficulty, 12, "#ffffff88" if not locked else "#ffffff55", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	row.add_child(_make_label("%s: %s" % [_loc("DIFICULDADE"), difficulty], 12, "#ffffff88" if not locked else "#ffffff55", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	row.add_child(_make_label(stats, 12, "#ffffff88" if not locked else "#ffffff55", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return info
 
@@ -190,6 +190,44 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.follow_focus = true
 	scroll.scroll_deadzone = 4
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func _loc(value: String) -> String:
+	return LocalizationManager.phrase(value) if has_node("/root/LocalizationManager") else value
+
+
+func _phase_name(id: int) -> String:
+	var label := _loc("FASE")
+	if has_node("/root/LocalizationManager"):
+		match LocalizationManager.current_language():
+			"en":
+				return "Level %s" % id
+			"es":
+				return "Nivel %s" % id
+			"ja":
+				return "レベル %s" % id
+			"zh":
+				return "关卡 %s" % id
+	return "%s %s" % [label.capitalize(), id]
+
+
+func _difficulty_name(value: String) -> String:
+	match value:
+		"Tutorial":
+			return LocalizationManager.text("Tutorial", "Tutorial", "Tutorial", "チュートリアル", "教程") if has_node("/root/LocalizationManager") else value
+		"Leve":
+			return LocalizationManager.text("Easy", "Leve", "Fácil", "イージー", "简单") if has_node("/root/LocalizationManager") else value
+		"Medio":
+			return LocalizationManager.text("Medium", "Médio", "Media", "ノーマル", "中等") if has_node("/root/LocalizationManager") else value
+		"Alto":
+			return LocalizationManager.text("High", "Alto", "Alta", "ハード", "较难") if has_node("/root/LocalizationManager") else value
+		"Dificil":
+			return LocalizationManager.text("Hard", "Difícil", "Difícil", "高難度", "困难") if has_node("/root/LocalizationManager") else value
+		"Elite":
+			return LocalizationManager.text("Elite", "Elite", "Élite", "エリート", "精英") if has_node("/root/LocalizationManager") else value
+		"Final":
+			return LocalizationManager.text("Final", "Final", "Final", "ファイナル", "最终") if has_node("/root/LocalizationManager") else value
+	return value
 
 
 func _is_narrow_screen() -> bool:

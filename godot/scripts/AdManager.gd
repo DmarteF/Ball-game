@@ -255,24 +255,39 @@ func _call_callback(callback: Callable, ok: bool) -> void:
 		callback.call(ok)
 
 
-func _is_pt() -> bool:
-	return String(GameState.get_setting("language", "en")).begins_with("pt")
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
 
 
 func _title_text() -> String:
-	return "Anúncio de teste" if _is_pt() else "Mock Ad"
+	return _txt("Mock Ad", "Anúncio de teste", "Anuncio de prueba", "テスト広告", "模拟广告")
 
 
 func _finish_text() -> String:
-	return "Finalizar anúncio" if _is_pt() else "Finish Ad"
+	return _txt("Finish Ad", "Finalizar anúncio", "Finalizar anuncio", "広告を完了", "完成广告")
 
 
 func _cancel_text() -> String:
-	return "Cancelar" if _is_pt() else "Cancel"
+	return _txt("Cancel", "Cancelar", "Cancelar", "キャンセル", "取消")
 
 
 func _reason_text(reason: String) -> String:
-	return ("Motivo: %s" if _is_pt() else "Reason: %s") % reason
+	return _txt("Reason: %s", "Motivo: %s", "Motivo: %s", "理由: %s", "原因：%s") % _reason_label(reason)
+
+
+func _reason_label(reason: String) -> String:
+	match reason:
+		"revive": return _txt("Revive", "Reviver", "Revivir", "復活", "复活")
+		"double_rewards": return _txt("Double rewards", "Dobrar recompensas", "Duplicar recompensas", "報酬2倍", "奖励翻倍")
+		"reroll_upgrades": return _txt("Reroll upgrades", "Rerrolar melhorias", "Repetir mejoras", "強化再抽選", "重随升级")
+		"free_chest": return _txt("Free chest", "Baú grátis", "Cofre gratis", "無料宝箱", "免费宝箱")
+		"wheel_extra_spin": return _txt("Extra wheel spin", "Giro extra da roleta", "Giro extra de ruleta", "ルーレット追加スピン", "转盘额外旋转")
+		"daily_bonus": return _txt("Daily bonus", "Bônus diário", "Bono diario", "デイリーボーナス", "每日加成")
+		"shop_free_coins": return _txt("Free shop coins", "Moedas grátis da loja", "Monedas gratis de tienda", "ショップ無料コイン", "商店免费金币")
+		"shop_free_diamonds": return _txt("Free shop diamonds", "Diamantes grátis da loja", "Diamantes gratis de tienda", "ショップ無料ダイヤ", "商店免费钻石")
+		"boss_retry": return _txt("Boss retry", "Tentar Boss novamente", "Reintentar Boss", "ボス再挑戦", "Boss重试")
+		"league_double_rewards": return _txt("League double rewards", "Dobrar recompensas da Liga", "Duplicar recompensas de Liga", "リーグ報酬2倍", "联赛奖励翻倍")
+	return reason
 
 
 func _label(text: String, size: int, color: String, bold := false) -> Label:

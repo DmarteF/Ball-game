@@ -515,3 +515,14 @@ Compatibilidade:
 Pendencias futuras:
 - Criar animacao mais rica de evolucao de skin, caso queira mais impacto visual.
 - Adicionar shards/fragmentos como terceira moeda de evolucao se a economia futura pedir.
+
+## Atualizacao - Localizacao EN/PT/ES/JA/ZH
+
+A migracao Godot recebeu uma passada de localizacao para todos os fluxos principais do jogo. `LocalizationManager.gd` agora centraliza chaves comuns, upgrades, raridades, efeitos e fallback de conquistas dinamicas. As telas principais chamam essa fonte de verdade em vez de manter textos fixos.
+
+Status:
+- Menus/telas principais: traduzidos.
+- Gameplay/modos: traduzidos.
+- Loja/eventos/boss/liga/conquistas: traduzidos.
+- Perfil/configuracoes/save/debug: traduzidos nos textos visiveis principais.
+- Nomes proprios de skins/produtos: mantidos como identidade quando aplicavel.

@@ -70,7 +70,7 @@ func _build_screen() -> void:
 	header.add_theme_constant_override("separation", 8)
 	root.add_child(header)
 
-	var title := _make_label("PERFIL", 25 if _is_narrow_screen() else 30, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var title := _make_label(_tr("profile").to_upper(), 25 if _is_narrow_screen() else 30, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	title.add_theme_color_override("font_outline_color", Color("#00f0ff66"))
 	title.add_theme_constant_override("outline_size", 4)
 	header.add_child(title)
@@ -121,15 +121,15 @@ func _make_profile_card() -> PanelContainer:
 	photo_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	photo_row.add_theme_constant_override("separation", 8)
 	body.add_child(photo_row)
-	var change_avatar := _make_small_icon_button("camera", "TROCAR AVATAR", "#00f0ff22", "#00f0ff88")
+	var change_avatar := _make_small_icon_button("camera", _txt("CHANGE AVATAR", "TROCAR AVATAR", "CAMBIAR AVATAR", "アバター変更", "更换头像"), "#00f0ff22", "#00f0ff88")
 	change_avatar.pressed.connect(_choose_avatar_image)
 	photo_row.add_child(change_avatar)
 	if _has_custom_avatar_image():
-		var remove_avatar := _make_small_icon_button("remove_image", "REMOVER FOTO", "#ff005522", "#ff005588")
+		var remove_avatar := _make_small_icon_button("remove_image", _txt("REMOVE PHOTO", "REMOVER FOTO", "QUITAR FOTO", "写真を削除", "移除照片"), "#ff005522", "#ff005588")
 		remove_avatar.pressed.connect(_remove_avatar_image)
 		photo_row.add_child(remove_avatar)
 
-	var save := _make_solid_button("SALVAR NICK", "#00f0ff", "#001018", 120, 36)
+	var save := _make_solid_button(_txt("SAVE NAME", "SALVAR NICK", "GUARDAR NOMBRE", "名前を保存", "保存昵称"), "#00f0ff", "#001018", 120, 36)
 	save.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	save.pressed.connect(_save_profile_mock)
 	body.add_child(save)
@@ -143,7 +143,7 @@ func _make_profile_card() -> PanelContainer:
 	for skin in _profile_avatar_skins():
 		avatar_row.add_child(_make_avatar_skin_pick(skin))
 
-	body.add_child(_make_section_title("SKIN FAVORITA"))
+	body.add_child(_make_section_title(_txt("FAVORITE SKIN", "SKIN FAVORITA", "SKIN FAVORITA", "お気に入りスキン", "最爱皮肤")))
 	body.add_child(_make_favorite_skin_box())
 
 	var skin_row := GridContainer.new()
@@ -160,11 +160,11 @@ func _make_profile_card() -> PanelContainer:
 func _make_account_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
-	body.add_child(_make_section_title("CONTA"))
+	body.add_child(_make_section_title(_txt("ACCOUNT", "CONTA", "CUENTA", "アカウント", "账号")))
 	var level := int(GameState.data.get("level", 1))
 	var xp := int(GameState.data.get("profile_xp", GameState.data.get("xp", 0)))
 	var xp_needed := _xp_needed(level)
-	body.add_child(_make_label("Level %s" % level, 24, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	body.add_child(_make_label("%s %s" % [_txt("Level", "Nível", "Nivel", "レベル", "等级"), level], 24, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	body.add_child(_make_xp_bar(float(xp) / float(max(1, xp_needed)), "%s/%s XP" % [xp, xp_needed]))
 
 	var resources := GridContainer.new()
@@ -177,7 +177,7 @@ func _make_account_card() -> PanelContainer:
 	resources.add_child(_make_resource("key", str(GameState.data.get("keys", 0))))
 	resources.add_child(_make_resource("legendary_key", str(GameState.data.get("legendary_keys", 0))))
 
-	var achievements := _make_outline_button("CONQUISTAS 0/32", "achievements", "#ffd70022", "#ffd70088", "#ffd700")
+	var achievements := _make_outline_button("%s 0/32" % _tr("achievements").to_upper(), "achievements", "#ffd70022", "#ffd70088", "#ffd700")
 	body.add_child(achievements)
 	return card
 
@@ -249,18 +249,18 @@ func _make_league_card() -> PanelContainer:
 func _make_stats_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
-	body.add_child(_make_section_title("ESTATÍSTICAS"))
+	body.add_child(_make_section_title(_txt("STATS", "ESTATÍSTICAS", "ESTADÍSTICAS", "統計", "统计")))
 	for line in [
-		"Partidas jogadas: %s" % _stat("runs_played", 0),
-		"Anéis destruídos: %s" % _stat("rings_destroyed", 0),
-		"Escapes perfeitos: %s" % _stat("perfect_escapes", 0),
-		"Diamantes encontrados: %s" % _stat("diamonds_found", 0),
-		"Baús abertos: %s" % _stat("chests_opened", 0),
-		"Skins desbloqueadas: %s" % Array(GameState.data.get("unlocked_skins", [])).size(),
-		"Maior fase: %s" % GameState.data.get("max_unlocked_phase", 1),
-		"Maior nível na partida: %s" % _stat("highest_run_level", 1),
-		"Vitórias no Boss: %s" % _stat("boss_wins", 0),
-		"Derrotas no Boss: %s" % _stat("boss_losses", 0),
+		_txt("Runs played: %s", "Partidas jogadas: %s", "Partidas jugadas: %s", "プレイ回数: %s", "游玩次数：%s") % _stat("runs_played", 0),
+		_txt("Rings destroyed: %s", "Anéis destruídos: %s", "Anillos destruidos: %s", "リング破壊: %s", "破坏圆环：%s") % _stat("rings_destroyed", 0),
+		_txt("Perfect escapes: %s", "Escapes perfeitos: %s", "Escapes perfectos: %s", "Perfect Escape: %s", "完美逃脱：%s") % _stat("perfect_escapes", 0),
+		_txt("Diamonds found: %s", "Diamantes encontrados: %s", "Diamantes encontrados: %s", "ダイヤ発見: %s", "发现钻石：%s") % _stat("diamonds_found", 0),
+		_txt("Chests opened: %s", "Baús abertos: %s", "Cofres abiertos: %s", "宝箱開封: %s", "打开宝箱：%s") % _stat("chests_opened", 0),
+		_txt("Skins unlocked: %s", "Skins desbloqueadas: %s", "Skins desbloqueadas: %s", "解除済みスキン: %s", "已解锁皮肤：%s") % Array(GameState.data.get("unlocked_skins", [])).size(),
+		_txt("Highest level: %s", "Maior fase: %s", "Nivel máximo: %s", "最高レベル: %s", "最高关卡：%s") % GameState.data.get("max_unlocked_phase", 1),
+		_txt("Highest run level: %s", "Maior nível na partida: %s", "Mayor nivel en partida: %s", "ラン最高Lv.: %s", "本局最高等级：%s") % _stat("highest_run_level", 1),
+		_txt("Boss wins: %s", "Vitórias no Boss: %s", "Victorias contra Boss: %s", "ボス勝利: %s", "Boss胜利：%s") % _stat("boss_wins", 0),
+		_txt("Boss losses: %s", "Derrotas no Boss: %s", "Derrotas contra Boss: %s", "ボス敗北: %s", "Boss失败：%s") % _stat("boss_losses", 0),
 	]:
 		body.add_child(_make_stat(line))
 	return card
@@ -269,8 +269,8 @@ func _make_stats_card() -> PanelContainer:
 func _make_abilities_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
-	body.add_child(_make_section_title("HABILIDADES"))
-	body.add_child(_make_stat("Desbloqueadas: 0"))
+	body.add_child(_make_section_title(_txt("ABILITIES", "HABILIDADES", "HABILIDADES", "アビリティ", "能力")))
+	body.add_child(_make_stat(_txt("Unlocked: 0", "Desbloqueadas: 0", "Desbloqueadas: 0", "解除済み: 0", "已解锁：0")))
 	for line in [
 		"Magnetismo - Perfil nível 2",
 		"Impacto Perfeito - Perfil nível 4",
@@ -372,8 +372,8 @@ func _build_avatar_file_dialog() -> void:
 	_avatar_file_dialog = FileDialog.new()
 	_avatar_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	_avatar_file_dialog.access = FileDialog.ACCESS_FILESYSTEM
-	_avatar_file_dialog.filters = PackedStringArray(["*.png, *.jpg, *.jpeg, *.webp ; Imagens"])
-	_avatar_file_dialog.title = "Escolher avatar"
+	_avatar_file_dialog.filters = PackedStringArray(["*.png, *.jpg, *.jpeg, *.webp ; Images"])
+	_avatar_file_dialog.title = _txt("Choose avatar", "Escolher avatar", "Elegir avatar", "アバターを選択", "选择头像")
 	_avatar_file_dialog.use_native_dialog = true
 	_avatar_file_dialog.file_selected.connect(_on_avatar_file_selected)
 	add_child(_avatar_file_dialog)
@@ -644,6 +644,14 @@ func _make_icon(key: String, icon_size: int, tint: Color = Color.WHITE) -> Textu
 	icon.modulate = tint
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return icon
+
+
+func _tr(key: String, fallback := "") -> String:
+	return LocalizationManager.tr_key(key, fallback) if has_node("/root/LocalizationManager") else (fallback if not fallback.is_empty() else key)
+
+
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
 
 
 func _make_label(text: String, font_size: int, color: String, font: Font, alignment: HorizontalAlignment) -> Label:

@@ -960,13 +960,13 @@ func _finish_victory() -> void:
 	pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": diamond_reward, "manual_quit": false, "victory": true }
 	_spawn_particles(arena_center, Color("#00ff88"), 42, 180.0)
 	_play_sfx("victory")
-	_victory_title.text = "FASE %s CONCLUIDA" % phase_id
+	_victory_title.text = _txt("LEVEL %s COMPLETE", "FASE %s CONCLUÍDA", "NIVEL %s COMPLETADO", "レベル%s完了", "关卡%s完成") % phase_id
 	_rebuild_victory_rewards(global_coins_reward, profile_xp_reward)
 	if _victory_unlock_label:
-		_victory_unlock_label.text = "PROXIMA FASE LIBERADA" if phase_id < LevelData.MAX_PHASE else "TODAS AS FASES CONCLUIDAS"
+		_victory_unlock_label.text = _txt("NEXT LEVEL UNLOCKED", "PRÓXIMA FASE LIBERADA", "SIGUIENTE NIVEL DESBLOQUEADO", "次のレベル解除", "下一关已解锁") if phase_id < LevelData.MAX_PHASE else _txt("ALL LEVELS COMPLETE", "TODAS AS FASES CONCLUÍDAS", "TODOS LOS NIVELES COMPLETADOS", "全レベル完了", "全部关卡完成")
 	if _victory_next_button:
 		_victory_next_button.disabled = phase_id >= LevelData.MAX_PHASE
-		_victory_next_button.text = "PROXIMA FASE" if phase_id < LevelData.MAX_PHASE else "CONCLUIDO"
+		_victory_next_button.text = _txt("NEXT LEVEL", "PRÓXIMA FASE", "SIGUIENTE NIVEL", "次のレベル", "下一关") if phase_id < LevelData.MAX_PHASE else _tr("done")
 	if _victory_double_button:
 		_victory_double_button.visible = _can_double_result_reward()
 		_victory_double_button.disabled = false
@@ -1036,9 +1036,9 @@ func _finish_daily_challenge(completed: bool) -> void:
 	var recorded := GameState.record_daily_challenge_run(summary)
 	pending_result_reward = { "coins": int(recorded.get("coins", global_coins_reward)), "xp": int(recorded.get("xp", profile_xp_reward)), "diamonds": 0, "manual_quit": false, "victory": completed }
 	_rebuild_defeat_summary(summary)
-	_defeat_title.text = "DESAFIO DIÁRIO CONCLUÍDO" if completed else "RESULTADO DO DESAFIO"
+	_defeat_title.text = _txt("DAILY CHALLENGE COMPLETE", "DESAFIO DIÁRIO CONCLUÍDO", "DESAFÍO DIARIO COMPLETADO", "デイリーチャレンジ完了", "每日挑战完成") if completed else _txt("CHALLENGE RESULT", "RESULTADO DO DESAFIO", "RESULTADO DEL DESAFÍO", "チャレンジ結果", "挑战结果")
 	if completed and bool(recorded.get("reward_available", false)):
-		_defeat_summary.add_child(_make_label("Recompensa principal disponível na aba Evento.", 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		_defeat_summary.add_child(_make_label(_txt("Main reward available in the Event tab.", "Recompensa principal disponível na aba Evento.", "Recompensa principal disponible en la pestaña Evento.", "メイン報酬はイベントタブで受け取れます。", "主要奖励可在活动页领取。"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if _defeat_revive_button:
 		_defeat_revive_button.visible = false
 	if _defeat_double_button:
@@ -1155,10 +1155,10 @@ func _build_hud() -> void:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)
 	hud.add_child(top)
-	var pause := _make_button("PAUSAR", 96, 40)
+	var pause := _make_button(_txt("PAUSE", "PAUSAR", "PAUSA", "一時停止", "暂停"), 96, 40)
 	pause.pressed.connect(_open_pause)
 	top.add_child(pause)
-	_hud_phase = _make_label("FASE %s" % phase_id, 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	_hud_phase = _make_label(_txt("LEVEL %s", "FASE %s", "NIVEL %s", "レベル%s", "关卡%s") % phase_id, 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
 	top.add_child(_hud_phase)
 
 	_hud_resources = HBoxContainer.new()
@@ -1178,7 +1178,7 @@ func _build_hud() -> void:
 	timer_margin.add_theme_constant_override("margin_right", 14)
 	timer_margin.add_theme_constant_override("margin_bottom", 7)
 	_hud_timer_panel.add_child(timer_margin)
-	_hud_timer_label = _make_label("TEMPO 00:00", 18, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_hud_timer_label = _make_label(_txt("TIME 00:00", "TEMPO 00:00", "TIEMPO 00:00", "時間 00:00", "时间 00:00"), 18, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_hud_timer_label.add_theme_color_override("font_shadow_color", Color("#00f0ff88"))
 	_hud_timer_label.add_theme_constant_override("shadow_offset_x", 0)
 	_hud_timer_label.add_theme_constant_override("shadow_offset_y", 0)
@@ -1247,7 +1247,7 @@ func _build_control_overlay() -> void:
 	var center := VBoxContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
-	_control_indicator = _make_label("CONTROLE", 11, "#00f0ffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_control_indicator = _make_label(_txt("CONTROL", "CONTROLE", "CONTROL", "操作", "控制"), 11, "#00f0ffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_control_indicator.add_theme_color_override("font_shadow_color", Color("#00f0ff77"))
 	_control_indicator.add_theme_constant_override("shadow_offset_x", 0)
 	_control_indicator.add_theme_constant_override("shadow_offset_y", 0)
@@ -1307,13 +1307,13 @@ func _update_control_overlay() -> void:
 		control_right_down = false
 		control_input = 0.0
 	if _control_indicator:
-		_control_indicator.text = "CONTROLE %s%%" % roundi(float(skin_profile.get("control_strength", 0.0)) * 100.0)
+		_control_indicator.text = _txt("CONTROL %s%%", "CONTROLE %s%%", "CONTROL %s%%", "操作 %s%%", "控制 %s%%") % roundi(float(skin_profile.get("control_strength", 0.0)) * 100.0)
 
 
 func _build_pause_overlay() -> void:
 	_pause_overlay = _make_modal()
-	var card := _make_modal_content(_pause_overlay, "PAUSA")
-	card.add_child(_make_modal_button("CONTINUAR", _close_pause))
+	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"))
+	card.add_child(_make_modal_button(_tr("continue").to_upper(), _close_pause))
 	card.add_child(_make_modal_button("REINICIAR", _restart_level))
 	card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
 	add_child(_pause_overlay)
@@ -1323,7 +1323,7 @@ func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
 	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(326, 454))
 	card.add_theme_constant_override("separation", 9)
-	card.add_child(_make_label("ESCOLHA UMA MELHORIA", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	card.add_child(_make_label(_txt("CHOOSE AN UPGRADE", "ESCOLHA UMA MELHORIA", "ELIGE UNA MEJORA", "強化を選択", "选择升级"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
 	_level_up_cards.add_theme_constant_override("separation", 6)
 	card.add_child(_level_up_cards)
@@ -1338,32 +1338,32 @@ func _build_level_up_overlay() -> void:
 
 func _build_result_overlays() -> void:
 	_victory_overlay = _make_modal()
-	var victory_card := _make_modal_content(_victory_overlay, "VITORIA")
-	_victory_title = _make_label("FASE 1 CONCLUIDA", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var victory_card := _make_modal_content(_victory_overlay, _tr("victory").to_upper())
+	_victory_title = _make_label(_txt("LEVEL 1 COMPLETE", "FASE 1 CONCLUÍDA", "NIVEL 1 COMPLETADO", "レベル1完了", "关卡1完成"), 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	victory_card.add_child(_victory_title)
 	_victory_rewards = VBoxContainer.new()
 	_victory_rewards.add_theme_constant_override("separation", 8)
 	victory_card.add_child(_victory_rewards)
-	_victory_unlock_label = _make_label("PROXIMA FASE LIBERADA", 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_victory_unlock_label = _make_label(_txt("NEXT LEVEL UNLOCKED", "PRÓXIMA FASE LIBERADA", "SIGUIENTE NIVEL DESBLOQUEADO", "次のレベル解除", "下一关已解锁"), 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	victory_card.add_child(_victory_unlock_label)
-	_victory_double_button = _make_modal_button("DOBRAR RECOMPENSA - AD", _double_result_reward)
+	_victory_double_button = _make_modal_button(_txt("DOUBLE REWARD - AD", "DOBRAR RECOMPENSA - AD", "DUPLICAR RECOMPENSA - ANUNCIO", "報酬2倍 - 広告", "奖励翻倍 - 广告"), _double_result_reward)
 	victory_card.add_child(_victory_double_button)
 	victory_card.add_child(_make_modal_button("VOLTAR AS FASES", _go_to_phase_select))
-	victory_card.add_child(_make_modal_button("JOGAR NOVAMENTE", _restart_level))
+	victory_card.add_child(_make_modal_button(_txt("PLAY AGAIN", "JOGAR NOVAMENTE", "JUGAR DE NUEVO", "もう一度プレイ", "再玩一次"), _restart_level))
 	_victory_next_button = _make_modal_button("PROXIMA FASE", _go_to_next_phase)
 	victory_card.add_child(_victory_next_button)
 	add_child(_victory_overlay)
 
 	_defeat_overlay = _make_modal()
 	var defeat_card := _make_modal_content(_defeat_overlay, "GAME OVER")
-	_defeat_title = _make_label("A bolinha foi presa pelos aneis.", 15, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_defeat_title = _make_label(_txt("The ball was trapped by the rings.", "A bolinha foi presa pelos anéis.", "La bola quedó atrapada por los anillos.", "ボールがリングに閉じ込められました。", "小球被圆环困住了。"), 15, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	defeat_card.add_child(_defeat_title)
 	_defeat_summary = VBoxContainer.new()
 	_defeat_summary.add_theme_constant_override("separation", 8)
 	defeat_card.add_child(_defeat_summary)
-	_defeat_double_button = _make_modal_button("DOBRAR RECOMPENSA - AD", _double_result_reward)
+	_defeat_double_button = _make_modal_button(_txt("DOUBLE REWARD - AD", "DOBRAR RECOMPENSA - AD", "DUPLICAR RECOMPENSA - ANUNCIO", "報酬2倍 - 広告", "奖励翻倍 - 广告"), _double_result_reward)
 	defeat_card.add_child(_defeat_double_button)
-	_defeat_revive_button = _make_modal_button("REVIVER COM ANUNCIO", _revive_with_ad)
+	_defeat_revive_button = _make_modal_button(_txt("REVIVE WITH AD", "REVIVER COM ANÚNCIO", "REVIVIR CON ANUNCIO", "広告で復活", "观看广告复活"), _revive_with_ad)
 	defeat_card.add_child(_defeat_revive_button)
 	defeat_card.add_child(_make_modal_button("TENTAR DE NOVO", _restart_level))
 	defeat_card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
@@ -1497,26 +1497,26 @@ func _make_progress_bar(fill_color: String) -> ProgressBar:
 
 func _update_hud() -> void:
 	var active: int = _active_ring_count()
-	_hud_phase.text = "DESAFIO DIÁRIO" if is_daily_challenge else "INFINITO" if is_infinite else "FASE %s" % phase_id
+	_hud_phase.text = _txt("DAILY CHALLENGE", "DESAFIO DIÁRIO", "DESAFÍO DIARIO", "デイリーチャレンジ", "每日挑战") if is_daily_challenge else _txt("INFINITE", "INFINITO", "INFINITO", "無限", "无限") if is_infinite else _txt("LEVEL %s", "FASE %s", "NIVEL %s", "レベル%s", "关卡%s") % phase_id
 	_set_resource_value("coins", run_coins)
 	_set_resource_value("gems", run_diamonds)
 	_set_resource_value("account", int(GameState.data.get("coins", 0)))
 	_set_resource_value("keys", int(GameState.data.get("keys", 0)))
-	var difficulty_text := "DIÁRIO %s" % String(daily_challenge.get("difficulty_label", "")) if is_daily_challenge else "INFINITO Lv.%s" % infinite_level if is_infinite else String(phase_config["difficulty"]).to_upper()
-	var combo_text := "   COMBO x%s" % combo if combo >= 2 else ""
+	var difficulty_text := "%s %s" % [_txt("DAILY", "DIÁRIO", "DIARIO", "デイリー", "每日"), String(daily_challenge.get("difficulty_label", ""))] if is_daily_challenge else "%s Lv.%s" % [_txt("INFINITE", "INFINITO", "INFINITO", "無限", "无限"), infinite_level] if is_infinite else LocalizationManager.phrase(String(phase_config["difficulty"]).to_upper()) if has_node("/root/LocalizationManager") else String(phase_config["difficulty"]).to_upper()
+	var combo_text := "   %s x%s" % [_txt("COMBO", "COMBO", "COMBO", "コンボ", "连击"), combo] if combo >= 2 else ""
 	if _hud_timer_panel and _hud_timer_label:
 		_hud_timer_panel.visible = is_infinite or is_daily_challenge
 		if is_daily_challenge:
 			var remaining: int = max(0, int(daily_challenge.get("duration", 90)) - floori(infinite_elapsed))
-			_hud_timer_label.text = "RESTA %s" % _format_time(remaining)
+			_hud_timer_label.text = _txt("LEFT %s", "RESTA %s", "QUEDA %s", "残り %s", "剩余 %s") % _format_time(remaining)
 		else:
-			_hud_timer_label.text = "TEMPO %s" % _format_time(floori(infinite_elapsed))
+			_hud_timer_label.text = _txt("TIME %s", "TEMPO %s", "TIEMPO %s", "時間 %s", "时间 %s") % _format_time(floori(infinite_elapsed))
 	if is_infinite:
-		_hud_meta.text = "TEMPO %s   %s%s" % [_format_time(floori(infinite_elapsed)), difficulty_text, combo_text]
+		_hud_meta.text = "%s   %s%s" % [_txt("TIME %s", "TEMPO %s", "TIEMPO %s", "時間 %s", "时间 %s") % _format_time(floori(infinite_elapsed)), difficulty_text, combo_text]
 	elif is_daily_challenge:
-		_hud_meta.text = "%s/%s ANÉIS   %s%s" % [rings_destroyed, int(daily_challenge.get("objective_rings", 30)), difficulty_text, combo_text]
+		_hud_meta.text = "%s/%s %s   %s%s" % [rings_destroyed, int(daily_challenge.get("objective_rings", 30)), _txt("RINGS", "ANÉIS", "ANILLOS", "リング", "圆环"), difficulty_text, combo_text]
 	else:
-		_hud_meta.text = "DIFICULDADE: %s%s" % [difficulty_text, combo_text]
+		_hud_meta.text = "%s: %s%s" % [_txt("DIFFICULTY", "DIFICULDADE", "DIFICULTAD", "難易度", "难度"), difficulty_text, combo_text]
 	var xp_needed := _run_xp_needed_for_level(run_level)
 	_hud_xp.text = "LV.%s   XP %s/%s   +%s XP" % [run_level, run_xp, xp_needed, run_xp]
 	_hud_xp_bar.max_value = xp_needed
@@ -2265,10 +2265,10 @@ func _rebuild_level_up_cards() -> void:
 		last_upgrade_option_ids = _upgrade_ids(available_upgrades)
 	var reroll_text := "Rerolls %s/3" % rerolls_used
 	if String(GameState.data.get("language", "pt")) == "pt":
-		reroll_text = "Rerolls %s/3 - anuncio ou 10 diamantes" % rerolls_used
+		reroll_text = _txt("Rerolls %s/3 - ad or 10 diamonds", "Rerolls %s/3 - anúncio ou 10 diamantes", "Rerolls %s/3 - anuncio o 10 diamantes", "再抽選 %s/3 - 広告またはダイヤ10", "重随 %s/3 - 广告或10钻石") % rerolls_used
 	_level_up_cards.add_child(_make_label(reroll_text, 12, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if available_upgrades.is_empty():
-		_level_up_cards.add_child(_make_label("Todas as melhorias da rodada chegaram ao limite.", 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		_level_up_cards.add_child(_make_label(_txt("All run upgrades reached their limit.", "Todas as melhorias da rodada chegaram ao limite.", "Todas las mejoras de la partida llegaron al límite.", "ラン強化はすべて上限です。", "本局升级均已达到上限。"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 		return
 	for upgrade in available_upgrades:
 		var button := _make_level_up_button(upgrade)
@@ -2433,8 +2433,8 @@ func _update_run_upgrade_buttons() -> void:
 		return
 	var atk_cost := _get_run_upgrade_cost("atk")
 	var gold_cost := _get_run_upgrade_cost("gold")
-	_run_atk_button.text = "ATK Lv.%s\n%s MOEDAS" % [int(run_shop_upgrades.get("atk", 0)), atk_cost]
-	_run_gold_button.text = "GOLD Lv.%s\n%s MOEDAS" % [int(run_shop_upgrades.get("gold", 0)), gold_cost]
+	_run_atk_button.text = "ATK Lv.%s\n%s %s" % [int(run_shop_upgrades.get("atk", 0)), atk_cost, _txt("COINS", "MOEDAS", "MONEDAS", "コイン", "金币")]
+	_run_gold_button.text = "GOLD Lv.%s\n%s %s" % [int(run_shop_upgrades.get("gold", 0)), gold_cost, _txt("COINS", "MOEDAS", "MONEDAS", "コイン", "金币")]
 	_run_atk_button.disabled = run_coins < atk_cost
 	_run_gold_button.disabled = run_coins < gold_cost
 
@@ -2504,7 +2504,7 @@ func _finish_quit_reward() -> void:
 	else:
 		GameState.record_mode_quit("phase", summary)
 	_rebuild_defeat_summary(summary)
-	_defeat_title.text = "RECOMPENSA DE SAIDA"
+	_defeat_title.text = _txt("EXIT REWARD", "RECOMPENSA DE SAÍDA", "RECOMPENSA DE SALIDA", "退出報酬", "退出奖励")
 	if _defeat_revive_button:
 		_defeat_revive_button.visible = false
 	if _defeat_double_button:
@@ -2553,7 +2553,7 @@ func _rebuild_defeat_summary(summary: Dictionary) -> void:
 	if not summary.is_empty():
 		var seconds := int(summary.get("seconds", 0))
 		var new_record := bool(summary.get("new_record", false))
-		_defeat_title.text = "RESULTADO DO MODO INFINITO" if is_infinite else "RECOMPENSA DA PARTIDA"
+		_defeat_title.text = _txt("INFINITE MODE RESULT", "RESULTADO DO MODO INFINITO", "RESULTADO DEL MODO INFINITO", "無限モード結果", "无限模式结果") if is_infinite else _txt("RUN REWARD", "RECOMPENSA DA PARTIDA", "RECOMPENSA DE PARTIDA", "ラン報酬", "本局奖励")
 		if is_infinite or seconds > 0:
 			_defeat_summary.add_child(_make_victory_line("perfect", "Tempo", _format_seconds(seconds)))
 		_defeat_summary.add_child(_make_victory_line("upgrade", "Aneis quebrados", str(summary.get("rings", 0))))
@@ -2562,9 +2562,9 @@ func _rebuild_defeat_summary(summary: Dictionary) -> void:
 		if int(summary.get("diamonds", 0)) > 0:
 			_defeat_summary.add_child(_make_victory_line("gem", "Diamantes", "+%s" % int(summary.get("diamonds", 0))))
 		if new_record:
-			_defeat_summary.add_child(_make_label("NOVO RECORDE!", 15, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+			_defeat_summary.add_child(_make_label(_txt("NEW RECORD!", "NOVO RECORDE!", "¡NUEVO RÉCORD!", "新記録!", "新纪录！"), 15, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
-		_defeat_title.text = "A bolinha foi presa pelos aneis."
+		_defeat_title.text = _txt("The ball was trapped by the rings.", "A bolinha foi presa pelos anéis.", "La bola quedó atrapada por los anillos.", "ボールがリングに閉じ込められました。", "小球被圆环困住了。")
 
 
 func _can_double_result_reward() -> bool:
@@ -2600,7 +2600,7 @@ func _double_result_reward() -> void:
 			_rebuild_victory_rewards(int(pending_result_reward["coins"]), int(pending_result_reward["xp"]))
 			if _victory_double_button:
 				_victory_double_button.disabled = true
-				_victory_double_button.text = "RECOMPENSA DOBRADA"
+				_victory_double_button.text = _txt("REWARD DOUBLED", "RECOMPENSA DOBRADA", "RECOMPENSA DUPLICADA", "報酬2倍", "奖励已翻倍")
 		elif _defeat_overlay and _defeat_overlay.visible:
 			var summary := {
 				"seconds": floori(infinite_elapsed),
@@ -2613,7 +2613,7 @@ func _double_result_reward() -> void:
 			_rebuild_defeat_summary(summary)
 			if _defeat_double_button:
 				_defeat_double_button.disabled = true
-				_defeat_double_button.text = "RECOMPENSA DOBRADA"
+				_defeat_double_button.text = _txt("REWARD DOUBLED", "RECOMPENSA DOBRADA", "RECOMPENSA DUPLICADA", "報酬2倍", "奖励已翻倍")
 	)
 
 
@@ -2974,6 +2974,14 @@ func _make_background_gradient() -> GradientTexture2D:
 	texture.fill_from = Vector2(0.0, 0.0)
 	texture.fill_to = Vector2(0.0, 1.0)
 	return texture
+
+
+func _tr(key: String, fallback := "") -> String:
+	return LocalizationManager.tr_key(key, fallback) if has_node("/root/LocalizationManager") else (fallback if not fallback.is_empty() else key)
+
+
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
 
 
 func _make_label(text: String, font_size: int, color: String, font: Font, alignment: HorizontalAlignment) -> Label:
