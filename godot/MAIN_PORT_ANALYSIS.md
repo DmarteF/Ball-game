@@ -307,6 +307,35 @@ Checklist:
 | Skins bloqueadas aparecem com interrogação | Sim |
 | Skins bloqueadas não mostram asset real | Sim |
 | Skins bloqueadas não mostram efeito real | Sim |
+
+## Colecao visual de skins
+
+Atualizacao aplicada em `godot/scripts/SkinsScreen.gd` e `godot/scripts/GameState.gd`:
+
+- A tela de Skins agora funciona como colecao, com topo `Colecao/Collection`, total desbloqueado, total geral e porcentagem completa.
+- Foram adicionados contadores por raridade e por efeito.
+- Filtros por raridade: Todas, Obtidas, Comum, Rara, Epica, Lendaria, Mitica, Ultimate e Bloqueadas.
+- Filtros por efeito: Controle, Gelo, Fogo, Critico, Moedas, XP, Velocidade, Corrente, Area, Fase e Gravidade.
+- Skins desbloqueadas mostram asset real, nome, raridade, efeitos, estado equipada/desbloqueada e botao Equipar.
+- Skins bloqueadas continuam com `???`, sem asset real e sem efeito completo; mostram apenas raridade e dica de origem.
+- Skins novas sao salvas em `GameState.data["new_skins"]`, exibem tag `Nova/New` e deixam de ser novas ao abrir detalhes ou ao usar `Limpar novas`.
+- Foi adicionado modal de detalhes para skin desbloqueada e modal oculto para skin bloqueada.
+- Botao `Equipar melhor skin` escolhe a maior raridade desbloqueada e, em empate, prioriza skins com Controle.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Porcentagem da colecao | Sim |
+| Contador total | Sim |
+| Contador por raridade | Sim |
+| Filtro por raridade | Sim |
+| Filtro por efeito | Sim |
+| Tag Nova | Sim |
+| Botao limpar novas | Sim |
+| Bloqueadas com ??? | Sim |
+| Modal de detalhes | Sim |
+| Equipar melhor skin | Sim |
 | Todas as melhorias/upgrades restauradas | Sim |
 | Upgrades permanentes existem internamente | Sim |
 | Upgrades temporários existem internamente | Sim |

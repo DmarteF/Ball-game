@@ -504,10 +504,14 @@ func refresh_unlocks(emit_signal := true) -> void:
 	data["unlocked_upgrades"] = unlocked
 
 	var skins: Array = data.get("unlocked_skins", [])
+	var new_skins: Array = data.get("new_skins", [])
 	for id in SKIN_UNLOCK_MILESTONES.keys():
 		if _meets_unlock(SKIN_UNLOCK_MILESTONES[id], max_phase, profile_level) and not skins.has(id):
 			skins.append(id)
+			if not new_skins.has(id):
+				new_skins.append(id)
 	data["unlocked_skins"] = skins
+	data["new_skins"] = new_skins
 	data["stats"]["skins_unlocked"] = skins.size()
 	_update_skin_collection_stats()
 	if not skins.has(String(data.get("equipped_skin", "neon_blue"))):
@@ -604,6 +608,12 @@ func _sanitize_persistent_unlocks() -> void:
 	if not cleaned_skins.has("neon_blue"):
 		cleaned_skins.push_front("neon_blue")
 	data["unlocked_skins"] = cleaned_skins
+	var cleaned_new_skins: Array = []
+	for value in Array(data.get("new_skins", [])):
+		var skin_id := String(value)
+		if cleaned_skins.has(skin_id) and not cleaned_new_skins.has(skin_id):
+			cleaned_new_skins.append(skin_id)
+	data["new_skins"] = cleaned_new_skins
 	if not cleaned_skins.has(String(data.get("equipped_skin", "neon_blue"))):
 		data["equipped_skin"] = "neon_blue"
 	if not cleaned_skins.has(String(data.get("favorite_skin", data.get("equipped_skin", "neon_blue")))):
@@ -1550,6 +1560,10 @@ func unlock_skin(id: String) -> void:
 	var skins: Array = data.get("unlocked_skins", [])
 	if not skins.has(id):
 		skins.append(id)
+		var new_skins: Array = data.get("new_skins", [])
+		if not new_skins.has(id):
+			new_skins.append(id)
+		data["new_skins"] = new_skins
 	data["unlocked_skins"] = skins
 	data["stats"]["skins_unlocked"] = skins.size()
 	data["stats"]["skinsUnlocked"] = skins.size()
@@ -1566,6 +1580,23 @@ func equip_skin(id: String) -> bool:
 	_progress_missions("skinEquips", 1)
 	save_game()
 	return true
+
+
+func is_new_skin(id: String) -> bool:
+	return Array(data.get("new_skins", [])).has(id)
+
+
+func mark_skin_seen(id: String) -> void:
+	var new_skins: Array = data.get("new_skins", [])
+	if new_skins.has(id):
+		new_skins.erase(id)
+		data["new_skins"] = new_skins
+		save_game()
+
+
+func clear_new_skins() -> void:
+	data["new_skins"] = []
+	save_game()
 
 
 func should_show_tutorial() -> bool:

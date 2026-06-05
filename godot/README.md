@@ -1152,3 +1152,7 @@ Checklist:
 - Tutorial respeita idioma: sim
 - Dicas pós-Fase 1 funcionam: sim
 - Tutorial salva no SaveManager: sim
+
+## Atualizacao - Colecao de Skins
+
+A tela `Skins` agora exibe colecao completa com porcentagem, total desbloqueado, total geral, contadores por raridade, contadores por efeito, filtros por raridade/efeito, tag `Nova`, botao `Limpar novas`, modal de detalhes e botao `Equipar melhor skin`. Skins bloqueadas continuam protegidas com `???`, sem revelar asset real nem efeito completo.

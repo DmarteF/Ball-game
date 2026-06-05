@@ -9,7 +9,8 @@ const ICON_PATHS := {
 	"key": "res://assets/ui/ui_key.png",
 }
 
-const FILTERS := [
+const RARITY_FILTERS := [
+	{ "id": "all", "label": "Todas" },
 	{ "id": "owned", "label": "Obtidas" },
 	{ "id": "common", "label": "Comuns" },
 	{ "id": "rare", "label": "Raras" },
@@ -21,6 +22,20 @@ const FILTERS := [
 ]
 
 const RARITIES := ["common", "rare", "epic", "legendary", "mythic", "ultimate"]
+const EFFECT_FILTERS := [
+	{ "id": "all", "label_pt": "Todos", "label_en": "All" },
+	{ "id": "control", "label_pt": "Controle", "label_en": "Control" },
+	{ "id": "ice", "label_pt": "Gelo", "label_en": "Ice" },
+	{ "id": "fire", "label_pt": "Fogo", "label_en": "Fire" },
+	{ "id": "critical", "label_pt": "Crítico", "label_en": "Critical" },
+	{ "id": "coins", "label_pt": "Moedas", "label_en": "Coins" },
+	{ "id": "xp", "label_pt": "XP", "label_en": "XP" },
+	{ "id": "speed", "label_pt": "Velocidade", "label_en": "Speed" },
+	{ "id": "chain", "label_pt": "Corrente", "label_en": "Chain" },
+	{ "id": "area", "label_pt": "Área", "label_en": "Area" },
+	{ "id": "phase", "label_pt": "Fase", "label_en": "Phase" },
+	{ "id": "gravity", "label_pt": "Gravidade", "label_en": "Gravity" },
+]
 
 const SKINS := [
 	{ "id": "neon_blue", "name": "Neon Azul", "rarity": "common", "desc": "Esfera inicial equilibrada.", "primary": "#00f0ff", "secondary": "#0088ff", "effects": ["Perfect"], "owned": true, "selected": true },
@@ -54,10 +69,15 @@ const SKINS := [
 
 var _regular_font: Font
 var _bold_font: Font
-var _filter := "owned"
+var _filter := "all"
+var _effect_filter := "all"
+var _root: VBoxContainer
+var _scroll_content: VBoxContainer
 var _content_grid: GridContainer
 var _filter_buttons: Array[Button] = []
+var _effect_filter_buttons: Array[Button] = []
 var _all_skin_data: Array = []
+var _detail_overlay: PanelContainer
 
 
 func _ready() -> void:
@@ -82,7 +102,8 @@ func _build_background() -> void:
 
 
 func _build_screen() -> void:
-	var root := VBoxContainer.new()
+	_root = VBoxContainer.new()
+	var root := _root
 	root.anchor_left = 0.0
 	root.anchor_top = 0.0
 	root.anchor_right = 1.0
@@ -112,10 +133,25 @@ func _build_screen() -> void:
 	content.mouse_filter = Control.MOUSE_FILTER_PASS
 	content.add_theme_constant_override("separation", 12)
 	scroll.add_child(content)
+	_scroll_content = content
 
-	content.add_child(_make_progress_grid())
-	content.add_child(_make_skin_summary())
-	content.add_child(_make_filters())
+	_rebuild_collection_content(content)
+	_build_detail_overlay()
+
+
+func _rebuild_collection_content(content: VBoxContainer = null) -> void:
+	if content == null:
+		content = _scroll_content
+	if content == null:
+		return
+	for child in content.get_children():
+		child.queue_free()
+	content.add_child(_make_collection_summary())
+	content.add_child(_make_counter_grid("rarity"))
+	content.add_child(_make_counter_grid("effect"))
+	content.add_child(_make_collection_actions())
+	content.add_child(_make_filters("rarity"))
+	content.add_child(_make_filters("effect"))
 
 	_content_grid = GridContainer.new()
 	_content_grid.columns = 1 if _is_narrow_screen() else 2
@@ -155,25 +191,23 @@ func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
 	return pill
 
 
-func _make_progress_grid() -> GridContainer:
+func _make_counter_grid(kind: String) -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = 2 if _is_narrow_screen() else 3
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.mouse_filter = Control.MOUSE_FILTER_PASS
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
-	for rarity in RARITIES:
-		var owned := 0
-		var total := 0
-		for skin in _all_skin_data:
-			if skin["rarity"] == rarity:
-				total += 1
-				if _is_owned(String(skin["id"])):
-					owned += 1
+	var entries := _rarity_counter_entries() if kind == "rarity" else _effect_counter_entries()
+	for entry in entries:
+		var id := String(entry.get("id", ""))
+		var owned := int(entry.get("owned", 0))
+		var total := int(entry.get("total", 0))
+		var tone := String(entry.get("color", "#00f0ff"))
 		var card := PanelContainer.new()
 		card.mouse_filter = Control.MOUSE_FILTER_PASS
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		card.add_theme_stylebox_override("panel", _make_style("#ffffff10", 10, _rarity_color(rarity) + "77", 1))
+		card.add_theme_stylebox_override("panel", _make_style("#ffffff10", 10, tone + "77", 1))
 		var margin := MarginContainer.new()
 		margin.add_theme_constant_override("margin_left", 10)
 		margin.add_theme_constant_override("margin_top", 8)
@@ -182,15 +216,17 @@ func _make_progress_grid() -> GridContainer:
 		card.add_child(margin)
 		var column := VBoxContainer.new()
 		margin.add_child(column)
-		column.add_child(_make_label(_rarity_name(rarity), 10, _rarity_color(rarity), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-		column.add_child(_make_label("%s/%s" % [owned, "???" if rarity in ["mythic", "ultimate"] else str(total)], 15, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		column.add_child(_make_label(String(entry.get("label", id.to_upper())), 10, tone, _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		column.add_child(_make_label("%s/%s" % [owned, total], 15, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 		grid.add_child(card)
 	return grid
 
 
-func _make_skin_summary() -> PanelContainer:
+func _make_collection_summary() -> PanelContainer:
 	var unlocked: int = Array(GameState.data.get("unlocked_skins", [])).size()
 	var locked: int = max(0, _all_skin_data.size() - unlocked)
+	var percent := 0 if _all_skin_data.is_empty() else roundi(float(unlocked) / float(_all_skin_data.size()) * 100.0)
+	var new_count := Array(GameState.data.get("new_skins", [])).size()
 	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
@@ -203,37 +239,61 @@ func _make_skin_summary() -> PanelContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 3)
 	margin.add_child(column)
-	column.add_child(_make_label(("Skins desbloqueadas: %s" if pt else "Unlocked skins: %s") % unlocked, 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label(("Skins bloqueadas: %s" if pt else "Locked skins: %s") % locked, 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label("Use filtros para ver raridade ou bloqueadas." if pt else "Use filters to view rarity or locked skins.", 12, "#ffffff88", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("COLEÇÃO" if pt else "COLLECTION", 13, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("%s/%s skins" % [unlocked, _all_skin_data.size()], 24, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label("%s%% %s" % [percent, "completo" if pt else "complete"], 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("Bloqueadas: %s  •  Novas: %s" if pt else "Locked: %s  •  New: %s") % [locked, new_count], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
-func _make_filters() -> GridContainer:
+func _make_collection_actions() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	var best := _make_action(_ui_text("EQUIPAR MELHOR SKIN", "EQUIP BEST SKIN"), "#00f0ff", false, _equip_best_skin)
+	var clear := _make_action(_ui_text("LIMPAR NOVAS", "CLEAR NEW"), "#ffd700", Array(GameState.data.get("new_skins", [])).is_empty(), _clear_new_tags)
+	row.add_child(best)
+	row.add_child(clear)
+	return row
+
+
+func _make_filters(kind: String) -> GridContainer:
 	var row := GridContainer.new()
 	row.columns = 2 if _is_narrow_screen() else 3
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_theme_constant_override("h_separation", 8)
 	row.add_theme_constant_override("v_separation", 8)
-	_filter_buttons.clear()
-	for filter_data in FILTERS:
+	if kind == "rarity":
+		_filter_buttons.clear()
+	else:
+		_effect_filter_buttons.clear()
+	var filters := RARITY_FILTERS if kind == "rarity" else EFFECT_FILTERS
+	for filter_data in filters:
 		var button := Button.new()
-		button.text = _filter_label(String(filter_data["id"]), String(filter_data["label"]))
+		var filter_id := String(filter_data["id"])
+		button.text = _filter_label(filter_id, String(filter_data.get("label", filter_data.get("label_pt", filter_id))), kind)
 		button.custom_minimum_size = Vector2(96, 34)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.focus_mode = Control.FOCUS_NONE
 		button.mouse_filter = Control.MOUSE_FILTER_PASS
 		button.add_theme_font_override("font", _bold_font)
 		button.add_theme_font_size_override("font_size", 12)
-		button.set_meta("filter_id", String(filter_data["id"]))
-		_apply_filter_style(button, String(filter_data["id"]) == _filter)
+		button.set_meta("filter_id", filter_id)
+		button.set_meta("filter_kind", kind)
+		_apply_filter_style(button, filter_id == (_filter if kind == "rarity" else _effect_filter))
 		button.pressed.connect(func() -> void:
-			_filter = String(filter_data["id"])
+			if kind == "rarity":
+				_filter = filter_id
+			else:
+				_effect_filter = filter_id
 			_refresh_filters()
 			_populate_skins()
 		)
-		_filter_buttons.append(button)
+		if kind == "rarity":
+			_filter_buttons.append(button)
+		else:
+			_effect_filter_buttons.append(button)
 		row.add_child(button)
 	return row
 
@@ -247,15 +307,23 @@ func _populate_skins() -> void:
 			continue
 		if _filter == "locked" and owned:
 			continue
-		if _filter not in ["owned", "locked"] and skin["rarity"] != _filter:
+		if _filter not in ["all", "owned", "locked"] and skin["rarity"] != _filter:
+			continue
+		if _effect_filter != "all" and not _skin_matches_effect(skin, _effect_filter):
 			continue
 		_content_grid.add_child(_make_skin_card(skin))
 
 
-func _filter_label(id: String, fallback: String) -> String:
+func _filter_label(id: String, fallback: String, kind := "rarity") -> String:
 	var pt := String(GameState.get_setting("language", "en")).begins_with("pt")
+	if kind == "effect":
+		for item in EFFECT_FILTERS:
+			if String(item.get("id", "")) == id:
+				return String(item.get("label_pt" if pt else "label_en", fallback))
+		return fallback
 	if not pt:
 		match id:
+			"all": return "All"
 			"common": return "Common"
 			"rare": return "Rare"
 			"epic": return "Epic"
@@ -266,6 +334,7 @@ func _filter_label(id: String, fallback: String) -> String:
 			"locked": return "Locked"
 		return fallback
 	match id:
+		"all": return "Todas"
 		"common": return "Comuns"
 		"rare": return "Raras"
 		"epic": return "Épicas"
@@ -281,12 +350,19 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	var owned := _is_owned(String(skin["id"]))
 	var selected := String(GameState.data.get("equipped_skin", "neon_blue")) == String(skin["id"])
 	var hidden := not owned
+	var is_new := owned and GameState.is_new_skin(String(skin["id"]))
 	var rarity_color := _rarity_color(String(skin["rarity"]))
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(0, 246)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.mouse_filter = Control.MOUSE_FILTER_PASS
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 14, "#00ff88" if selected else rarity_color + "88", 2 if selected else 1))
+	card.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			_show_skin_details(skin)
+		elif event is InputEventScreenTouch and event.pressed:
+			_show_skin_details(skin)
+	)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)
 	margin.add_theme_constant_override("margin_top", 12)
@@ -304,6 +380,8 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	top.mouse_filter = Control.MOUSE_FILTER_PASS
 	column.add_child(top)
 	top.add_child(_make_skin_icon(String(skin["id"]), hidden, Color(String(skin["primary"]))))
+	if is_new:
+		top.add_child(_make_new_badge())
 	var badge := _make_label(_rarity_name(String(skin["rarity"])), 9, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	badge.custom_minimum_size = Vector2(58, 24)
 	badge.add_theme_stylebox_override("normal", _make_style(rarity_color, 7))
@@ -325,7 +403,7 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	else:
 		effects.add_child(_make_effect_badge("???", rarity_color))
 
-	column.add_child(_make_label("Lv.1 • 0/10" if owned else "BLOQUEADA", 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	column.add_child(_make_label(("EQUIPADA" if selected else "DESBLOQUEADA") if owned else _unlock_hint(String(skin.get("source", "")), String(skin["rarity"])), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	if owned:
 		var row := HBoxContainer.new()
@@ -346,6 +424,9 @@ func _build_all_skin_data() -> Array:
 		var item: Dictionary = skin.duplicate(true)
 		item["desc"] = String(item.get("desc", item.get("description", "")))
 		item["effects"] = _effects_from_passive(Dictionary(item.get("passive", {})))
+		if MainPortData.skin_has_control(String(item.get("id", ""))) and not Array(item["effects"]).has("Controle"):
+			item["effects"].append("Controle")
+		item["source"] = _source_hint_from_skin(item)
 		item["owned"] = String(item.get("id", "")) == "neon_blue"
 		result.append(item)
 		seen[String(item["id"])] = true
@@ -377,6 +458,7 @@ func _append_asset_skins_from_dir(result: Array, seen: Dictionary, path: String)
 					"primary": _primary_from_id(id, rarity),
 					"secondary": _secondary_from_id(id),
 					"effects": _effects_from_id(id),
+					"source": _source_hint_from_id(id, rarity),
 					"owned": false,
 				})
 				seen[id] = true
@@ -414,6 +496,24 @@ func _effects_from_passive(passive: Dictionary) -> Array[String]:
 		"all_bonus":
 			return ["Bônus"]
 	return ["Trilha"]
+
+
+func _source_hint_from_skin(skin: Dictionary) -> String:
+	var id := String(skin.get("id", ""))
+	return _source_hint_from_id(id, String(skin.get("rarity", "common")))
+
+
+func _source_hint_from_id(id: String, rarity: String) -> String:
+	var lower := id.to_lower()
+	if _contains_any(lower, ["league", "emperor", "champion"]):
+		return _ui_text("Recompensa da Liga Neon", "Neon League reward")
+	if _contains_any(lower, ["boss", "phoenix", "dragon", "guardian"]):
+		return _ui_text("Recompensa de Boss", "Boss reward")
+	if _contains_any(lower, ["event", "codex"]):
+		return _ui_text("Recompensa de evento", "Event reward")
+	if rarity in ["mythic", "ultimate"]:
+		return _ui_text("Conquista, evento ou baú raro", "Achievement, event or rare chest")
+	return _ui_text("Obtida em baús", "Found in chests")
 
 
 func _name_from_id(id: String) -> String:
@@ -486,6 +586,8 @@ func _effects_from_id(id: String) -> Array[String]:
 		effects.append("Velocidade")
 	if _contains_any(lower, ["kitty", "tiger", "bee", "skull", "crown", "omega", "champion"]):
 		effects.append("Crítico")
+	if MainPortData.skin_has_control(id) or _contains_any(lower, ["control", "ripple", "chrono", "ultimate"]):
+		effects.append("Controle")
 	if effects.is_empty():
 		effects.append("Trilha")
 	if _rarity_from_id(id) in ["legendary", "mythic", "ultimate"]:
@@ -565,6 +667,140 @@ func _make_effect_badge(text: String, color: String) -> PanelContainer:
 	return badge
 
 
+func _make_new_badge() -> PanelContainer:
+	var badge := PanelContainer.new()
+	badge.add_theme_stylebox_override("panel", _make_style("#ff0055", 8, "#ffffff66", 1, "#ff005588", 6))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 7)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_right", 7)
+	margin.add_theme_constant_override("margin_bottom", 4)
+	badge.add_child(margin)
+	margin.add_child(_make_label(_ui_text("NOVA", "NEW"), 9, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	return badge
+
+
+func _rarity_counter_entries() -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	for rarity in RARITIES:
+		var owned := 0
+		var total := 0
+		for skin in _all_skin_data:
+			if String(skin.get("rarity", "")) == rarity:
+				total += 1
+				if _is_owned(String(skin.get("id", ""))):
+					owned += 1
+		entries.append({ "id": rarity, "label": _rarity_name(rarity), "owned": owned, "total": total, "color": _rarity_color(rarity) })
+	return entries
+
+
+func _effect_counter_entries() -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	for item in EFFECT_FILTERS:
+		var id := String(item.get("id", ""))
+		if id == "all":
+			continue
+		var owned := 0
+		var total := 0
+		for skin in _all_skin_data:
+			if _skin_matches_effect(skin, id):
+				total += 1
+				if _is_owned(String(skin.get("id", ""))):
+					owned += 1
+		entries.append({ "id": id, "label": _filter_label(id, id, "effect").to_upper(), "owned": owned, "total": total, "color": _effect_color(id) })
+	return entries
+
+
+func _skin_matches_effect(skin: Dictionary, effect_id: String) -> bool:
+	if effect_id == "control":
+		return MainPortData.skin_has_control(String(skin.get("id", ""))) or _effect_keys(skin).has("control")
+	return _effect_keys(skin).has(effect_id)
+
+
+func _effect_keys(skin: Dictionary) -> Array[String]:
+	var keys: Array[String] = []
+	for effect in Array(skin.get("effects", [])):
+		var text := String(effect).to_lower()
+		if _contains_any(text, ["controle", "control"]): keys.append("control")
+		if _contains_any(text, ["gelo", "ice", "congela", "lentidão", "lento", "freeze", "slow"]): keys.append("ice")
+		if _contains_any(text, ["fogo", "fire", "queima", "burn", "chama"]): keys.append("fire")
+		if _contains_any(text, ["crítico", "critico", "critical", "crit"]): keys.append("critical")
+		if _contains_any(text, ["moeda", "coins", "tesouro"]): keys.append("coins")
+		if text == "xp" or text.contains("xp"): keys.append("xp")
+		if _contains_any(text, ["velocidade", "speed"]): keys.append("speed")
+		if _contains_any(text, ["corrente", "chain"]): keys.append("chain")
+		if _contains_any(text, ["área", "area"]): keys.append("area")
+		if _contains_any(text, ["fase", "phase"]): keys.append("phase")
+		if _contains_any(text, ["gravidade", "gravity"]): keys.append("gravity")
+	var unique: Array[String] = []
+	for key in keys:
+		if not unique.has(key):
+			unique.append(key)
+	return unique
+
+
+func _effect_color(id: String) -> String:
+	match id:
+		"control": return "#00f0ff"
+		"ice": return "#9be8ff"
+		"fire": return "#ff8800"
+		"critical": return "#ff4fd8"
+		"coins": return "#ffd700"
+		"xp": return "#00ff88"
+		"speed": return "#67e8f9"
+		"chain": return "#38bdf8"
+		"area": return "#b000ff"
+		"phase": return "#a855f7"
+		"gravity": return "#c084fc"
+	return "#00f0ff"
+
+
+func _clear_new_tags() -> void:
+	GameState.clear_new_skins()
+	_rebuild_collection_content()
+	_play_ui_sfx(true)
+
+
+func _equip_best_skin() -> void:
+	var best_id := ""
+	var best_score := -1
+	var equipped := String(GameState.data.get("equipped_skin", "neon_blue"))
+	for id_value in Array(GameState.data.get("unlocked_skins", [])):
+		var id := String(id_value)
+		var skin := _skin_data_by_id(id)
+		if skin.is_empty():
+			continue
+		var score := _rarity_rank(String(skin.get("rarity", "common"))) * 100
+		if MainPortData.skin_has_control(id) or _skin_matches_effect(skin, "control"):
+			score += 25
+		if score > best_score:
+			best_score = score
+			best_id = id
+	if best_id.is_empty() or best_id == equipped:
+		_play_ui_sfx(false)
+		return
+	_equip_skin(best_id)
+
+
+func _skin_data_by_id(id: String) -> Dictionary:
+	for skin in _all_skin_data:
+		if String(skin.get("id", "")) == id:
+			return skin
+	return {}
+
+
+func _rarity_rank(rarity: String) -> int:
+	return RARITIES.find(rarity)
+
+
+func _unlock_hint(source: String, rarity: String) -> String:
+	if not source.is_empty():
+		return source
+	if rarity in ["legendary", "mythic", "ultimate"]:
+		return _ui_text("Recompensa da Liga Neon, Boss, evento ou baú", "Neon League, Boss, event or chest reward")
+	return _ui_text("Obtida em baús, fases ou conquistas", "Found in chests, levels or achievements")
+
+
 func _make_action(text: String, color: String, disabled: bool, action: Callable = Callable()) -> Button:
 	var button := Button.new()
 	button.text = text
@@ -583,19 +819,97 @@ func _make_action(text: String, color: String, disabled: bool, action: Callable 
 	return button
 
 
+func _build_detail_overlay() -> void:
+	_detail_overlay = PanelContainer.new()
+	_fill(_detail_overlay)
+	_detail_overlay.visible = false
+	_detail_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_detail_overlay.add_theme_stylebox_override("panel", _make_style("#050014cc", 0))
+	add_child(_detail_overlay)
+
+
+func _show_skin_details(skin: Dictionary) -> void:
+	if _detail_overlay == null:
+		return
+	for child in _detail_overlay.get_children():
+		child.queue_free()
+	var skin_id := String(skin.get("id", ""))
+	var owned := _is_owned(skin_id)
+	if owned and GameState.is_new_skin(skin_id):
+		GameState.mark_skin_seen(skin_id)
+	var center := CenterContainer.new()
+	_fill(center)
+	_detail_overlay.add_child(center)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(330, 470)
+	var rarity := String(skin.get("rarity", "common"))
+	panel.add_theme_stylebox_override("panel", _make_style("#16003bee", 18, _rarity_color(rarity) + "aa", 2, _rarity_color(rarity) + "55", 14))
+	center.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 18)
+	panel.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	margin.add_child(column)
+	var icon_box := CenterContainer.new()
+	icon_box.custom_minimum_size = Vector2(0, 116)
+	column.add_child(icon_box)
+	icon_box.add_child(_make_skin_icon(skin_id, not owned, Color(String(skin.get("primary", "#00f0ff")))))
+	column.add_child(_make_label(String(skin.get("name", "???")) if owned else "???", 24, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label(_rarity_name(rarity), 13, _rarity_color(rarity), _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var effect_text := _effects_text(skin) if owned else "???"
+	column.add_child(_make_label(effect_text, 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var desc := _make_label(String(skin.get("desc", "")) if owned else _ui_text("Asset oculto até desbloquear.", "Asset hidden until unlocked."), 12, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.custom_minimum_size.y = 54
+	column.add_child(desc)
+	column.add_child(_make_label(_unlock_hint(String(skin.get("source", "")), rarity), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	if owned:
+		var selected := String(GameState.data.get("equipped_skin", "neon_blue")) == skin_id
+		column.add_child(_make_action(_ui_text("USANDO", "USING") if selected else _ui_text("EQUIPAR", "EQUIP"), "#00f0ff", selected, func() -> void:
+			_equip_skin(skin_id)
+			_detail_overlay.visible = false
+		))
+	column.add_child(_make_action(_ui_text("FECHAR", "CLOSE"), "#ffffff", false, func() -> void:
+		_detail_overlay.visible = false
+		_rebuild_collection_content()
+	))
+	_detail_overlay.visible = true
+
+
+func _effects_text(skin: Dictionary) -> String:
+	var effects: Array = skin.get("effects", [])
+	var parts: Array[String] = []
+	for effect in effects:
+		parts.append(String(effect))
+	return " • ".join(parts)
+
+
 func _equip_skin(skin_id: String) -> void:
 	if GameState.equip_skin(skin_id):
-		if has_node("/root/AudioManager"):
-			AudioManager.play_sfx("res://assets/sounds/button_confirm.mp3", -6.0)
-		_populate_skins()
+		_play_ui_sfx(true)
+		_rebuild_collection_content()
 	else:
-		if has_node("/root/AudioManager"):
-			AudioManager.play_sfx("res://assets/sounds/button_error.mp3", -6.0)
+		_play_ui_sfx(false)
+
+
+func _play_ui_sfx(ok: bool) -> void:
+	if has_node("/root/AudioManager"):
+		AudioManager.play_sfx("res://assets/sounds/button_confirm.mp3" if ok else "res://assets/sounds/button_error.mp3", -6.0)
+
+
+func _ui_text(pt: String, en: String) -> String:
+	return pt if String(GameState.get_setting("language", "en")).begins_with("pt") else en
 
 
 func _refresh_filters() -> void:
 	for button in _filter_buttons:
 		_apply_filter_style(button, String(button.get_meta("filter_id")) == _filter)
+	for button in _effect_filter_buttons:
+		_apply_filter_style(button, String(button.get_meta("filter_id")) == _effect_filter)
 
 
 func _apply_filter_style(button: Button, active: bool) -> void:
