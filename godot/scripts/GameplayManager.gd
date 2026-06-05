@@ -636,13 +636,14 @@ func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2
 			rings[i] = ring
 			_register_ring_clear()
 			perfect_escapes += 1
-			var perfect_coins: int = max(5, floori(10.0 * _gold_multiplier()))
-			var perfect_xp: int = floori((28.0 + randf() * 16.0 + phase_id * 1.2) * _xp_multiplier())
+			var perfect_coins: int = max(12, floori((22.0 + float(run_level) * 1.8 + float(combo) * 0.8) * _gold_multiplier()))
+			var perfect_xp: int = max(24, floori((48.0 + randf() * 20.0 + phase_id * 1.6 + float(run_level) * 3.0) * _xp_multiplier()))
 			_award_coins(perfect_coins)
 			_award_xp(perfect_xp)
 			_register_combo("Perfect", Color("#00f0ff"))
 			_spawn_particles(ball_position, Color("#b8f3ff"), 12, 110.0)
 			_spawn_floating("Perfect", ball_position + Vector2(10, -20), Color("#b8f3ff"))
+			_spawn_floating("+%s GOLD  +%s XP" % [perfect_coins, perfect_xp], ball_position + Vector2(-46, 34), Color("#ffd700"))
 			_play_sfx("ring_clear")
 			if randf() < min(0.18, 0.03 + _perfect_diamond_bonus()):
 				run_diamonds += 1
@@ -2022,7 +2023,7 @@ func _open_level_up() -> void:
 func _get_safe_upgrade_options(exclude_ids: Array[String] = [], allow_repeats := true) -> Array[Dictionary]:
 	GameState.refresh_unlocks(false)
 	var unlocked: Array = GameState.data.get("unlocked_upgrades", [])
-	var pool: Array = MainPortData.run_upgrades()
+	var pool: Array = GameState.available_run_upgrades()
 	var filtered: Array[Dictionary] = []
 	var fallback: Array[Dictionary] = []
 	for upgrade in pool:
@@ -2059,27 +2060,7 @@ func _is_run_upgrade_available(upgrade: Dictionary, unlocked: Array) -> bool:
 		return false
 	if int(current_upgrades.get(id, 0)) >= int(upgrade.get("maxLevel", 1)):
 		return false
-	if bool(upgrade.get("secret", false)):
-		return unlocked.has(id)
-	if not unlocked.has(id):
-		return false
-	if MainPortData.auto_run_upgrade_ids().has(id):
-		return true
-	var explicit_unlocks: Array = GameState.data.get("explicit_unlocked_run_upgrades", [])
-	if explicit_unlocks.has(id):
-		return true
-	var profile_level: int = int(GameState.data.get("level", 1))
-	var max_phase: int = int(GameState.data.get("max_unlocked_phase", GameState.data.get("current_phase", 1)))
-	var required_profile: int = max(int(upgrade.get("unlockLevel", 1)), _profile_requirement_from_text(String(upgrade.get("unlockRequirement", ""))))
-	if profile_level < required_profile:
-		return false
-	if GameState.TEMP_UPGRADE_UNLOCKS.has(id):
-		var rule: Dictionary = GameState.TEMP_UPGRADE_UNLOCKS[id]
-		var phase_required := int(rule.get("phase", 999))
-		var level_required := int(rule.get("level", 999))
-		if max_phase < phase_required and profile_level < level_required:
-			return false
-	return true
+	return unlocked.has(id)
 
 
 func _profile_requirement_from_text(text: String) -> int:

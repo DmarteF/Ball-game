@@ -1066,3 +1066,30 @@ Checklist:
 | Level-up usa temporarios liberados reais | Sim |
 | Liga/Boss usam o mesmo pool desbloqueado | Sim |
 | Setas do Boss dependem da skin equipada | Sim |
+
+## 7.21 Perfect bonus, upgrades sincronizados e novas conquistas de modos
+
+Atualizado nesta etapa:
+
+- Perfect Escape agora entrega bonus maior de gold/moedas de partida e XP de partida em fases, Modo Infinito, Liga Neon e Boss.
+- A recompensa de perfect em fases/infinito mostra feedback visual com `+GOLD` e `+XP`.
+- A tela `Melhorias` voltou a exibir tambem as temporarias de partida liberadas, logo abaixo das permanentes.
+- A lista visivel de temporarias liberadas e a lista usada no level-up agora vem da mesma fonte: `GameState.available_run_upgrades()`.
+- Fases, Modo Infinito, Liga Neon e Boss usam `GameState.available_run_upgrade_ids()` / `available_run_upgrades()` para impedir diferenca entre o que aparece na tela e o que pode ser escolhido.
+- Temporarias ainda bloqueadas continuam escondidas, incluindo upgrades secretos, ate a conquista/recompensa liberar.
+- A notificacao de recompensas pendentes no menu agora usa checagem por tempo em `_process` e some automaticamente apos alguns segundos.
+- Foram adicionadas conquistas extras com premios para Liga Neon e Boss, incluindo partidas/vitorias na Liga, ranks Ouro/Lendario e vitorias em Boss/Elite/Impossivel.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Perfect da bonus maior de gold | Sim |
+| Perfect da bonus maior de XP | Sim |
+| Perfect bonus aplicado em fases/infinito | Sim |
+| Perfect bonus aplicado em Liga/Boss | Sim |
+| Temporarias liberadas aparecem na tela Melhorias | Sim |
+| Level-up usa a mesma lista visivel de temporarias | Sim |
+| Temporarias bloqueadas ficam escondidas | Sim |
+| Notificacao de rewards some sozinha | Sim |
+| Mais conquistas de Liga/Boss com premios | Sim |

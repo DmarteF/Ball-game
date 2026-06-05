@@ -461,8 +461,10 @@ func _check_perfect_escape(state: Dictionary, prev_dist: float, next_dist: float
 			state["rings"][i] = ring
 			state["rings_destroyed"] = int(state.get("rings_destroyed", 0)) + 1
 			state["perfects"] = int(state.get("perfects", 0)) + 1
-			_award_arena_coins(state, 8 + int(state.get("gold", 0)) * 2)
-			_award_arena_xp(state, floori(30.0 * _xp_multiplier(state)))
+			var perfect_coins: int = max(12, floori((20.0 + float(int(state.get("level", 1))) * 1.5) * _gold_multiplier(state)))
+			var perfect_xp: int = max(24, floori((44.0 + float(int(state.get("level", 1))) * 2.5) * _xp_multiplier(state)))
+			_award_arena_coins(state, perfect_coins)
+			_award_arena_xp(state, perfect_xp)
 			if String(state.get("id", "")) == "player":
 				_play_sfx("clear")
 				if randf() < 0.035 + _perfect_bonus(state):
@@ -817,19 +819,7 @@ func _upgrade_choices(state: Dictionary, player_only: bool) -> Array[Dictionary]
 
 
 func _player_unlocked_run_upgrade_ids() -> Array[String]:
-	var defined: Array[String] = MainPortData.all_run_upgrade_ids()
-	var unlocked_save: Array = GameState.data.get("unlocked_upgrades", [])
-	var explicit: Array = GameState.data.get("explicit_unlocked_run_upgrades", [])
-	var result: Array[String] = []
-	for id in MainPortData.auto_run_upgrade_ids():
-		var upgrade_id := String(id)
-		if defined.has(upgrade_id) and not result.has(upgrade_id):
-			result.append(upgrade_id)
-	for id in explicit:
-		var upgrade_id := String(id)
-		if defined.has(upgrade_id) and unlocked_save.has(upgrade_id) and not result.has(upgrade_id):
-			result.append(upgrade_id)
-	return result
+	return GameState.available_run_upgrade_ids()
 
 
 func _apply_run_upgrade(state: Dictionary, id: String) -> void:

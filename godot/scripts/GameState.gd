@@ -78,6 +78,17 @@ const ACHIEVEMENTS := [
 	{ "id": "store_buyer", "name": "Neon Shopper", "name_pt": "Comprador Neon", "desc": "Buy or claim something in the shop.", "desc_pt": "Compre ou resgate algo na loja.", "metric": "storePurchases", "required": 1, "reward": { "type": "diamonds", "amount": 6 }, "rarity": "common" },
 ]
 
+const MODE_REWARD_ACHIEVEMENTS := [
+	{ "id": "league_match_3", "name": "League Regular", "name_pt": "Frequente da Liga", "desc": "Play 3 Neon League matches.", "desc_pt": "Jogue 3 partidas da Liga Neon.", "metric": "leagueMatches", "required": 3, "reward": { "type": "coins", "amount": 750 }, "rarity": "common" },
+	{ "id": "league_win_3", "name": "League Spark", "name_pt": "Faísca da Liga", "desc": "Win 3 Neon League matches.", "desc_pt": "Vença 3 partidas da Liga Neon.", "metric": "leagueWins", "required": 3, "reward": { "type": "diamonds", "amount": 22 }, "rarity": "rare" },
+	{ "id": "league_gold_reward", "name": "Gold Division", "name_pt": "Divisão Ouro", "desc": "Reach Gold in Neon League.", "desc_pt": "Alcance a Liga Ouro.", "metric": "leagueGoldReached", "required": 1, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+	{ "id": "league_legend_reward", "name": "Legend Division", "name_pt": "Divisão Lendária", "desc": "Reach Legendary in Neon League.", "desc_pt": "Alcance a Liga Lendária.", "metric": "leagueLegendaryReached", "required": 1, "reward": { "type": "legendaryKeys", "amount": 1 }, "rarity": "legendary" },
+	{ "id": "boss_first_win", "name": "Boss Breaker", "name_pt": "Quebra-Boss", "desc": "Defeat any boss.", "desc_pt": "Derrote qualquer boss.", "metric": "bossWins", "required": 1, "reward": { "type": "coins", "amount": 900 }, "rarity": "rare" },
+	{ "id": "boss_three_wins", "name": "Boss Hunter II", "name_pt": "Caçador de Boss II", "desc": "Defeat 3 bosses.", "desc_pt": "Derrote 3 bosses.", "metric": "bossWins", "required": 3, "reward": { "type": "diamonds", "amount": 45 }, "rarity": "epic" },
+	{ "id": "boss_elite_reward", "name": "Elite Boss Clear", "name_pt": "Boss Elite Limpo", "desc": "Defeat an Elite Boss.", "desc_pt": "Derrote o Boss Elite.", "metric": "bossEliteWins", "required": 1, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+	{ "id": "boss_impossible_reward", "name": "Impossible Boss Clear", "name_pt": "Boss Impossível Limpo", "desc": "Defeat the Impossible Boss.", "desc_pt": "Derrote o Boss Impossível.", "metric": "bossImpossibleWins", "required": 1, "reward": { "type": "chest", "chest_type": "epic", "amount": 1 }, "rarity": "legendary" },
+]
+
 const RUN_UPGRADE_UNLOCK_ACHIEVEMENTS := [
 	{ "id": "unlock_burn_phase_5", "name": "Fire Circuit", "name_pt": "Circuito de Fogo", "desc": "Unlock phase 5.", "desc_pt": "Libere a fase 5.", "metric": "highestPhase", "required": 5, "reward": { "type": "upgrade", "upgrade_id": "burn" }, "rarity": "rare" },
 	{ "id": "unlock_magnet_coins_1500", "name": "Coin Magnet", "name_pt": "Ima de Moedas", "desc": "Earn 1500 run coins.", "desc_pt": "Ganhe 1500 moedas em partidas.", "metric": "runCoins", "required": 1500, "reward": { "type": "upgrade", "upgrade_id": "magnetCoins" }, "rarity": "rare" },
@@ -113,6 +124,8 @@ const RUN_UPGRADE_UNLOCK_ACHIEVEMENTS := [
 func get_achievements() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for achievement in ACHIEVEMENTS:
+		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
+	for achievement in MODE_REWARD_ACHIEVEMENTS:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
 	for achievement in RUN_UPGRADE_UNLOCK_ACHIEVEMENTS:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
@@ -627,6 +640,33 @@ func get_upgrade_max_level(id: String) -> int:
 
 func is_upgrade_unlocked(id: String) -> bool:
 	return Array(data.get("unlocked_upgrades", [])).has(id)
+
+
+func available_run_upgrade_ids() -> Array[String]:
+	refresh_unlocks(false)
+	var unlocked: Array = data.get("unlocked_upgrades", [])
+	var result: Array[String] = []
+	for upgrade in MainPortData.run_upgrades():
+		var id := String(upgrade.get("id", ""))
+		if id.is_empty():
+			continue
+		if not MainPortData.is_run_upgrade_defined(id):
+			continue
+		if not unlocked.has(id):
+			continue
+		if not result.has(id):
+			result.append(id)
+	return result
+
+
+func available_run_upgrades() -> Array[Dictionary]:
+	var ids := available_run_upgrade_ids()
+	var result: Array[Dictionary] = []
+	for upgrade in MainPortData.run_upgrades():
+		var id := String(upgrade.get("id", ""))
+		if ids.has(id):
+			result.append(Dictionary(upgrade).duplicate(true))
+	return result
 
 
 func purchase_permanent_upgrade(id: String) -> Dictionary:

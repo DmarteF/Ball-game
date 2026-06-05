@@ -645,3 +645,27 @@ Checklist:
 | Liga alimenta conquistas/desbloqueios | Sim |
 | Tempo do infinito contabiliza conquistas | Sim |
 | Timer visual no infinito | Sim |
+
+## Atualizacao - Consistencia de upgrades e bonus de Perfect
+
+Correcoes aplicadas:
+
+- O bonus de Perfect Escape foi aumentado e agora concede gold/moedas de partida e XP de partida de forma perceptivel.
+- Fases e Modo Infinito mostram feedback visual do bonus de perfect com valores de `GOLD` e `XP`.
+- Liga Neon e Boss tambem recebem bonus de moedas/XP ao passar pelo gap corretamente.
+- `GameState.available_run_upgrade_ids()` e `GameState.available_run_upgrades()` viraram a fonte unica de temporarias liberadas.
+- A tela `Upgrades/Melhorias`, o level-up das fases/infinito e o level-up da Liga/Boss usam a mesma fonte, entao o que esta visivel como liberado e o que pode aparecer na partida ficam sincronizados.
+- A notificacao de recompensas pendentes no menu principal passou a ter auto-ocultamento por tempo via `_process`.
+- Foram adicionadas conquistas extras de Liga/Boss com moedas, diamantes, bau raro, chave lendaria e bau epico.
+
+Checklist:
+
+| Item | Status |
+| --- | --- |
+| Perfect gera gold/moedas extras | Sim |
+| Perfect gera XP extra | Sim |
+| Pool de temporarias unificado | Sim |
+| Tela Melhorias mostra temporarias liberadas | Sim |
+| Level-up respeita exatamente temporarias liberadas | Sim |
+| Notificacao de rewards some apos alguns segundos | Sim |
+| Conquistas extras de Liga/Boss | Sim |

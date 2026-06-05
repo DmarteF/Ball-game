@@ -91,6 +91,7 @@ var _more_panel: PanelContainer
 var _more_items: Array = []
 var _opening_achievements := false
 var _achievement_notice: Button
+var _achievement_notice_hide_at := 0
 
 
 func _ready() -> void:
@@ -105,6 +106,11 @@ func _ready() -> void:
 	_build_top_bar()
 	_build_content()
 	_build_achievement_notice_overlay()
+
+
+func _process(_delta: float) -> void:
+	if _achievement_notice_hide_at > 0 and Time.get_ticks_msec() >= _achievement_notice_hide_at:
+		_hide_achievement_notice()
 	_build_more_button()
 	_build_more_modal()
 
@@ -162,8 +168,7 @@ func _build_achievement_notice_overlay() -> void:
 		notice.offset_bottom = 198.0
 		notice.z_index = 30
 		add_child(notice)
-		var timer := get_tree().create_timer(6.0)
-		timer.timeout.connect(_hide_achievement_notice)
+		_achievement_notice_hide_at = Time.get_ticks_msec() + 5200
 
 
 func _build_content() -> void:
@@ -266,12 +271,15 @@ func _make_achievement_notice(count: int) -> Button:
 
 
 func _hide_achievement_notice() -> void:
+	_achievement_notice_hide_at = 0
 	if not is_instance_valid(_achievement_notice):
 		return
+	var notice := _achievement_notice
+	_achievement_notice = null
 	var tween := create_tween()
-	tween.tween_property(_achievement_notice, "modulate:a", 0.0, 0.35)
-	tween.parallel().tween_property(_achievement_notice, "position:y", _achievement_notice.position.y - 8.0, 0.35)
-	tween.tween_callback(_achievement_notice.queue_free)
+	tween.tween_property(notice, "modulate:a", 0.0, 0.35)
+	tween.parallel().tween_property(notice, "position:y", notice.position.y - 8.0, 0.35)
+	tween.tween_callback(notice.queue_free)
 
 
 func _open_achievements_scene() -> void:
