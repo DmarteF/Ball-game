@@ -89,6 +89,21 @@ const MODE_REWARD_ACHIEVEMENTS := [
 	{ "id": "boss_impossible_reward", "name": "Impossible Boss Clear", "name_pt": "Boss Impossível Limpo", "desc": "Defeat the Impossible Boss.", "desc_pt": "Derrote o Boss Impossível.", "metric": "bossImpossibleWins", "required": 1, "reward": { "type": "chest", "chest_type": "epic", "amount": 1 }, "rarity": "legendary" },
 ]
 
+const SKIN_REWARD_ACHIEVEMENTS := [
+	{ "id": "skin_reward_mini_ruby", "name": "Ruby Start", "name_pt": "Inicio Rubi", "desc": "Make 3 critical hits.", "desc_pt": "Faça 3 criticos.", "metric": "criticals", "required": 3, "reward": { "type": "skin", "skin_id": "mini_ruby_orb" }, "rarity": "common" },
+	{ "id": "skin_reward_prism_drop", "name": "Prism Perfect", "name_pt": "Perfect Prismático", "desc": "Make 12 Perfect Escapes.", "desc_pt": "Faça 12 Perfect Escapes.", "metric": "perfectEscapes", "required": 12, "reward": { "type": "skin", "skin_id": "prism_drop" }, "rarity": "rare" },
+	{ "id": "skin_reward_frost_guardian", "name": "Cold Perfects", "name_pt": "Perfects Gelados", "desc": "Make 40 Perfect Escapes.", "desc_pt": "Faça 40 Perfect Escapes.", "metric": "perfectEscapes", "required": 40, "reward": { "type": "skin", "skin_id": "frost_guardian" }, "rarity": "epic" },
+	{ "id": "skin_reward_astral_mirror", "name": "Phase Mirror", "name_pt": "Espelho de Fase", "desc": "Unlock phase 35.", "desc_pt": "Libere a fase 35.", "metric": "highestPhase", "required": 35, "reward": { "type": "skin", "skin_id": "astral_mirror" }, "rarity": "epic" },
+	{ "id": "skin_reward_cosmic_serpent", "name": "Serpent Combo", "name_pt": "Combo Serpente", "desc": "Reach combo 30.", "desc_pt": "Alcance combo 30.", "metric": "bestCombo", "required": 30, "reward": { "type": "skin", "skin_id": "cosmic_serpent" }, "rarity": "legendary" },
+	{ "id": "skin_reward_chronal_orb", "name": "Chronal Survivor", "name_pt": "Sobrevivente Cronal", "desc": "Survive 8 minutes in Infinite Mode.", "desc_pt": "Sobreviva 8 minutos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 480, "reward": { "type": "skin", "skin_id": "chronal_orb" }, "rarity": "mythic" },
+	{ "id": "skin_reward_living_star", "name": "Living Star Run", "name_pt": "Run da Estrela Viva", "desc": "Survive 12 minutes in Infinite Mode.", "desc_pt": "Sobreviva 12 minutos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 720, "reward": { "type": "skin", "skin_id": "living_star" }, "rarity": "mythic" },
+	{ "id": "skin_reward_void_eye", "name": "Void League", "name_pt": "Liga do Vazio", "desc": "Reach Diamond in Neon League.", "desc_pt": "Alcance a Liga Diamante.", "metric": "leagueDiamondReached", "required": 1, "reward": { "type": "skin", "skin_id": "void_eye" }, "rarity": "mythic" },
+	{ "id": "skin_reward_ether_guardian", "name": "Ether League", "name_pt": "Liga de Eter", "desc": "Reach Legendary in Neon League.", "desc_pt": "Alcance a Liga Lendária.", "metric": "leagueLegendaryReached", "required": 1, "reward": { "type": "skin", "skin_id": "ether_guardian" }, "rarity": "mythic" },
+	{ "id": "skin_reward_eclipse_god", "name": "Eclipse God", "name_pt": "Deus do Eclipse", "desc": "Unlock phase 50.", "desc_pt": "Libere a fase 50.", "metric": "highestPhase", "required": 50, "reward": { "type": "skin", "skin_id": "eclipse_god" }, "rarity": "ultimate" },
+	{ "id": "skin_reward_multiverse_heart", "name": "Multiverse Marathon", "name_pt": "Maratona Multiverso", "desc": "Survive 25 minutes in Infinite Mode.", "desc_pt": "Sobreviva 25 minutos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 1500, "reward": { "type": "skin", "skin_id": "multiverse_heart" }, "rarity": "ultimate" },
+	{ "id": "skin_reward_neon_emperor", "name": "Neon Emperor", "name_pt": "Imperador Neon", "desc": "Reach Ultimate in Neon League.", "desc_pt": "Alcance a Liga Ultimate.", "metric": "leagueUltimateReached", "required": 1, "reward": { "type": "skin", "skin_id": "neon_emperor" }, "rarity": "ultimate" },
+]
+
 const RUN_UPGRADE_UNLOCK_ACHIEVEMENTS := [
 	{ "id": "unlock_burn_phase_5", "name": "Fire Circuit", "name_pt": "Circuito de Fogo", "desc": "Unlock phase 5.", "desc_pt": "Libere a fase 5.", "metric": "highestPhase", "required": 5, "reward": { "type": "upgrade", "upgrade_id": "burn" }, "rarity": "rare" },
 	{ "id": "unlock_magnet_coins_1500", "name": "Coin Magnet", "name_pt": "Ima de Moedas", "desc": "Earn 1500 run coins.", "desc_pt": "Ganhe 1500 moedas em partidas.", "metric": "runCoins", "required": 1500, "reward": { "type": "upgrade", "upgrade_id": "magnetCoins" }, "rarity": "rare" },
@@ -126,6 +141,8 @@ func get_achievements() -> Array[Dictionary]:
 	for achievement in ACHIEVEMENTS:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
 	for achievement in MODE_REWARD_ACHIEVEMENTS:
+		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
+	for achievement in SKIN_REWARD_ACHIEVEMENTS:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
 	for achievement in RUN_UPGRADE_UNLOCK_ACHIEVEMENTS:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
@@ -803,12 +820,12 @@ func open_chest(chest_id: String) -> Dictionary:
 
 func _random_chest_reward(chest_id: String) -> Dictionary:
 	if chest_id.contains("legendary"):
-		return { "type": "skin", "skin_id": _rotating_skin("legendary") } if randf() < 0.35 else { "type": "diamonds", "amount": 95 }
+		return { "type": "skin", "skin_id": _weighted_skin(["epic", "legendary", "mythic", "ultimate"], [24.0, 58.0, 16.0, 2.0]) } if randf() < 0.38 else { "type": "diamonds", "amount": 95 }
 	if chest_id.contains("epic"):
-		return { "type": "skin", "skin_id": _rotating_skin("rare") } if randf() < 0.22 else { "type": "diamonds", "amount": 45 }
+		return { "type": "skin", "skin_id": _weighted_skin(["rare", "epic", "legendary"], [26.0, 66.0, 8.0]) } if randf() < 0.26 else { "type": "diamonds", "amount": 45 }
 	if chest_id.contains("rare"):
-		return { "type": "skin", "skin_id": _rotating_skin("rare") } if randf() < 0.14 else { "type": "keys", "amount": 1 }
-	return { "type": "skin", "skin_id": _rotating_skin("common") } if randf() < 0.10 else { "type": "coins", "amount": 220 }
+		return { "type": "skin", "skin_id": _weighted_skin(["common", "rare", "epic"], [26.0, 66.0, 8.0]) } if randf() < 0.16 else { "type": "keys", "amount": 1 }
+	return { "type": "skin", "skin_id": _weighted_skin(["common", "rare"], [86.0, 14.0]) } if randf() < 0.12 else { "type": "coins", "amount": 220 }
 
 
 func claim_daily_reward() -> Dictionary:
@@ -856,8 +873,24 @@ func _current_wheel_rewards() -> Array:
 	var rewards := WHEEL_REWARDS.duplicate(true)
 	rewards.append({ "type": "skin", "skin_id": _rotating_skin("common"), "wheel_slot": "weekly_common" })
 	rewards.append({ "type": "skin", "skin_id": _rotating_skin("rare"), "wheel_slot": "weekly_rare" })
+	rewards.append({ "type": "skin", "skin_id": _rotating_skin("epic"), "wheel_slot": "weekly_epic" })
 	rewards.append({ "type": "skin", "skin_id": _rotating_skin("legendary"), "wheel_slot": "monthly_legendary" })
+	if randf() < 0.18:
+		rewards.append({ "type": "skin", "skin_id": _rotating_skin("mythic"), "wheel_slot": "monthly_mythic" })
 	return rewards
+
+
+func _weighted_skin(rarities: Array, weights: Array) -> String:
+	var total := 0.0
+	for weight in weights:
+		total += max(0.0, float(weight))
+	var roll: float = randf() * max(total, 0.001)
+	var cursor := 0.0
+	for i in range(min(rarities.size(), weights.size())):
+		cursor += max(0.0, float(weights[i]))
+		if roll <= cursor:
+			return _rotating_skin(String(rarities[i]))
+	return _rotating_skin(String(rarities[0])) if not rarities.is_empty() else "neon_blue"
 
 
 func _rotating_skin(rarity: String) -> String:

@@ -2626,7 +2626,7 @@ func _xp_needed_for_level(player_level: int) -> int:
 func _load_skin_texture() -> void:
 	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
 	skin_profile = _make_skin_profile(skin_id)
-	var path := "res://assets/skins/%s.png" % skin_id
+	var path := MainPortData.skin_asset_path(skin_id)
 	if ResourceLoader.exists(path):
 		_skin_texture = load(path)
 	else:
@@ -2655,8 +2655,10 @@ func _make_skin_profile(skin_id: String) -> Dictionary:
 				profile.merge({ "effect": "phase", "chance": chance, "value": value, "color": String(skin_def.get("primary", "#a855f7")) }, true)
 			"repel_ring":
 				profile.merge({ "effect": "repulse", "chance": chance, "value": max(10.0, value), "color": String(skin_def.get("primary", "#c084fc")) }, true)
-			"area_damage", "cosmic_critical", "league_king_wave":
+			"area_damage", "cosmic_critical", "league_king_wave", "gravity":
 				profile.merge({ "effect": "area", "chance": chance, "value": max(0.28, value), "color": String(skin_def.get("primary", "#7c3aed")) }, true)
+			"all_bonus":
+				profile.merge({ "effect": "area", "chance": chance, "value": max(0.35, value), "color": String(skin_def.get("primary", "#ffffff")) }, true)
 			"coin_on_hit", "coin_multiplier":
 				profile.merge({ "effect": "coin", "chance": chance, "value": max(4.0, value * 20.0), "color": String(skin_def.get("primary", "#ffd700")) }, true)
 			"xp_multiplier":

@@ -1633,7 +1633,7 @@ func _format_time(seconds: int) -> String:
 
 
 func _skin_texture(id: String) -> Texture2D:
-	var path := "res://assets/skins/%s.png" % id
+	var path := MainPortData.skin_asset_path(id)
 	if ResourceLoader.exists(path):
 		return load(path)
 	return load("res://assets/skins/neon_blue.png")

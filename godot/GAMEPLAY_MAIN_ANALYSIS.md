@@ -669,3 +669,18 @@ Checklist:
 | Level-up respeita exatamente temporarias liberadas | Sim |
 | Notificacao de rewards some apos alguns segundos | Sim |
 | Conquistas extras de Liga/Boss | Sim |
+
+## Atualizacao - Skins, drops e Controle
+
+A colecao agora tem 145 skins no total e todas as ultimates habilitam Controle automaticamente. Skins miticas selecionadas tambem podem ter Controle via metadados de efeito.
+
+Drops:
+- Bau comum: common com chance alta e rare baixa.
+- Bau raro: common/rare/epic com rare dominante.
+- Bau epico: rare/epic/legendary com epic dominante.
+- Bau lendario: epic/legendary/mythic/ultimate com ultimate muito baixa.
+- Roleta: common/rare/epic semanal, legendary mensal e chance baixa de mythic mensal.
+
+Conquistas:
+- Novas recompensas de skins foram vinculadas a perfects, fases, combo, tempo no infinito e Liga Neon.
+- Skins duplicadas continuam sendo convertidas em diamantes por `GameState.apply_reward()`.

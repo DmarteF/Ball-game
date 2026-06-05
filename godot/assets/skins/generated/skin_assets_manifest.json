@@ -1,0 +1,426 @@
+[
+  {
+    "id": "aqua_bubble",
+    "name_pt": "Bolha Aqua",
+    "rarity": "common",
+    "effect": "speed",
+    "asset": "godot/assets/skins/generated/aqua_bubble.png",
+    "style_note": "azul translúcido com bolhas internas"
+  },
+  {
+    "id": "moon_pebble",
+    "name_pt": "Pedra Lunar",
+    "rarity": "common",
+    "effect": "xp_multiplier",
+    "asset": "godot/assets/skins/generated/moon_pebble.png",
+    "style_note": "cinza azulado com crateras neon"
+  },
+  {
+    "id": "neon_seed",
+    "name_pt": "Semente Neon",
+    "rarity": "common",
+    "effect": "coin_on_hit",
+    "asset": "godot/assets/skins/generated/neon_seed.png",
+    "style_note": "verde neon com broto central"
+  },
+  {
+    "id": "mini_ruby_orb",
+    "name_pt": "Mini Orbe Rubi",
+    "rarity": "common",
+    "effect": "crit_chance",
+    "asset": "godot/assets/skins/generated/mini_ruby_orb.png",
+    "style_note": "rubi vermelho com reflexos"
+  },
+  {
+    "id": "cloud_orb",
+    "name_pt": "Orbe de Nuvem",
+    "rarity": "common",
+    "effect": "slime_bounce",
+    "asset": "godot/assets/skins/generated/cloud_orb.png",
+    "style_note": "branco azul-claro fofo"
+  },
+  {
+    "id": "green_spark",
+    "name_pt": "Faísca Verde",
+    "rarity": "common",
+    "effect": "speed",
+    "asset": "godot/assets/skins/generated/green_spark.png",
+    "style_note": "verde-limão com faíscas"
+  },
+  {
+    "id": "small_sunstone",
+    "name_pt": "Pedra Solar Pequena",
+    "rarity": "common",
+    "effect": "damage_multiplier",
+    "asset": "godot/assets/skins/generated/small_sunstone.png",
+    "style_note": "laranja/amarelo quente"
+  },
+  {
+    "id": "prism_drop",
+    "name_pt": "Gota Prismática",
+    "rarity": "rare",
+    "effect": "perfect_chance",
+    "asset": "godot/assets/skins/generated/prism_drop.png",
+    "style_note": "gota prismática arco-íris"
+  },
+  {
+    "id": "magnetic_core",
+    "name_pt": "Núcleo Magnético",
+    "rarity": "rare",
+    "effect": "repel_ring",
+    "asset": "godot/assets/skins/generated/magnetic_core.png",
+    "style_note": "metálico com linhas magnéticas"
+  },
+  {
+    "id": "tide_crystal",
+    "name_pt": "Cristal de Maré",
+    "rarity": "rare",
+    "effect": "slow_ring",
+    "asset": "godot/assets/skins/generated/tide_crystal.png",
+    "style_note": "azul-marinho com ondas"
+  },
+  {
+    "id": "golden_spark",
+    "name_pt": "Faísca Dourada",
+    "rarity": "rare",
+    "effect": "coin_multiplier",
+    "asset": "godot/assets/skins/generated/golden_spark.png",
+    "style_note": "dourada com raios"
+  },
+  {
+    "id": "sapphire_eye",
+    "name_pt": "Olho de Safira",
+    "rarity": "rare",
+    "effect": "crit_chance",
+    "asset": "godot/assets/skins/generated/sapphire_eye.png",
+    "style_note": "olho azul safira"
+  },
+  {
+    "id": "electric_sprout",
+    "name_pt": "Broto Elétrico",
+    "rarity": "rare",
+    "effect": "chain_damage",
+    "asset": "godot/assets/skins/generated/electric_sprout.png",
+    "style_note": "galhos elétricos verde/ciano"
+  },
+  {
+    "id": "swift_mask",
+    "name_pt": "Máscara Veloz",
+    "rarity": "rare",
+    "effect": "speed",
+    "asset": "godot/assets/skins/generated/swift_mask.png",
+    "style_note": "máscara preta/ciano"
+  },
+  {
+    "id": "blue_flame",
+    "name_pt": "Chama Azul",
+    "rarity": "rare",
+    "effect": "burn",
+    "asset": "godot/assets/skins/generated/blue_flame.png",
+    "style_note": "chama azul intensa"
+  },
+  {
+    "id": "storm_orb",
+    "name_pt": "Orbe Tempestade",
+    "rarity": "epic",
+    "effect": "chain_damage+speed",
+    "asset": "godot/assets/skins/generated/storm_orb.png",
+    "style_note": "raios ciano/roxo"
+  },
+  {
+    "id": "frost_guardian",
+    "name_pt": "Guardião de Gelo",
+    "rarity": "epic",
+    "effect": "freeze_ring",
+    "asset": "godot/assets/skins/generated/frost_guardian.png",
+    "style_note": "cristais de gelo e neve"
+  },
+  {
+    "id": "flaming_heart",
+    "name_pt": "Coração Flamejante",
+    "rarity": "epic",
+    "effect": "burn+coin_on_hit",
+    "asset": "godot/assets/skins/generated/flaming_heart.png",
+    "style_note": "coração flamejante"
+  },
+  {
+    "id": "green_neon_eye",
+    "name_pt": "Olho de Neon Verde",
+    "rarity": "epic",
+    "effect": "slow_ring+crit_chance",
+    "asset": "godot/assets/skins/generated/green_neon_eye.png",
+    "style_note": "olho verde com mira"
+  },
+  {
+    "id": "electric_prism",
+    "name_pt": "Prisma Elétrico",
+    "rarity": "epic",
+    "effect": "chain_damage",
+    "asset": "godot/assets/skins/generated/electric_prism.png",
+    "style_note": "prisma com raios"
+  },
+  {
+    "id": "pink_comet",
+    "name_pt": "Cometa Rosa",
+    "rarity": "epic",
+    "effect": "speed+xp_multiplier",
+    "asset": "godot/assets/skins/generated/pink_comet.png",
+    "style_note": "cometa rosa/ciano"
+  },
+  {
+    "id": "astral_mirror",
+    "name_pt": "Espelho Astral",
+    "rarity": "epic",
+    "effect": "phase_solid",
+    "asset": "godot/assets/skins/generated/astral_mirror.png",
+    "style_note": "espelho astral roxo/azul"
+  },
+  {
+    "id": "ruby_dragon",
+    "name_pt": "Dragão Rubro",
+    "rarity": "legendary",
+    "effect": "burn+mega_crit",
+    "asset": "godot/assets/skins/generated/ruby_dragon.png",
+    "style_note": "rubi com dragão"
+  },
+  {
+    "id": "aurora_core",
+    "name_pt": "Núcleo da Aurora",
+    "rarity": "legendary",
+    "effect": "xp_multiplier+perfect_chance",
+    "asset": "godot/assets/skins/generated/aurora_core.png",
+    "style_note": "aurora verde azul roxa"
+  },
+  {
+    "id": "obsidian_sentinel",
+    "name_pt": "Sentinela de Obsidiana",
+    "rarity": "legendary",
+    "effect": "damage_multiplier+repel_ring",
+    "asset": "godot/assets/skins/generated/obsidian_sentinel.png",
+    "style_note": "obsidiana rachada"
+  },
+  {
+    "id": "plasma_crown",
+    "name_pt": "Coroa de Plasma",
+    "rarity": "legendary",
+    "effect": "area_damage",
+    "asset": "godot/assets/skins/generated/plasma_crown.png",
+    "style_note": "coroa energética"
+  },
+  {
+    "id": "cosmic_serpent",
+    "name_pt": "Serpente Cósmica",
+    "rarity": "legendary",
+    "effect": "chain_damage+slow_ring",
+    "asset": "godot/assets/skins/generated/cosmic_serpent.png",
+    "style_note": "serpente luminosa"
+  },
+  {
+    "id": "golden_eclipse",
+    "name_pt": "Eclipse Dourado",
+    "rarity": "legendary",
+    "effect": "coin_multiplier+cosmic_critical",
+    "asset": "godot/assets/skins/generated/golden_eclipse.png",
+    "style_note": "eclipse preto/dourado"
+  },
+  {
+    "id": "chronal_orb",
+    "name_pt": "Orbe Cronal",
+    "rarity": "mythic",
+    "effect": "slow_ring+control",
+    "asset": "godot/assets/skins/generated/chronal_orb.png",
+    "style_note": "relógio temporal"
+  },
+  {
+    "id": "quantum_heart",
+    "name_pt": "Coração Quântico",
+    "rarity": "mythic",
+    "effect": "phase_solid+xp_multiplier",
+    "asset": "godot/assets/skins/generated/quantum_heart.png",
+    "style_note": "coração glitch dimensional"
+  },
+  {
+    "id": "abyss_core",
+    "name_pt": "Núcleo Abissal",
+    "rarity": "mythic",
+    "effect": "area_damage+gravity",
+    "asset": "godot/assets/skins/generated/abyss_core.png",
+    "style_note": "vórtice abissal"
+  },
+  {
+    "id": "boreal_phoenix",
+    "name_pt": "Fênix Boreal",
+    "rarity": "mythic",
+    "effect": "burn+freeze_ring",
+    "asset": "godot/assets/skins/generated/boreal_phoenix.png",
+    "style_note": "asas fogo gelo"
+  },
+  {
+    "id": "temporal_blade",
+    "name_pt": "Lâmina Temporal",
+    "rarity": "mythic",
+    "effect": "chain_damage+crit_chance",
+    "asset": "godot/assets/skins/generated/temporal_blade.png",
+    "style_note": "lâminas orbitais"
+  },
+  {
+    "id": "split_prism",
+    "name_pt": "Prisma Dividido",
+    "rarity": "mythic",
+    "effect": "perfect_chance+coin_multiplier",
+    "asset": "godot/assets/skins/generated/split_prism.png",
+    "style_note": "cristal ciano magenta"
+  },
+  {
+    "id": "void_eye",
+    "name_pt": "Olho do Vácuo",
+    "rarity": "mythic",
+    "effect": "cosmic_critical",
+    "asset": "godot/assets/skins/generated/void_eye.png",
+    "style_note": "olho violeta no vazio"
+  },
+  {
+    "id": "living_star",
+    "name_pt": "Estrela Viva",
+    "rarity": "mythic",
+    "effect": "area_damage+burn",
+    "asset": "godot/assets/skins/generated/living_star.png",
+    "style_note": "plasma solar vivo"
+  },
+  {
+    "id": "ether_guardian",
+    "name_pt": "Guardião de Éter",
+    "rarity": "mythic",
+    "effect": "repel_ring+control",
+    "asset": "godot/assets/skins/generated/ether_guardian.png",
+    "style_note": "escudo etéreo"
+  },
+  {
+    "id": "plasma_dragon",
+    "name_pt": "Dragão de Plasma",
+    "rarity": "mythic",
+    "effect": "burn+chain_damage",
+    "asset": "godot/assets/skins/generated/plasma_dragon.png",
+    "style_note": "dragão magenta/ciano"
+  },
+  {
+    "id": "antimatter_core",
+    "name_pt": "Núcleo de Antimatéria",
+    "rarity": "mythic",
+    "effect": "area_damage+damage_multiplier",
+    "asset": "godot/assets/skins/generated/antimatter_core.png",
+    "style_note": "bordas invertidas"
+  },
+  {
+    "id": "fractal_moon",
+    "name_pt": "Lua Fractal",
+    "rarity": "mythic",
+    "effect": "slow_ring+perfect_chance",
+    "asset": "godot/assets/skins/generated/fractal_moon.png",
+    "style_note": "lua com fractais"
+  },
+  {
+    "id": "dimensional_comet",
+    "name_pt": "Cometa Dimensional",
+    "rarity": "mythic",
+    "effect": "speed+phase_solid",
+    "asset": "godot/assets/skins/generated/dimensional_comet.png",
+    "style_note": "cauda dimensional"
+  },
+  {
+    "id": "phantom_crown",
+    "name_pt": "Coroa Fantasma",
+    "rarity": "mythic",
+    "effect": "phase_solid+crit_chance",
+    "asset": "godot/assets/skins/generated/phantom_crown.png",
+    "style_note": "coroa espectral"
+  },
+  {
+    "id": "black_lightning",
+    "name_pt": "Relâmpago Negro",
+    "rarity": "mythic",
+    "effect": "chain_damage+mega_crit",
+    "asset": "godot/assets/skins/generated/black_lightning.png",
+    "style_note": "raios negros"
+  },
+  {
+    "id": "cosmic_seed",
+    "name_pt": "Semente Cósmica",
+    "rarity": "mythic",
+    "effect": "xp_multiplier+coin_multiplier",
+    "asset": "godot/assets/skins/generated/cosmic_seed.png",
+    "style_note": "broto estelar"
+  },
+  {
+    "id": "control_orb",
+    "name_pt": "Orbe de Controle",
+    "rarity": "mythic",
+    "effect": "control+speed",
+    "asset": "godot/assets/skins/generated/control_orb.png",
+    "style_note": "setas orbitais"
+  },
+  {
+    "id": "astral_diamond",
+    "name_pt": "Diamante Astral",
+    "rarity": "mythic",
+    "effect": "perfect_chance+diamond_bonus",
+    "asset": "godot/assets/skins/generated/astral_diamond.png",
+    "style_note": "diamante astral"
+  },
+  {
+    "id": "eclipse_god",
+    "name_pt": "Deus do Eclipse",
+    "rarity": "ultimate",
+    "effect": "gravity+area_damage+control",
+    "asset": "godot/assets/skins/generated/eclipse_god.png",
+    "style_note": "eclipse divino"
+  },
+  {
+    "id": "multiverse_heart",
+    "name_pt": "Coração do Multiverso",
+    "rarity": "ultimate",
+    "effect": "cosmic_critical+xp_multiplier+control",
+    "asset": "godot/assets/skins/generated/multiverse_heart.png",
+    "style_note": "coração multiversal"
+  },
+  {
+    "id": "singularity_dragon",
+    "name_pt": "Dragão da Singularidade",
+    "rarity": "ultimate",
+    "effect": "burn+gravity+control",
+    "asset": "godot/assets/skins/generated/singularity_dragon.png",
+    "style_note": "dragão singularidade"
+  },
+  {
+    "id": "neon_emperor",
+    "name_pt": "Imperador Neon",
+    "rarity": "ultimate",
+    "effect": "coin_multiplier+league_king_wave+control",
+    "asset": "godot/assets/skins/generated/neon_emperor.png",
+    "style_note": "coroa imperial neon"
+  },
+  {
+    "id": "void_angel",
+    "name_pt": "Anjo do Vácuo",
+    "rarity": "ultimate",
+    "effect": "phase_solid+area_damage+control",
+    "asset": "godot/assets/skins/generated/void_angel.png",
+    "style_note": "asas do vazio"
+  },
+  {
+    "id": "genesis_core",
+    "name_pt": "Núcleo Genesis",
+    "rarity": "ultimate",
+    "effect": "xp_multiplier+perfect_chance+control",
+    "asset": "godot/assets/skins/generated/genesis_core.png",
+    "style_note": "núcleo criação"
+  },
+  {
+    "id": "prismatic_omega",
+    "name_pt": "Omega Prismático",
+    "rarity": "ultimate",
+    "effect": "all_bonus+control",
+    "asset": "godot/assets/skins/generated/prismatic_omega.png",
+    "style_note": "ômega prismático"
+  }
+]

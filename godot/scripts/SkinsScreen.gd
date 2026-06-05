@@ -353,6 +353,15 @@ func _build_all_skin_data() -> Array:
 	var directory := DirAccess.open("res://assets/skins")
 	if directory == null:
 		return result
+	_append_asset_skins_from_dir(result, seen, "res://assets/skins")
+	_append_asset_skins_from_dir(result, seen, "res://assets/skins/generated")
+	return result
+
+
+func _append_asset_skins_from_dir(result: Array, seen: Dictionary, path: String) -> void:
+	var directory := DirAccess.open(path)
+	if directory == null:
+		return
 	directory.list_dir_begin()
 	var file_name := directory.get_next()
 	while file_name != "":
@@ -370,8 +379,8 @@ func _build_all_skin_data() -> Array:
 					"effects": _effects_from_id(id),
 					"owned": false,
 				})
+				seen[id] = true
 		file_name = directory.get_next()
-	return result
 
 
 func _effects_from_passive(passive: Dictionary) -> Array[String]:
@@ -394,10 +403,16 @@ func _effects_from_passive(passive: Dictionary) -> Array[String]:
 			return ["Corrente"]
 		"area_damage", "league_king_wave":
 			return ["Área"]
+		"gravity":
+			return ["Gravidade"]
 		"repel_ring", "league_starter_champion":
 			return ["Repulsão"]
 		"xp_multiplier":
 			return ["XP"]
+		"control", "controle":
+			return ["Controle"]
+		"all_bonus":
+			return ["Bônus"]
 	return ["Trilha"]
 
 
@@ -523,7 +538,7 @@ func _make_skin_icon(skin_id: String, hidden: bool, tint: Color) -> PanelContain
 	if hidden:
 		center.add_child(_make_label("?", 26, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
-		var path := "res://assets/skins/%s.png" % skin_id
+		var path := MainPortData.skin_asset_path(skin_id)
 		if ResourceLoader.exists(path):
 			var texture := TextureRect.new()
 			texture.texture = load(path)

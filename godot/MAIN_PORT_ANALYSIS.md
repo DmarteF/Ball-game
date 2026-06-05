@@ -361,3 +361,19 @@ Checklist:
 Nesta etapa, a implementacao anterior de Liga Neon em formato battle/duas arenas foi removida da cena atual. `League.tscn` agora usa `scripts/LeagueScreen.gd`, uma tela visual baseada em `frontend/app/league.tsx`, com resumo do jogador, trofeus, temporada, progresso de divisao, podium, recompensa estimada e ranking local mockado.
 
 A competicao real da Liga fica pendente para ser recriada depois com fidelidade ao fluxo do frontend/main, sem reutilizar a batalha custom anterior como base definitiva.
+
+## Atualizacao - Expansao de skins
+
+A base original de skins no Godot tinha 92 skins: 23 comuns, 22 raras, 18 epicas, 19 lendarias, 2 miticas e 8 ultimates. A meta final foi completada sem remover skins existentes.
+
+Resultado final:
+- Common: 30
+- Rare: 30
+- Epic: 25
+- Legendary: 25
+- Mythic: 20
+- Ultimate: 15
+
+Foram reaproveitados os assets recebidos em `godot_skin_assets_generated.zip`, extraidos para `godot/assets/skins/generated`. O carregamento foi ajustado para aceitar assets diretos em `assets/skins` e assets gerados na subpasta `generated`.
+
+As novas skins possuem metadados de raridade, nome PT/EN, descricao PT/EN, cores, passiva, efeitos, origem, dicas de desbloqueio e pools de drop. Baús e roleta passaram a usar raridades ponderadas para incluir as novas skins sem quebrar a compensacao de duplicatas por diamantes.

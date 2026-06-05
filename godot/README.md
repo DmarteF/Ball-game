@@ -1093,3 +1093,33 @@ Checklist:
 | Temporarias bloqueadas ficam escondidas | Sim |
 | Notificacao de rewards some sozinha | Sim |
 | Mais conquistas de Liga/Boss com premios | Sim |
+
+## 7.22 Expansao final da colecao de skins
+
+A colecao de skins foi expandida mantendo todas as skins portadas anteriormente e adicionando apenas o necessario para bater as metas finais por raridade.
+
+Checklist atual:
+- Total common = 30: sim
+- Total rare = 30: sim
+- Total epic = 25: sim
+- Total legendary = 25: sim
+- Total mythic = 20: sim
+- Total ultimate = 15: sim
+- Assets PNG gerados para novas skins: sim
+- Assets em `godot/assets/skins/generated`: sim
+- Todas as skins têm desbloqueio/origem documentada nos metadados: sim
+- Todas podem vir de baus, roleta, conquistas ou modos conforme raridade: sim
+- Todas as Ultimates têm Controle: sim, via regra global `skin_has_control()` para raridade `ultimate`
+- Skins bloqueadas aparecem como `???`: sim, tela de Skins preservada
+- Skins desbloqueadas mostram asset real: sim, via `MainPortData.skin_asset_path()` com fallback para `/generated`
+- Skins repetidas viram diamantes: sim, mantido em `GameState.apply_reward()`
+- Traducoes adicionadas: sim, metadados `name_pt/name_en` e `desc_pt/desc_en`
+- Documentacao atualizada: sim
+
+Implementacao:
+- `MainPortData.gd` agora separa `BASE_SKINS` e `GENERATED_SKINS`, expondo `SKINS = BASE_SKINS + GENERATED_SKINS`.
+- Assets novos ficam em `assets/skins/generated` e sao carregados por `MainPortData.skin_asset_path()`.
+- Baús agora sorteiam skins por tabela ponderada de raridade: comum, raro, epico e lendario respeitam chances progressivas.
+- Roleta semanal inclui comuns, raras e epicas; roleta mensal inclui lendarias e pequena chance de miticas.
+- Conquistas novas liberam skins ligadas a Perfect, fases, modo infinito e Liga Neon.
+- Todas as skins ultimates possuem Controle por regra de raridade, com forca escalada por `CONTROL_STRENGTH_BY_RARITY`.
