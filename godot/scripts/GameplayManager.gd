@@ -974,7 +974,7 @@ func _finish_defeat() -> void:
 func _revive_with_ad() -> void:
 	if revive_used or not finished:
 		return
-	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+	AdManager.show_rewarded_ad("revive", func(ok: bool) -> void:
 		if not ok:
 			return
 		revive_used = true
@@ -2152,7 +2152,7 @@ func _reroll_upgrades_ad() -> void:
 	if rerolls_used >= 3:
 		_spawn_floating(_level_up_feedback("Limite de reroll", "Reroll limit"), arena_center + Vector2(-34, -62), Color("#ff6b9a"))
 		return
-	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+	AdManager.show_rewarded_ad("reroll_upgrades", func(ok: bool) -> void:
 		if ok:
 			_do_upgrade_reroll()
 	)
@@ -2445,7 +2445,7 @@ func _double_result_reward() -> void:
 	if not _can_double_result_reward():
 		_spawn_floating("Recompensa ja dobrada", arena_center + Vector2(-54, -60), Color("#ff6b9a"))
 		return
-	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+	AdManager.show_rewarded_ad("double_rewards", func(ok: bool) -> void:
 		if not ok:
 			return
 		result_rewards_doubled = true

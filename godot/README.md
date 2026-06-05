@@ -1244,3 +1244,65 @@ Checklist:
 - Unlock all funciona: sim
 - Reset tutorial funciona: sim
 - Debug respeita confirmações: sim
+
+## Atualizacao - AdManager Mock / Preparacao para Anuncios Reais
+
+Foi criado `scripts/AdManager.gd` como autoload central para todos os anúncios recompensados. O jogo continua usando anúncios fictícios/mockados por enquanto, mas as chamadas agora passam por uma API única:
+
+- `show_rewarded_ad(reason: String, callback: Callable)`
+- `can_show_ad(reason: String) -> bool`
+- `register_ad_completed(reason: String)`
+- `register_ad_failed(reason: String)`
+- `get_ad_cooldown(reason: String)`
+- `is_mock_enabled() -> bool`
+
+Reasons suportados:
+- `revive`
+- `double_rewards`
+- `reroll_upgrades`
+- `free_chest`
+- `wheel_extra_spin`
+- `daily_bonus`
+- `shop_free_coins`
+- `shop_free_diamonds`
+- `boss_retry`
+- `league_double_rewards`
+
+Fluxo atual:
+- `AdManager.show_rewarded_ad(...)` abre um modal global `Mock Ad / Anúncio de teste`.
+- `Finish Ad / Finalizar anúncio` registra conclusão e chama o callback com `true`.
+- `Cancel / Cancelar` registra falha e chama o callback com `false`.
+- Cancelar não entrega recompensa.
+- Completar entrega recompensa apenas no callback do sistema que pediu o anúncio.
+
+Integrações portadas para AdManager:
+- Revive em partidas.
+- Dobrar recompensa de resultado.
+- Reroll de upgrades por anúncio.
+- Giro extra da roleta.
+- Recompensas grátis da loja.
+- Dobrar recompensa da Liga Neon.
+
+Limites:
+- Revive, double rewards e reroll continuam respeitando os limites locais de cada partida/tela.
+- `free_chest`, `shop_free_coins`, `shop_free_diamonds` e `daily_bonus` possuem cooldown central no AdManager.
+- A roleta continua validando limite próprio em `GameState.spin_wheel("ad")`.
+
+Debug:
+- Com Modo Debug ativo em Configurações, é possível forçar sucesso de anúncio, forçar falha, resetar cooldowns e resetar limites/contadores da sessão.
+- A seção debug também mostra contadores de anúncios completos/falhos.
+
+Preparação para AdMob/SDK real:
+- O ponto futuro de integração fica em `AdManager.show_rewarded_ad`, no trecho marcado como `Future SDK path`.
+- Nenhuma tela deve chamar SDK externo diretamente.
+- Cada sistema deve passar um `reason` e aplicar recompensa apenas no callback `ok == true`.
+
+Checklist:
+- AdManager centralizado: sim
+- Todos anúncios usam AdManager: sim
+- Mock Ad funciona: sim
+- Cancelar não dá recompensa: sim
+- Completar dá recompensa: sim
+- Limites por motivo funcionando: sim
+- Debug de anúncios: sim
+- Documentação adicionada: sim

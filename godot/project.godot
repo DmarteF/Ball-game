@@ -21,6 +21,7 @@ TimeManager="*res://scripts/TimeManager.gd"
 MainPortData="*res://scripts/MainPortData.gd"
 GameState="*res://scripts/GameState.gd"
 AudioManager="*res://scripts/AudioManager.gd"
+AdManager="*res://scripts/AdManager.gd"
 LocalizationManager="*res://scripts/LocalizationManager.gd"
 
 [display]

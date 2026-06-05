@@ -403,6 +403,16 @@ func default_save() -> Dictionary:
 			"last_opponent_id": "",
 		},
 		"wheel": { "day_key": "", "free_used": false, "ad_spins_used": 0, "last_reward": {} },
+		"ads": {
+			"mock_enabled": true,
+			"completed": {},
+			"failed": {},
+			"cooldowns": {},
+			"last_completed": "",
+			"last_completed_at": 0,
+			"last_failed": "",
+			"last_failed_at": 0,
+		},
 		"daily_missions": { "day_key": "", "missions": [] },
 		"achievements": {},
 		"stats": {
@@ -1151,7 +1161,17 @@ func _duplicate_skin_compensation(skin_id: String) -> int:
 
 
 func show_mock_rewarded_ad(callback: Callable) -> void:
-	call_deferred("_complete_mock_rewarded_ad", callback)
+	if has_node("/root/AdManager"):
+		AdManager.show_rewarded_ad("daily_bonus", callback)
+	else:
+		call_deferred("_complete_mock_rewarded_ad", callback)
+
+
+func show_rewarded_ad(reason: String, callback: Callable) -> void:
+	if has_node("/root/AdManager"):
+		AdManager.show_rewarded_ad(reason, callback)
+	else:
+		call_deferred("_complete_mock_rewarded_ad", callback)
 
 
 func _complete_mock_rewarded_ad(callback: Callable) -> void:

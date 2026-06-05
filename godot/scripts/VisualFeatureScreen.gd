@@ -764,6 +764,37 @@ func _handle_action(action: String) -> void:
 			_animate_wheel(Dictionary(result.get("reward", {})))
 			await get_tree().create_timer(2.25).timeout
 	elif action == "wheel_ad":
+		AdManager.show_rewarded_ad("wheel_extra_spin", func(ok: bool) -> void:
+			if ok:
+				_complete_rewarded_action(action)
+			else:
+				_show_feedback(_tr("ad_cancelled", "Anúncio cancelado"), false)
+		)
+		return
+	elif _is_ad_shop_action(action):
+		AdManager.show_rewarded_ad(_ad_reason_for_shop_action(action), func(ok: bool) -> void:
+			if ok:
+				_complete_rewarded_action(action)
+			else:
+				_show_feedback(_tr("ad_cancelled", "Anúncio cancelado"), false)
+		)
+		return
+	else:
+		result = GameState.shop_claim(action)
+	_play_sfx("res://assets/sounds/button_confirm.mp3" if bool(result.get("ok", false)) else "res://assets/sounds/button_error.mp3")
+	_rebuild_current()
+	if bool(result.get("ok", false)):
+		_show_reward_modal(result)
+	_show_feedback(_failure_label(String(result.get("reason", result.get("text", "not_ready")))) if not bool(result.get("ok", false)) else String(result.get("text", "")), bool(result.get("ok", false)))
+
+
+func _complete_rewarded_action(action: String) -> void:
+	call_deferred("_complete_rewarded_action_async", action)
+
+
+func _complete_rewarded_action_async(action: String) -> void:
+	var result := { "ok": false, "text": "" }
+	if action == "wheel_ad":
 		result = GameState.spin_wheel("ad")
 		if bool(result.get("ok", false)):
 			_animate_wheel(Dictionary(result.get("reward", {})))
@@ -775,6 +806,21 @@ func _handle_action(action: String) -> void:
 	if bool(result.get("ok", false)):
 		_show_reward_modal(result)
 	_show_feedback(_failure_label(String(result.get("reason", result.get("text", "not_ready")))) if not bool(result.get("ok", false)) else String(result.get("text", "")), bool(result.get("ok", false)))
+
+
+func _is_ad_shop_action(action: String) -> bool:
+	return ["ad_gems", "ad_coins", "ad_key", "ad_chest"].has(action)
+
+
+func _ad_reason_for_shop_action(action: String) -> String:
+	match action:
+		"ad_gems":
+			return "shop_free_diamonds"
+		"ad_coins":
+			return "shop_free_coins"
+		"ad_chest":
+			return "free_chest"
+	return "daily_bonus"
 
 
 func _rebuild_current() -> void:

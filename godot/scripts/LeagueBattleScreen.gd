@@ -767,7 +767,7 @@ func _reroll_player_upgrades_with_ad() -> void:
 	if _upgrade_rerolls_used >= MAX_UPGRADE_REROLLS:
 		_play_sfx("click")
 		return
-	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+	AdManager.show_rewarded_ad("reroll_upgrades", func(ok: bool) -> void:
 		if ok:
 			_consume_upgrade_reroll()
 	)
@@ -1182,7 +1182,7 @@ func _offer_revive_or_finish() -> void:
 func _revive_with_ad() -> void:
 	if _revive_used or _finished:
 		return
-	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+	AdManager.show_rewarded_ad("revive", func(ok: bool) -> void:
 		if not ok:
 			return
 		_revive_used = true
@@ -1278,7 +1278,7 @@ func _show_result(summary: Dictionary) -> void:
 func _double_result_reward() -> void:
 	if _result_doubled or _winner == "quit":
 		return
-	GameState.show_mock_rewarded_ad(func(ok: bool) -> void:
+	AdManager.show_rewarded_ad("league_double_rewards", func(ok: bool) -> void:
 		if not ok:
 			return
 		_result_doubled = true

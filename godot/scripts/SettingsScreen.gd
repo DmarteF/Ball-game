@@ -2,7 +2,7 @@ extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const SETTINGS_PATH := "user://settings.json"
-const BUILD_VERSION := "1.0.10"
+const BUILD_VERSION := "1.0.11"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
@@ -214,6 +214,10 @@ func _make_debug_card() -> PanelContainer:
 		[_t("reset_wheel"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_wheel"), func() -> void: GameState.debug_reset_wheel_timer())],
 		[_t("reset_tutorial"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_tutorial"), func() -> void: GameState.reset_tutorial_for_debug())],
 		[_t("export_debug_save"), "#00f0ff", _show_export_save],
+		[_t("force_ad_success"), "#00ff88", _toggle_force_ad_success],
+		[_t("force_ad_failure"), "#ff6b9a", _toggle_force_ad_failure],
+		[_t("reset_ad_cooldowns"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_ad_cooldowns"), func() -> void: AdManager.reset_cooldowns())],
+		[_t("reset_ad_session"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_ad_session"), func() -> void: AdManager.reset_session_limits())],
 		[_t("disable_debug"), "#ff3b6b", _disable_debug_mode],
 	]))
 	_refresh_debug_labels()
@@ -455,6 +459,18 @@ func _confirm_debug_action(title: String, action: Callable) -> void:
 	_show_message_modal(title, _t("debug_confirm_body"), "#ffb000", [cancel, confirm])
 
 
+func _toggle_force_ad_success() -> void:
+	AdManager.set_force_success(not AdManager.is_force_success())
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _toggle_force_ad_failure() -> void:
+	AdManager.set_force_failure(not AdManager.is_force_failure())
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
 func _refresh_debug_labels() -> void:
 	if _debug_fps_label != null and is_instance_valid(_debug_fps_label):
 		_debug_fps_label.text = "%s: %s" % [_t("fps"), Engine.get_frames_per_second()]
@@ -484,6 +500,11 @@ func _refresh_debug_labels() -> void:
 			_t("level"), int(GameState.data.get("level", 1)),
 		],
 	]
+	if has_node("/root/AdManager"):
+		var ads := AdManager.ad_debug_summary()
+		lines.append("%s: %s" % [_t("ad_completed"), JSON.stringify(ads.get("completed", {}))])
+		lines.append("%s: %s" % [_t("ad_failed"), JSON.stringify(ads.get("failed", {}))])
+		lines.append("%s: %s / %s: %s" % [_t("force_ad_success"), bool(ads.get("force_success", false)), _t("force_ad_failure"), bool(ads.get("force_failure", false))])
 	_debug_stats_label.text = "\n".join(lines)
 
 
@@ -881,6 +902,12 @@ func _t(key: String) -> String:
 		"reset_wheel": return "Resetar Timer da Roleta" if pt else "Reset Wheel Timer"
 		"reset_tutorial": return "Resetar Tutorial" if pt else "Reset Tutorial"
 		"export_debug_save": return "Exportar Save Debug" if pt else "Export Debug Save"
+		"force_ad_success": return "Forçar sucesso de anúncio" if pt else "Force ad success"
+		"force_ad_failure": return "Forçar falha de anúncio" if pt else "Force ad failure"
+		"reset_ad_cooldowns": return "Resetar cooldowns de anúncios" if pt else "Reset ad cooldowns"
+		"reset_ad_session": return "Resetar limites da sessão" if pt else "Reset session limits"
+		"ad_completed": return "Anúncios completos" if pt else "Completed ads"
+		"ad_failed": return "Anúncios falhos" if pt else "Failed ads"
 		"disable_debug": return "Desativar Debug" if pt else "Disable Debug"
 		"confirm": return "Confirmar" if pt else "Confirm"
 		"error_empty": return "O campo está vazio." if pt else "The field is empty."
