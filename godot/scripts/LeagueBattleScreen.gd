@@ -16,7 +16,7 @@ const PHYSICS_STEPS_PER_SECOND := 60.0
 const RING_SPAWN_GRACE_MSEC := 900
 const CRUSH_CONFIRM_MSEC := 150
 const MATCH_LIMIT_SECONDS := 60.0
-const XP_BASE := 34.0
+const XP_BASE := 30.0
 const BASE_BALL_SPEED := 2.25
 const MAX_UPGRADE_REROLLS := 3
 const REROLL_DIAMOND_COST := 15
@@ -461,8 +461,8 @@ func _check_perfect_escape(state: Dictionary, prev_dist: float, next_dist: float
 			state["rings"][i] = ring
 			state["rings_destroyed"] = int(state.get("rings_destroyed", 0)) + 1
 			state["perfects"] = int(state.get("perfects", 0)) + 1
-			var perfect_coins: int = max(12, floori((20.0 + float(int(state.get("level", 1))) * 1.5) * _gold_multiplier(state)))
-			var perfect_xp: int = max(24, floori((44.0 + float(int(state.get("level", 1))) * 2.5) * _xp_multiplier(state)))
+			var perfect_coins: int = max(16, floori((28.0 + float(int(state.get("level", 1))) * 1.8) * _gold_multiplier(state)))
+			var perfect_xp: int = max(32, floori((58.0 + float(int(state.get("level", 1))) * 2.9) * _xp_multiplier(state)))
 			_award_arena_coins(state, perfect_coins)
 			_award_arena_xp(state, perfect_xp)
 			if String(state.get("id", "")) == "player":
@@ -503,13 +503,13 @@ func _check_ring_hit(state: Dictionary, prev_dist: float, next_dist: float, prev
 	state["score"] = int(state.get("score", 0)) + damage
 	if crit:
 		state["criticals"] = int(state.get("criticals", 0)) + 1
-	_award_arena_coins(state, max(2, floori(float(damage) * 0.72 * _gold_multiplier(state))))
-	_award_arena_xp(state, floori((18.0 if crit else 12.0) * _xp_multiplier(state)))
+	_award_arena_coins(state, max(4, floori(float(damage) * 0.90 * _gold_multiplier(state))))
+	_award_arena_xp(state, floori((24.0 if crit else 16.0) * _xp_multiplier(state)))
 	if new_hp <= 0:
 		state["rings_destroyed"] = int(state.get("rings_destroyed", 0)) + 1
 		_spawn_burst(state, Vector2(state.get("ball", Vector2.ZERO)), String(ring.get("color", "#00f0ff")), "break")
-		_award_arena_coins(state, max(8, floori((24.0 if String(ring.get("type", "normal")) == "solid" else 16.0) * _gold_multiplier(state))))
-		_award_arena_xp(state, floori((22.0 + randf() * 12.0) * _xp_multiplier(state)))
+		_award_arena_coins(state, max(12, floori((32.0 if String(ring.get("type", "normal")) == "solid" else 22.0) * _gold_multiplier(state))))
+		_award_arena_xp(state, floori((30.0 + randf() * 14.0) * _xp_multiplier(state)))
 		if String(state.get("id", "")) == "player":
 			_play_sfx("break")
 	elif String(state.get("id", "")) == "player":
@@ -1147,8 +1147,8 @@ func _finish_match(result: String, reason: String = "") -> void:
 	_paused = false
 	_winner = result
 	_finish_reason = reason
-	var global_coins: int = max(0, floori(float(int(_player.get("coins", 0))) * 0.72))
-	var profile_xp: int = max(0, floori(float(int(_player.get("total_xp", 0))) * 0.95))
+	var global_coins: int = max(0, floori(float(int(_player.get("coins", 0))) * 0.82))
+	var profile_xp: int = max(0, floori(float(int(_player.get("total_xp", 0))) * 1.08))
 	var summary := {
 		"opponent_id": String(_opponent.get("id", "")),
 		"seconds": floori(_elapsed),

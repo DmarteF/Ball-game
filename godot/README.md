@@ -220,6 +220,7 @@ Referencias analisadas na branch `main`:
 
 Arquivos Godot criados/alterados:
 
+- `BALANCE.md`
 - `GAMEPLAY_MAIN_ANALYSIS.md`
 - `scenes/GameScene.tscn`
 - `scripts/GameplayManager.gd`

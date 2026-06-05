@@ -2,17 +2,19 @@ extends Node
 
 signal changed
 
+const LevelData := preload("res://scripts/LevelData.gd")
+
 const MAX_PHASE := 100
 const TARGET_ACHIEVEMENT_COUNT := 100
 
 const PERMANENT_UPGRADE_DEFS := {
-	"baseDamage": { "base_cost": 90, "max": 36, "phase": 1, "level": 1 },
-	"baseSpeed": { "base_cost": 115, "max": 24, "phase": 1, "level": 1 },
-	"coinMultiplier": { "base_cost": 180, "max": 30, "phase": 1, "level": 1 },
-	"critChance": { "base_cost": 145, "max": 24, "phase": 1, "level": 1 },
-	"xpBoost": { "base_cost": 175, "max": 30, "phase": 3, "level": 3 },
-	"perfectChance": { "base_cost": 420, "max": 15, "phase": 5, "level": 5 },
-	"slowRings": { "base_cost": 560, "max": 14, "phase": 8, "level": 9 },
+	"baseDamage": { "base_cost": 70, "max": 40, "phase": 1, "level": 1 },
+	"baseSpeed": { "base_cost": 85, "max": 28, "phase": 1, "level": 1 },
+	"coinMultiplier": { "base_cost": 120, "max": 34, "phase": 1, "level": 1 },
+	"critChance": { "base_cost": 110, "max": 28, "phase": 1, "level": 1 },
+	"xpBoost": { "base_cost": 135, "max": 32, "phase": 3, "level": 3 },
+	"perfectChance": { "base_cost": 320, "max": 18, "phase": 5, "level": 5 },
+	"slowRings": { "base_cost": 440, "max": 18, "phase": 8, "level": 9 },
 }
 
 const TEMP_UPGRADE_UNLOCKS := {
@@ -100,6 +102,8 @@ const SKIN_REWARD_ACHIEVEMENTS := [
 	{ "id": "skin_reward_void_eye", "name": "Void League", "name_pt": "Liga do Vazio", "desc": "Reach Diamond in Neon League.", "desc_pt": "Alcance a Liga Diamante.", "metric": "leagueDiamondReached", "required": 1, "reward": { "type": "skin", "skin_id": "void_eye" }, "rarity": "mythic" },
 	{ "id": "skin_reward_ether_guardian", "name": "Ether League", "name_pt": "Liga de Eter", "desc": "Reach Legendary in Neon League.", "desc_pt": "Alcance a Liga Lendária.", "metric": "leagueLegendaryReached", "required": 1, "reward": { "type": "skin", "skin_id": "ether_guardian" }, "rarity": "mythic" },
 	{ "id": "skin_reward_eclipse_god", "name": "Eclipse God", "name_pt": "Deus do Eclipse", "desc": "Unlock phase 50.", "desc_pt": "Libere a fase 50.", "metric": "highestPhase", "required": 50, "reward": { "type": "skin", "skin_id": "eclipse_god" }, "rarity": "ultimate" },
+	{ "id": "skin_reward_genesis_core", "name": "Genesis Core", "name_pt": "Nucleo Genesis", "desc": "Unlock phase 75.", "desc_pt": "Libere a fase 75.", "metric": "highestPhase", "required": 75, "reward": { "type": "skin", "skin_id": "genesis_core" }, "rarity": "ultimate" },
+	{ "id": "skin_reward_prismatic_omega", "name": "Prismatic Omega", "name_pt": "Omega Prismatico", "desc": "Unlock phase 100.", "desc_pt": "Libere a fase 100.", "metric": "highestPhase", "required": 100, "reward": { "type": "skin", "skin_id": "prismatic_omega" }, "rarity": "ultimate" },
 	{ "id": "skin_reward_multiverse_heart", "name": "Multiverse Marathon", "name_pt": "Maratona Multiverso", "desc": "Survive 25 minutes in Infinite Mode.", "desc_pt": "Sobreviva 25 minutos no Modo Infinito.", "metric": "bestInfiniteSeconds", "required": 1500, "reward": { "type": "skin", "skin_id": "multiverse_heart" }, "rarity": "ultimate" },
 	{ "id": "skin_reward_neon_emperor", "name": "Neon Emperor", "name_pt": "Imperador Neon", "desc": "Reach Ultimate in Neon League.", "desc_pt": "Alcance a Liga Ultimate.", "metric": "leagueUltimateReached", "required": 1, "reward": { "type": "skin", "skin_id": "neon_emperor" }, "rarity": "ultimate" },
 ]
@@ -282,34 +286,34 @@ func _milestone_reward(value: int, category: String) -> Dictionary:
 
 
 const DAILY_REWARDS := [
-	{ "type": "coins", "amount": 120 },
-	{ "type": "diamonds", "amount": 20 },
+	{ "type": "coins", "amount": 300 },
+	{ "type": "diamonds", "amount": 18 },
 	{ "type": "keys", "amount": 1 },
 	{ "type": "chest", "chest_type": "common", "amount": 1 },
 	{ "type": "chest", "chest_type": "rare", "amount": 1 },
-	{ "type": "diamonds", "amount": 75 },
+	{ "type": "diamonds", "amount": 55 },
 	{ "type": "chest", "chest_type": "epic", "amount": 1 },
 ]
 
 const WHEEL_REWARDS := [
-	{ "type": "coins", "amount": 180 },
-	{ "type": "coins", "amount": 420 },
-	{ "type": "diamonds", "amount": 6 },
-	{ "type": "diamonds", "amount": 14 },
+	{ "type": "coins", "amount": 280 },
+	{ "type": "coins", "amount": 650 },
+	{ "type": "diamonds", "amount": 8 },
+	{ "type": "diamonds", "amount": 18 },
 	{ "type": "keys", "amount": 1 },
 	{ "type": "chest", "chest_type": "common", "amount": 1 },
 	{ "type": "chest", "chest_type": "rare", "amount": 1 },
-	{ "type": "xp", "amount": 120 },
+	{ "type": "xp", "amount": 250 },
 	{ "type": "chest", "chest_type": "epic", "amount": 1 },
 ]
 
 const DAILY_MISSION_DEFS := [
-	{ "id": "runs_3", "title": "Play 3 runs", "title_pt": "Jogar 3 partidas", "metric": "runsPlayed", "target": 3, "reward": { "type": "xp", "amount": 70 } },
-	{ "id": "win_1", "title": "Win 1 phase", "title_pt": "Vencer 1 fase", "metric": "phaseWins", "target": 1, "reward": { "type": "diamonds", "amount": 8 } },
-	{ "id": "rings_50", "title": "Destroy 50 rings", "title_pt": "Destruir 50 aneis", "metric": "ringsDestroyed", "target": 50, "reward": { "type": "coins", "amount": 260 } },
-	{ "id": "perfect_3", "title": "Make 3 Perfect Escapes", "title_pt": "Fazer 3 Perfect Escapes", "metric": "perfectEscapes", "target": 3, "reward": { "type": "diamonds", "amount": 5 } },
-	{ "id": "store_buy", "title": "Buy or claim in the shop", "title_pt": "Comprar ou resgatar na loja", "metric": "storePurchases", "target": 1, "reward": { "type": "diamonds", "amount": 6 } },
-	{ "id": "wheel_spin", "title": "Spin the wheel", "title_pt": "Girar a roleta", "metric": "wheelSpins", "target": 1, "reward": { "type": "coins", "amount": 240 } },
+	{ "id": "runs_3", "title": "Play 3 runs", "title_pt": "Jogar 3 partidas", "metric": "runsPlayed", "target": 3, "reward": { "type": "xp", "amount": 180 } },
+	{ "id": "win_1", "title": "Win 1 phase", "title_pt": "Vencer 1 fase", "metric": "phaseWins", "target": 1, "reward": { "type": "diamonds", "amount": 10 } },
+	{ "id": "rings_50", "title": "Destroy 50 rings", "title_pt": "Destruir 50 aneis", "metric": "ringsDestroyed", "target": 50, "reward": { "type": "coins", "amount": 420 } },
+	{ "id": "perfect_3", "title": "Make 3 Perfect Escapes", "title_pt": "Fazer 3 Perfect Escapes", "metric": "perfectEscapes", "target": 3, "reward": { "type": "diamonds", "amount": 8 } },
+	{ "id": "store_buy", "title": "Buy or claim in the shop", "title_pt": "Comprar ou resgatar na loja", "metric": "storePurchases", "target": 1, "reward": { "type": "diamonds", "amount": 8 } },
+	{ "id": "wheel_spin", "title": "Spin the wheel", "title_pt": "Girar a roleta", "metric": "wheelSpins", "target": 1, "reward": { "type": "coins", "amount": 380 } },
 ]
 
 var data: Dictionary = {}
@@ -682,7 +686,8 @@ func get_upgrade_cost(id: String) -> int:
 	if definition.is_empty():
 		return 0
 	var level := int(data.get("permanent_upgrades", {}).get(id, 0))
-	return floori(float(definition["base_cost"]) * pow(1.5, level))
+	var late_tax: float = 1.0 + max(0.0, float(level - 10)) * 0.025
+	return floori(float(definition["base_cost"]) * pow(1.32, level) * late_tax)
 
 
 func get_upgrade_max_level(id: String) -> int:
@@ -854,12 +859,12 @@ func open_chest(chest_id: String) -> Dictionary:
 
 func _random_chest_reward(chest_id: String) -> Dictionary:
 	if chest_id.contains("legendary"):
-		return { "type": "skin", "skin_id": _weighted_skin(["epic", "legendary", "mythic", "ultimate"], [24.0, 58.0, 16.0, 2.0]) } if randf() < 0.38 else { "type": "diamonds", "amount": 95 }
+		return { "type": "skin", "skin_id": _weighted_skin(["common", "rare", "epic", "legendary", "mythic", "ultimate"], [2.0, 8.0, 24.0, 50.0, 14.0, 2.0]) } if randf() < 0.42 else { "type": "diamonds", "amount": 110 }
 	if chest_id.contains("epic"):
-		return { "type": "skin", "skin_id": _weighted_skin(["rare", "epic", "legendary"], [26.0, 66.0, 8.0]) } if randf() < 0.26 else { "type": "diamonds", "amount": 45 }
+		return { "type": "skin", "skin_id": _weighted_skin(["common", "rare", "epic", "legendary", "mythic", "ultimate"], [8.0, 24.0, 55.0, 10.0, 2.6, 0.4]) } if randf() < 0.30 else { "type": "diamonds", "amount": 55 }
 	if chest_id.contains("rare"):
-		return { "type": "skin", "skin_id": _weighted_skin(["common", "rare", "epic"], [26.0, 66.0, 8.0]) } if randf() < 0.16 else { "type": "keys", "amount": 1 }
-	return { "type": "skin", "skin_id": _weighted_skin(["common", "rare"], [86.0, 14.0]) } if randf() < 0.12 else { "type": "coins", "amount": 220 }
+		return { "type": "skin", "skin_id": _weighted_skin(["common", "rare", "epic", "legendary", "mythic", "ultimate"], [20.0, 63.0, 13.0, 3.0, 0.8, 0.2]) } if randf() < 0.20 else ({ "type": "keys", "amount": 1 } if randf() < 0.68 else { "type": "diamonds", "amount": 26 })
+	return { "type": "skin", "skin_id": _weighted_skin(["common", "rare", "epic", "legendary", "mythic", "ultimate"], [82.0, 14.0, 3.0, 0.8, 0.18, 0.02]) } if randf() < 0.14 else { "type": "coins", "amount": 260 }
 
 
 func claim_daily_reward() -> Dictionary:
@@ -1178,10 +1183,16 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 	var coins_bonus: int = int(summary.get("coins", 0)) + (int(reward.get("amount", 0)) if String(reward.get("type", "")) == "coins" else 0)
 	var run_upgrade_levels: Dictionary = summary.get("run_upgrade_levels", {})
 	var xp_bonus: int = maxi(30, int(summary.get("xp", 0)) + int(definition.get("xp", 60)) + int(run_upgrade_levels.get("bossHunter", 0)) * 20)
+	var diamonds_bonus := 0
 	if coins_bonus > 0:
 		data["coins"] = int(data.get("coins", 0)) + coins_bonus
 	if String(reward.get("type", "")) != "coins":
 		apply_reward(reward)
+	if result == "win":
+		diamonds_bonus = int(definition.get("diamonds", 0))
+		if diamonds_bonus > 0:
+			data["diamonds"] = int(data.get("diamonds", 0)) + diamonds_bonus
+			_increment_stat("diamondsFound", diamonds_bonus, false)
 	add_profile_xp(xp_bonus)
 	var stats: Dictionary = data.get("stats", {})
 	stats["boss_runs"] = int(stats.get("boss_runs", 0)) + 1
@@ -1198,6 +1209,8 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + int(summary.get("rings", 0))
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins_bonus
 	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + int(summary.get("run_upgrades", 0))
+	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds_bonus
+	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds_bonus
 	data["stats"] = stats
 	_progress_missions("ringsDestroyed", int(summary.get("rings", 0)))
 	_progress_missions("runCoins", coins_bonus)
@@ -1206,7 +1219,7 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 	return {
 		"coins": coins_bonus,
 		"xp": xp_bonus,
-		"diamonds": 0,
+		"diamonds": diamonds_bonus,
 		"reward": reward,
 		"boss_level": level_id,
 	}
@@ -1229,11 +1242,11 @@ func boss_level_definition(level_id: String) -> Dictionary:
 
 func boss_level_definitions() -> Array[Dictionary]:
 	return [
-		{ "id": "normal", "title": "Normal", "quality": 0.45, "xp": 80, "reward": { "type": "coins", "amount": 220 } },
-		{ "id": "strong", "title": "Forte", "quality": 0.58, "xp": 120, "reward": { "type": "diamonds", "amount": 8 } },
-		{ "id": "elite", "title": "Elite", "quality": 0.72, "xp": 170, "reward": { "type": "keys", "amount": 1 } },
-		{ "id": "legendary", "title": "Lendário", "quality": 0.86, "xp": 240, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
-		{ "id": "impossible", "title": "Impossível", "quality": 1.0, "xp": 360, "reward": { "type": "chest", "chest_type": "epic", "amount": 1 } },
+		{ "id": "normal", "title": "Normal", "quality": 0.45, "xp": 160, "diamonds": 2, "reward": { "type": "coins", "amount": 520 } },
+		{ "id": "strong", "title": "Forte", "quality": 0.58, "xp": 240, "diamonds": 8, "reward": { "type": "diamonds", "amount": 10 } },
+		{ "id": "elite", "title": "Elite", "quality": 0.72, "xp": 340, "diamonds": 12, "reward": { "type": "keys", "amount": 1 } },
+		{ "id": "legendary", "title": "Lendário", "quality": 0.86, "xp": 480, "diamonds": 18, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 } },
+		{ "id": "impossible", "title": "Impossível", "quality": 1.0, "xp": 680, "diamonds": 28, "reward": { "type": "chest", "chest_type": "epic", "amount": 1 } },
 	]
 
 
@@ -1675,10 +1688,25 @@ func add_profile_xp(amount: int) -> void:
 
 
 func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int, perfect_escapes: int, diamonds: int = 0, best_combo: int = 0, criticals: int = 0, skin_effects: int = 0, run_upgrades: int = 0) -> void:
-	data["coins"] = max(0, int(data.get("coins", 0)) + coins)
-	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
-	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
-	data["xp"] = max(0, int(data.get("xp", 0)) + xp)
+	var phase_config := LevelData.get_phase_config(phase)
+	var bonus_coins := int(phase_config.get("reward_coins", 0))
+	var bonus_xp := int(phase_config.get("reward_xp", 0))
+	var bonus_diamonds := diamonds
+	if randf() < float(phase_config.get("diamond_chance", 0.0)):
+		bonus_diamonds += 1
+	var bonus_keys := 0
+	if randf() < float(phase_config.get("key_chance", 0.0)):
+		bonus_keys = 1
+	var chest_rewarded := false
+	if randf() < float(phase_config.get("chest_chance", 0.0)):
+		chest_rewarded = true
+		var chest_type := _phase_chest_type(phase)
+		add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, 1)
+	data["coins"] = max(0, int(data.get("coins", 0)) + coins + bonus_coins)
+	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + bonus_diamonds)
+	data["keys"] = max(0, int(data.get("keys", 0)) + bonus_keys)
+	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp + bonus_xp)
+	data["xp"] = max(0, int(data.get("xp", 0)) + xp + bonus_xp)
 	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
 		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
 		data["level"] = int(data.get("level", 1)) + 1
@@ -1691,9 +1719,11 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_destroyed
 	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + perfect_escapes
 	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + perfect_escapes
-	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
-	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds
-	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + bonus_diamonds
+	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + bonus_diamonds
+	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins + bonus_coins
+	if chest_rewarded:
+		stats["chestsEarned"] = int(stats.get("chestsEarned", 0)) + 1
 	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), best_combo)
 	stats["criticals"] = int(stats.get("criticals", 0)) + criticals
 	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + skin_effects
@@ -1707,7 +1737,7 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	_progress_missions("phaseWins", 1)
 	_progress_missions("ringsDestroyed", rings_destroyed)
 	_progress_missions("perfectEscapes", perfect_escapes)
-	_progress_missions("runCoins", coins)
+	_progress_missions("runCoins", coins + bonus_coins)
 	_progress_missions("bestCombo", best_combo)
 	_progress_missions("criticals", criticals)
 	_progress_missions("skinEffects", skin_effects)
@@ -1886,16 +1916,16 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	var league: Dictionary = data.get("league", {})
 	var trophies := int(league.get("trophies", 0))
 	var previous_rank := MainPortData.rank_for_trophies(trophies)
-	var base_delta := 36 if result == "win" else -18 if result == "loss" else -24
+	var base_delta := 34 if result == "win" else -14 if result == "loss" else -10
 	var rings_value := int(summary.get("rings", 0))
 	var seconds := int(summary.get("seconds", 0))
 	var trophy_delta := base_delta
 	var run_upgrade_levels: Dictionary = summary.get("run_upgrade_levels", {})
 	if result == "win":
-		trophy_delta += min(14, rings_value / 3) + min(6, seconds / 45)
+		trophy_delta += min(12, rings_value / 4) + min(6, seconds / 45)
 		trophy_delta += int(run_upgrade_levels.get("trophyInstinct", 0)) * 2
 	else:
-		trophy_delta += min(8, rings_value / 8)
+		trophy_delta += min(6, rings_value / 10)
 	trophies = max(0, trophies + trophy_delta)
 	league["trophies"] = trophies
 	league["season_key"] = String(league.get("season_key", TimeManager.get_month_key()))
@@ -1918,9 +1948,13 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 		league["last_reward"] = "initial_neon_champion"
 	data["league"] = league
 
-	var coins: int = max(10, int(summary.get("coins", 0)) + (180 if result == "win" else 65 if result == "loss" else 35))
-	var xp: int = max(8, int(summary.get("xp", 0)) + (80 if result == "win" else 30 if result == "loss" else 16))
+	var coins: int = max(10, int(summary.get("coins", 0)) + (360 if result == "win" else 95 if result == "loss" else 25))
+	var xp: int = max(8, int(summary.get("xp", 0)) + (180 if result == "win" else 65 if result == "loss" else 12))
 	var diamonds: int = max(0, int(summary.get("diamonds", 0)))
+	if result == "win" and randf() < 0.35:
+		diamonds += 4
+	if result == "win" and randf() < 0.08:
+		add_inventory_item("chest_rare", "chest", "Chest Rare", "rare", 1)
 	data["coins"] = int(data.get("coins", 0)) + coins
 	data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
 	add_profile_xp(xp)
@@ -2001,7 +2035,17 @@ func get_setting(key: String, fallback = null):
 
 
 func _xp_needed_for_level(player_level: int) -> int:
-	return floori(150.0 * pow(max(1, player_level), 1.55))
+	return floori(130.0 * pow(max(1, player_level), 1.50))
+
+
+func _phase_chest_type(phase: int) -> String:
+	if phase >= 90 and randf() < 0.12:
+		return "legendary"
+	if phase >= 60 and randf() < 0.22:
+		return "epic"
+	if phase >= 20 and randf() < 0.42:
+		return "rare"
+	return "common"
 
 
 func _merge_defaults(defaults: Dictionary, loaded: Dictionary) -> Dictionary:

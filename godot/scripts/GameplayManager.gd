@@ -23,10 +23,10 @@ const MIN_DIRECTION_COMPONENT := 0.24
 const RING_SPAWN_GRACE_MSEC := 1050
 const RING_REPOSITION_GRACE_MSEC := 520
 const CRUSH_CONFIRM_MSEC := 150
-const XP_BASE_REQUIREMENT := 150.0
+const XP_BASE_REQUIREMENT := 130.0
 const RUN_COIN_MULTIPLIER := 1.25
-const GLOBAL_COIN_CONVERSION_RATE := 0.72
-const PROFILE_XP_MULTIPLIER := 0.95
+const GLOBAL_COIN_CONVERSION_RATE := 0.82
+const PROFILE_XP_MULTIPLIER := 1.08
 const COMBO_WINDOW_MSEC := 2600
 const PHYSICS_STEPS_PER_SECOND := 60.0
 const TWO_PI := PI * 2.0
@@ -390,18 +390,18 @@ func _make_infinite_gameplay_config() -> Dictionary:
 	var player_level := int(GameState.data.get("level", 1))
 	var pressure := clampf(infinite_clear_pressure, 0.0, 8.0)
 	return {
-		"ring_count": clampi(12 + floori(float(level_factor) * 0.34 + pressure * 0.34), 12, 20),
-		"base_hp": 18 + floori(float(level_factor) * 2.8 + pressure * 1.4) + floori(float(player_level) * 0.25),
-		"closing_speed": 0.0068 + min(0.024, float(level_factor) * 0.00062 + pressure * 0.0008),
-		"rotation_speed": 0.0044 + min(0.014, float(level_factor) * 0.00038 + pressure * 0.00045),
-		"gap_size": max(PI / 13.5, PI / (3.55 + float(level_factor) * 0.065 + pressure * 0.09)),
+		"ring_count": clampi(12 + floori(float(level_factor) * 0.25 + pressure * 0.22), 12, 18),
+		"base_hp": 18 + floori(float(level_factor) * 2.35 + pressure * 1.15) + floori(float(player_level) * 0.22),
+		"closing_speed": 0.0062 + min(0.020, float(level_factor) * 0.00050 + pressure * 0.00062),
+		"rotation_speed": 0.0042 + min(0.012, float(level_factor) * 0.00032 + pressure * 0.00038),
+		"gap_size": max(PI / 13.2, PI / (3.42 + float(level_factor) * 0.054 + pressure * 0.074)),
 	}
 
 
 func _update_infinite_mode(delta_seconds: float) -> void:
 	infinite_elapsed += delta_seconds
 	infinite_clear_pressure = max(0.0, infinite_clear_pressure - delta_seconds * 0.18)
-	var next_level := 1 + floori(infinite_elapsed / 22.0) + floori(float(rings_destroyed) / 10.0) + floori(infinite_clear_pressure * 0.45)
+	var next_level := 1 + floori(infinite_elapsed / 28.0) + floori(float(rings_destroyed) / 14.0) + floori(infinite_clear_pressure * 0.35)
 	if next_level != infinite_level:
 		infinite_level = next_level
 		gameplay_config = _make_infinite_gameplay_config()
@@ -636,8 +636,8 @@ func _check_perfect_escape(prev_dist: float, next_dist: float, prev_pos: Vector2
 			rings[i] = ring
 			_register_ring_clear()
 			perfect_escapes += 1
-			var perfect_coins: int = max(12, floori((22.0 + float(run_level) * 1.8 + float(combo) * 0.8) * _gold_multiplier()))
-			var perfect_xp: int = max(24, floori((48.0 + randf() * 20.0 + phase_id * 1.6 + float(run_level) * 3.0) * _xp_multiplier()))
+			var perfect_coins: int = max(18, floori((32.0 + float(run_level) * 2.2 + float(combo) * 1.0) * _gold_multiplier()))
+			var perfect_xp: int = max(34, floori((64.0 + randf() * 22.0 + phase_id * 1.8 + float(run_level) * 3.4) * _xp_multiplier()))
 			_award_coins(perfect_coins)
 			_award_xp(perfect_xp)
 			_register_combo("Perfect", Color("#00f0ff"))
@@ -686,8 +686,8 @@ func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next
 	ring["hp"] = new_hp
 	ring["status"] = "broken" if new_hp <= 0 else "active"
 	rings[closest_index] = ring
-	_award_coins(max(2, floori(damage * 0.82 * _gold_multiplier())))
-	_award_xp(floori((18.0 if is_crit else 12.0) * _xp_multiplier()))
+	_award_coins(max(4, floori(damage * 0.98 * _gold_multiplier())))
+	_award_xp(floori((26.0 if is_crit else 17.0) * _xp_multiplier()))
 	run_score += damage
 	_track_dps(float(damage))
 	_spawn_particles(ball_position, Color(String(ring["color"])), 6, 70.0)
@@ -701,8 +701,8 @@ func _check_ring_hit(prev_dist: float, next_dist: float, prev_pos: Vector2, next
 		_try_apply_skin_effect(closest_index, "break")
 		_try_apply_upgrade_effects(closest_index, "break", damage)
 		_register_combo("Break", Color("#ffd700"))
-		_award_coins(max(10, floori((26.0 if String(ring.get("type", "normal")) == "solid" else 18.0) * _gold_multiplier())))
-		_award_xp(floori(((24.0 if String(ring.get("type", "normal")) == "solid" else 14.0) + phase_id * 0.8 + randf() * (14.0 if String(ring.get("type", "normal")) == "solid" else 9.0)) * _xp_multiplier()))
+		_award_coins(max(14, floori((34.0 if String(ring.get("type", "normal")) == "solid" else 24.0) * _gold_multiplier())))
+		_award_xp(floori(((32.0 if String(ring.get("type", "normal")) == "solid" else 20.0) + phase_id * 0.9 + randf() * (16.0 if String(ring.get("type", "normal")) == "solid" else 10.0)) * _xp_multiplier()))
 		_spawn_particles(ball_position, Color("#ffd700"), 18, 130.0)
 		_spawn_floating("Break!", ball_position + Vector2(-18, -28), Color("#ffd700"))
 		_play_sfx("ring_break")
@@ -1996,7 +1996,7 @@ func _track_dps(damage: float) -> void:
 
 
 func _run_profile_xp() -> int:
-	return max(24, floori((total_run_xp * 0.58 + rings_destroyed * 6.0 + perfect_escapes * 9.0 + best_combo * 1.8 + phase_id * 10.0) * PROFILE_XP_MULTIPLIER))
+	return max(34, floori((total_run_xp * 0.66 + rings_destroyed * 7.5 + perfect_escapes * 13.0 + best_combo * 2.4 + phase_id * 13.0) * PROFILE_XP_MULTIPLIER))
 
 
 func _global_coins_from_run(coins_value: int, combo_value: int, won: bool) -> int:
@@ -2006,7 +2006,7 @@ func _global_coins_from_run(coins_value: int, combo_value: int, won: bool) -> in
 
 
 func _run_xp_needed_for_level(level_value: int) -> int:
-	return floori(XP_BASE_REQUIREMENT * pow(max(1, level_value), 1.55))
+	return floori(XP_BASE_REQUIREMENT * pow(max(1, level_value), 1.50))
 
 
 func _open_level_up() -> void:
