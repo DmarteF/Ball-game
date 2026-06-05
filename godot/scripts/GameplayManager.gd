@@ -375,6 +375,7 @@ func _create_rings() -> Array[Dictionary]:
 	var difficulty: float = 1.0 + max(0, phase_id - 1) * 0.22
 	var phase_gap: float = max(PI / 13.0, float(gameplay_config["gap_size"]))
 	var palette: Array = RING_PALETTES[ring_palette_index]
+	# Normal phases always end with a solid ring; procedural modes keep using open rings.
 	var solid_indexes: Dictionary = {} if is_infinite or is_daily_challenge else { count - 1: true }
 	var initial_active_count: int = min(count, _target_active_ring_count())
 	for i in range(count):
@@ -2664,6 +2665,9 @@ func _bounce_arena_edge() -> void:
 
 
 func _clamp_ring_spacing() -> void:
+	if is_infinite:
+		_clamp_infinite_ring_bounds()
+		return
 	var active_indices := _active_ring_indices_by_radius()
 	if active_indices.is_empty():
 		return
@@ -2689,6 +2693,23 @@ func _clamp_ring_spacing() -> void:
 		ring["radius"] = next_radius
 		rings[index] = ring
 		previous_radius = float(ring["radius"])
+
+
+func _clamp_infinite_ring_bounds() -> void:
+	var max_radius := _playable_ring_max_radius()
+	var crush_min_radius := 4.0
+	for i in range(rings.size()):
+		var ring: Dictionary = rings[i]
+		if String(ring.get("status", "")) != "active" or int(ring.get("hp", 0)) <= 0:
+			continue
+		var lower_bound: float = maxf(float(ring.get("min_radius", crush_min_radius)), crush_min_radius)
+		var current_radius: float = float(ring.get("radius", max_radius))
+		if current_radius > max_radius:
+			ring["radius"] = max_radius
+			ring["initial_radius"] = max(float(ring.get("initial_radius", max_radius)), max_radius)
+		elif current_radius < lower_bound:
+			ring["radius"] = lower_bound
+		rings[i] = ring
 
 
 func _is_angle_inside_gap(angle: float, ring: Dictionary, padding := 0.0) -> bool:
