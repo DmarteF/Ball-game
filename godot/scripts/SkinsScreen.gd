@@ -74,6 +74,7 @@ var _effect_filter := "all"
 var _root: VBoxContainer
 var _scroll_content: VBoxContainer
 var _content_grid: GridContainer
+var _skin_scroll: ScrollContainer
 var _filter_buttons: Array[Button] = []
 var _effect_filter_buttons: Array[Button] = []
 var _all_skin_data: Array = []
@@ -129,6 +130,7 @@ func _build_screen() -> void:
 	_configure_scroll(scroll)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(scroll)
+	_skin_scroll = scroll
 
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -384,23 +386,29 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 14, "#00ff88" if selected else rarity_color + "88", 2 if selected else 1))
 	var press_pos := Vector2.ZERO
+	var press_msec := 0
+	var start_scroll := 0
 	var dragged := false
 	card.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				press_pos = event.position
+				press_pos = card.get_global_mouse_position()
+				press_msec = Time.get_ticks_msec()
+				start_scroll = _skin_scroll.scroll_vertical if _skin_scroll else 0
 				dragged = false
-			elif not dragged:
+			elif _is_skin_tap_valid(press_pos, card.get_global_mouse_position(), press_msec, start_scroll, dragged):
 				_show_skin_details(skin)
 		elif event is InputEventScreenTouch:
 			if event.pressed:
 				press_pos = event.position
+				press_msec = Time.get_ticks_msec()
+				start_scroll = _skin_scroll.scroll_vertical if _skin_scroll else 0
 				dragged = false
-			elif not dragged:
+			elif _is_skin_tap_valid(press_pos, event.position, press_msec, start_scroll, dragged):
 				_show_skin_details(skin)
-		elif event is InputEventMouseMotion and event.position.distance_to(press_pos) > 10.0:
+		elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and card.get_global_mouse_position().distance_to(press_pos) > 14.0:
 			dragged = true
-		elif event is InputEventScreenDrag:
+		elif event is InputEventScreenDrag and event.position.distance_to(press_pos) > 8.0:
 			dragged = true
 	)
 	var margin := MarginContainer.new()
@@ -1194,8 +1202,20 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.follow_focus = true
-	scroll.scroll_deadzone = 4
+	scroll.scroll_deadzone = 14
 	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func _is_skin_tap_valid(start_pos: Vector2, end_pos: Vector2, start_msec: int, start_scroll: int, dragged: bool) -> bool:
+	if dragged:
+		return false
+	if start_pos.distance_to(end_pos) > 10.0:
+		return false
+	if Time.get_ticks_msec() - start_msec > 650:
+		return false
+	if _skin_scroll and abs(_skin_scroll.scroll_vertical - start_scroll) > 3:
+		return false
+	return true
 
 
 func _is_narrow_screen() -> bool:

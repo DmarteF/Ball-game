@@ -140,11 +140,11 @@ func _make_language_card() -> PanelContainer:
 	grid.columns = 1
 	grid.add_theme_constant_override("v_separation", 8)
 	body.add_child(grid)
-	grid.add_child(_make_language_button("Português", "pt"))
-	grid.add_child(_make_language_button("English", "en"))
-	grid.add_child(_make_language_button("Español", "es"))
-	grid.add_child(_make_language_button("日本語", "ja"))
-	grid.add_child(_make_language_button("中文", "zh"))
+	grid.add_child(_make_language_button("PT - Português / Portuguese", "pt"))
+	grid.add_child(_make_language_button("EN - English", "en"))
+	grid.add_child(_make_language_button("ES - Español / Spanish", "es"))
+	grid.add_child(_make_language_button("JA - 日本語 / Japanese", "ja"))
+	grid.add_child(_make_language_button("ZH - 中文 / Chinese", "zh"))
 	return card
 
 
@@ -265,6 +265,7 @@ func _make_language_button(label: String, code: String) -> Button:
 	var button := _make_solid_button("%s%s" % [label, "  OK" if active else ""], "#00ff8822" if active else "#ffffff14", "#00ff88" if active else "#ffffff", 220, 48)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.mouse_filter = Control.MOUSE_FILTER_PASS
+	button.add_theme_font_size_override("font_size", 12 if _is_narrow_screen() else 13)
 	button.add_theme_stylebox_override("normal", _make_style("#00ff8822" if active else "#ffffff14", 10, "#00ff88" if active else "#ffffff22", 1))
 	button.add_theme_stylebox_override("hover", _make_style("#00ff8822" if active else "#ffffff14", 10, "#00ff88" if active else "#ffffff22", 1))
 	button.add_theme_stylebox_override("pressed", _make_style("#00ff8822" if active else "#ffffff14", 10, "#00ff88" if active else "#ffffff22", 1))

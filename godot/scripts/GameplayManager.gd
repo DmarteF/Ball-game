@@ -562,7 +562,11 @@ func _active_ring_indices_by_radius() -> Array[int]:
 		for j in range(i + 1, indices.size()):
 			var a: int = indices[i]
 			var b: int = indices[j]
-			if float(rings[b].get("radius", 0.0)) < float(rings[a].get("radius", 0.0)):
+			var radius_a := float(rings[a].get("radius", 0.0))
+			var radius_b := float(rings[b].get("radius", 0.0))
+			var spawned_a := int(rings[a].get("spawned_at", 0))
+			var spawned_b := int(rings[b].get("spawned_at", 0))
+			if radius_b < radius_a or (is_equal_approx(radius_a, radius_b) and spawned_b < spawned_a):
 				indices[i] = b
 				indices[j] = a
 	return indices
@@ -1313,10 +1317,10 @@ func _update_control_overlay() -> void:
 
 func _build_pause_overlay() -> void:
 	_pause_overlay = _make_modal()
-	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"))
+	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"), Vector2(320, 300))
 	card.add_child(_make_modal_button(_tr("continue").to_upper(), _close_pause))
-	card.add_child(_make_modal_button("REINICIAR", _restart_level))
-	card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
+	card.add_child(_make_modal_button(_txt("RESTART", "REINICIAR", "REINICIAR", "リスタート", "重新开始"), _restart_level))
+	card.add_child(_make_modal_button(_txt("EXIT TO LEVELS", "SAIR PARA FASES", "SALIR A NIVELES", "レベルへ戻る", "返回关卡"), _go_to_phase_select))
 	add_child(_pause_overlay)
 
 
@@ -1339,7 +1343,7 @@ func _build_level_up_overlay() -> void:
 
 func _build_result_overlays() -> void:
 	_victory_overlay = _make_modal()
-	var victory_card := _make_modal_content(_victory_overlay, _tr("victory").to_upper())
+	var victory_card := _make_modal_content(_victory_overlay, _tr("victory").to_upper(), Vector2(326, 430))
 	_victory_title = _make_label(_txt("LEVEL 1 COMPLETE", "FASE 1 CONCLUÍDA", "NIVEL 1 COMPLETADO", "レベル1完了", "关卡1完成"), 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	victory_card.add_child(_victory_title)
 	_victory_rewards = VBoxContainer.new()
@@ -1349,14 +1353,14 @@ func _build_result_overlays() -> void:
 	victory_card.add_child(_victory_unlock_label)
 	_victory_double_button = _make_modal_button(_txt("DOUBLE REWARD - AD", "DOBRAR RECOMPENSA - AD", "DUPLICAR RECOMPENSA - ANUNCIO", "報酬2倍 - 広告", "奖励翻倍 - 广告"), _double_result_reward)
 	victory_card.add_child(_victory_double_button)
-	victory_card.add_child(_make_modal_button("VOLTAR AS FASES", _go_to_phase_select))
+	victory_card.add_child(_make_modal_button(_txt("BACK TO LEVELS", "VOLTAR ÀS FASES", "VOLVER A NIVELES", "レベルへ戻る", "返回关卡"), _go_to_phase_select))
 	victory_card.add_child(_make_modal_button(_txt("PLAY AGAIN", "JOGAR NOVAMENTE", "JUGAR DE NUEVO", "もう一度プレイ", "再玩一次"), _restart_level))
-	_victory_next_button = _make_modal_button("PROXIMA FASE", _go_to_next_phase)
+	_victory_next_button = _make_modal_button(_txt("NEXT LEVEL", "PRÓXIMA FASE", "SIGUIENTE NIVEL", "次のレベル", "下一关"), _go_to_next_phase)
 	victory_card.add_child(_victory_next_button)
 	add_child(_victory_overlay)
 
 	_defeat_overlay = _make_modal()
-	var defeat_card := _make_modal_content(_defeat_overlay, "GAME OVER")
+	var defeat_card := _make_modal_content(_defeat_overlay, _txt("GAME OVER", "FIM DE JOGO", "FIN DEL JUEGO", "ゲームオーバー", "游戏结束"), Vector2(326, 430))
 	_defeat_title = _make_label(_txt("The ball was trapped by the rings.", "A bolinha foi presa pelos anéis.", "La bola quedó atrapada por los anillos.", "ボールがリングに閉じ込められました。", "小球被圆环困住了。"), 15, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	defeat_card.add_child(_defeat_title)
 	_defeat_summary = VBoxContainer.new()
@@ -1366,8 +1370,8 @@ func _build_result_overlays() -> void:
 	defeat_card.add_child(_defeat_double_button)
 	_defeat_revive_button = _make_modal_button(_txt("REVIVE WITH AD", "REVIVER COM ANÚNCIO", "REVIVIR CON ANUNCIO", "広告で復活", "观看广告复活"), _revive_with_ad)
 	defeat_card.add_child(_defeat_revive_button)
-	defeat_card.add_child(_make_modal_button("TENTAR DE NOVO", _restart_level))
-	defeat_card.add_child(_make_modal_button("SAIR PARA FASES", _go_to_phase_select))
+	defeat_card.add_child(_make_modal_button(_txt("TRY AGAIN", "TENTAR DE NOVO", "INTENTAR DE NUEVO", "もう一度挑戦", "重试"), _restart_level))
+	defeat_card.add_child(_make_modal_button(_txt("EXIT TO LEVELS", "SAIR PARA FASES", "SALIR A NIVELES", "レベルへ戻る", "返回关卡"), _go_to_phase_select))
 	add_child(_defeat_overlay)
 	_hide_all_overlays()
 
@@ -2696,20 +2700,32 @@ func _clamp_ring_spacing() -> void:
 
 
 func _clamp_infinite_ring_bounds() -> void:
+	var active_indices := _active_ring_indices_by_radius()
+	if active_indices.is_empty():
+		return
 	var max_radius := _playable_ring_max_radius()
 	var crush_min_radius := 4.0
-	for i in range(rings.size()):
-		var ring: Dictionary = rings[i]
-		if String(ring.get("status", "")) != "active" or int(ring.get("hp", 0)) <= 0:
-			continue
+	var playable_width := max_radius - crush_min_radius
+	var spacing: float = min(_infinite_ring_spacing(), max(3.0, playable_width / float(max(1, active_indices.size()))))
+	active_indices.reverse()
+	var previous_radius: float = INF
+	var now := Time.get_ticks_msec()
+	for index in active_indices:
+		var ring: Dictionary = rings[index]
 		var lower_bound: float = maxf(float(ring.get("min_radius", crush_min_radius)), crush_min_radius)
 		var current_radius: float = float(ring.get("radius", max_radius))
-		if current_radius > max_radius:
-			ring["radius"] = max_radius
+		var next_radius: float = clampf(current_radius, lower_bound, max_radius)
+		if previous_radius != INF:
+			var max_allowed: float = maxf(lower_bound, previous_radius - maxf(spacing, float(ring.get("thickness", 5.0)) + 1.0))
+			if next_radius > max_allowed:
+				next_radius = max_allowed
+		if abs(next_radius - current_radius) > 0.5:
+			ring["defeat_grace_until"] = now + RING_REPOSITION_GRACE_MSEC
+		ring["radius"] = next_radius
+		if next_radius >= max_radius - 0.5:
 			ring["initial_radius"] = max(float(ring.get("initial_radius", max_radius)), max_radius)
-		elif current_radius < lower_bound:
-			ring["radius"] = lower_bound
-		rings[i] = ring
+		rings[index] = ring
+		previous_radius = next_radius
 
 
 func _is_angle_inside_gap(angle: float, ring: Dictionary, padding := 0.0) -> bool:
