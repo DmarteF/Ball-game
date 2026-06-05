@@ -72,6 +72,14 @@ func apply_audio_settings() -> void:
 		play_music(_current_music, _last_volume_db, false, _current_context)
 
 
+func current_music_path() -> String:
+	return _current_music
+
+
+func current_context() -> String:
+	return _current_context
+
+
 func play_sfx(path: String, volume_db := -5.0) -> void:
 	if _is_sfx_muted() or not ResourceLoader.exists(path):
 		return

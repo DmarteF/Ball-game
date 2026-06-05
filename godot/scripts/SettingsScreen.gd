@@ -2,6 +2,7 @@ extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
 const SETTINGS_PATH := "user://settings.json"
+const BUILD_VERSION := "1.0.10"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
@@ -16,6 +17,21 @@ var _music_muted := false
 var _sfx_muted := false
 var _language := "en"
 var _active_modal: Control
+var _debug_taps := 0
+var _debug_enabled := false
+var _debug_fps_label: Label
+var _debug_stats_label: Label
+var _debug_update_accum := 0.0
+
+
+func _process(delta: float) -> void:
+	if not _debug_enabled:
+		return
+	_debug_update_accum += delta
+	if _debug_update_accum < 0.5:
+		return
+	_debug_update_accum = 0.0
+	_refresh_debug_labels()
 
 
 func _ready() -> void:
@@ -73,6 +89,8 @@ func _build_screen() -> void:
 	content.add_child(_make_audio_card())
 	content.add_child(_make_language_card())
 	content.add_child(_make_save_card())
+	if _debug_enabled:
+		content.add_child(_make_debug_card())
 	content.add_child(_make_about_card())
 	content.add_child(_spacer(18))
 
@@ -140,12 +158,6 @@ func _make_save_card() -> PanelContainer:
 	body.add_child(_make_save_button(_t("copy_save"), "#ffd700", _copy_save_code))
 	body.add_child(_make_save_button(_t("paste_save"), "#ff5cff", _show_paste_save))
 	body.add_child(_make_save_button(_t("reset_progress"), "#ff3b6b", _show_reset_warning))
-	if OS.is_debug_build():
-		var debug_label := _make_label(_t("debug_tools"), 12, "#ffffff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
-		body.add_child(debug_label)
-		body.add_child(_make_save_button(_t("debug_test_save"), "#ffffff", _debug_make_test_save))
-		body.add_child(_make_save_button(_t("debug_unlock_all"), "#ffffff", _debug_unlock_all))
-		body.add_child(_make_save_button(_t("debug_clear_save"), "#ff3b6b", _show_reset_warning))
 	return card
 
 
@@ -157,7 +169,67 @@ func _make_about_card() -> PanelContainer:
 	var text := _make_label(_t("about_text"), 13, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(text)
+	var secret := Button.new()
+	secret.text = "💎"
+	secret.custom_minimum_size = Vector2(34, 30)
+	secret.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	secret.focus_mode = Control.FOCUS_NONE
+	secret.add_theme_font_size_override("font_size", 16)
+	secret.add_theme_stylebox_override("normal", _make_style("#00000000", 8))
+	secret.add_theme_stylebox_override("hover", _make_style("#ffffff08", 8))
+	secret.add_theme_stylebox_override("pressed", _make_style("#ffffff12", 8))
+	secret.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	secret.pressed.connect(_on_debug_secret_pressed)
+	body.add_child(secret)
 	return card
+
+
+func _make_debug_card() -> PanelContainer:
+	var card := _make_card()
+	card.add_theme_stylebox_override("panel", _make_style("#0b0820ee", 12, "#ff5cff88", 1, "#ff5cff55", 10))
+	var body := _card_body(card)
+	body.add_child(_make_section_title(_t("debug_mode")))
+	_debug_fps_label = _make_label("", 15, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	body.add_child(_debug_fps_label)
+	_debug_stats_label = _make_label("", 12, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	_debug_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(_debug_stats_label)
+	body.add_child(_make_debug_grid([
+		[_t("add_1k_coins"), "#ffd700", func() -> void: _debug_add_resource("coins", 1000)],
+		[_t("add_10k_coins"), "#ffd700", func() -> void: _debug_add_resource("coins", 10000)],
+		[_t("add_100_diamonds"), "#00f0ff", func() -> void: _debug_add_resource("diamonds", 100)],
+		[_t("add_1000_diamonds"), "#00f0ff", func() -> void: _debug_add_resource("diamonds", 1000)],
+		[_t("add_10_keys"), "#ff5cff", func() -> void: _debug_add_resource("keys", 10)],
+		[_t("add_100_keys"), "#ff5cff", func() -> void: _debug_add_resource("keys", 100)],
+		[_t("add_1k_xp"), "#7dd3fc", func() -> void: _debug_add_xp(1000)],
+		[_t("add_10k_xp"), "#7dd3fc", func() -> void: _debug_add_xp(10000)],
+		[_t("add_1_level"), "#00ff88", func() -> void: _debug_add_levels(1)],
+		[_t("add_10_levels"), "#00ff88", func() -> void: _debug_add_levels(10)],
+	]))
+	body.add_child(_make_debug_grid([
+		[_t("unlock_all_levels"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_levels"), func() -> void: GameState.debug_unlock_all_levels())],
+		[_t("unlock_all_upgrades"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_upgrades"), func() -> void: GameState.debug_unlock_all_upgrades())],
+		[_t("unlock_all_skins"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_skins"), func() -> void: GameState.debug_unlock_all_skins())],
+		[_t("reset_daily"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily"), func() -> void: GameState.debug_reset_daily_reward())],
+		[_t("reset_wheel"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_wheel"), func() -> void: GameState.debug_reset_wheel_timer())],
+		[_t("reset_tutorial"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_tutorial"), func() -> void: GameState.reset_tutorial_for_debug())],
+		[_t("export_debug_save"), "#00f0ff", _show_export_save],
+		[_t("disable_debug"), "#ff3b6b", _disable_debug_mode],
+	]))
+	_refresh_debug_labels()
+	return card
+
+
+func _make_debug_grid(items: Array) -> GridContainer:
+	var grid := GridContainer.new()
+	grid.columns = 1 if _is_narrow_screen() else 2
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	for item in items:
+		var data: Array = item
+		grid.add_child(_make_save_button(String(data[0]), String(data[1]), data[2]))
+	return grid
 
 
 func _make_save_button(text: String, color: String, action: Callable) -> Button:
@@ -316,6 +388,129 @@ func _debug_make_test_save() -> void:
 func _debug_unlock_all() -> void:
 	GameState.debug_unlock_all()
 	_show_message_modal(_t("debug_tools"), _t("debug_unlock_done"), "#00ff88")
+
+
+func _on_debug_secret_pressed() -> void:
+	if _debug_enabled:
+		_show_toast(_t("debug_already_enabled"))
+		return
+	_debug_taps += 1
+	if _debug_taps >= 4:
+		_debug_taps = 0
+		_debug_enabled = true
+		GameState.set_debug_enabled(true)
+		_show_toast(_t("debug_enabled_toast"))
+		get_tree().create_timer(0.35).timeout.connect(func() -> void:
+			get_tree().reload_current_scene()
+		)
+
+
+func _disable_debug_mode() -> void:
+	GameState.set_debug_enabled(false)
+	_debug_enabled = false
+	_show_toast(_t("debug_disabled_toast"))
+	get_tree().create_timer(0.35).timeout.connect(func() -> void:
+		get_tree().reload_current_scene()
+	)
+
+
+func _debug_add_resource(kind: String, amount: int) -> void:
+	match kind:
+		"coins":
+			GameState.add_coins(amount)
+		"diamonds":
+			GameState.add_diamonds(amount)
+		"keys":
+			GameState.add_keys(amount)
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _debug_add_levels(amount: int) -> void:
+	GameState.debug_add_levels(amount)
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _debug_add_xp(amount: int) -> void:
+	GameState.add_profile_xp(amount)
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _confirm_debug_action(title: String, action: Callable) -> void:
+	var cancel := Button.new()
+	cancel.text = _t("cancel")
+	_style_modal_button(cancel, "#ffffff")
+	cancel.pressed.connect(_close_modal)
+	var confirm := Button.new()
+	confirm.text = _t("confirm")
+	_style_modal_button(confirm, "#ffb000")
+	confirm.pressed.connect(func() -> void:
+		action.call()
+		_close_modal()
+		_show_toast(_t("debug_done"))
+		_refresh_debug_labels()
+	)
+	_show_message_modal(title, _t("debug_confirm_body"), "#ffb000", [cancel, confirm])
+
+
+func _refresh_debug_labels() -> void:
+	if _debug_fps_label != null and is_instance_valid(_debug_fps_label):
+		_debug_fps_label.text = "%s: %s" % [_t("fps"), Engine.get_frames_per_second()]
+	if _debug_stats_label == null or not is_instance_valid(_debug_stats_label):
+		return
+	var runtime: Dictionary = GameState.data.get("runtime_debug", {})
+	var wheel: Dictionary = GameState.data.get("wheel", {})
+	var daily: Dictionary = GameState.data.get("daily_missions", {})
+	var current_music := "-"
+	var music_context := "-"
+	if has_node("/root/AudioManager"):
+		current_music = AudioManager.current_music_path().get_file()
+		music_context = AudioManager.current_context()
+	var lines := [
+		"%s: %s" % [_t("active_rings"), int(runtime.get("active_rings", 0))],
+		"%s: %s" % [_t("active_particles"), int(runtime.get("particles", 0))],
+		"%s: %s" % [_t("current_mode"), String(runtime.get("mode", GameState.data.get("selected_mode", "menu")))],
+		"%s: %s" % [_t("equipped_skin"), String(GameState.data.get("equipped_skin", "neon_blue"))],
+		"%s: %s / %s" % [_t("current_music"), music_context, current_music],
+		"%s: %s" % [_t("build_version"), BUILD_VERSION],
+		"%s: %s / %s" % [_t("seed"), String(wheel.get("day_key", "")), String(daily.get("day_key", ""))],
+		"%s: %s  %s: %s  %s: %s  XP: %s  %s: %s" % [
+			_t("coins"), int(GameState.data.get("coins", 0)),
+			_t("diamonds"), int(GameState.data.get("diamonds", 0)),
+			_t("keys"), int(GameState.data.get("keys", 0)),
+			int(GameState.data.get("xp", 0)),
+			_t("level"), int(GameState.data.get("level", 1)),
+		],
+	]
+	_debug_stats_label.text = "\n".join(lines)
+
+
+func _show_toast(message: String) -> void:
+	var toast := PanelContainer.new()
+	toast.anchor_left = 0.5
+	toast.anchor_right = 0.5
+	toast.anchor_top = 0.0
+	toast.anchor_bottom = 0.0
+	toast.offset_left = -132
+	toast.offset_right = 132
+	toast.offset_top = 24
+	toast.offset_bottom = 72
+	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toast.add_theme_stylebox_override("panel", _make_style("#08132bee", 14, "#00f0ff99", 1, "#00f0ff55", 10))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	toast.add_child(margin)
+	margin.add_child(_make_label(message, 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	add_child(toast)
+	get_tree().create_timer(1.6).timeout.connect(func() -> void:
+		if is_instance_valid(toast):
+			toast.queue_free()
+	)
 
 
 func _show_code_modal(title: String, message: String, code: String, editable: bool, extra_buttons: Array) -> void:
@@ -592,6 +787,7 @@ func _load_settings() -> void:
 	_music_muted = bool(GameState.get_setting("music_muted", GameState.get_setting("audio_muted", false)))
 	_sfx_muted = bool(GameState.get_setting("sfx_muted", GameState.get_setting("audio_muted", false)))
 	_language = String(GameState.get_setting("language", "en"))
+	_debug_enabled = bool(GameState.get_setting("debug_enabled", false))
 
 
 func _save_settings() -> void:
@@ -654,6 +850,39 @@ func _t(key: String) -> String:
 		"debug_clear_save": return "Limpar save" if pt else "Clear save"
 		"debug_test_done": return "Recursos de teste adicionados." if pt else "Test resources added."
 		"debug_unlock_done": return "Conteúdo desbloqueado no save de debug." if pt else "Content unlocked in debug save."
+		"debug_mode": return "MODO DEBUG" if pt else "DEBUG MODE"
+		"debug_enabled_toast": return "Debug ativado" if pt else "Debug enabled"
+		"debug_disabled_toast": return "Debug desativado" if pt else "Debug disabled"
+		"debug_already_enabled": return "Debug já está ativo" if pt else "Debug already enabled"
+		"debug_done": return "Ação debug aplicada" if pt else "Debug action applied"
+		"debug_confirm_body": return "Esta ação altera bastante o progresso. Confirmar?" if pt else "This action changes progress significantly. Confirm?"
+		"fps": return "FPS" if pt else "FPS"
+		"active_rings": return "Anéis ativos" if pt else "Active rings"
+		"active_particles": return "Partículas ativas" if pt else "Active particles"
+		"current_mode": return "Modo atual" if pt else "Current mode"
+		"equipped_skin": return "Skin equipada" if pt else "Equipped skin"
+		"current_music": return "Música atual" if pt else "Current music"
+		"build_version": return "Versão do build" if pt else "Build version"
+		"seed": return "Seed roleta/desafio" if pt else "Wheel/daily seed"
+		"add_1k_coins": return "+1.000 moedas" if pt else "+1,000 coins"
+		"add_10k_coins": return "+10.000 moedas" if pt else "+10,000 coins"
+		"add_100_diamonds": return "+100 diamantes" if pt else "+100 diamonds"
+		"add_1000_diamonds": return "+1.000 diamantes" if pt else "+1,000 diamonds"
+		"add_10_keys": return "+10 chaves" if pt else "+10 keys"
+		"add_100_keys": return "+100 chaves" if pt else "+100 keys"
+		"add_1k_xp": return "+1.000 XP" if pt else "+1,000 XP"
+		"add_10k_xp": return "+10.000 XP" if pt else "+10,000 XP"
+		"add_1_level": return "+1 nível" if pt else "+1 level"
+		"add_10_levels": return "+10 níveis" if pt else "+10 levels"
+		"unlock_all_levels": return "Liberar Todas as Fases" if pt else "Unlock All Levels"
+		"unlock_all_upgrades": return "Liberar Todas as Melhorias" if pt else "Unlock All Upgrades"
+		"unlock_all_skins": return "Liberar Todas as Skins" if pt else "Unlock All Skins"
+		"reset_daily": return "Resetar Recompensa Diária" if pt else "Reset Daily Reward"
+		"reset_wheel": return "Resetar Timer da Roleta" if pt else "Reset Wheel Timer"
+		"reset_tutorial": return "Resetar Tutorial" if pt else "Reset Tutorial"
+		"export_debug_save": return "Exportar Save Debug" if pt else "Export Debug Save"
+		"disable_debug": return "Desativar Debug" if pt else "Disable Debug"
+		"confirm": return "Confirmar" if pt else "Confirm"
 		"error_empty": return "O campo está vazio." if pt else "The field is empty."
 		"error_json": return "JSON inválido ou corrompido." if pt else "Invalid or corrupted JSON."
 		"error_format": return "Formato de save não reconhecido." if pt else "Unknown save format."

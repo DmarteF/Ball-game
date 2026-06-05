@@ -201,12 +201,24 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_update_control_overlay()
+	_update_runtime_debug_snapshot()
 	if is_paused or level_up_active or finished:
 		return
 	_update_game(delta * PHYSICS_STEPS_PER_SECOND)
 	_update_effects(delta)
 	_update_hud()
 	queue_redraw()
+
+
+func _update_runtime_debug_snapshot() -> void:
+	GameState.update_runtime_debug({
+		"mode": game_mode,
+		"active_rings": _active_ring_count(),
+		"particles": particles.size(),
+		"skin": String(GameState.data.get("equipped_skin", "neon_blue")),
+		"infinite_seconds": floori(infinite_elapsed),
+		"rings_destroyed": rings_destroyed,
+	})
 
 
 func _draw() -> void:

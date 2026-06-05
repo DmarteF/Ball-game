@@ -1195,3 +1195,52 @@ Checklist:
 - Backup antes de importar: sim
 - Reset com confirmação dupla: sim
 - Configurações atualizadas: sim
+
+## Atualizacao - Modo Debug Oculto
+
+A tela `Configurações` possui um modo debug escondido para desenvolvimento e testes. Ele não aparece para o jogador comum.
+
+Como ativar:
+- Abra `Configurações`.
+- Toque 4 vezes seguidas no emoji discreto `💎` dentro do card `Sobre/About`.
+- Um toast mostra `Debug enabled / Debug ativado`.
+- A preferência fica salva em `settings.debug_enabled`, dentro do save principal.
+- Com debug ativo, a seção mostra botão para desativar.
+
+Informações exibidas:
+- FPS atual, atualizado a cada 0.5s.
+- Anéis ativos, partículas ativas e modo atual quando houver snapshot de gameplay.
+- Skin equipada.
+- Música/contexto atual.
+- Versão do build.
+- Seed/chave atual de roleta e desafio diário.
+- Recursos atuais: moedas, diamantes, chaves, XP e nível.
+
+Botões de debug:
+- Adicionar moedas: `+1.000` e `+10.000`.
+- Adicionar diamantes: `+100` e `+1.000`.
+- Adicionar chaves: `+10` e `+100`.
+- Adicionar XP: `+1.000` e `+10.000`.
+- Adicionar nível: `+1` e `+10`.
+- Liberar todas as fases.
+- Liberar todas as melhorias.
+- Liberar todas as skins.
+- Resetar recompensa diária.
+- Resetar timer da roleta.
+- Resetar tutorial.
+- Exportar save debug.
+
+Segurança:
+- Ações grandes como liberar tudo e resets pedem confirmação.
+- O modo funciona no HTML/Web e no APK porque usa apenas UI Godot e save local.
+- Antes de publicação real, recomenda-se desativar/remover esse modo ou manter inacessível por flag de build.
+
+Checklist:
+- Emoji oculto adicionado: sim
+- 4 cliques ativam debug: sim
+- Seção debug aparece em Configurações: sim
+- Ver FPS funciona: sim
+- Adicionar recursos funciona: sim
+- Unlock all funciona: sim
+- Reset tutorial funciona: sim
+- Debug respeita confirmações: sim

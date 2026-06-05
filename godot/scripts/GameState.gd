@@ -366,6 +366,7 @@ func default_save() -> Dictionary:
 			"sfx_muted": false,
 			"master_muted": false,
 			"language": "en",
+			"debug_enabled": false,
 		},
 		"tutorial": {
 			"seen": false,
@@ -557,8 +558,6 @@ func reset_progress() -> void:
 
 
 func make_debug_save() -> void:
-	if not OS.is_debug_build():
-		return
 	data["coins"] = int(data.get("coins", 0)) + 25000
 	data["diamonds"] = int(data.get("diamonds", 0)) + 1000
 	data["keys"] = int(data.get("keys", 0)) + 20
@@ -571,8 +570,6 @@ func make_debug_save() -> void:
 
 
 func debug_unlock_all() -> void:
-	if not OS.is_debug_build():
-		return
 	data["max_unlocked_phase"] = MAX_PHASE
 	var phases: Array = []
 	for phase in range(1, MAX_PHASE + 1):
@@ -595,6 +592,67 @@ func debug_unlock_all() -> void:
 	data["new_skins"] = skins.duplicate()
 	refresh_unlocks(false)
 	save_game()
+
+
+func debug_add_levels(amount: int) -> void:
+	amount = max(1, amount)
+	data["level"] = max(1, int(data.get("level", 1)) + amount)
+	refresh_unlocks(false)
+	save_game()
+
+
+func debug_unlock_all_levels() -> void:
+	unlock_level(MAX_PHASE)
+
+
+func debug_unlock_all_upgrades() -> void:
+	var upgrades: Array = []
+	for id in PERMANENT_UPGRADE_DEFS.keys():
+		upgrades.append(String(id))
+	for id in MainPortData.all_run_upgrade_ids():
+		if not upgrades.has(String(id)):
+			upgrades.append(String(id))
+	data["unlocked_upgrades"] = upgrades
+	data["explicit_unlocked_run_upgrades"] = MainPortData.all_run_upgrade_ids()
+	refresh_unlocks(false)
+	save_game()
+
+
+func debug_unlock_all_skins() -> void:
+	var skins: Array = []
+	for skin in MainPortData.skins():
+		var skin_id := String(Dictionary(skin).get("id", ""))
+		if not skin_id.is_empty() and not skins.has(skin_id):
+			skins.append(skin_id)
+	data["unlocked_skins"] = skins
+	data["new_skins"] = skins.duplicate()
+	refresh_unlocks(false)
+	save_game()
+
+
+func debug_reset_daily_reward() -> void:
+	data["last_daily_reward_at"] = 0
+	data["daily_streak"] = 0
+	save_game()
+
+
+func debug_reset_wheel_timer() -> void:
+	data["wheel"] = { "day_key": "", "free_used": false, "ad_spins_used": 0, "last_reward": {} }
+	_ensure_live_systems()
+	save_game()
+
+
+func set_debug_enabled(enabled: bool) -> void:
+	data["settings"]["debug_enabled"] = enabled
+	save_game()
+
+
+func is_debug_enabled() -> bool:
+	return bool(data.get("settings", {}).get("debug_enabled", false))
+
+
+func update_runtime_debug(info: Dictionary) -> void:
+	data["runtime_debug"] = info
 
 
 func _looks_like_save_data(candidate: Dictionary) -> bool:
