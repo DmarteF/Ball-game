@@ -1595,14 +1595,11 @@ func _make_result_line(label: String, value: String) -> PanelContainer:
 	row.add_theme_constant_override("separation", 8)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin.add_child(row)
-	var name_label := _make_label(label, 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
-	name_label.custom_minimum_size.x = 116
-	name_label.clip_text = false
-	row.add_child(name_label)
-	var value_label := _make_label(value, 14, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
-	value_label.clip_text = false
-	value_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(value_label)
+	var text_label := _make_label("%s  %s" % [label, value], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	text_label.clip_text = false
+	text_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(text_label)
 	return panel
 
 

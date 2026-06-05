@@ -485,10 +485,26 @@ func _build_all_skin_data() -> Array:
 
 	var directory := DirAccess.open("res://assets/skins")
 	if directory == null:
+		_sort_skin_data(result)
 		return result
 	_append_asset_skins_from_dir(result, seen, "res://assets/skins")
 	_append_asset_skins_from_dir(result, seen, "res://assets/skins/generated")
+	_sort_skin_data(result)
 	return result
+
+
+func _sort_skin_data(skins: Array) -> void:
+	skins.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_rank := _rarity_rank(String(a.get("rarity", "common")))
+		var b_rank := _rarity_rank(String(b.get("rarity", "common")))
+		if a_rank != b_rank:
+			return a_rank < b_rank
+		var a_owned := _is_owned(String(a.get("id", "")))
+		var b_owned := _is_owned(String(b.get("id", "")))
+		if a_owned != b_owned:
+			return a_owned
+		return String(a.get("name", a.get("id", ""))).naturalnocasecmp_to(String(b.get("name", b.get("id", "")))) < 0
+	)
 
 
 func _append_asset_skins_from_dir(result: Array, seen: Dictionary, path: String) -> void:
@@ -842,7 +858,8 @@ func _skin_data_by_id(id: String) -> Dictionary:
 
 
 func _rarity_rank(rarity: String) -> int:
-	return RARITIES.find(rarity)
+	var index := RARITIES.find(rarity)
+	return index if index >= 0 else RARITIES.size()
 
 
 func _unlock_hint(source: String, rarity: String) -> String:

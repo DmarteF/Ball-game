@@ -2580,6 +2580,14 @@ func _finish_quit_reward() -> void:
 	var global_coins_reward: int = max(0, floori(float(_global_coins_from_run(run_coins, best_combo, false)) * (0.48 if is_infinite else 0.35)))
 	var profile_xp_reward: int = max(0, floori(float(_run_profile_xp()) * (0.52 if is_infinite else 0.38)))
 	var diamonds: int = max(0, floori(float(run_diamonds) * 0.5))
+	var has_progress: bool = rings_destroyed > 0 or run_coins > 0 or run_xp > 0 or total_run_xp > 0 or infinite_elapsed > 2.0
+	if has_progress:
+		var coin_rate: int = 8 if is_infinite else 5
+		var time_coin_rate: float = 1.2 if is_infinite else 0.45
+		var minimum_coins: int = max(3, rings_destroyed * coin_rate + floori(infinite_elapsed * time_coin_rate))
+		var minimum_xp: int = max(12, rings_destroyed * 5 + floori(infinite_elapsed * 0.8))
+		global_coins_reward = max(global_coins_reward, minimum_coins)
+		profile_xp_reward = max(profile_xp_reward, minimum_xp)
 	var summary := {
 		"seconds": floori(infinite_elapsed),
 		"rings": rings_destroyed,
@@ -2661,6 +2669,8 @@ func _rebuild_defeat_summary(summary: Dictionary) -> void:
 		_defeat_summary.add_child(_make_victory_line("xp", "XP", "+%s" % int(summary.get("xp", 0))))
 		if int(summary.get("diamonds", 0)) > 0:
 			_defeat_summary.add_child(_make_victory_line("gem", _txt("Diamonds", "Diamantes", "Diamantes", "ダイヤ", "钻石"), "+%s" % int(summary.get("diamonds", 0))))
+		if int(summary.get("coins", 0)) <= 0 and int(summary.get("xp", 0)) <= 0 and int(summary.get("diamonds", 0)) <= 0:
+			_defeat_summary.add_child(_make_label(_txt("No reward earned yet.", "Nenhuma recompensa obtida ainda.", "Aún no obtuviste recompensas.", "まだ報酬はありません。", "尚未获得奖励。"), 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 		if new_record:
 			_defeat_summary.add_child(_make_label(_txt("NEW RECORD!", "NOVO RECORDE!", "¡NUEVO RÉCORD!", "新記録!", "新纪录！"), 15, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
@@ -2739,15 +2749,11 @@ func _make_victory_line(icon_key: String, label_text: String, value_text: String
 	row.add_theme_constant_override("separation", 8)
 	margin.add_child(row)
 	row.add_child(_make_icon_texture(icon_key, 20))
-	var name_label := _make_label(label_text, 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
-	name_label.custom_minimum_size.x = 122
-	name_label.clip_text = false
-	row.add_child(name_label)
-	var value_label := _make_label(value_text, 15, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
-	value_label.custom_minimum_size.x = 72
-	value_label.clip_text = false
-	value_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(value_label)
+	var text_label := _make_label("%s  %s" % [label_text, value_text], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	text_label.clip_text = false
+	text_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(text_label)
 	return panel
 
 
