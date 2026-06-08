@@ -978,8 +978,9 @@ func _make_action(text: String, color: String, disabled: bool, action: Callable 
 func _build_detail_overlay() -> void:
 	_detail_overlay = PanelContainer.new()
 	_fill(_detail_overlay)
+	_detail_overlay.z_index = 50
 	_detail_overlay.visible = false
-	_detail_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_detail_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail_overlay.add_theme_stylebox_override("panel", _make_style("#050014cc", 0))
 	add_child(_detail_overlay)
 
@@ -995,12 +996,14 @@ func _show_skin_details(skin: Dictionary) -> void:
 		GameState.mark_skin_seen(skin_id)
 	var center := CenterContainer.new()
 	_fill(center)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.offset_left = 12.0
 	center.offset_top = 24.0
 	center.offset_right = -12.0
 	center.offset_bottom = -24.0
 	_detail_overlay.add_child(center)
 	var panel := PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	var viewport := get_viewport_rect().size
 	panel.custom_minimum_size = Vector2(min(362.0, max(300.0, viewport.x - 20.0)), min(620.0, max(440.0, viewport.y - 58.0)))
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -1053,7 +1056,6 @@ func _show_skin_details(skin: Dictionary) -> void:
 			upgrade_row.add_child(_make_action("%s\n%s" % [_ui_text("DIAMANTES", "DIAMONDS", "DIAMANTES", "ダイヤ", "钻石"), int(preview.get("diamonds", 0))], "#00ff88", false, func() -> void:
 				_upgrade_skin_from_modal(skin, "diamonds")
 			))
-	column.add_child(_make_action(_ui_text("VOLTAR", "BACK", "VOLVER", "戻る", "返回"), "#ffffff", false, _close_skin_details))
 	_detail_overlay.visible = true
 
 
