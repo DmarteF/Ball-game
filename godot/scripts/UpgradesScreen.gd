@@ -525,6 +525,7 @@ func _localize_effect_label(label: String) -> String:
 
 func _rebuild_upgrade_list() -> void:
 	for child in get_children():
+		remove_child(child)
 		child.queue_free()
 	_build_background()
 	_build_screen()

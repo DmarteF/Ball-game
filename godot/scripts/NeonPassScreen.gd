@@ -548,6 +548,7 @@ func _close_reward_modal(refresh_on_close := false) -> void:
 
 func _refresh_screen() -> void:
 	for child in get_children():
+		remove_child(child)
 		child.queue_free()
 	_reward_overlay = null
 	_refresh_state()

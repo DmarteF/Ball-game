@@ -358,6 +358,8 @@ const RUN_UPGRADE_UNLOCK_ACHIEVEMENTS := [
 
 
 func get_achievements() -> Array[Dictionary]:
+	if not _achievement_cache.is_empty():
+		return _achievement_cache
 	var result: Array[Dictionary] = []
 	for achievement in ACHIEVEMENTS:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
@@ -373,6 +375,7 @@ func get_achievements() -> Array[Dictionary]:
 	_append_progress_achievements(result)
 	for i in range(result.size()):
 		result[i] = _normalize_achievement_metadata(Dictionary(result[i]))
+	_achievement_cache = result
 	return result
 
 
@@ -801,6 +804,13 @@ const DAILY_MISSION_DEFS := [
 var data: Dictionary = {}
 var _save_timer: Timer
 var _save_pending := false
+var _bulk_depth := 0
+var _bulk_save_requested := false
+var _bulk_emit_requested := false
+var _bulk_achievements_requested := false
+var _bulk_skin_stats_requested := false
+var _achievement_cache: Array[Dictionary] = []
+var _skin_id_cache: Array = []
 
 
 func _ready() -> void:
@@ -1062,6 +1072,7 @@ func claim_afk_rewards(double_reward := false) -> Dictionary:
 	var rewards: Dictionary = data.get("pending_afk_rewards", {})
 	if rewards.is_empty() or bool(rewards.get("claimed", false)) or not bool(rewards.get("valid", false)):
 		return { "ok": false, "reason": "no_afk" }
+	begin_bulk_update()
 	var multiplier := 2 if double_reward and not bool(rewards.get("doubled", false)) else 1
 	rewards["claimed"] = true
 	rewards["doubled"] = multiplier > 1
@@ -1094,6 +1105,7 @@ func claim_afk_rewards(double_reward := false) -> Dictionary:
 	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
+	end_bulk_update()
 	return {
 		"ok": true,
 		"reward": {
@@ -1148,7 +1160,36 @@ func debug_force_show_afk_modal() -> void:
 	save_game()
 
 
+func begin_bulk_update() -> void:
+	_bulk_depth += 1
+
+
+func end_bulk_update(emit_signal := true, immediate := false) -> void:
+	if _bulk_depth <= 0:
+		return
+	_bulk_depth -= 1
+	if _bulk_depth > 0:
+		return
+	if _bulk_achievements_requested:
+		_bulk_achievements_requested = false
+		_bulk_skin_stats_requested = false
+		_update_achievements(false)
+	elif _bulk_skin_stats_requested:
+		_bulk_skin_stats_requested = false
+		_update_skin_collection_stats()
+	var should_save := _bulk_save_requested
+	var should_emit := emit_signal or _bulk_emit_requested
+	_bulk_save_requested = false
+	_bulk_emit_requested = false
+	if should_save:
+		save_game(should_emit, immediate)
+
+
 func save_game(emit_signal := true, immediate := false) -> void:
+	if _bulk_depth > 0:
+		_bulk_save_requested = true
+		_bulk_emit_requested = _bulk_emit_requested or emit_signal
+		return
 	if not data.is_empty() and data.has("neon_pass_season_id"):
 		_save_neon_pass_season_progress()
 	if emit_signal:
@@ -1190,7 +1231,7 @@ func _ensure_save_timer() -> void:
 		return
 	_save_timer = Timer.new()
 	_save_timer.one_shot = true
-	_save_timer.wait_time = 0.55
+	_save_timer.wait_time = 1.35
 	_save_timer.timeout.connect(_on_save_timer_timeout)
 	add_child(_save_timer)
 
@@ -1420,6 +1461,8 @@ func debug_reset_skin_achievements() -> void:
 
 
 func _all_known_skin_ids() -> Array:
+	if not _skin_id_cache.is_empty():
+		return _skin_id_cache
 	var skins: Array = []
 	for skin in MainPortData.SKINS:
 		var skin_id := String(Dictionary(skin).get("id", ""))
@@ -1429,6 +1472,7 @@ func _all_known_skin_ids() -> Array:
 	_append_skin_ids_from_dir(skins, "res://assets/skins/generated")
 	if not skins.has("neon_blue"):
 		skins.push_front("neon_blue")
+	_skin_id_cache = skins
 	return skins
 
 
@@ -1850,6 +1894,7 @@ func claim_neon_pass_reward(level: int) -> Dictionary:
 		return { "ok": false, "reason": "claimed" }
 	if not bool(entry.get("reached", false)):
 		return { "ok": false, "reason": "locked" }
+	begin_bulk_update()
 	var reward: Dictionary = Dictionary(entry.get("reward", {})).duplicate(true)
 	var season_id := String(entry.get("season_id", data.get("neon_pass_season_id", "neon_pass_s1")))
 	var reward_id := String(entry.get("id", ""))
@@ -1867,6 +1912,7 @@ func claim_neon_pass_reward(level: int) -> Dictionary:
 	data["last_reward_text"] = text
 	_increment_stat("neonPassRewardsClaimed", 1, false)
 	save_game()
+	end_bulk_update()
 	entry["reward"] = reward
 	entry["claimed"] = true
 	entry["available"] = false
@@ -1881,6 +1927,7 @@ func claim_neon_pass_reward(level: int) -> Dictionary:
 
 func claim_all_neon_pass_rewards() -> Dictionary:
 	_ensure_neon_pass_state()
+	begin_bulk_update()
 	var claimed_count := 0
 	var applied_rewards: Array = []
 	var reward_summary := {
@@ -1915,12 +1962,14 @@ func claim_all_neon_pass_rewards() -> Dictionary:
 		})
 		claimed_count += 1
 	if claimed_count <= 0:
+		end_bulk_update(false)
 		return { "ok": false, "reason": "not_ready" }
 	data["neon_pass_reward_history"] = history.slice(max(0, history.size() - 80), history.size())
 	var text := _neon_pass_reward_summary_text(reward_summary, claimed_count)
 	data["last_reward_text"] = text
 	_increment_stat("neonPassRewardsClaimed", claimed_count, false)
 	save_game()
+	end_bulk_update()
 	return {
 		"ok": true,
 		"reward": reward_summary,
@@ -2173,6 +2222,7 @@ func claim_first_win_of_day(source := "eligible_win") -> Dictionary:
 			"reward": Dictionary(data.get("last_first_win_reward", {})).duplicate(true),
 			"text": String(data.get("last_reward_text", "")),
 		}
+	begin_bulk_update()
 	var reward := _finalize_first_win_reward(_first_win_reward_for_today())
 	data["first_win_claimed_date"] = today
 	data["first_win_completed_today"] = true
@@ -2185,6 +2235,7 @@ func claim_first_win_of_day(source := "eligible_win") -> Dictionary:
 	_progress_missions("firstWinBonuses", 1)
 	_update_achievements(false)
 	save_game()
+	end_bulk_update()
 	return {
 		"ok": true,
 		"source": source,
@@ -2460,11 +2511,10 @@ func _ensure_upgrade_state() -> void:
 
 
 func _ensure_live_systems() -> void:
+	_ensure_daily_missions_state()
 	var day_key := _day_key()
 	if String(data.get("wheel", {}).get("day_key", "")) != day_key:
 		data["wheel"] = { "day_key": day_key, "free_used": false, "ad_spins_used": 0, "last_reward": {} }
-	if String(data.get("daily_missions", {}).get("day_key", "")) != day_key:
-		data["daily_missions"] = _create_daily_missions(day_key)
 	_ensure_upgrade_state()
 	_ensure_daily_challenge_state()
 	_ensure_boss_state()
@@ -2777,10 +2827,80 @@ func _day_key() -> String:
 func _create_daily_missions(day_key: String) -> Dictionary:
 	var start: int = abs(hash(day_key)) % DAILY_MISSION_DEFS.size()
 	var missions: Array = []
-	for i in range(4):
-		var definition: Dictionary = DAILY_MISSION_DEFS[(start + i * 2) % DAILY_MISSION_DEFS.size()]
+	var target_count: int = mini(4, DAILY_MISSION_DEFS.size())
+	var offset := 0
+	while missions.size() < target_count and offset < DAILY_MISSION_DEFS.size() * 2:
+		var definition: Dictionary = DAILY_MISSION_DEFS[(start + offset) % DAILY_MISSION_DEFS.size()]
+		offset += 1
+		var mission_id := String(definition.get("id", ""))
+		if mission_id.is_empty() or _mission_array_has_id(missions, mission_id):
+			continue
 		missions.append({ "id": definition["id"], "progress": 0, "claimed": false })
 	return { "day_key": day_key, "missions": missions }
+
+
+func _ensure_daily_missions_state() -> void:
+	var day_key := _day_key()
+	var daily_value = data.get("daily_missions", {})
+	if typeof(daily_value) != TYPE_DICTIONARY:
+		data["daily_missions"] = _create_daily_missions(day_key)
+		return
+	var daily: Dictionary = daily_value
+	if String(daily.get("day_key", "")) != day_key:
+		data["daily_missions"] = _create_daily_missions(day_key)
+		return
+	data["daily_missions"] = _normalize_daily_missions(daily, day_key)
+
+
+func _normalize_daily_missions(daily: Dictionary, day_key: String) -> Dictionary:
+	var existing_by_id := {}
+	for value in Array(daily.get("missions", [])):
+		if typeof(value) != TYPE_DICTIONARY:
+			continue
+		var mission: Dictionary = value
+		var id := String(mission.get("id", ""))
+		if id.is_empty() or get_daily_mission_def(id).is_empty():
+			continue
+		var definition := get_daily_mission_def(id)
+		mission["progress"] = clampi(int(mission.get("progress", 0)), 0, int(definition.get("target", 1)))
+		mission["claimed"] = bool(mission.get("claimed", false))
+		if existing_by_id.has(id):
+			var current: Dictionary = existing_by_id[id]
+			var current_score := int(current.get("progress", 0)) - (100000 if bool(current.get("claimed", false)) else 0)
+			var candidate_score := int(mission.get("progress", 0)) - (100000 if bool(mission.get("claimed", false)) else 0)
+			if candidate_score > current_score:
+				existing_by_id[id] = mission
+			continue
+		existing_by_id[id] = mission
+	var start: int = abs(hash(day_key)) % DAILY_MISSION_DEFS.size()
+	var ordered_ids: Array[String] = []
+	for value in Array(daily.get("missions", [])):
+		var id := String(Dictionary(value).get("id", "")) if typeof(value) == TYPE_DICTIONARY else ""
+		if existing_by_id.has(id) and not ordered_ids.has(id):
+			ordered_ids.append(id)
+	var target_count: int = mini(4, DAILY_MISSION_DEFS.size())
+	var offset := 0
+	while ordered_ids.size() < target_count and offset < DAILY_MISSION_DEFS.size() * 2:
+		var definition: Dictionary = DAILY_MISSION_DEFS[(start + offset) % DAILY_MISSION_DEFS.size()]
+		offset += 1
+		var id := String(definition.get("id", ""))
+		if id.is_empty() or ordered_ids.has(id):
+			continue
+		ordered_ids.append(id)
+	var normalized: Array = []
+	for id in ordered_ids:
+		if existing_by_id.has(id):
+			normalized.append(Dictionary(existing_by_id[id]).duplicate(true))
+		else:
+			normalized.append({ "id": id, "progress": 0, "claimed": false })
+	return { "day_key": day_key, "missions": normalized }
+
+
+func _mission_array_has_id(missions: Array, id: String) -> bool:
+	for mission in missions:
+		if typeof(mission) == TYPE_DICTIONARY and String(Dictionary(mission).get("id", "")) == id:
+			return true
+	return false
 
 
 func _meets_unlock(rule: Dictionary, max_phase: int, profile_level: int) -> bool:
@@ -3255,6 +3375,7 @@ func open_chest(chest_id: String) -> Dictionary:
 	var inventory: Dictionary = data.get("inventory", {})
 	if not inventory.has(chest_id) or int(inventory[chest_id].get("amount", 0)) <= 0:
 		return { "ok": false, "reason": "empty" }
+	begin_bulk_update()
 	var item: Dictionary = inventory[chest_id]
 	item["amount"] = int(item.get("amount", 0)) - 1
 	if int(item["amount"]) <= 0:
@@ -3270,6 +3391,7 @@ func open_chest(chest_id: String) -> Dictionary:
 	_update_achievements(false)
 	data["last_reward_text"] = text
 	save_game()
+	end_bulk_update()
 	return { "ok": true, "reward": reward, "text": text }
 
 
@@ -3287,6 +3409,7 @@ func claim_daily_reward() -> Dictionary:
 	_ensure_live_systems()
 	if not TimeManager.can_claim_daily_reward():
 		return { "ok": false, "reason": "already_claimed" }
+	begin_bulk_update()
 	var streak := TimeManager.update_daily_streak()
 	var day_index := clampi(streak - 1, 0, DAILY_REWARDS.size() - 1)
 	var reward: Dictionary = DAILY_REWARDS[day_index]
@@ -3299,6 +3422,7 @@ func claim_daily_reward() -> Dictionary:
 	_update_achievements(false)
 	data["last_reward_text"] = text
 	save_game()
+	end_bulk_update()
 	return { "ok": true, "day": day_index + 1, "reward": reward, "text": text }
 
 
@@ -3309,6 +3433,7 @@ func spin_wheel(source := "free") -> Dictionary:
 		return { "ok": false, "reason": "free_used" }
 	if source == "ad" and int(wheel.get("ad_spins_used", 0)) >= 2:
 		return { "ok": false, "reason": "ad_limit" }
+	begin_bulk_update()
 	var rewards := _current_wheel_rewards()
 	var reward: Dictionary = rewards[randi() % rewards.size()].duplicate(true)
 	var text := apply_reward(reward)
@@ -3321,6 +3446,7 @@ func spin_wheel(source := "free") -> Dictionary:
 	_update_achievements(false)
 	data["last_reward_text"] = text
 	save_game()
+	end_bulk_update()
 	return { "ok": true, "reward": reward, "text": text }
 
 
@@ -3396,27 +3522,32 @@ func _complete_mock_rewarded_ad(callback: Callable) -> void:
 
 func shop_claim(action_id: String) -> Dictionary:
 	var result := { "ok": true, "text": "" }
+	begin_bulk_update()
 	match action_id:
 		"common_chest":
 			if not spend_coins(100):
+				end_bulk_update(false)
 				return { "ok": false, "reason": "coins" }
 			add_inventory_item("chest_common", "chest", "Common Chest", "common", 1)
 			result["reward"] = { "type": "chest", "chest_type": "common", "amount": 1 }
 			result["text"] = "+1 common chest"
 		"rare_chest":
 			if not spend_diamonds(40):
+				end_bulk_update(false)
 				return { "ok": false, "reason": "diamonds" }
 			add_inventory_item("chest_rare", "chest", "Rare Chest", "rare", 1)
 			result["reward"] = { "type": "chest", "chest_type": "rare", "amount": 1 }
 			result["text"] = "+1 rare chest"
 		"epic_chest":
 			if not spend_diamonds(120):
+				end_bulk_update(false)
 				return { "ok": false, "reason": "diamonds" }
 			add_inventory_item("chest_epic", "chest", "Epic Chest", "epic", 1)
 			result["reward"] = { "type": "chest", "chest_type": "epic", "amount": 1 }
 			result["text"] = "+1 epic chest"
 		"legendary_chest":
 			if int(data.get("legendary_keys", 0)) < 1:
+				end_bulk_update(false)
 				return { "ok": false, "reason": "legendary_key" }
 			data["legendary_keys"] = int(data.get("legendary_keys", 0)) - 1
 			add_inventory_item("chest_legendary", "chest", "Legendary Chest", "legendary", 1)
@@ -3424,6 +3555,7 @@ func shop_claim(action_id: String) -> Dictionary:
 			result["text"] = "+1 legendary chest"
 		"keys_pack":
 			if not spend_diamonds(80):
+				end_bulk_update(false)
 				return { "ok": false, "reason": "diamonds" }
 			data["keys"] = int(data.get("keys", 0)) + 6
 			_add_earning_stats(0, 0, 0, 6)
@@ -3431,6 +3563,7 @@ func shop_claim(action_id: String) -> Dictionary:
 			result["text"] = "+6 keys"
 		"legendary_keys_pack":
 			if not spend_diamonds(180):
+				end_bulk_update(false)
 				return { "ok": false, "reason": "diamonds" }
 			data["legendary_keys"] = int(data.get("legendary_keys", 0)) + 2
 			_add_earning_stats(0, 0, 0, 2)
@@ -3465,6 +3598,7 @@ func shop_claim(action_id: String) -> Dictionary:
 	_update_achievements(false)
 	data["last_reward_text"] = String(result["text"])
 	save_game()
+	end_bulk_update()
 	return result
 
 
@@ -3777,6 +3911,7 @@ func claim_weekly_event_reward(reward_id: String) -> Dictionary:
 				break
 	if not ready or reward.is_empty():
 		return { "ok": false, "reason": "not_ready" }
+	begin_bulk_update()
 	var text := apply_reward(reward)
 	claimed.append(reward_id)
 	state["claimed"] = claimed
@@ -3791,6 +3926,7 @@ func claim_weekly_event_reward(reward_id: String) -> Dictionary:
 		_increment_stat("eventMissionsCompleted", 1, false)
 	add_neon_pass_xp(150 if reward_id == String(final.get("id", "final_reward")) else int(NEON_PASS_SOURCE_XP.get("event_mission", 75)), "event_mission")
 	save_game()
+	end_bulk_update()
 	return { "ok": true, "reward": reward, "text": text }
 
 
@@ -3920,6 +4056,7 @@ func claim_daily_challenge_reward(double_reward := false) -> Dictionary:
 		return { "ok": false, "reason": "not_ready" }
 	if bool(day_state.get("claimed", false)):
 		return { "ok": false, "reason": "already_claimed" }
+	begin_bulk_update()
 	var reward := Dictionary(challenge.get("reward", {})).duplicate(true)
 	var multiplier := 2 if double_reward else 1
 	var summary := _apply_daily_challenge_bundle(reward, multiplier)
@@ -3932,6 +4069,7 @@ func claim_daily_challenge_reward(double_reward := false) -> Dictionary:
 	data["last_reward_text"] = summary
 	_update_achievements(false)
 	save_game()
+	end_bulk_update()
 	return { "ok": true, "reward": reward, "text": summary, "doubled": double_reward }
 
 
@@ -4277,7 +4415,7 @@ func get_daily_mission_def(id: String) -> Dictionary:
 
 
 func claim_daily_mission(id: String) -> Dictionary:
-	_ensure_live_systems()
+	_ensure_daily_missions_state()
 	var daily: Dictionary = data.get("daily_missions", {})
 	var missions: Array = daily.get("missions", [])
 	for i in range(missions.size()):
@@ -4287,6 +4425,7 @@ func claim_daily_mission(id: String) -> Dictionary:
 		var definition := get_daily_mission_def(id)
 		if definition.is_empty() or bool(mission.get("claimed", false)) or int(mission.get("progress", 0)) < int(definition["target"]):
 			return { "ok": false, "reason": "not_ready" }
+		begin_bulk_update()
 		var text := apply_reward(definition["reward"])
 		mission["claimed"] = true
 		missions[i] = mission
@@ -4294,6 +4433,7 @@ func claim_daily_mission(id: String) -> Dictionary:
 		data["daily_missions"] = daily
 		data["last_reward_text"] = text
 		save_game()
+		end_bulk_update()
 		return { "ok": true, "reward": definition["reward"], "text": text }
 	return { "ok": false, "reason": "missing" }
 
@@ -4306,6 +4446,7 @@ func claim_achievement(id: String) -> Dictionary:
 	var state: Dictionary = achievements[id]
 	if not bool(state.get("completed", false)) or bool(state.get("claimed", false)):
 		return { "ok": false, "reason": "not_ready" }
+	begin_bulk_update()
 	var definition := _achievement_def(id)
 	var text := apply_reward(definition.get("reward", {}))
 	state["claimed"] = true
@@ -4313,12 +4454,14 @@ func claim_achievement(id: String) -> Dictionary:
 	data["achievements"] = achievements
 	data["last_reward_text"] = text
 	save_game()
+	end_bulk_update()
 	return { "ok": true, "reward": definition.get("reward", {}), "text": text }
 
 
 func claim_all_achievements() -> Dictionary:
 	_update_achievements(false)
 	var achievements: Dictionary = data.get("achievements", {})
+	begin_bulk_update()
 	var claimed_count := 0
 	var reward_summary := {
 		"coins": 0,
@@ -4342,11 +4485,13 @@ func claim_all_achievements() -> Dictionary:
 		achievements[id] = state
 		claimed_count += 1
 	if claimed_count <= 0:
+		end_bulk_update(false)
 		return { "ok": false, "reason": "not_ready" }
 	data["achievements"] = achievements
 	var text := _reward_summary_text(reward_summary, claimed_count)
 	data["last_reward_text"] = text
 	save_game()
+	end_bulk_update()
 	return {
 		"ok": true,
 		"reward": reward_summary,
@@ -4405,6 +4550,9 @@ func _achievement_def(id: String) -> Dictionary:
 
 
 func _update_skin_collection_stats() -> void:
+	if _bulk_depth > 0:
+		_bulk_skin_stats_requested = true
+		return
 	var stats: Dictionary = data.get("stats", {})
 	var rarity_counts := {}
 	for rarity in SKIN_RARITY_ORDER:
@@ -4638,6 +4786,11 @@ func _skin_rarity_all_reward(rarity: String) -> Dictionary:
 
 
 func _update_achievements(save_after := true) -> void:
+	if _bulk_depth > 0:
+		_bulk_achievements_requested = true
+		if save_after:
+			_bulk_save_requested = true
+		return
 	var achievements: Dictionary = data.get("achievements", {})
 	var stats: Dictionary = data.get("stats", {})
 	stats["skinsUnlocked"] = Array(data.get("unlocked_skins", [])).size()
@@ -4682,7 +4835,7 @@ func _update_achievements(save_after := true) -> void:
 func _progress_missions(metric: String, amount: int) -> void:
 	if amount <= 0:
 		return
-	_ensure_live_systems()
+	_ensure_daily_missions_state()
 	_progress_weekly_event_metric(metric, amount)
 	var daily: Dictionary = data.get("daily_missions", {})
 	var missions: Array = daily.get("missions", [])

@@ -79,6 +79,7 @@ var _rival_label: Label
 var _resource_labels: Dictionary = {}
 var _hud_xp_label: Label
 var _hud_xp_bar: ProgressBar
+var _hud_xp_bar_text: Label
 var _control_overlay: HBoxContainer
 var _control_indicator: Label
 var _run_atk_button: Button
@@ -764,8 +765,10 @@ func _render_player_upgrade_choices() -> void:
 		for upgrade in _current_upgrade_choices:
 			var id := String(upgrade.get("id", ""))
 			var current := int(Dictionary(_player.get("run_upgrades", {})).get(id, 0))
-			var button := _make_button("%s\n%s\nLv.%s > Lv.%s" % [String(upgrade.get("name", id)).to_upper(), String(upgrade.get("description", "")), current, current + 1], 286, 60)
-			button.add_theme_font_size_override("font_size", 10)
+			var button := _make_button("%s\nLv.%s > Lv.%s" % [String(upgrade.get("name", id)).to_upper(), current, current + 1], 286, 48)
+			button.add_theme_font_size_override("font_size", 9)
+			button.clip_text = true
+			button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			_set_button_icon(button, _upgrade_icon_key(id))
 			button.pressed.connect(_select_player_upgrade.bind(id))
 			_level_up_cards.add_child(button)
@@ -779,7 +782,9 @@ func _render_reroll_actions() -> void:
 		child.queue_free()
 	if _current_upgrade_choices.is_empty():
 		return
-	var label := _make_label("Rerolls %s/%s" % [_upgrade_rerolls_used, MAX_UPGRADE_REROLLS], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var needed := _arena_xp_needed(int(_player.get("level", 1)))
+	_level_up_actions.add_child(_make_label("XP %s/%s" % [int(_player.get("xp", 0)), needed], 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var label := _make_label("Rerolls %s/%s" % [_upgrade_rerolls_used, MAX_UPGRADE_REROLLS], 11, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	_level_up_actions.add_child(label)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
@@ -1508,6 +1513,13 @@ func _build_hud() -> void:
 	_hud_xp_label = _make_label("", 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	hud.add_child(_hud_xp_label)
 	_hud_xp_bar = _make_progress_bar("#00f0ff")
+	_hud_xp_bar_text = _make_label("", 10, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_fill(_hud_xp_bar_text)
+	_hud_xp_bar_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hud_xp_bar_text.add_theme_color_override("font_shadow_color", Color("#000000cc"))
+	_hud_xp_bar_text.add_theme_constant_override("shadow_offset_x", 0)
+	_hud_xp_bar_text.add_theme_constant_override("shadow_offset_y", 1)
+	_hud_xp_bar.add_child(_hud_xp_bar_text)
 	hud.add_child(_hud_xp_bar)
 
 	_rival_label = _make_label("", 12, "#ff4fd8", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
@@ -1585,7 +1597,7 @@ func _build_control_overlay() -> void:
 
 func _build_pause_overlay() -> void:
 	_pause_overlay = _make_modal()
-	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"), Vector2(326, 310))
+	var card := _make_modal_content(_pause_overlay, _txt("PAUSE", "PAUSA", "PAUSA", "一時停止", "暂停"), Vector2(320, 286), false)
 	card.add_child(_make_modal_button(_tr("continue").to_upper(), _close_pause))
 	card.add_child(_make_modal_button("REINICIAR DUELO", _prepare_match))
 	card.add_child(_make_modal_button("SAIR", _quit_match))
@@ -1594,11 +1606,11 @@ func _build_pause_overlay() -> void:
 
 func _build_level_up_overlay() -> void:
 	_level_up_overlay = _make_modal()
-	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(346, 540))
-	card.add_theme_constant_override("separation", 8)
+	var card := _make_modal_content(_level_up_overlay, "LEVEL UP", Vector2(340, 424), false)
+	card.add_theme_constant_override("separation", 6)
 	card.add_child(_make_label(_txt("Choose an upgrade for your arena.", "Escolha uma melhoria para sua arena.", "Elige una mejora para tu arena.", "自分のアリーナ強化を選択。", "为你的竞技场选择升级。"), 13, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	_level_up_cards = VBoxContainer.new()
-	_level_up_cards.add_theme_constant_override("separation", 6)
+	_level_up_cards.add_theme_constant_override("separation", 5)
 	card.add_child(_level_up_cards)
 	_level_up_actions = VBoxContainer.new()
 	_level_up_actions.add_theme_constant_override("separation", 5)
@@ -1608,11 +1620,11 @@ func _build_level_up_overlay() -> void:
 
 func _build_result_overlay() -> void:
 	_result_overlay = _make_modal()
-	var card := _make_modal_content(_result_overlay, _txt("RESULT", "RESULTADO", "RESULTADO", "結果", "结果"), Vector2(338, 500))
-	_result_title = _make_label("", 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var card := _make_modal_content(_result_overlay, _txt("RESULT", "RESULTADO", "RESULTADO", "結果", "结果"), Vector2(350, 520), false)
+	_result_title = _make_label("", 22, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
 	card.add_child(_result_title)
 	_result_details = VBoxContainer.new()
-	_result_details.add_theme_constant_override("separation", 8)
+	_result_details.add_theme_constant_override("separation", 6)
 	card.add_child(_result_details)
 	_result_double_button = _make_modal_button(_txt("DOUBLE REWARD - AD", "DOBRAR RECOMPENSA - AD", "DUPLICAR RECOMPENSA - ANUNCIO", "報酬2倍 - 広告", "奖励翻倍 - 广告"), _double_result_reward)
 	card.add_child(_result_double_button)
@@ -1634,7 +1646,7 @@ func _build_revive_overlay() -> void:
 
 func _make_result_line(label: String, value: String) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(0, 34)
+	panel.custom_minimum_size = Vector2(0, 31)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.add_theme_stylebox_override("panel", _make_style("#06162a", 10, "#00f0ff55", 1, "#00f0ff33", 5))
 	var margin := MarginContainer.new()
@@ -1647,7 +1659,7 @@ func _make_result_line(label: String, value: String) -> PanelContainer:
 	row.add_theme_constant_override("separation", 8)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin.add_child(row)
-	var text_label := _make_label("%s  %s" % [label, value], 14, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	var text_label := _make_label("%s  %s" % [label, value], 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	text_label.clip_text = false
 	text_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1777,6 +1789,8 @@ func _update_status() -> void:
 		_hud_xp_label.text = "LV.%s   XP %s/%s   GOLD Lv.%s   ATK Lv.%s" % [int(_player.get("level", 1)), int(_player.get("xp", 0)), needed, int(_player.get("gold", 0)), int(_player.get("atk", 0))]
 		_hud_xp_bar.max_value = needed
 		_hud_xp_bar.value = int(_player.get("xp", 0))
+		if _hud_xp_bar_text:
+			_hud_xp_bar_text.text = "XP %s/%s" % [int(_player.get("xp", 0)), needed]
 	_update_run_upgrade_buttons()
 
 
@@ -1967,7 +1981,7 @@ func _make_modal() -> PanelContainer:
 	return overlay
 
 
-func _make_modal_content(overlay: Control, title: String, panel_size: Vector2) -> VBoxContainer:
+func _make_modal_content(overlay: Control, title: String, panel_size: Vector2, allow_scroll := true) -> VBoxContainer:
 	var center := CenterContainer.new()
 	_fill(center)
 	center.offset_left = 8.0
@@ -1988,31 +2002,35 @@ func _make_modal_content(overlay: Control, title: String, panel_size: Vector2) -
 	var is_large := panel_size.y > 420.0
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12 if is_large else 18)
-	margin.add_theme_constant_override("margin_top", 12 if is_large else 16)
+	margin.add_theme_constant_override("margin_top", 10 if is_large else 16)
 	margin.add_theme_constant_override("margin_right", 12 if is_large else 18)
-	margin.add_theme_constant_override("margin_bottom", 12 if is_large else 16)
+	margin.add_theme_constant_override("margin_bottom", 10 if is_large else 16)
 	panel.add_child(margin)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if is_large else ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.follow_focus = true
-	scroll.scroll_deadzone = 2
-	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
-	margin.add_child(scroll)
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL if not allow_scroll else Control.SIZE_SHRINK_CENTER
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_theme_constant_override("separation", 7 if is_large else 8)
-	scroll.add_child(content)
+	if allow_scroll:
+		var scroll := ScrollContainer.new()
+		scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if is_large else ScrollContainer.SCROLL_MODE_DISABLED
+		scroll.follow_focus = true
+		scroll.scroll_deadzone = 2
+		scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+		margin.add_child(scroll)
+		scroll.add_child(content)
+	else:
+		margin.add_child(content)
 	content.add_child(_make_label(title, 21 if is_large else 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	overlay.add_child(center)
 	return content
 
 
 func _make_modal_button(text: String, callback: Callable) -> Button:
-	var button := _make_button(text, 0, 42)
+	var button := _make_button(text, 0, 38)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.clip_text = true
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

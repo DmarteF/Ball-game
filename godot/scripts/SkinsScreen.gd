@@ -69,7 +69,7 @@ const SKINS := [
 
 var _regular_font: Font
 var _bold_font: Font
-var _filter := "all"
+var _filter := "owned"
 var _effect_filter := "all"
 var _root: VBoxContainer
 var _scroll_content: VBoxContainer
@@ -151,11 +151,9 @@ func _rebuild_collection_content(content: VBoxContainer = null) -> void:
 	if content == null:
 		return
 	for child in content.get_children():
+		content.remove_child(child)
 		child.queue_free()
 	content.add_child(_make_collection_summary())
-	content.add_child(_make_counter_grid("rarity"))
-	content.add_child(_make_counter_grid("effect"))
-	content.add_child(_make_collection_actions())
 	content.add_child(_make_filters("rarity"))
 	content.add_child(_make_filters("effect"))
 
@@ -174,14 +172,14 @@ func _make_wallet() -> HBoxContainer:
 	wallet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wallet.alignment = BoxContainer.ALIGNMENT_BEGIN if _is_narrow_screen() else BoxContainer.ALIGNMENT_END
 	wallet.add_theme_constant_override("separation", 8)
-	wallet.add_child(_make_wallet_item("coin", str(GameState.data.get("coins", 0))))
-	wallet.add_child(_make_wallet_item("gem", str(GameState.data.get("diamonds", 0))))
-	wallet.add_child(_make_wallet_item("key", str(GameState.data.get("keys", 0))))
+	wallet.add_child(_make_wallet_item("coin", _format_wallet_value(int(GameState.data.get("coins", 0)))))
+	wallet.add_child(_make_wallet_item("gem", _format_wallet_value(int(GameState.data.get("diamonds", 0)))))
 	return wallet
 
 
 func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
 	var pill := PanelContainer.new()
+	pill.custom_minimum_size = Vector2(78, 0)
 	pill.add_theme_stylebox_override("panel", _make_style("#ffffff12", 8, "#ffffff22", 1))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 7)
@@ -193,8 +191,16 @@ func _make_wallet_item(icon_key: String, value: String) -> PanelContainer:
 	row.add_theme_constant_override("separation", 4)
 	margin.add_child(row)
 	row.add_child(_make_icon(icon_key, 15))
-	row.add_child(_make_label(value, 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	row.add_child(_make_label(value, 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return pill
+
+
+func _format_wallet_value(value: int) -> String:
+	if value >= 1000000:
+		return "%.1fM" % (float(value) / 1000000.0)
+	if value >= 10000:
+		return "%.1fK" % (float(value) / 1000.0)
+	return str(value)
 
 
 func _make_counter_grid(kind: String) -> GridContainer:
@@ -230,11 +236,9 @@ func _make_counter_grid(kind: String) -> GridContainer:
 
 func _make_collection_summary() -> PanelContainer:
 	var unlocked: int = Array(GameState.data.get("unlocked_skins", [])).size()
-	var locked: int = max(0, _all_skin_data.size() - unlocked)
 	var percent := 0 if _all_skin_data.is_empty() else roundi(float(unlocked) / float(_all_skin_data.size()) * 100.0)
-	var new_count := Array(GameState.data.get("new_skins", [])).size()
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff55", 1))
+	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 12, "#00f0ff66", 1, "#00f0ff22", 10))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
 	margin.add_theme_constant_override("margin_top", 12)
@@ -247,12 +251,6 @@ func _make_collection_summary() -> PanelContainer:
 	column.add_child(_make_label(_ui_text("COLEÇÃO", "COLLECTION", "COLECCIÓN", "コレクション", "收藏"), 13, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label("%s/%s skins" % [unlocked, _all_skin_data.size()], 24, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label("%s%% %s" % [percent, _ui_text("completo", "complete", "completo", "完了", "完成")], 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	column.add_child(_make_label(_ui_text("Bloqueadas: %s  •  Novas: %s", "Locked: %s  •  New: %s", "Bloqueadas: %s  •  Nuevas: %s", "ロック中: %s  •  新着: %s", "未解锁：%s  •  新：%s") % [locked, new_count], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	var next_goal := GameState.get_next_skin_collection_goal()
-	if not next_goal.is_empty():
-		var progress := int(next_goal.get("progress", unlocked))
-		var required := int(next_goal.get("required", 1))
-		column.add_child(_make_label(_ui_text("Próxima recompensa: %s/%s skins", "Next reward: %s/%s skins", "Próxima recompensa: %s/%s skins", "次の報酬: %s/%s スキン", "下个奖励：%s/%s 皮肤") % [progress, required], 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -275,13 +273,13 @@ func _make_filters(kind: String) -> VBoxContainer:
 
 	var expanded := _rarity_filters_expanded if kind == "rarity" else _effect_filters_expanded
 	var selected := _filter if kind == "rarity" else _effect_filter
-	var title := _ui_text("Raridade", "Rarity") if kind == "rarity" else _ui_text("Efeito", "Effect")
+	var title := _ui_text("Mostrar", "Show", "Mostrar", "表示", "显示") if kind == "rarity" else _ui_text("Efeito", "Effect", "Efecto", "効果", "效果")
 	var header := Button.new()
 	header.custom_minimum_size = Vector2(0, 42)
 	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.focus_mode = Control.FOCUS_NONE
 	header.mouse_filter = Control.MOUSE_FILTER_PASS
-	header.text = "%s: %s  %s" % [title, _filter_label(selected, selected, kind), "▲" if expanded else "▼"]
+	header.text = "%s: %s   %s" % [title, _filter_label(selected, selected, kind), "▲" if expanded else "▼"]
 	header.add_theme_font_override("font", _bold_font)
 	header.add_theme_font_size_override("font_size", 13)
 	header.add_theme_color_override("font_color", Color("#ffffff"))
@@ -337,10 +335,11 @@ func _make_filters(kind: String) -> VBoxContainer:
 		button.pressed.connect(func() -> void:
 			if kind == "rarity":
 				_filter = filter_id
+				_rarity_filters_expanded = false
 			else:
 				_effect_filter = filter_id
-			_refresh_filters()
-			_populate_skins()
+				_effect_filters_expanded = false
+			_rebuild_collection_content()
 		)
 		if kind == "rarity":
 			_filter_buttons.append(button)
@@ -353,6 +352,7 @@ func _make_filters(kind: String) -> VBoxContainer:
 
 func _populate_skins() -> void:
 	for child in _content_grid.get_children():
+		_content_grid.remove_child(child)
 		child.queue_free()
 	for skin in _all_skin_data:
 		var owned := _is_owned(String(skin["id"]))
@@ -365,6 +365,8 @@ func _populate_skins() -> void:
 		if _effect_filter != "all" and not _skin_matches_effect(skin, _effect_filter):
 			continue
 		_content_grid.add_child(_make_skin_card(skin))
+	if _content_grid.get_child_count() == 0:
+		_content_grid.add_child(_make_empty_collection_card())
 
 
 func _filter_label(id: String, fallback: String, kind := "rarity") -> String:
@@ -388,36 +390,10 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	var is_new := owned and GameState.is_new_skin(String(skin["id"]))
 	var rarity_color := _rarity_color(String(skin["rarity"]))
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(0, 286 if owned else 246)
+	card.custom_minimum_size = Vector2(0, 326 if owned else 286)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.mouse_filter = Control.MOUSE_FILTER_PASS
-	card.add_theme_stylebox_override("panel", _make_style("#ffffff12", 14, "#00ff88" if selected else rarity_color + "88", 2 if selected else 1))
-	var press_pos := Vector2.ZERO
-	var press_msec := 0
-	var start_scroll := 0
-	var dragged := false
-	card.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-			if event.pressed:
-				press_pos = card.get_global_mouse_position()
-				press_msec = Time.get_ticks_msec()
-				start_scroll = _skin_scroll.scroll_vertical if _skin_scroll else 0
-				dragged = false
-			elif _is_skin_tap_valid(press_pos, card.get_global_mouse_position(), press_msec, start_scroll, dragged):
-				_show_skin_details(skin)
-		elif event is InputEventScreenTouch:
-			if event.pressed:
-				press_pos = event.position
-				press_msec = Time.get_ticks_msec()
-				start_scroll = _skin_scroll.scroll_vertical if _skin_scroll else 0
-				dragged = false
-			elif _is_skin_tap_valid(press_pos, event.position, press_msec, start_scroll, dragged):
-				_show_skin_details(skin)
-		elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and card.get_global_mouse_position().distance_to(press_pos) > 4.0:
-			dragged = true
-		elif event is InputEventScreenDrag and event.position.distance_to(press_pos) > 3.0:
-			dragged = true
-	)
+	card.add_theme_stylebox_override("panel", _make_style("#0b0620ee", 16, "#00ff88" if selected else rarity_color + "99", 2 if selected else 1, rarity_color + "30", 12))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)
 	margin.add_theme_constant_override("margin_top", 12)
@@ -426,26 +402,27 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.add_child(margin)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 7)
+	column.add_theme_constant_override("separation", 8)
 	column.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_child(column)
 
 	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 8)
+	top.add_theme_constant_override("separation", 10)
 	top.mouse_filter = Control.MOUSE_FILTER_PASS
 	column.add_child(top)
-	top.add_child(_make_skin_icon(String(skin["id"]), hidden, Color(String(skin["primary"]))))
+	top.add_child(_make_skin_icon(String(skin["id"]), hidden, Color(String(skin["primary"])), 72))
+	var title_column := VBoxContainer.new()
+	title_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_column.add_theme_constant_override("separation", 4)
+	top.add_child(title_column)
+	title_column.add_child(_make_label("???" if hidden else String(skin["name"]), 18, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	title_column.add_child(_make_label(_rarity_name(String(skin["rarity"])), 11, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	title_column.add_child(_make_label((_ui_text("Equipada", "Equipped", "Equipada", "装備中", "已装备") if selected else _ui_text("Desbloqueada", "Unlocked", "Desbloqueada", "解除済み", "已解锁")) if owned else _unlock_hint(String(skin.get("source", "")), String(skin["rarity"])), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	if is_new:
-		top.add_child(_make_new_badge())
-	var badge := _make_label(_rarity_name(String(skin["rarity"])), 9, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
-	badge.custom_minimum_size = Vector2(58, 24)
-	badge.add_theme_stylebox_override("normal", _make_style(rarity_color, 7))
-	top.add_child(badge)
-
-	column.add_child(_make_label("???" if hidden else String(skin["name"]), 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		title_column.add_child(_make_label(_ui_text("Nova", "New", "Nueva", "新着", "新"), 10, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var desc := _make_label("???" if hidden else String(skin["desc"]), 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.custom_minimum_size.y = 30
+	desc.custom_minimum_size.y = 38
 	column.add_child(desc)
 	if owned:
 		column.add_child(_make_skin_level_panel(String(skin["id"]), String(skin["rarity"])))
@@ -460,19 +437,25 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 	else:
 		effects.add_child(_make_effect_badge("???", rarity_color))
 
-	column.add_child(_make_label((_ui_text("EQUIPADA", "EQUIPPED", "EQUIPADA", "装備中", "已装备") if selected else _ui_text("DESBLOQUEADA", "UNLOCKED", "DESBLOQUEADA", "解除済み", "已解锁")) if owned else _unlock_hint(String(skin.get("source", "")), String(skin["rarity"])), 11, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-
 	if owned:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 7)
+		var row := GridContainer.new()
+		row.columns = 3
+		row.add_theme_constant_override("h_separation", 7)
+		row.add_theme_constant_override("v_separation", 7)
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		column.add_child(row)
 		row.add_child(_make_action(_ui_text("USANDO", "USING", "USANDO", "使用中", "使用中") if selected else _ui_text("EQUIPAR", "EQUIP", "EQUIPAR", "装備", "装备"), "#00f0ff", selected, _equip_skin.bind(String(skin["id"]))))
-		row.add_child(_make_action(_ui_text("MELHORAR", "UPGRADE", "MEJORAR", "強化", "升级"), "#00ff88", GameState.is_skin_max_level(String(skin["id"])), func() -> void:
+		row.add_child(_make_action(_skin_card_upgrade_text(String(skin["id"])), "#00ff88", GameState.is_skin_max_level(String(skin["id"])), func() -> void:
+			_show_skin_details(skin)
+		))
+		row.add_child(_make_action(_ui_text("DETALHES", "DETAILS", "DETALLES", "詳細", "详情"), "#ffd700", false, func() -> void:
 			_show_skin_details(skin)
 		))
 	else:
 		column.add_child(_make_label(_ui_text("Revele em baús, fases ou conquistas", "Reveal in chests, levels or achievements", "Revélala en cofres, niveles o logros", "宝箱・レベル・実績で解放", "可通过宝箱、关卡或成就解锁"), 11, "#ffffff77", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+		column.add_child(_make_action(_ui_text("DETALHES", "DETAILS", "DETALLES", "詳細", "详情"), "#00f0ff", false, func() -> void:
+			_show_skin_details(skin)
+		))
 	return card
 
 
@@ -767,27 +750,27 @@ func _contains_any(id: String, needles: Array) -> bool:
 	return false
 
 
-func _make_skin_icon(skin_id: String, hidden: bool, tint: Color) -> PanelContainer:
+func _make_skin_icon(skin_id: String, hidden: bool, tint: Color, icon_size: int = 58) -> PanelContainer:
 	var box := PanelContainer.new()
-	box.custom_minimum_size = Vector2(58, 58)
+	box.custom_minimum_size = Vector2(icon_size, icon_size)
 	box.mouse_filter = Control.MOUSE_FILTER_PASS
-	box.add_theme_stylebox_override("panel", _make_style("#00000033", 29, "#ffffff44", 1))
+	box.add_theme_stylebox_override("panel", _make_style("#00000044", roundi(float(icon_size) * 0.5), "#ffffff44", 1, "#%s44" % tint.to_html(false), 8))
 	var center := CenterContainer.new()
 	box.add_child(center)
 	if hidden:
-		center.add_child(_make_label("?", 26, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		center.add_child(_make_label("?", roundi(float(icon_size) * 0.44), "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
 		var path := MainPortData.skin_asset_path(skin_id)
 		if ResourceLoader.exists(path):
 			var texture := TextureRect.new()
 			texture.texture = load(path)
-			texture.custom_minimum_size = Vector2(54, 54)
+			texture.custom_minimum_size = Vector2(icon_size - 6, icon_size - 6)
 			texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			texture.modulate = tint.lightened(0.15)
 			center.add_child(texture)
 		else:
-			center.add_child(_make_label("?", 26, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+			center.add_child(_make_label("?", roundi(float(icon_size) * 0.44), "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return box
 
 
@@ -815,6 +798,39 @@ func _make_new_badge() -> PanelContainer:
 	badge.add_child(margin)
 	margin.add_child(_make_label(_ui_text("NOVA", "NEW"), 9, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return badge
+
+
+func _make_status_badge(text: String, color: String) -> PanelContainer:
+	var badge := PanelContainer.new()
+	badge.add_theme_stylebox_override("panel", _make_style(color, 8, "#ffffff66", 1, color + "88", 6))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 7)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_right", 7)
+	margin.add_theme_constant_override("margin_bottom", 4)
+	badge.add_child(margin)
+	margin.add_child(_make_label(text, 9, "#001018", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	return badge
+
+
+func _make_empty_collection_card() -> PanelContainer:
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.custom_minimum_size = Vector2(0, 132)
+	card.add_theme_stylebox_override("panel", _make_style("#ffffff0e", 14, "#00f0ff44", 1))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	card.add_child(margin)
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 6)
+	margin.add_child(column)
+	column.add_child(_make_label(_ui_text("Nenhuma skin neste filtro", "No skins in this filter", "No hay skins en este filtro", "このフィルターにスキンはありません", "此筛选无皮肤"), 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label(_ui_text("Altere raridade ou efeito para ver outras skins.", "Change rarity or effect to see other skins.", "Cambia rareza o efecto para ver otras skins.", "レア度または効果を変更してください。", "更改稀有度或效果以查看其他皮肤。"), 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_CENTER))
+	return card
 
 
 func _rarity_counter_entries() -> Array[Dictionary]:
@@ -942,10 +958,10 @@ func _unlock_hint(source: String, rarity: String) -> String:
 func _make_action(text: String, color: String, disabled: bool, action: Callable = Callable()) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(66, 34)
+	button.custom_minimum_size = Vector2(66, 44 if text.contains("\n") else 34)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
-	button.mouse_filter = Control.MOUSE_FILTER_PASS
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.modulate.a = 0.45 if disabled else 1.0
 	button.disabled = disabled
 	button.add_theme_font_override("font", _bold_font)
@@ -986,7 +1002,7 @@ func _show_skin_details(skin: Dictionary) -> void:
 	_detail_overlay.add_child(center)
 	var panel := PanelContainer.new()
 	var viewport := get_viewport_rect().size
-	panel.custom_minimum_size = Vector2(min(330.0, max(280.0, viewport.x - 28.0)), min(470.0, max(260.0, viewport.y - 88.0)))
+	panel.custom_minimum_size = Vector2(min(362.0, max(300.0, viewport.x - 20.0)), min(620.0, max(440.0, viewport.y - 58.0)))
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var rarity := String(skin.get("rarity", "common"))
@@ -998,30 +1014,23 @@ func _show_skin_details(skin: Dictionary) -> void:
 	margin.add_theme_constant_override("margin_right", 18)
 	margin.add_theme_constant_override("margin_bottom", 18)
 	panel.add_child(margin)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	scroll.follow_focus = true
-	scroll.scroll_deadzone = 2
-	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
-	margin.add_child(scroll)
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation", 10)
-	scroll.add_child(column)
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 8)
+	margin.add_child(column)
 	var icon_box := CenterContainer.new()
-	icon_box.custom_minimum_size = Vector2(0, 116)
+	icon_box.custom_minimum_size = Vector2(0, 94)
 	column.add_child(icon_box)
-	icon_box.add_child(_make_skin_icon(skin_id, not owned, Color(String(skin.get("primary", "#00f0ff")))))
-	column.add_child(_make_label(String(skin.get("name", "???")) if owned else "???", 24, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-	column.add_child(_make_label(_rarity_name(rarity), 13, _rarity_color(rarity), _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	icon_box.add_child(_make_skin_icon(skin_id, not owned, Color(String(skin.get("primary", "#00f0ff"))), 84))
+	column.add_child(_make_label(String(skin.get("name", "???")) if owned else "???", 22, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label(_rarity_name(rarity), 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	var effect_text := _effects_text(skin) if owned else "???"
 	column.add_child(_make_label(effect_text, 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	var desc := _make_label(String(skin.get("desc", "")) if owned else _ui_text("Asset oculto até desbloquear.", "Asset hidden until unlocked.", "Asset oculto hasta desbloquear.", "解除までアセット非表示。", "解锁前隐藏资源。"), 12, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_CENTER)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.custom_minimum_size.y = 54
+	desc.custom_minimum_size.y = 44
 	column.add_child(desc)
 	if owned:
 		column.add_child(_make_skin_upgrade_details(skin_id, rarity))
@@ -1033,42 +1042,45 @@ func _show_skin_details(skin: Dictionary) -> void:
 			_detail_overlay.visible = false
 		))
 		if not GameState.is_skin_max_level(skin_id):
+			var preview := GameState.get_skin_upgrade_preview(skin_id)
 			var upgrade_row := HBoxContainer.new()
 			upgrade_row.add_theme_constant_override("separation", 7)
 			upgrade_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			column.add_child(upgrade_row)
-			upgrade_row.add_child(_make_action(_ui_text("Melhorar com Moedas", "Upgrade with Coins", "Mejorar con Monedas", "コインで強化", "用金币升级"), "#ffd700", false, func() -> void:
+			upgrade_row.add_child(_make_action("%s\n%s" % [_ui_text("MOEDAS", "COINS", "MONEDAS", "コイン", "金币"), int(preview.get("coins", 0))], "#ffd700", false, func() -> void:
 				_upgrade_skin_from_modal(skin, "coins")
 			))
-			upgrade_row.add_child(_make_action(_ui_text("Melhorar com Diamantes", "Upgrade with Diamonds", "Mejorar con Diamantes", "ダイヤで強化", "用钻石升级"), "#00ff88", false, func() -> void:
+			upgrade_row.add_child(_make_action("%s\n%s" % [_ui_text("DIAMANTES", "DIAMONDS", "DIAMANTES", "ダイヤ", "钻石"), int(preview.get("diamonds", 0))], "#00ff88", false, func() -> void:
 				_upgrade_skin_from_modal(skin, "diamonds")
 			))
-	column.add_child(_make_action(_ui_text("FECHAR", "CLOSE", "CERRAR", "閉じる", "关闭"), "#ffffff", false, func() -> void:
-		_detail_overlay.visible = false
-		_rebuild_collection_content()
-	))
+	column.add_child(_make_action(_ui_text("VOLTAR", "BACK", "VOLVER", "戻る", "返回"), "#ffffff", false, _close_skin_details))
 	_detail_overlay.visible = true
 
 
-func _make_skin_level_panel(skin_id: String, rarity: String) -> VBoxContainer:
+func _make_skin_level_panel(skin_id: String, rarity: String) -> PanelContainer:
 	var preview := GameState.get_skin_upgrade_preview(skin_id)
 	var level := int(preview.get("level", 1))
 	var max_level := int(preview.get("max_level", GameState.get_skin_max_level(skin_id)))
+	var color := _rarity_color(rarity)
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _make_style("#ffffff0f", 12, color + "66", 1, color + "20", 7))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	panel.add_child(margin)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 3)
+	column.add_theme_constant_override("separation", 6)
 	column.mouse_filter = Control.MOUSE_FILTER_PASS
-	column.add_child(_make_label("%s %s/%s" % [_ui_text("Nível", "Level", "Nivel", "レベル", "等级"), level, max_level], 11, _rarity_color(rarity), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	var bar := ProgressBar.new()
-	bar.custom_minimum_size = Vector2(0, 9)
-	bar.show_percentage = false
-	bar.max_value = max_level
-	bar.value = level
-	bar.add_theme_stylebox_override("background", _make_style("#ffffff12", 5, "#ffffff22", 1))
-	bar.add_theme_stylebox_override("fill", _make_style(_rarity_color(rarity), 5, "#00000000", 0, _rarity_color(rarity), 4))
-	column.add_child(bar)
-	var cost_text := _ui_text("MAX", "MAX", "MAX", "最大", "满级") if level >= max_level else "%s %s  •  %s ♦" % [int(preview.get("coins", 0)), _ui_text("moedas", "coins", "monedas", "コイン", "金币"), int(preview.get("diamonds", 0))]
-	column.add_child(_make_label(cost_text, 10, "#ffffff99", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
-	return column
+	margin.add_child(column)
+	column.add_child(_make_labeled_progress_bar(level, max_level, color, _skin_level_label(level, max_level), 26))
+	if level < max_level:
+		column.add_child(_make_skin_cost_panel(preview))
+	else:
+		column.add_child(_make_label(_ui_text("Skin no nível máximo", "Skin at max level", "Skin en nivel máximo", "スキンは最大レベル", "皮肤已满级"), 10, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return panel
 
 
 func _make_skin_upgrade_details(skin_id: String, rarity: String) -> PanelContainer:
@@ -1087,14 +1099,76 @@ func _make_skin_upgrade_details(skin_id: String, rarity: String) -> PanelContain
 	margin.add_child(column)
 	var level := int(preview.get("level", 1))
 	var max_level := int(preview.get("max_level", 5))
-	column.add_child(_make_label("%s: %s/%s" % [_ui_text("Nível da Skin", "Skin Level", "Nivel de Skin", "スキンレベル", "皮肤等级"), level, max_level], 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_labeled_progress_bar(level, max_level, _rarity_color(rarity), _skin_level_label(level, max_level), 28))
 	column.add_child(_make_label("%s: %s" % [_ui_text("Efeito Atual", "Current Effect", "Efecto Actual", "現在の効果", "当前效果"), _effect_preview_text(Dictionary(preview.get("current", {})))], 11, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	if level >= max_level:
 		column.add_child(_make_label(_ui_text("Máximo", "Max", "Máximo", "最大", "满级"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
 		column.add_child(_make_label("%s: %s" % [_ui_text("Próximo Nível", "Next Level", "Siguiente Nivel", "次のレベル", "下一级"), _effect_preview_text(Dictionary(preview.get("next", {})))], 11, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
-		column.add_child(_make_label("%s: %s %s / %s %s" % [_ui_text("Custo", "Cost", "Costo", "コスト", "花费"), int(preview.get("coins", 0)), _ui_text("moedas", "coins", "monedas", "コイン", "金币"), int(preview.get("diamonds", 0)), _ui_text("diamantes", "diamonds", "diamantes", "ダイヤ", "钻石")], 11, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+		column.add_child(_make_skin_cost_panel(preview))
 	return card
+
+
+func _close_skin_details() -> void:
+	if _detail_overlay:
+		_detail_overlay.visible = false
+	_rebuild_collection_content()
+
+
+func _skin_card_upgrade_text(skin_id: String) -> String:
+	if GameState.is_skin_max_level(skin_id):
+		return _ui_text("MAX", "MAX", "MAX", "最大", "满级")
+	var preview := GameState.get_skin_upgrade_preview(skin_id)
+	return "%s\n%sG / %sD" % [_ui_text("UP", "UP", "UP", "強化", "升级"), int(preview.get("coins", 0)), int(preview.get("diamonds", 0))]
+
+
+func _make_skin_cost_panel(preview: Dictionary) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0, 30)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", _make_style("#06162add", 10, "#ffffff22", 1, "#00f0ff22", 4))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_bottom", 4)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	margin.add_child(row)
+	row.add_child(_make_icon("coin", 15))
+	row.add_child(_make_label(str(int(preview.get("coins", 0))), 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	row.add_child(_make_icon("gem", 15))
+	row.add_child(_make_label(str(int(preview.get("diamonds", 0))), 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	return panel
+
+
+func _skin_level_label(level: int, max_level: int) -> String:
+	return "%s %s/%s" % [_ui_text("Nível", "Level", "Nivel", "レベル", "等级"), level, max_level]
+
+
+func _make_labeled_progress_bar(level: int, max_level: int, color: String, text: String, height: int = 24) -> Control:
+	var wrapper := Control.new()
+	wrapper.custom_minimum_size = Vector2(0, height)
+	wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var bar := ProgressBar.new()
+	_fill(bar)
+	bar.show_percentage = false
+	bar.max_value = max(1, max_level)
+	bar.value = clampi(level, 0, max_level)
+	var radius := maxi(8, int(height / 2))
+	bar.add_theme_stylebox_override("background", _make_style("#ffffff14", radius, "#ffffff22", 1))
+	bar.add_theme_stylebox_override("fill", _make_style(color, radius, "#00000000", 0, color, 5))
+	wrapper.add_child(bar)
+	var label := _make_label(text, 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	_fill(label)
+	label.add_theme_color_override("font_shadow_color", Color("#000000cc"))
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 1)
+	wrapper.add_child(label)
+	return wrapper
 
 
 func _effect_preview_text(effect: Dictionary) -> String:
@@ -1301,6 +1375,9 @@ func _fill(control: Control) -> void:
 
 
 func _go_back() -> void:
+	if _detail_overlay and _detail_overlay.visible:
+		_close_skin_details()
+		return
 	if has_node("/root/NavigationManager"):
 		NavigationManager.go_back(MENU_SCENE)
 	else:
@@ -1318,11 +1395,11 @@ func _configure_scroll(scroll: ScrollContainer) -> void:
 func _is_skin_tap_valid(start_pos: Vector2, end_pos: Vector2, start_msec: int, start_scroll: int, dragged: bool) -> bool:
 	if dragged:
 		return false
-	if start_pos.distance_to(end_pos) > 5.0:
+	if start_pos.distance_to(end_pos) > 9.0:
 		return false
-	if Time.get_ticks_msec() - start_msec > 320:
+	if Time.get_ticks_msec() - start_msec > 260:
 		return false
-	if _skin_scroll and abs(_skin_scroll.scroll_vertical - start_scroll) > 1:
+	if _skin_scroll and abs(_skin_scroll.scroll_vertical - start_scroll) > 3:
 		return false
 	return true
 

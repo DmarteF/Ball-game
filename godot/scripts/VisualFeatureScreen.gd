@@ -191,6 +191,7 @@ var _feedback_label: Label
 var _reward_overlay: Control
 var _wheel_prize_ring: Control
 var _wheel_prizes := ["coin", "gem", "key", "chest_common", "skins", "chest_rare", "skins", "chest_epic", "gem", "skins"]
+var _action_busy := false
 
 
 func _ready() -> void:
@@ -257,6 +258,7 @@ func _build_screen() -> void:
 
 func _populate_content(data: Dictionary) -> void:
 	for child in _content.get_children():
+		_content.remove_child(child)
 		child.queue_free()
 
 	if screen_id == "shop":
@@ -787,7 +789,7 @@ func _boss_level_data() -> Array[Dictionary]:
 
 
 func _populate_missions() -> void:
-	GameState._ensure_live_systems()
+	GameState._ensure_daily_missions_state()
 	var daily: Dictionary = GameState.data.get("daily_missions", {})
 	var added := 0
 	for mission in daily.get("missions", []):
@@ -812,7 +814,6 @@ func _populate_missions() -> void:
 
 
 func _populate_achievements() -> void:
-	GameState._update_achievements(false)
 	var all_achievements := GameState.get_achievements()
 	var summary := GameState.get_achievement_summary()
 	var pending_claims := 0
@@ -845,7 +846,7 @@ func _populate_achievements() -> void:
 		"action": "achievement_all" if pending_claims > 0 else "",
 		"disabled": pending_claims <= 0,
 	}))
-	_content.add_child(_make_achievement_filter_row())
+	_content.add_child(_make_achievement_filter_row(summary))
 	var visible_achievements: Array[Dictionary] = []
 	for achievement in all_achievements:
 		if not _achievement_matches_filter(achievement):
@@ -871,8 +872,7 @@ func _populate_achievements() -> void:
 		}))
 
 
-func _make_achievement_filter_row() -> Control:
-	var summary := GameState.get_achievement_summary()
+func _make_achievement_filter_row(summary: Dictionary) -> Control:
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 46)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -896,7 +896,7 @@ func _make_achievement_filter_row() -> Control:
 		var filter_id := String(filter["id"])
 		button.pressed.connect(func() -> void:
 			_achievement_filter = filter_id
-			_build_screen()
+			_rebuild_current()
 		)
 		row.add_child(button)
 	return scroll
@@ -1022,6 +1022,9 @@ func _localized_achievement_desc(achievement: Dictionary) -> String:
 func _handle_action(action: String) -> void:
 	if action.is_empty():
 		return
+	if _action_busy:
+		return
+	_action_busy = true
 	var result := { "ok": false, "text": "" }
 	if action.begins_with("open:"):
 		result = GameState.open_chest(action.trim_prefix("open:"))
@@ -1047,6 +1050,7 @@ func _handle_action(action: String) -> void:
 				_complete_rewarded_action(action)
 			else:
 				_show_feedback(_tr("ad_cancelled", "Anúncio cancelado"), false)
+				_action_busy = false
 		)
 		return
 	elif action.begins_with("boss_start:"):
@@ -1061,13 +1065,16 @@ func _handle_action(action: String) -> void:
 		result = GameState.spin_wheel("free")
 		if bool(result.get("ok", false)):
 			_animate_wheel(Dictionary(result.get("reward", {})))
-			await get_tree().create_timer(2.25).timeout
+			_show_feedback(_txt("Spinning...", "Girando...", "Girando...", "回転中...", "旋转中..."), true)
+			call_deferred("_finish_wheel_result", result)
+			return
 	elif action == "wheel_ad":
 		AdManager.show_rewarded_ad("wheel_extra_spin", func(ok: bool) -> void:
 			if ok:
 				_complete_rewarded_action(action)
 			else:
 				_show_feedback(_tr("ad_cancelled", "Anúncio cancelado"), false)
+				_action_busy = false
 		)
 		return
 	elif _is_ad_shop_action(action):
@@ -1076,14 +1083,17 @@ func _handle_action(action: String) -> void:
 				_complete_rewarded_action(action)
 			else:
 				_show_feedback(_tr("ad_cancelled", "Anúncio cancelado"), false)
+				_action_busy = false
 		)
 		return
 	else:
 		result = GameState.shop_claim(action)
 	_play_sfx("res://assets/sounds/button_confirm.mp3" if bool(result.get("ok", false)) else "res://assets/sounds/button_error.mp3")
-	_rebuild_current()
 	if bool(result.get("ok", false)):
-		_show_reward_modal(result)
+		_show_reward_modal(result, true)
+	else:
+		_rebuild_current()
+		_action_busy = false
 	_show_feedback(_failure_label(String(result.get("reason", result.get("text", "not_ready")))) if not bool(result.get("ok", false)) else String(result.get("text", "")), bool(result.get("ok", false)))
 
 
@@ -1097,15 +1107,28 @@ func _complete_rewarded_action_async(action: String) -> void:
 		result = GameState.spin_wheel("ad")
 		if bool(result.get("ok", false)):
 			_animate_wheel(Dictionary(result.get("reward", {})))
-			await get_tree().create_timer(2.25).timeout
+			_show_feedback(_txt("Spinning...", "Girando...", "Girando...", "回転中...", "旋转中..."), true)
+			call_deferred("_finish_wheel_result", result)
+			return
 	elif action == "daily_challenge_claim_ad":
 		result = GameState.claim_daily_challenge_reward(true)
 	else:
 		result = GameState.shop_claim(action)
 	_play_sfx("res://assets/sounds/button_confirm.mp3" if bool(result.get("ok", false)) else "res://assets/sounds/button_error.mp3")
-	_rebuild_current()
 	if bool(result.get("ok", false)):
-		_show_reward_modal(result)
+		_show_reward_modal(result, true)
+	else:
+		_rebuild_current()
+		_action_busy = false
+	_show_feedback(_failure_label(String(result.get("reason", result.get("text", "not_ready")))) if not bool(result.get("ok", false)) else String(result.get("text", "")), bool(result.get("ok", false)))
+
+
+func _finish_wheel_result(result: Dictionary) -> void:
+	await get_tree().create_timer(2.25).timeout
+	if bool(result.get("ok", false)):
+		_show_reward_modal(result, true)
+	else:
+		_action_busy = false
 	_show_feedback(_failure_label(String(result.get("reason", result.get("text", "not_ready")))) if not bool(result.get("ok", false)) else String(result.get("text", "")), bool(result.get("ok", false)))
 
 
@@ -1126,6 +1149,7 @@ func _ad_reason_for_shop_action(action: String) -> String:
 
 func _rebuild_current() -> void:
 	for child in get_children():
+		remove_child(child)
 		child.queue_free()
 	_build_background()
 	_build_screen()
@@ -1137,7 +1161,7 @@ func _show_feedback(text: String, ok: bool) -> void:
 		_feedback_label.add_theme_color_override("font_color", Color("#00ff88") if ok else Color("#ff6b9a"))
 
 
-func _show_reward_modal(result: Dictionary) -> void:
+func _show_reward_modal(result: Dictionary, refresh_on_close := false) -> void:
 	if _reward_overlay:
 		_reward_overlay.queue_free()
 	var reward: Dictionary = result.get("reward", {})
@@ -1174,6 +1198,9 @@ func _show_reward_modal(result: Dictionary) -> void:
 		if _reward_overlay:
 			_reward_overlay.queue_free()
 			_reward_overlay = null
+		_action_busy = false
+		if refresh_on_close:
+			call_deferred("_rebuild_current")
 	)
 	body.add_child(close)
 	if _is_diamond_reward(reward):
