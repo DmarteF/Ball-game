@@ -413,7 +413,6 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 		_check_perfect_escape(state, prev_dist, next_dist, prev_pos, Vector2(state.get("ball", center)))
 		_check_ring_hit(state, prev_dist, next_dist, prev_pos, Vector2(state.get("ball", center)))
 		_bounce_arena_edge(state)
-		_keep_arena_rings_in_reach(state)
 		_clamp_ring_spacing(state)
 		if _is_ball_crushed(state):
 			var now := Time.get_ticks_msec()
@@ -431,15 +430,14 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 
 func _update_rings(state: Dictionary, delta_steps: float) -> void:
 	var level := int(state.get("level", 1))
-	var difficulty := float(state.get("battle_difficulty", 0.0))
-	var pressure: float = min(0.42, float(int(state.get("rings_destroyed", 0))) * 0.0032 + _elapsed * 0.00038 + difficulty * 0.045)
+	var pressure: float = min(0.16, float(int(state.get("rings_destroyed", 0))) * 0.0012 + _elapsed * 0.00012)
 	for i in range(Array(state.get("rings", [])).size()):
 		var ring: Dictionary = state["rings"][i]
 		if String(ring.get("status", "")) != "active":
 			continue
 		var grace_multiplier := 0.32 if Time.get_ticks_msec() < int(ring.get("defeat_grace_until", 0)) else 1.0
 		ring["rotation"] = _normalize_angle(float(ring.get("rotation", 0.0)) + float(ring.get("rotation_speed", 0.004)) * delta_steps)
-		ring["radius"] = max(float(ring.get("min_radius", 4.0)), float(ring.get("radius", 0.0)) - float(ring.get("closing_speed", 0.008)) * delta_steps * (0.92 + pressure + float(level) * 0.004) * grace_multiplier)
+		ring["radius"] = max(float(ring.get("min_radius", 4.0)), float(ring.get("radius", 0.0)) - float(ring.get("closing_speed", 0.008)) * delta_steps * (0.78 + pressure + float(level) * 0.0015) * grace_multiplier)
 		if int(ring.get("effect_until", 0)) > 0 and Time.get_ticks_msec() > int(ring.get("effect_until", 0)):
 			ring["effect_color"] = ""
 			ring["rotation_speed"] = float(ring.get("base_rotation_speed", ring.get("rotation_speed", 0.004)))
@@ -450,11 +448,14 @@ func _refill_rings(state: Dictionary) -> void:
 	_prune_inactive_rings(state)
 	var target := _target_count_for_arena(state)
 	var attempts := 0
+	var added_ring := false
 	while _active_ring_count(state) < target and attempts < 16:
 		attempts += 1
 		if not _append_ring(state):
 			break
-	_keep_arena_rings_in_reach(state)
+		added_ring = true
+	if added_ring:
+		_keep_arena_rings_in_reach(state)
 	_clamp_ring_spacing(state)
 
 
@@ -478,18 +479,19 @@ func _make_ring(state: Dictionary, radius: float, index: int) -> Dictionary:
 	var destroyed := int(state.get("rings_destroyed", 0))
 	var quality := float(state.get("quality", 0.5))
 	var difficulty := float(state.get("battle_difficulty", 0.0))
-	var solid_every: int = max(3, 10 - min(6, floori(float(level) / 5.0 + float(destroyed) / 42.0 + difficulty * 4.0)))
+	var solid_every: int = max(2, 11 - min(7, floori(float(level) / 6.0 + float(destroyed) / 38.0 + difficulty * 5.0)))
 	var is_solid: bool = index > 0 and level >= 3 and (index + floori(difficulty * 3.0)) % solid_every == 0
 	var direction: float = 1.0 if index % 2 == 0 else -1.0
-	var hp: int = floori((30.0 + float(level) * 6.2 + float(destroyed) * 0.78) * (1.0 + quality * 0.42 + difficulty * 0.78) * (1.95 if is_solid else 1.0))
+	var hp: int = floori((34.0 + float(level) * 7.4 + float(destroyed) * 1.15) * (1.0 + quality * 0.42 + difficulty * 1.18) * (2.18 if is_solid else 1.0))
 	var gap: float = 0.0 if is_solid else max(PI / 15.0, PI / (3.45 + float(level) * 0.07 + float(destroyed) * 0.003 + difficulty * 0.32))
 	var rotation_speed: float = (0.0042 + min(0.0088, float(level) * 0.00022 + quality * 0.0014 + difficulty * 0.0011)) * randf_range(0.86, 1.18) * direction
+	var closing_speed: float = (0.0038 + minf(0.0042, float(level) * 0.00005 + float(destroyed) * 0.000003)) * randf_range(0.82, 1.05)
 	return {
 		"id": "%s_ring_%s" % [String(state.get("id", "arena")), index],
 		"type": "solid" if is_solid else "normal",
 		"radius": clampf(radius, _playable_ring_min_radius(state), _playable_ring_max_radius(state)),
 		"initial_radius": radius,
-		"closing_speed": 0.0063 + min(0.0148, float(level) * 0.00018 + quality * 0.00078 + difficulty * 0.00115 + float(destroyed) * 0.000006),
+		"closing_speed": closing_speed,
 		"rotation": randf() * TWO_PI,
 		"rotation_speed": rotation_speed,
 		"base_rotation_speed": rotation_speed,
@@ -574,8 +576,8 @@ func _keep_arena_rings_in_reach(state: Dictionary) -> void:
 		var target_radius: float = clampf(low + spacing * float(order), min_radius, max_radius)
 		var current_radius: float = float(ring.get("radius", target_radius))
 		var too_far: bool = abs(current_radius - ball_dist) > reach or current_radius < min_radius or current_radius > max_radius
-		if too_far or abs(current_radius - target_radius) > MIN_RING_SPACING * 1.25:
-			var next_radius: float = move_toward(current_radius, target_radius, 2.0)
+		if too_far or abs(current_radius - target_radius) > MIN_RING_SPACING * 2.0:
+			var next_radius: float = move_toward(current_radius, target_radius, 0.45)
 			ring["radius"] = next_radius
 			ring["initial_radius"] = max(float(ring.get("initial_radius", target_radius)), target_radius)
 			if abs(current_radius - next_radius) > 0.5:
