@@ -9,11 +9,12 @@ const BALL_RADIUS := 8.0
 const TARGET_ACTIVE_RINGS := 6
 const MAX_ACTIVE_RINGS := 6
 const MIN_RING_SPACING := 8.8
-const MIN_RING_RADIUS := 25.0
+const MIN_RING_RADIUS := 12.0
 const SAFE_STEP_DISTANCE := 7.0
 const MAX_PHYSICS_SUBSTEPS := 7
 const PHYSICS_STEPS_PER_SECOND := 60.0
 const RING_SPAWN_GRACE_MSEC := 900
+const RING_REPOSITION_GRACE_MSEC := 520
 const CRUSH_CONFIRM_MSEC := 150
 const MATCH_LIMIT_SECONDS := 60.0
 const XP_BASE := 52.0
@@ -38,6 +39,8 @@ const ICON_PATHS := {
 	"key": "res://assets/ui/ui_key.png",
 	"xp": "res://assets/ui/ui_xp.png",
 	"league": "res://assets/ui/ui_league_neon.png",
+	"boss": "res://assets/ui/ui_boss.png",
+	"chest": "res://assets/ui/ui_chest_common.png",
 	"upgrade": "res://assets/ui/ui_upgrades.png",
 	"damage": "res://assets/ui/ui_damage.png",
 	"speed": "res://assets/ui/ui_speed.png",
@@ -345,26 +348,43 @@ func _assign_arena_metrics(state: Dictionary, center: Vector2, radius: float) ->
 		state["prev_ball"] = state["ball"]
 		for i in range(Array(state.get("rings", [])).size()):
 			var ring: Dictionary = state["rings"][i]
-			ring["radius"] = clampf(float(ring.get("radius", radius)), MIN_RING_RADIUS, radius - 3.0)
+			ring["radius"] = clampf(float(ring.get("radius", radius)), _playable_ring_min_radius(state), _playable_ring_max_radius(state))
 			state["rings"][i] = ring
+
+
+func _playable_ring_min_radius(state: Dictionary) -> float:
+	return max(4.0, min(MIN_RING_RADIUS, float(state.get("arena_radius", 100.0)) * 0.16))
+
+
+func _playable_ring_max_radius(state: Dictionary) -> float:
+	return max(_playable_ring_min_radius(state) + MIN_RING_SPACING * 2.0, float(state.get("arena_radius", 100.0)) - 4.0)
+
+
+func _ring_spacing_for_arena(state: Dictionary) -> float:
+	var max_radius := _playable_ring_max_radius(state)
+	var min_radius := _playable_ring_min_radius(state)
+	var width: float = maxf(1.0, max_radius - min_radius)
+	var ideal: float = width / float(max(1, TARGET_ACTIVE_RINGS - 1))
+	return min(MIN_RING_SPACING, max(5.4, ideal))
 
 
 func _create_initial_rings(state: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var count := _target_count_for_arena(state)
-	var min_radius := MIN_RING_RADIUS
-	var max_radius := float(state.get("arena_radius", 100.0)) - 4.0
-	var spacing := (max_radius - min_radius) / float(max(1, count - 1))
+	var max_radius := _playable_ring_max_radius(state)
+	var spacing := _ring_spacing_for_arena(state)
 	for i in range(count):
 		var radius := max_radius - spacing * float(i)
-		result.append(_make_ring(state, radius, i))
+		var ring := _make_ring(state, radius, i)
+		ring = _randomize_ring_gap_spaced_for_state(state, ring, result)
+		result.append(ring)
 	state["spawned"] = count
 	return result
 
 
 func _target_count_for_arena(state: Dictionary) -> int:
-	var capacity := floori((float(state.get("arena_radius", 100.0)) - MIN_RING_RADIUS) / MIN_RING_SPACING) + 1
-	return clampi(min(TARGET_ACTIVE_RINGS, capacity), TARGET_ACTIVE_RINGS, MAX_ACTIVE_RINGS)
+	var capacity := floori(maxf(0.0, _playable_ring_max_radius(state) - _playable_ring_min_radius(state)) / maxf(5.4, _ring_spacing_for_arena(state))) + 1
+	return clampi(min(TARGET_ACTIVE_RINGS, capacity), 1, MAX_ACTIVE_RINGS)
 
 
 func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
@@ -393,6 +413,7 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 		_check_perfect_escape(state, prev_dist, next_dist, prev_pos, Vector2(state.get("ball", center)))
 		_check_ring_hit(state, prev_dist, next_dist, prev_pos, Vector2(state.get("ball", center)))
 		_bounce_arena_edge(state)
+		_keep_arena_rings_in_reach(state)
 		_clamp_ring_spacing(state)
 		if _is_ball_crushed(state):
 			var now := Time.get_ticks_msec()
@@ -410,14 +431,15 @@ func _tick_arena(state: Dictionary, delta: float, is_ai: bool) -> void:
 
 func _update_rings(state: Dictionary, delta_steps: float) -> void:
 	var level := int(state.get("level", 1))
-	var pressure: float = min(0.45, float(int(state.get("rings_destroyed", 0))) * 0.0035 + _elapsed * 0.00045)
+	var difficulty := float(state.get("battle_difficulty", 0.0))
+	var pressure: float = min(0.42, float(int(state.get("rings_destroyed", 0))) * 0.0032 + _elapsed * 0.00038 + difficulty * 0.045)
 	for i in range(Array(state.get("rings", [])).size()):
 		var ring: Dictionary = state["rings"][i]
 		if String(ring.get("status", "")) != "active":
 			continue
 		var grace_multiplier := 0.32 if Time.get_ticks_msec() < int(ring.get("defeat_grace_until", 0)) else 1.0
 		ring["rotation"] = _normalize_angle(float(ring.get("rotation", 0.0)) + float(ring.get("rotation_speed", 0.004)) * delta_steps)
-		ring["radius"] = max(float(ring.get("min_radius", MIN_RING_RADIUS)), float(ring.get("radius", 0.0)) - float(ring.get("closing_speed", 0.008)) * delta_steps * (1.0 + pressure + float(level) * 0.006) * grace_multiplier)
+		ring["radius"] = max(float(ring.get("min_radius", 4.0)), float(ring.get("radius", 0.0)) - float(ring.get("closing_speed", 0.008)) * delta_steps * (0.92 + pressure + float(level) * 0.004) * grace_multiplier)
 		if int(ring.get("effect_until", 0)) > 0 and Time.get_ticks_msec() > int(ring.get("effect_until", 0)):
 			ring["effect_color"] = ""
 			ring["rotation_speed"] = float(ring.get("base_rotation_speed", ring.get("rotation_speed", 0.004)))
@@ -425,25 +447,30 @@ func _update_rings(state: Dictionary, delta_steps: float) -> void:
 
 
 func _refill_rings(state: Dictionary) -> void:
+	_prune_inactive_rings(state)
 	var target := _target_count_for_arena(state)
 	var attempts := 0
 	while _active_ring_count(state) < target and attempts < 16:
 		attempts += 1
-		_append_ring(state)
+		if not _append_ring(state):
+			break
+	_keep_arena_rings_in_reach(state)
 	_clamp_ring_spacing(state)
 
 
-func _append_ring(state: Dictionary) -> void:
+func _append_ring(state: Dictionary) -> bool:
 	var rings: Array = state.get("rings", [])
-	var max_radius := float(state.get("arena_radius", 100.0)) - 4.0
-	var radius := max_radius
-	for ring in rings:
-		if String(ring.get("status", "")) == "active":
-			radius = max(radius, min(max_radius, float(ring.get("radius", max_radius)) + MIN_RING_SPACING))
+	var spawn := _find_outer_spawn_radius_for_state(state)
+	if not bool(spawn.get("ok", false)):
+		return false
+	var radius := float(spawn.get("radius", _playable_ring_max_radius(state)))
 	var index := int(state.get("spawned", 0))
 	state["spawned"] = index + 1
-	rings.append(_make_ring(state, radius, index))
+	var ring := _make_ring(state, radius, index)
+	ring = _randomize_ring_gap_spaced_for_state(state, ring, rings)
+	rings.append(ring)
 	state["rings"] = rings
+	return true
 
 
 func _make_ring(state: Dictionary, radius: float, index: int) -> Dictionary:
@@ -460,7 +487,7 @@ func _make_ring(state: Dictionary, radius: float, index: int) -> Dictionary:
 	return {
 		"id": "%s_ring_%s" % [String(state.get("id", "arena")), index],
 		"type": "solid" if is_solid else "normal",
-		"radius": clampf(radius, MIN_RING_RADIUS, float(state.get("arena_radius", 100.0)) - 4.0),
+		"radius": clampf(radius, _playable_ring_min_radius(state), _playable_ring_max_radius(state)),
 		"initial_radius": radius,
 		"closing_speed": 0.0063 + min(0.0148, float(level) * 0.00018 + quality * 0.00078 + difficulty * 0.00115 + float(destroyed) * 0.000006),
 		"rotation": randf() * TWO_PI,
@@ -479,6 +506,107 @@ func _make_ring(state: Dictionary, radius: float, index: int) -> Dictionary:
 		"spawned_at": Time.get_ticks_msec(),
 		"defeat_grace_until": Time.get_ticks_msec() + RING_SPAWN_GRACE_MSEC,
 	}
+
+
+func _prune_inactive_rings(state: Dictionary) -> void:
+	var kept: Array = []
+	for ring in Array(state.get("rings", [])):
+		if String(ring.get("status", "")) == "active" and int(ring.get("hp", 0)) > 0:
+			kept.append(ring)
+	state["rings"] = kept
+
+
+func _find_outer_spawn_radius_for_state(state: Dictionary) -> Dictionary:
+	return { "ok": true, "radius": _playable_ring_max_radius(state) }
+
+
+func _active_ring_indices_by_radius(state: Dictionary) -> Array[int]:
+	var indices: Array[int] = []
+	var rings: Array = state.get("rings", [])
+	for i in range(rings.size()):
+		var ring: Dictionary = rings[i]
+		if String(ring.get("status", "")) == "active" and int(ring.get("hp", 0)) > 0:
+			indices.append(i)
+	for i in range(indices.size()):
+		for j in range(i + 1, indices.size()):
+			var a: int = indices[i]
+			var b: int = indices[j]
+			var radius_a := float(rings[a].get("radius", 0.0))
+			var radius_b := float(rings[b].get("radius", 0.0))
+			var spawned_a := int(rings[a].get("spawned_at", 0))
+			var spawned_b := int(rings[b].get("spawned_at", 0))
+			if radius_b < radius_a or (is_equal_approx(radius_a, radius_b) and spawned_b < spawned_a):
+				indices[i] = b
+				indices[j] = a
+	return indices
+
+
+func _keep_arena_rings_in_reach(state: Dictionary) -> void:
+	var indices := _active_ring_indices_by_radius(state)
+	var count := indices.size()
+	if count <= 0:
+		return
+	var min_radius := _playable_ring_min_radius(state)
+	var max_radius := _playable_ring_max_radius(state)
+	var center: Vector2 = state.get("center", Vector2.ZERO)
+	var ball: Vector2 = state.get("ball", center)
+	var ball_dist := clampf((ball - center).length(), min_radius, max_radius)
+	var spacing := _ring_spacing_for_arena(state)
+	var width := spacing * float(max(0, count - 1))
+	var available_width := max_radius - min_radius
+	if width > available_width:
+		spacing = max(5.0, available_width / float(max(1, count - 1)))
+		width = spacing * float(max(0, count - 1))
+	var reach: float = min(max_radius - min_radius, max(width * 0.5 + spacing * 2.0, 38.0))
+	var low: float = max(min_radius, ball_dist - reach)
+	var high: float = min(max_radius, ball_dist + reach)
+	if high - low < width:
+		var center_radius := clampf(ball_dist, min_radius + width * 0.5, max_radius - width * 0.5)
+		low = clampf(center_radius - width * 0.5, min_radius, max_radius - width)
+		high = low + width
+	else:
+		low = clampf(ball_dist - width * 0.5, low, high - width)
+		high = low + width
+	var now := Time.get_ticks_msec()
+	for order in range(count):
+		var index: int = indices[order]
+		var ring: Dictionary = state["rings"][index]
+		var target_radius: float = clampf(low + spacing * float(order), min_radius, max_radius)
+		var current_radius: float = float(ring.get("radius", target_radius))
+		var too_far: bool = abs(current_radius - ball_dist) > reach or current_radius < min_radius or current_radius > max_radius
+		if too_far or abs(current_radius - target_radius) > MIN_RING_SPACING * 1.25:
+			var next_radius: float = move_toward(current_radius, target_radius, 2.0)
+			ring["radius"] = next_radius
+			ring["initial_radius"] = max(float(ring.get("initial_radius", target_radius)), target_radius)
+			if abs(current_radius - next_radius) > 0.5:
+				ring["defeat_grace_until"] = maxi(int(ring.get("defeat_grace_until", 0)), now + RING_REPOSITION_GRACE_MSEC)
+			state["rings"][index] = ring
+
+
+func _randomize_ring_gap_spaced_for_state(state: Dictionary, ring: Dictionary, existing: Array = []) -> Dictionary:
+	if String(ring.get("type", "normal")) == "solid":
+		return ring
+	var best_angle := randf() * TWO_PI
+	var best_distance := -1.0
+	for attempt in range(12):
+		var candidate := _normalize_angle(randf() * TWO_PI + float(attempt) * 2.399963)
+		var nearest := TWO_PI
+		for other in existing:
+			if typeof(other) != TYPE_DICTIONARY:
+				continue
+			var other_ring: Dictionary = other
+			if String(other_ring.get("status", "active")) != "active" or String(other_ring.get("type", "normal")) == "solid":
+				continue
+			var other_angle := _normalize_angle(float(other_ring.get("gap_start", 0.0)) + float(other_ring.get("rotation", 0.0)))
+			var distance: float = abs(_normalize_angle(candidate - other_angle))
+			nearest = min(nearest, min(distance, TWO_PI - distance))
+		if nearest > best_distance:
+			best_distance = nearest
+			best_angle = candidate
+		if nearest >= 0.86:
+			break
+	ring["gap_start"] = _normalize_angle(best_angle - float(ring.get("rotation", 0.0)))
+	return ring
 
 
 func _check_perfect_escape(state: Dictionary, prev_dist: float, next_dist: float, prev_pos: Vector2, next_pos: Vector2) -> void:
@@ -684,7 +812,7 @@ func _try_consume_state_shield(state: Dictionary) -> bool:
 		var ring: Dictionary = state["rings"][i]
 		if String(ring.get("status", "")) != "active":
 			continue
-		ring["radius"] = min(float(state.get("arena_radius", 100.0)) - 4.0, float(ring.get("radius", 0.0)) + push_amount)
+		ring["radius"] = min(_playable_ring_max_radius(state), float(ring.get("radius", 0.0)) + push_amount)
 		ring["defeat_grace_until"] = now + 850
 		ring["effect_color"] = "#00f0ff"
 		ring["effect_until"] = now + 1050
@@ -695,37 +823,25 @@ func _try_consume_state_shield(state: Dictionary) -> bool:
 
 
 func _clamp_ring_spacing(state: Dictionary) -> void:
-	var indices: Array[int] = []
-	for i in range(Array(state.get("rings", [])).size()):
-		var ring: Dictionary = state["rings"][i]
-		if String(ring.get("status", "")) == "active" and int(ring.get("hp", 0)) > 0:
-			indices.append(i)
-	for i in range(indices.size()):
-		for j in range(i + 1, indices.size()):
-			var left: Dictionary = state["rings"][indices[i]]
-			var right: Dictionary = state["rings"][indices[j]]
-			var left_radius: float = float(left.get("radius", 0.0))
-			var right_radius: float = float(right.get("radius", 0.0))
-			var right_is_outer: bool = right_radius > left_radius
-			var same_radius_newer: bool = absf(right_radius - left_radius) < 0.01 and int(right.get("spawned_at", 0)) > int(left.get("spawned_at", 0))
-			if right_is_outer or same_radius_newer:
-				var temp := indices[i]
-				indices[i] = indices[j]
-				indices[j] = temp
-	var min_radius := MIN_RING_RADIUS
+	var indices := _active_ring_indices_by_radius(state)
+	if indices.is_empty():
+		return
 	var crush_min_radius := 4.0
-	var max_radius := float(state.get("arena_radius", 100.0)) - 4.0
-	var spacing: float = min(MIN_RING_SPACING, max(4.2, (max_radius - min_radius) / float(max(1, indices.size() - 1))))
-	var previous: float = max_radius + spacing
+	var max_radius := _playable_ring_max_radius(state)
+	var playable_width := max_radius - crush_min_radius
+	var spacing: float = min(_ring_spacing_for_arena(state), max(3.6, playable_width / float(max(1, indices.size()))))
+	indices.reverse()
+	var previous: float = INF
 	var now: int = Time.get_ticks_msec()
 	for index in indices:
 		var ring: Dictionary = state["rings"][index]
-		var upper_bound: float = minf(max_radius, previous - spacing)
 		var lower_bound: float = maxf(float(ring.get("min_radius", crush_min_radius)), crush_min_radius)
+		var upper_bound: float = max_radius if previous == INF else previous - maxf(spacing, float(ring.get("thickness", 5.0)) + 1.0)
+		upper_bound = maxf(lower_bound, upper_bound)
 		var current_radius: float = float(ring.get("radius", upper_bound))
-		var radius: float = clampf(current_radius, lower_bound, maxf(lower_bound, upper_bound))
+		var radius: float = clampf(current_radius, lower_bound, upper_bound)
 		if abs(radius - current_radius) > 0.5 and now - int(ring.get("spawned_at", 0)) > 180:
-			ring["defeat_grace_until"] = maxi(int(ring.get("defeat_grace_until", 0)), now + 260)
+			ring["defeat_grace_until"] = maxi(int(ring.get("defeat_grace_until", 0)), now + RING_REPOSITION_GRACE_MSEC)
 		ring["radius"] = radius
 		previous = radius
 		state["rings"][index] = ring
@@ -1254,7 +1370,7 @@ func _revive_with_ad() -> void:
 		for i in range(Array(_player.get("rings", [])).size()):
 			var ring: Dictionary = _player["rings"][i]
 			if String(ring.get("status", "")) == "active":
-				ring["radius"] = max(float(ring.get("radius", MIN_RING_RADIUS)), MIN_RING_RADIUS + 24.0)
+				ring["radius"] = max(float(ring.get("radius", MIN_RING_RADIUS)), _playable_ring_min_radius(_player) + 24.0)
 				ring["defeat_grace_until"] = Time.get_ticks_msec() + 1400
 				_player["rings"][i] = ring
 		_play_sfx("level")
@@ -1308,26 +1424,26 @@ func _show_result(summary: Dictionary) -> void:
 		_result_title.text = _txt("NEON VICTORY", "VITÓRIA NEON", "VICTORIA NEON", "ネオン勝利", "霓虹胜利") if _winner == "win" else _txt("NEON DEFEAT", "DERROTA NEON", "DERROTA NEON", "ネオン敗北", "霓虹失败") if _winner == "loss" else _txt("LEFT LEAGUE", "SAÍDA DA LIGA", "SALIDA DE LIGA", "リーグ退出", "退出联赛")
 	for child in _result_details.get_children():
 		child.queue_free()
-	_result_details.add_child(_make_result_line(_txt("Time", "Tempo", "Tiempo", "時間", "时间"), "%ss" % int(summary.get("seconds", 0))))
+	_result_details.add_child(_make_result_line("perfect", _txt("Time", "Tempo", "Tiempo", "時間", "时间"), "%ss" % int(summary.get("seconds", 0))))
 	if not _finish_reason.is_empty():
-		_result_details.add_child(_make_result_line(_txt("Decision", "Decisão", "Decisión", "判定", "判定"), _finish_reason.capitalize()))
-	_result_details.add_child(_make_result_line(_txt("You", "Você", "Tú", "あなた", "你"), _txt("%s rings", "%s anéis", "%s anillos", "%sリング", "%s圆环") % int(_player.get("rings_destroyed", 0))))
-	_result_details.add_child(_make_result_line(_txt("Rival", "Rival", "Rival", "ライバル", "对手"), _txt("%s rings", "%s anéis", "%s anillos", "%sリング", "%s圆环") % int(_rival.get("rings_destroyed", 0))))
-	_result_details.add_child(_make_result_line(_txt("Gold", "Ouro", "Oro", "ゴールド", "金币"), "+%s" % int(_result_reward.get("coins", 0))))
-	_result_details.add_child(_make_result_line("XP", "+%s" % int(_result_reward.get("xp", 0))))
+		_result_details.add_child(_make_result_line("upgrade", _txt("Decision", "Decisão", "Decisión", "判定", "判定"), _finish_reason.capitalize()))
+	_result_details.add_child(_make_result_line("perfect", _txt("You", "Você", "Tú", "あなた", "你"), _txt("%s rings", "%s anéis", "%s anillos", "%sリング", "%s圆环") % int(_player.get("rings_destroyed", 0))))
+	_result_details.add_child(_make_result_line("league", _txt("Rival", "Rival", "Rival", "ライバル", "对手"), _txt("%s rings", "%s anéis", "%s anillos", "%sリング", "%s圆环") % int(_rival.get("rings_destroyed", 0))))
+	_result_details.add_child(_make_result_line("coin", _txt("Gold", "Ouro", "Oro", "ゴールド", "金币"), "+%s" % int(_result_reward.get("coins", 0))))
+	_result_details.add_child(_make_result_line("xp", "XP", "+%s" % int(_result_reward.get("xp", 0))))
 	if int(_result_reward.get("diamonds", 0)) > 0:
-		_result_details.add_child(_make_result_line(_txt("Diamonds", "Diamantes", "Diamantes", "ダイヤ", "钻石"), "+%s" % int(_result_reward.get("diamonds", 0))))
+		_result_details.add_child(_make_result_line("gem", _txt("Diamonds", "Diamantes", "Diamantes", "ダイヤ", "钻石"), "+%s" % int(_result_reward.get("diamonds", 0))))
 	var first_win := Dictionary(_result_reward.get("first_win_bonus", {}))
 	if bool(first_win.get("ok", false)):
-		_result_details.add_child(_make_result_line(_txt("First Win Bonus", "Bônus de Primeira Vitória", "Bono de primera victoria", "初勝利ボーナス", "首胜奖励"), _first_win_bonus_label(first_win)))
+		_result_details.add_child(_make_result_line("gem", _txt("First Win Bonus", "Bônus de Primeira Vitória", "Bono de primera victoria", "初勝利ボーナス", "首胜奖励"), _first_win_bonus_label(first_win)))
 	if _battle_kind == "boss":
 		var reward: Dictionary = _result_reward.get("reward", {})
-		_result_details.add_child(_make_result_line("Boss", String(_opponent.get("name", "Boss"))))
-		_result_details.add_child(_make_result_line(_txt("Reward", "Recompensa", "Recompensa", "報酬", "奖励"), _boss_reward_label(reward)))
+		_result_details.add_child(_make_result_line("boss", "Boss", String(_opponent.get("name", "Boss"))))
+		_result_details.add_child(_make_result_line(_reward_icon_key(reward), _txt("Reward", "Recompensa", "Recompensa", "報酬", "奖励"), _boss_reward_label(reward)))
 	else:
-		_result_details.add_child(_make_result_line(_txt("Trophies", "Troféus", "Trofeos", "トロフィー", "奖杯"), "%+d" % int(_result_reward.get("trophy_delta", 0))))
+		_result_details.add_child(_make_result_line("league", _txt("Trophies", "Troféus", "Trofeos", "トロフィー", "奖杯"), "%+d" % int(_result_reward.get("trophy_delta", 0))))
 		if not String(_result_reward.get("promotion_skin", "")).is_empty():
-			_result_details.add_child(_make_label(_txt("Skin unlocked: Starter Neon Champion", "Skin desbloqueada: Campeão Neon Inicial", "Skin desbloqueada: Campeón Neon Inicial", "スキン解除: スターターネオンチャンピオン", "皮肤解锁：初始霓虹冠军"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+			_result_details.add_child(_make_result_line("perfect", _txt("Skin", "Skin", "Skin", "スキン", "皮肤"), _txt("Starter Neon Champion", "Campeão Neon Inicial", "Campeón Neon Inicial", "スターターネオンチャンピオン", "初始霓虹冠军")))
 	if _result_double_button:
 		_result_double_button.visible = _winner != "quit"
 		_result_double_button.disabled = _result_doubled
@@ -1643,7 +1759,7 @@ func _build_revive_overlay() -> void:
 	add_child(_revive_overlay)
 
 
-func _make_result_line(label: String, value: String) -> PanelContainer:
+func _make_result_line(icon_key: String, label: String, value: String) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(0, 28)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1658,12 +1774,30 @@ func _make_result_line(label: String, value: String) -> PanelContainer:
 	row.add_theme_constant_override("separation", 8)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin.add_child(row)
+	row.add_child(_make_icon_texture(icon_key, 16))
 	var text_label := _make_label("%s  %s" % [label, value], 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
-	text_label.clip_text = false
+	text_label.clip_text = true
 	text_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	text_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(text_label)
 	return panel
+
+
+func _reward_icon_key(reward: Dictionary) -> String:
+	match String(reward.get("type", "")):
+		"coins":
+			return "coin"
+		"diamonds", "gems":
+			return "gem"
+		"keys":
+			return "key"
+		"chest":
+			return "chest"
+		"skin":
+			return "perfect"
+		_:
+			return "upgrade"
 
 
 func _boss_reward_label(reward: Dictionary) -> String:

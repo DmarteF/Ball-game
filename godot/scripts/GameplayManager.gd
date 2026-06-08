@@ -55,6 +55,9 @@ const ICON_PATHS := {
 	"speed": "res://assets/ui/ui_speed.png",
 	"crit": "res://assets/ui/ui_crit.png",
 	"perfect": "res://assets/ui/ui_perfect.png",
+	"boss": "res://assets/ui/ui_boss.png",
+	"league": "res://assets/ui/ui_league_neon.png",
+	"chest": "res://assets/ui/ui_chest_common.png",
 	"upgrade": "res://assets/ui/ui_upgrades.png",
 }
 const SOUND_PATHS := {
@@ -2785,7 +2788,7 @@ func _add_reward_drop_lines(container: Control, drops: Dictionary) -> void:
 		if amount <= 0:
 			continue
 		var label := "%s: %s" % [_txt("Chest Found", "Baú Encontrado", "Cofre encontrado", "宝箱発見", "发现宝箱"), _chest_type_label(String(chest_type))]
-		container.add_child(_make_victory_line("upgrade", label, "x%s" % amount))
+		container.add_child(_make_victory_line("chest", label, "x%s" % amount))
 
 
 func _chest_type_label(chest_type: String) -> String:
