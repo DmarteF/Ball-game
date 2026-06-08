@@ -371,7 +371,90 @@ func get_achievements() -> Array[Dictionary]:
 	_append_phase_achievements(result)
 	_append_infinite_achievements(result)
 	_append_progress_achievements(result)
+	for i in range(result.size()):
+		result[i] = _normalize_achievement_metadata(Dictionary(result[i]))
 	return result
+
+
+func get_achievement_summary() -> Dictionary:
+	_update_achievements(false)
+	var achievements: Dictionary = data.get("achievements", {})
+	var summary := {
+		"total": 0,
+		"completed": 0,
+		"claimed": 0,
+		"claimable": 0,
+		"by_category": {},
+	}
+	for achievement in get_achievements():
+		var id := String(achievement.get("id", ""))
+		if id.is_empty():
+			continue
+		var category := String(achievement.get("category", "progress"))
+		var state: Dictionary = achievements.get(id, {})
+		var completed := bool(state.get("completed", false))
+		var claimed := bool(state.get("claimed", false))
+		var claimable := completed and not claimed
+		summary["total"] = int(summary.get("total", 0)) + 1
+		if completed:
+			summary["completed"] = int(summary.get("completed", 0)) + 1
+		if claimed:
+			summary["claimed"] = int(summary.get("claimed", 0)) + 1
+		if claimable:
+			summary["claimable"] = int(summary.get("claimable", 0)) + 1
+		var by_category: Dictionary = summary.get("by_category", {})
+		var category_summary: Dictionary = by_category.get(category, {
+			"total": 0,
+			"completed": 0,
+			"claimed": 0,
+			"claimable": 0,
+		})
+		category_summary["total"] = int(category_summary.get("total", 0)) + 1
+		if completed:
+			category_summary["completed"] = int(category_summary.get("completed", 0)) + 1
+		if claimed:
+			category_summary["claimed"] = int(category_summary.get("claimed", 0)) + 1
+		if claimable:
+			category_summary["claimable"] = int(category_summary.get("claimable", 0)) + 1
+		by_category[category] = category_summary
+		summary["by_category"] = by_category
+	return summary
+
+
+func _normalize_achievement_metadata(achievement: Dictionary) -> Dictionary:
+	var category := String(achievement.get("category", ""))
+	if category == "collection":
+		category = "skins"
+	if category.is_empty():
+		category = _infer_achievement_category(achievement)
+	achievement["category"] = category
+	if not achievement.has("subtype") or String(achievement.get("subtype", "")).is_empty():
+		achievement["subtype"] = category
+	return achievement
+
+
+func _infer_achievement_category(achievement: Dictionary) -> String:
+	var id := String(achievement.get("id", "")).to_lower()
+	var metric := String(achievement.get("metric", "")).to_lower()
+	var reward: Dictionary = Dictionary(achievement.get("reward", {}))
+	var reward_type := String(reward.get("type", "")).to_lower()
+	if id.begins_with("skin_") or metric.begins_with("skin") or reward_type == "skin":
+		return "skins"
+	if id.begins_with("unlock_") or reward_type in ["upgrade", "run_upgrade", "upgrade_unlock"] or metric.contains("upgrade"):
+		return "upgrades"
+	if id.begins_with("phase_") or metric in ["highestphase", "phasewins", "phasecompletions"]:
+		return "phases"
+	if id.begins_with("infinite_") or metric.contains("infinite"):
+		return "infinite"
+	if id.contains("boss") or metric.contains("boss"):
+		return "boss"
+	if id.contains("league") or metric.contains("league"):
+		return "league"
+	if id.contains("daily") or id.contains("wheel") or id.contains("event") or metric.contains("daily") or metric.contains("wheel") or metric.contains("event"):
+		return "daily"
+	if metric.contains("ring") or metric.contains("perfect") or metric.contains("coin") or metric.contains("chest") or metric.contains("diamond") or metric.contains("combo") or metric.contains("critical"):
+		return "progress"
+	return "progress"
 
 
 func _append_skin_collection_achievements(result: Array[Dictionary]) -> void:

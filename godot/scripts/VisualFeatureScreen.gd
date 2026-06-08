@@ -814,11 +814,28 @@ func _populate_missions() -> void:
 func _populate_achievements() -> void:
 	GameState._update_achievements(false)
 	var all_achievements := GameState.get_achievements()
+	var summary := GameState.get_achievement_summary()
 	var pending_claims := 0
 	for achievement in all_achievements:
 		var state: Dictionary = GameState.data.get("achievements", {}).get(String(achievement.get("id", "")), {})
 		if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
 			pending_claims += 1
+	_content.add_child(_make_feature_card({
+		"title": _tr("achievements"),
+		"desc": "%s/%s • %s: %s • %s: %s" % [
+			int(summary.get("completed", 0)),
+			int(summary.get("total", all_achievements.size())),
+			_txt("Ready", "Prontas", "Listas", "受取可", "可领取"),
+			int(summary.get("claimable", pending_claims)),
+			_txt("Claimed", "Coletadas", "Cobradas", "受取済み", "已领取"),
+			int(summary.get("claimed", 0)),
+		],
+		"icon": "achievements",
+		"button": "done",
+		"tone": "#ffd700",
+		"progress": float(int(summary.get("completed", 0))) / max(1.0, float(int(summary.get("total", all_achievements.size())))),
+		"disabled": true,
+	}))
 	_content.add_child(_make_feature_card({
 		"title": _tr("claim_all"),
 		"desc": (_txt("%s achievement reward(s) ready to claim.", "%s conquista(s) prontas para coletar.", "%s recompensa(s) de logro listas para cobrar.", "%s個の実績報酬を受け取れます。", "%s个成就奖励可领取。") % pending_claims) if pending_claims > 0 else _txt("No pending achievements.", "Nenhuma conquista pendente.", "No hay logros pendientes.", "保留中の実績はありません。", "没有待领取成就。"),
@@ -829,9 +846,13 @@ func _populate_achievements() -> void:
 		"disabled": pending_claims <= 0,
 	}))
 	_content.add_child(_make_achievement_filter_row())
+	var visible_achievements: Array[Dictionary] = []
 	for achievement in all_achievements:
 		if not _achievement_matches_filter(achievement):
 			continue
+		visible_achievements.append(achievement)
+	visible_achievements.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return _achievement_sort_less(a, b))
+	for achievement in visible_achievements:
 		var id := String(achievement["id"])
 		var state: Dictionary = GameState.data.get("achievements", {}).get(id, {})
 		var progress := int(state.get("progress", 0))
@@ -850,20 +871,24 @@ func _populate_achievements() -> void:
 		}))
 
 
-func _make_achievement_filter_row() -> HBoxContainer:
+func _make_achievement_filter_row() -> Control:
+	var summary := GameState.get_achievement_summary()
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 46)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_theme_constant_override("separation", 10)
-	for filter in [
-		{ "id": "all", "label": _txt("All", "Todas", "Todos", "すべて", "全部") },
-		{ "id": "skins", "label": _txt("Skins / Collection", "Skins / Colecao", "Skins / Coleccion", "スキン/コレクション", "皮肤/收藏") },
-	]:
+	scroll.add_child(row)
+	for filter in _achievement_filter_defs(summary):
 		var button := Button.new()
 		button.text = String(filter["label"])
-		button.custom_minimum_size = Vector2(0, 42)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size = Vector2(108, 42)
+		button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		button.add_theme_font_override("font", _bold_font)
-		button.add_theme_font_size_override("font_size", 14)
+		button.add_theme_font_size_override("font_size", 12)
 		button.add_theme_color_override("font_color", Color("#001018") if String(filter["id"]) == _achievement_filter else Color("#ffffff"))
 		var tone := "#00f0ff" if String(filter["id"]) == _achievement_filter else "#ffffff22"
 		var border := "#ffffff" if String(filter["id"]) == _achievement_filter else "#00f0ff55"
@@ -874,17 +899,110 @@ func _make_achievement_filter_row() -> HBoxContainer:
 			_build_screen()
 		)
 		row.add_child(button)
-	return row
+	return scroll
+
+
+func _achievement_filter_defs(summary: Dictionary) -> Array[Dictionary]:
+	var filters: Array[Dictionary] = [
+		{ "id": "all", "label": _filter_label(_txt("All", "Todas", "Todos", "すべて", "全部"), int(summary.get("completed", 0)), int(summary.get("total", 0))) },
+		{ "id": "ready", "label": _filter_label(_txt("Ready", "Prontas", "Listas", "受取可", "可领取"), int(summary.get("claimable", 0)), int(summary.get("claimable", 0))) },
+	]
+	for category_id in ["phases", "infinite", "boss", "league", "skins", "upgrades", "progress", "daily"]:
+		var by_category: Dictionary = summary.get("by_category", {})
+		var category_summary: Dictionary = by_category.get(category_id, {})
+		if int(category_summary.get("total", 0)) <= 0:
+			continue
+		filters.append({
+			"id": category_id,
+			"label": _filter_label(_achievement_category_label(category_id), int(category_summary.get("completed", 0)), int(category_summary.get("total", 0))),
+		})
+	return filters
+
+
+func _filter_label(label: String, value: int, total: int) -> String:
+	if total <= 0:
+		return label
+	if value == total and label in [_txt("Ready", "Prontas", "Listas", "受取可", "可领取")]:
+		return "%s %s" % [label, value]
+	return "%s %s/%s" % [label, value, total]
+
+
+func _achievement_category_label(category_id: String) -> String:
+	match category_id:
+		"phases":
+			return _txt("Phases", "Fases", "Fases", "フェーズ", "关卡")
+		"infinite":
+			return _txt("Infinite", "Infinito", "Infinito", "無限", "无限")
+		"boss":
+			return _txt("Boss", "Boss", "Boss", "ボス", "Boss")
+		"league":
+			return _txt("League", "Liga", "Liga", "リーグ", "联赛")
+		"skins":
+			return _txt("Skins", "Skins", "Skins", "スキン", "皮肤")
+		"upgrades":
+			return _txt("Upgrades", "Melhorias", "Mejoras", "強化", "升级")
+		"progress":
+			return _txt("Progress", "Progresso", "Progreso", "進行", "进度")
+		"daily":
+			return _txt("Daily", "Diárias", "Diarias", "デイリー", "每日")
+	return category_id.capitalize()
 
 
 func _achievement_matches_filter(achievement: Dictionary) -> bool:
 	if _achievement_filter == "all":
 		return true
+	if _achievement_filter == "ready":
+		var ready_state: Dictionary = GameState.data.get("achievements", {}).get(String(achievement.get("id", "")), {})
+		return bool(ready_state.get("completed", false)) and not bool(ready_state.get("claimed", false))
 	var category := String(achievement.get("category", ""))
-	var id := String(achievement.get("id", ""))
-	var metric := String(achievement.get("metric", ""))
-	var reward: Dictionary = Dictionary(achievement.get("reward", {}))
-	return category in ["skins", "collection"] or id.begins_with("skin_") or metric.begins_with("skin") or String(reward.get("type", "")) == "skin"
+	return category == _achievement_filter
+
+
+func _achievement_sort_less(a: Dictionary, b: Dictionary) -> bool:
+	var state_a: Dictionary = GameState.data.get("achievements", {}).get(String(a.get("id", "")), {})
+	var state_b: Dictionary = GameState.data.get("achievements", {}).get(String(b.get("id", "")), {})
+	var rank_a := _achievement_state_rank(state_a)
+	var rank_b := _achievement_state_rank(state_b)
+	if rank_a != rank_b:
+		return rank_a < rank_b
+	var category_a := _achievement_category_order(String(a.get("category", "progress")))
+	var category_b := _achievement_category_order(String(b.get("category", "progress")))
+	if category_a != category_b:
+		return category_a < category_b
+	var rarity_a := _achievement_rarity_order(String(a.get("rarity", "common")))
+	var rarity_b := _achievement_rarity_order(String(b.get("rarity", "common")))
+	if rarity_a != rarity_b:
+		return rarity_a < rarity_b
+	return String(a.get("name", "")) < String(b.get("name", ""))
+
+
+func _achievement_state_rank(state: Dictionary) -> int:
+	if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
+		return 0
+	if not bool(state.get("completed", false)):
+		return 1
+	return 2
+
+
+func _achievement_category_order(category_id: String) -> int:
+	var order := ["phases", "infinite", "boss", "league", "skins", "upgrades", "progress", "daily"]
+	var index := order.find(category_id)
+	return index if index >= 0 else 99
+
+
+func _achievement_rarity_order(rarity: String) -> int:
+	match rarity.to_lower():
+		"ultimate":
+			return 0
+		"mythic":
+			return 1
+		"legendary":
+			return 2
+		"epic":
+			return 3
+		"rare":
+			return 4
+	return 5
 
 
 func _localized_definition_title(definition: Dictionary) -> String:

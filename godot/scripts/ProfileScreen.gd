@@ -1,6 +1,7 @@
 extends Control
 
 const MENU_SCENE := "res://scenes/MainMenu.tscn"
+const ACHIEVEMENTS_SCENE := "res://scenes/Achievements.tscn"
 const NeonBackButtonScript := preload("res://scripts/NeonBackButton.gd")
 
 const ICON_PATHS := {
@@ -177,7 +178,8 @@ func _make_account_card() -> PanelContainer:
 	resources.add_child(_make_resource("key", str(GameState.data.get("keys", 0))))
 	resources.add_child(_make_resource("legendary_key", str(GameState.data.get("legendary_keys", 0))))
 
-	var achievements := _make_outline_button("%s 0/32" % _tr("achievements").to_upper(), "achievements", "#ffd70022", "#ffd70088", "#ffd700")
+	var achievements := _make_outline_button(_achievement_counter_text(), "achievements", "#ffd70022", "#ffd70088", "#ffd700")
+	achievements.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCENE))
 	body.add_child(achievements)
 	return card
 
@@ -709,6 +711,17 @@ func _make_outline_button(text: String, icon_key: String, bg: String, border: St
 	row.add_child(_make_icon(icon_key, 18))
 	row.add_child(_make_label(text, 14, color, _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return button
+
+
+func _achievement_counter_text() -> String:
+	var summary := GameState.get_achievement_summary() if has_node("/root/GameState") else { "completed": 0, "total": 0, "claimable": 0 }
+	var completed := int(summary.get("completed", 0))
+	var total := int(summary.get("total", 0))
+	var claimable := int(summary.get("claimable", 0))
+	var text := "%s %s/%s" % [_tr("achievements").to_upper(), completed, total]
+	if claimable > 0:
+		text += " • %s" % _txt("%s READY" % claimable, "%s PRONTAS" % claimable, "%s LISTAS" % claimable, "%s受取可" % claimable, "%s可领取" % claimable)
+	return text
 
 
 func _make_solid_button(text: String, bg: String, color: String, width: float, height: float) -> Button:

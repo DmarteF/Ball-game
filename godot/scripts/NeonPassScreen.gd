@@ -97,7 +97,7 @@ func _build_layout() -> void:
 func _make_header_card() -> PanelContainer:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_theme_stylebox_override("panel", _make_style("#160824ee", 18, "#00f0ff66", 1, "#00f0ff55", 18))
+	card.add_theme_stylebox_override("panel", _make_style("#12051ff2", 22, "#00f0ff88", 1, "#00f0ff55", 22))
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 16)
@@ -110,11 +110,32 @@ func _make_header_card() -> PanelContainer:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	var title := _make_label(_tr("neon_pass").to_upper(), 30, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	var hero := HBoxContainer.new()
+	hero.add_theme_constant_override("separation", 12)
+	column.add_child(hero)
+	var badge := PanelContainer.new()
+	badge.custom_minimum_size = Vector2(76, 76)
+	badge.add_theme_stylebox_override("panel", _make_style("#00f0ff22", 22, "#00f0ff", 1, "#00f0ffaa", 14))
+	hero.add_child(badge)
+	var badge_center := CenterContainer.new()
+	badge.add_child(badge_center)
+	var badge_stack := VBoxContainer.new()
+	badge_stack.alignment = BoxContainer.ALIGNMENT_CENTER
+	badge_center.add_child(badge_stack)
+	badge_stack.add_child(_make_label("NEON", 10, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	badge_stack.add_child(_make_label("PASS", 16, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+
+	var hero_text := VBoxContainer.new()
+	hero_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hero_text.add_theme_constant_override("separation", 4)
+	hero.add_child(hero_text)
+	var title := _make_label(_tr("neon_pass").to_upper(), 29, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
 	title.add_theme_constant_override("letter_spacing", 2)
 	title.add_theme_color_override("font_outline_color", Color("#00f0ff66"))
 	title.add_theme_constant_override("outline_size", 5)
-	column.add_child(title)
+	hero_text.add_child(title)
+	hero_text.add_child(_make_label(_season_name(), 16, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	hero_text.add_child(_make_label("%s %s • %s 40" % [_tr("week"), int(_pass_state.get("week_index", 1)), _tr("level")], 12, "#ffffffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
 
 	var meta_grid := GridContainer.new()
 	meta_grid.columns = 2
@@ -154,6 +175,7 @@ func _make_header_card() -> PanelContainer:
 	xp_row.add_child(level_label)
 	xp_row.add_child(_make_label("%s %s/%s" % [_tr("pass_xp"), current_xp, needed_xp], 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT))
 	xp_column.add_child(_make_progress(float(current_xp) / float(needed_xp), "#00f0ff"))
+	xp_column.add_child(_make_progress(float(current_level) / float(max(1, int(_pass_state.get("max_level", 40)))), "#ff4fd8"))
 	if bool(_pass_state.get("cap_reached", false)):
 		xp_column.add_child(_make_label(_tr("weekly_cap_reached"), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 
@@ -176,7 +198,7 @@ func _make_header_card() -> PanelContainer:
 func _make_track_card() -> PanelContainer:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_theme_stylebox_override("panel", _make_style("#0b0616cc", 18, "#ff4fd866", 1, "#ff4fd833", 14))
+	card.add_theme_stylebox_override("panel", _make_style("#080412dd", 22, "#ff4fd866", 1, "#ff4fd844", 16))
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)
@@ -186,11 +208,91 @@ func _make_track_card() -> PanelContainer:
 	card.add_child(margin)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
+	column.add_child(_make_label(_txt("REWARD TRACK", "TRILHA DE RECOMPENSAS", "RUTA DE RECOMPENSAS", "報酬トラック", "奖励路线"), 18, "#ff4fd8", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(_make_label(_txt("Reach levels, light up rewards and collect everything unlocked.", "Avance níveis, ilumine recompensas e colete tudo que liberar.", "Sube niveles, ilumina recompensas y cobra lo desbloqueado.", "レベルを進めて報酬を光らせ、解放分を受け取ろう。", "提升等级，点亮奖励并领取已解锁内容。"), 12, "#ffffff99", _regular_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var grid := GridContainer.new()
+	grid.columns = 2 if get_viewport_rect().size.x <= 620.0 else 4
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	column.add_child(grid)
 	for level in range(1, 41):
-		column.add_child(_make_reward_row(level))
+		grid.add_child(_make_reward_tile(level))
+	return card
+
+
+func _make_reward_tile(level: int) -> PanelContainer:
+	var entry := _reward_entry(level)
+	var reached := bool(entry.get("reached", false))
+	var claimed := bool(entry.get("claimed", false))
+	var available := bool(entry.get("available", false))
+	var capped := bool(entry.get("capped", false))
+	var rarity := String(entry.get("rarity", "common")).to_lower()
+	var tone := _rarity_tone(rarity)
+	if available:
+		tone = "#ffd700"
+	elif claimed:
+		tone = "#00ff88"
+	elif capped:
+		tone = "#ff4fd8"
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(0, 178)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var bg := "#ffd70024" if available else "#00ff8818" if claimed else "#ff4fd812" if capped else "#ffffff0a"
+	card.add_theme_stylebox_override("panel", _make_style(bg, 16, tone, 1, tone.replace("ff", "66"), 12 if available else 5))
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	card.add_child(margin)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	margin.add_child(column)
+
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 6)
+	column.add_child(top)
+	var level_chip := PanelContainer.new()
+	level_chip.custom_minimum_size = Vector2(42, 30)
+	level_chip.add_theme_stylebox_override("panel", _make_style("#001018" if reached else "#101018", 10, tone, 1))
+	top.add_child(level_chip)
+	var chip_center := CenterContainer.new()
+	level_chip.add_child(chip_center)
+	chip_center.add_child(_make_label(str(level), 14, "#ffffff" if reached else "#ffffff88", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var state_label := _tr("reward_claimed") if claimed else _tr("claim") if available else _tr("weekly_cap") if capped else _tr("locked")
+	top.add_child(_make_label(state_label.to_upper(), 10, "#ffd700" if available else "#00ff88" if claimed else "#ffffff88", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT))
+
+	var reward_center := CenterContainer.new()
+	reward_center.custom_minimum_size = Vector2(0, 54)
+	column.add_child(reward_center)
+	reward_center.add_child(_make_reward_square(entry, claimed, available))
+
+	var title := _make_label(_localized_entry_title(entry), 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	title.clip_text = true
+	column.add_child(title)
+	column.add_child(_make_progress(_track_fill_for_level(level), tone))
+
+	var action := Button.new()
+	action.text = _tr("claim") if available else _tr("view_reward")
+	action.custom_minimum_size = Vector2(0, 32)
+	action.focus_mode = Control.FOCUS_NONE
+	action.disabled = claimed
+	action.add_theme_font_override("font", _bold_font)
+	action.add_theme_font_size_override("font_size", 10)
+	action.add_theme_color_override("font_color", Color("#001018") if available else Color("#ffffff"))
+	action.add_theme_color_override("font_disabled_color", Color("#ffffff88"))
+	_apply_button_style(action, _make_style("#ffd700" if available else "#ffffff14", 10, tone, 1, tone.replace("ff", "66"), 5))
+	if available:
+		action.pressed.connect(func() -> void: _claim_reward(level))
+	else:
+		action.pressed.connect(func() -> void: _show_reward_preview(entry))
+	column.add_child(action)
 	return card
 
 
@@ -281,6 +383,21 @@ func _make_reward_square(entry: Dictionary, claimed: bool, available: bool) -> P
 	else:
 		stack.add_child(_make_label("!", 15, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	return square
+
+
+func _rarity_tone(rarity: String) -> String:
+	match rarity.to_lower():
+		"ultimate":
+			return "#ffffff"
+		"mythic":
+			return "#ff4fd8"
+		"legendary":
+			return "#ffd700"
+		"epic":
+			return "#b000ff"
+		"rare":
+			return "#00f0ff"
+	return "#00ff88"
 
 
 func _reward_entry(level: int) -> Dictionary:
@@ -698,6 +815,10 @@ func _format_remaining(seconds: int) -> String:
 
 func _tr(key: String) -> String:
 	return LocalizationManager.tr_key(key) if has_node("/root/LocalizationManager") else key
+
+
+func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
+	return LocalizationManager.text(en, pt, es, ja, zh) if has_node("/root/LocalizationManager") else en
 
 
 func _fill(control: Control) -> void:
