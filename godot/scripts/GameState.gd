@@ -1060,37 +1060,34 @@ func claim_afk_rewards(double_reward := false) -> Dictionary:
 	if rewards.is_empty() or bool(rewards.get("claimed", false)) or not bool(rewards.get("valid", false)):
 		return { "ok": false, "reason": "no_afk" }
 	var multiplier := 2 if double_reward and not bool(rewards.get("doubled", false)) else 1
+	rewards["claimed"] = true
+	rewards["doubled"] = multiplier > 1
+	data["pending_afk_rewards"] = rewards
 	var coins := int(rewards.get("coins", 0)) * multiplier
 	var xp := int(rewards.get("xp", 0)) * multiplier
+	var pass_xp := int(rewards.get("pass_xp", 0)) * multiplier
 	var diamonds := int(rewards.get("diamonds", 0)) * multiplier
 	var keys := int(rewards.get("keys", 0)) * multiplier
-	var chests := int(rewards.get("chests", 0)) * multiplier
+	var chests := int(rewards.get("chests", 0))
 	var chest_type := String(rewards.get("chest_type", "common"))
 	if coins > 0:
-		data["coins"] = max(0, int(data.get("coins", 0)) + coins)
+		apply_reward({ "type": "coins", "amount": coins }, false)
 		_increment_stat("runCoins", coins, false)
-		_add_earning_stats(coins, 0, 0, 0)
 	if xp > 0:
-		data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
-		data["xp"] = max(0, int(data.get("xp", 0)) + xp)
-		_add_earning_stats(0, xp, 0, 0)
-		while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
-			data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
-			data["level"] = int(data.get("level", 1)) + 1
+		apply_reward({ "type": "xp", "amount": xp }, false)
+	if pass_xp > 0:
+		add_neon_pass_xp(pass_xp, "offline_rewards")
 	if diamonds > 0:
-		data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
-		_increment_stat("diamondsFound", diamonds, false)
-		_add_earning_stats(0, 0, diamonds, 0)
+		apply_reward({ "type": "diamonds", "amount": diamonds }, false)
 	if keys > 0:
-		data["keys"] = max(0, int(data.get("keys", 0)) + keys)
-		_add_earning_stats(0, 0, 0, keys)
+		apply_reward({ "type": "keys", "amount": keys }, false)
 	if chests > 0 and not chest_type.is_empty():
-		add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, chests)
+		apply_reward({ "type": "chest", "chest_type": chest_type, "amount": chests }, false)
 	var now := TimeManager.get_now_timestamp()
 	data["pending_afk_rewards"] = {}
 	data["last_afk_claim_timestamp"] = now
 	data["last_exit_at"] = now
-	data["last_reward_text"] = _afk_reward_text(coins, xp, diamonds, keys, chests, chest_type)
+	data["last_reward_text"] = _afk_reward_text(coins, xp, pass_xp, diamonds, keys, chests, chest_type)
 	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
@@ -1099,6 +1096,7 @@ func claim_afk_rewards(double_reward := false) -> Dictionary:
 		"reward": {
 			"coins": coins,
 			"xp": xp,
+			"pass_xp": pass_xp,
 			"diamonds": diamonds,
 			"keys": keys,
 			"chests": chests,
@@ -1109,12 +1107,14 @@ func claim_afk_rewards(double_reward := false) -> Dictionary:
 	}
 
 
-func _afk_reward_text(coins: int, xp: int, diamonds: int, keys: int, chests: int, chest_type: String) -> String:
+func _afk_reward_text(coins: int, xp: int, pass_xp: int, diamonds: int, keys: int, chests: int, chest_type: String) -> String:
 	var parts: Array[String] = []
 	if coins > 0:
 		parts.append("+%s coins" % coins)
 	if xp > 0:
 		parts.append("+%s XP" % xp)
+	if pass_xp > 0:
+		parts.append("+%s Pass XP" % pass_xp)
 	if diamonds > 0:
 		parts.append("+%s diamonds" % diamonds)
 	if keys > 0:
@@ -4091,13 +4091,17 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 	var reward: Dictionary = Dictionary(definition.get("reward", { "type": "coins", "amount": 80 })).duplicate(true)
 	if result != "win":
 		reward = { "type": "coins", "amount": max(25, floori(float(int(reward.get("amount", 100))) * 0.35)) }
-	var coins_bonus: int = int(summary.get("coins", 0)) + (int(reward.get("amount", 0)) if String(reward.get("type", "")) == "coins" else 0)
+	var boss_phase_reward := LevelData.get_phase_config(_boss_equivalent_phase(level_id))
+	var boss_outcome_multiplier := 1.0 if result == "win" else 0.35
+	var coins_bonus: int = int(summary.get("coins", 0)) + floori(float(int(boss_phase_reward.get("reward_coins", 120))) * boss_outcome_multiplier)
 	var run_upgrade_levels: Dictionary = summary.get("run_upgrade_levels", {})
-	var xp_bonus: int = maxi(30, int(summary.get("xp", 0)) + int(definition.get("xp", 60)) + int(run_upgrade_levels.get("bossHunter", 0)) * 20)
+	var xp_bonus: int = maxi(30, int(summary.get("xp", 0)) + floori(float(int(boss_phase_reward.get("reward_xp", 90))) * boss_outcome_multiplier) + int(run_upgrade_levels.get("bossHunter", 0)) * 6)
+	if String(reward.get("type", "")) == "coins":
+		reward["amount"] = floori(float(int(boss_phase_reward.get("reward_coins", 120))) * boss_outcome_multiplier)
 	var diamonds_bonus := 0
 	if coins_bonus > 0:
 		data["coins"] = int(data.get("coins", 0)) + coins_bonus
-		_add_earning_stats(coins_bonus, 0, 0, 0)
+		_add_earning_stats(coins_bonus, xp_bonus, 0, 0)
 	if String(reward.get("type", "")) != "coins":
 		apply_reward(reward)
 	if result == "win":
@@ -4166,6 +4170,20 @@ func _boss_level_index(level_id: String) -> int:
 		if String(Dictionary(levels[i]).get("id", "")) == level_id:
 			return i
 	return 0
+
+
+func _boss_equivalent_phase(level_id: String) -> int:
+	match level_id:
+		"strong":
+			return 25
+		"elite":
+			return 45
+		"legendary":
+			return 70
+		"impossible":
+			return 95
+		_:
+			return 12
 
 
 func boss_level_definition(level_id: String) -> Dictionary:
@@ -5089,20 +5107,12 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	var bonus_diamonds := diamonds
 	if randf() < float(phase_config.get("diamond_chance", 0.0)):
 		bonus_diamonds += 1
-	var bonus_keys := 0
-	if randf() < float(phase_config.get("key_chance", 0.0)):
-		bonus_keys = 1
-	var chest_rewarded := false
-	if randf() < float(phase_config.get("chest_chance", 0.0)):
-		chest_rewarded = true
-		var chest_type := _phase_chest_type(phase)
-		add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, 1)
+	var reward_drops := _roll_phase_reward_drops(phase)
 	data["coins"] = max(0, int(data.get("coins", 0)) + coins + bonus_coins)
 	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + bonus_diamonds)
-	data["keys"] = max(0, int(data.get("keys", 0)) + bonus_keys)
 	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp + bonus_xp)
 	data["xp"] = max(0, int(data.get("xp", 0)) + xp + bonus_xp)
-	_add_earning_stats(coins + bonus_coins, xp + bonus_xp, bonus_diamonds, bonus_keys)
+	_add_earning_stats(coins + bonus_coins, xp + bonus_xp, bonus_diamonds, 0)
 	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
 		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
 		data["level"] = int(data.get("level", 1)) + 1
@@ -5119,8 +5129,6 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + bonus_diamonds
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins + bonus_coins
 	stats["totalPlayTimeSeconds"] = int(stats.get("totalPlayTimeSeconds", 0)) + max(0, seconds)
-	if chest_rewarded:
-		stats["chestsEarned"] = int(stats.get("chestsEarned", 0)) + 1
 	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), best_combo)
 	stats["criticals"] = int(stats.get("criticals", 0)) + criticals
 	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + skin_effects
@@ -5130,6 +5138,7 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), min(MAX_PHASE, phase + 1))
 	data["current_phase"] = max(int(data.get("current_phase", 1)), min(MAX_PHASE, phase + 1))
 	data["stats"] = stats
+	_grant_reward_drops(reward_drops, "phase")
 	_track_skin_mode_usage("phase", true, max(0, seconds), rings_destroyed, perfect_escapes)
 	_progress_missions("runsPlayed", 1)
 	_progress_missions("phaseWins", 1)
@@ -5151,8 +5160,9 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 		"coins": coins + bonus_coins,
 		"xp": xp + bonus_xp,
 		"diamonds": bonus_diamonds,
-		"keys": bonus_keys,
-		"chest_rewarded": chest_rewarded,
+		"keys": int(reward_drops.get("keys", 0)),
+		"chest_rewarded": int(reward_drops.get("chests", 0)) > 0,
+		"reward_drops": reward_drops,
 		"first_win_bonus": first_win,
 	}
 
@@ -5204,6 +5214,8 @@ func record_infinite_run(summary: Dictionary) -> Dictionary:
 	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + skin_effect_value
 	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + run_upgrade_value
 	data["stats"] = stats
+	var reward_drops := _roll_infinite_reward_drops(summary)
+	_grant_reward_drops(reward_drops, "infinite")
 	_track_skin_mode_usage("infinite", false, seconds, rings_value, perfect_value)
 	_progress_missions("runsPlayed", 1)
 	_progress_missions("infiniteRuns", 1)
@@ -5229,6 +5241,7 @@ func record_infinite_run(summary: Dictionary) -> Dictionary:
 		"diamonds": diamonds,
 		"rings": rings_value,
 		"seconds": seconds,
+		"reward_drops": reward_drops,
 		"first_win_bonus": first_win,
 	}
 
@@ -5310,7 +5323,7 @@ func record_mode_quit(mode: String, summary: Dictionary) -> void:
 	var diamonds: int = max(0, int(summary.get("diamonds", 0)))
 	data["coins"] = int(data.get("coins", 0)) + coins
 	data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
-	_add_earning_stats(coins, 0, diamonds, 0)
+	_add_earning_stats(coins, xp, diamonds, 0)
 	add_profile_xp(xp)
 	var stats: Dictionary = data.get("stats", {})
 	stats["runsPlayed"] = int(stats.get("runsPlayed", 0)) + 1
@@ -5391,8 +5404,10 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 		league["last_reward"] = "initial_neon_champion"
 	data["league"] = league
 
-	var coins: int = max(10, int(summary.get("coins", 0)) + (360 if result == "win" else 95 if result == "loss" else 25))
-	var xp: int = max(8, int(summary.get("xp", 0)) + (180 if result == "win" else 65 if result == "loss" else 12))
+	var league_phase_reward := LevelData.get_phase_config(_league_equivalent_phase(rank_id))
+	var league_outcome_multiplier := 1.0 if result == "win" else 0.42 if result == "loss" else 0.18
+	var coins: int = max(10, int(summary.get("coins", 0)) + floori(float(int(league_phase_reward.get("reward_coins", 120))) * league_outcome_multiplier))
+	var xp: int = max(8, int(summary.get("xp", 0)) + floori(float(int(league_phase_reward.get("reward_xp", 90))) * league_outcome_multiplier))
 	var diamonds: int = max(0, int(summary.get("diamonds", 0)))
 	if result == "win" and randf() < 0.35:
 		diamonds += 4
@@ -5400,7 +5415,7 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 		add_inventory_item("chest_rare", "chest", "Chest Rare", "rare", 1)
 	data["coins"] = int(data.get("coins", 0)) + coins
 	data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
-	_add_earning_stats(coins, 0, diamonds, 0)
+	_add_earning_stats(coins, xp, diamonds, 0)
 	add_profile_xp(xp)
 	add_neon_pass_source_xp("league_battle")
 	var first_win := {}
@@ -5461,6 +5476,22 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	return { "coins": coins, "xp": xp, "diamonds": diamonds, "trophy_delta": trophy_delta, "trophies": trophies, "rank": rank, "promotion_skin": promotion_skin_id, "first_win_bonus": first_win }
 
 
+func _league_equivalent_phase(rank_id: String) -> int:
+	match rank_id:
+		"silver":
+			return 16
+		"gold":
+			return 30
+		"diamond":
+			return 55
+		"legendary":
+			return 75
+		"ultimate":
+			return 92
+		_:
+			return 8
+
+
 func set_audio_muted(muted: bool) -> void:
 	data["settings"]["audio_muted"] = muted
 	data["settings"]["master_muted"] = muted
@@ -5492,8 +5523,150 @@ func get_setting(key: String, fallback = null):
 	return data.get("settings", {}).get(key, fallback)
 
 
+func debug_force_chest_drop_next_win() -> void:
+	data["debug_force_chest_drop_next_win"] = true
+	save_game()
+
+
+func debug_force_key_drop_next_win() -> void:
+	data["debug_force_key_drop_next_win"] = true
+	save_game()
+
+
+func debug_reward_drop_chances() -> Dictionary:
+	var phase := clampi(int(data.get("current_phase", 1)), 1, MAX_PHASE)
+	var phase_config := LevelData.get_phase_config(phase)
+	var infinite_sample := {
+		"seconds": 180,
+		"rings": 30,
+	}
+	return {
+		"phase": phase,
+		"phase_key_chance": float(phase_config.get("key_chance", 0.0)),
+		"phase_chest_chance": float(phase_config.get("chest_chance", 0.0)),
+		"phase_chest_type_preview": _phase_chest_type_preview(phase),
+		"infinite_sample_seconds": int(infinite_sample["seconds"]),
+		"infinite_sample_rings": int(infinite_sample["rings"]),
+		"infinite_key_chance": _infinite_key_drop_chance(infinite_sample),
+		"infinite_chest_chance": _infinite_chest_drop_chance(infinite_sample),
+		"forced_chest_next_win": bool(data.get("debug_force_chest_drop_next_win", false)),
+		"forced_key_next_win": bool(data.get("debug_force_key_drop_next_win", false)),
+	}
+
+
 func _xp_needed_for_level(player_level: int) -> int:
 	return floori(130.0 * pow(max(1, player_level), 1.50))
+
+
+func _empty_reward_drops(source: String, chances: Dictionary = {}) -> Dictionary:
+	return {
+		"source": source,
+		"keys": 0,
+		"chests": 0,
+		"chest_types": {},
+		"chances": chances,
+	}
+
+
+func _roll_phase_reward_drops(phase: int) -> Dictionary:
+	var phase_config := LevelData.get_phase_config(phase)
+	var key_chance := clampf(float(phase_config.get("key_chance", 0.0)), 0.0, 1.0)
+	var chest_chance := clampf(float(phase_config.get("chest_chance", 0.0)), 0.0, 1.0)
+	var result := _empty_reward_drops("phase", {
+		"key": key_chance,
+		"chest": chest_chance,
+	})
+	var force_key := bool(data.get("debug_force_key_drop_next_win", false))
+	var force_chest := bool(data.get("debug_force_chest_drop_next_win", false))
+	if force_key:
+		data["debug_force_key_drop_next_win"] = false
+	if force_chest:
+		data["debug_force_chest_drop_next_win"] = false
+	if force_key or randf() < key_chance:
+		result["keys"] = 1
+	if force_chest or randf() < chest_chance:
+		var chest_type := _phase_chest_type(phase)
+		result["chests"] = 1
+		result["chest_types"] = { chest_type: 1 }
+	return result
+
+
+func _roll_infinite_reward_drops(summary: Dictionary) -> Dictionary:
+	var seconds: int = maxi(0, int(summary.get("seconds", 0)))
+	var rings: int = maxi(0, int(summary.get("rings", 0)))
+	var key_chance: float = _infinite_key_drop_chance(summary)
+	var chest_chance: float = _infinite_chest_drop_chance(summary)
+	var result: Dictionary = _empty_reward_drops("infinite", {
+		"key": key_chance,
+		"chest": chest_chance,
+	})
+	if seconds < 30 and rings < 10:
+		return result
+	var force_key: bool = bool(data.get("debug_force_key_drop_next_win", false))
+	var force_chest: bool = bool(data.get("debug_force_chest_drop_next_win", false))
+	if force_key:
+		data["debug_force_key_drop_next_win"] = false
+	if force_chest:
+		data["debug_force_chest_drop_next_win"] = false
+	if force_key or randf() < key_chance:
+		result["keys"] = 1
+	if force_chest or randf() < chest_chance:
+		var chest_type := _infinite_chest_type(seconds, rings)
+		result["chests"] = 1
+		result["chest_types"] = { chest_type: 1 }
+	return result
+
+
+func _grant_reward_drops(drops: Dictionary, source: String) -> void:
+	var keys := int(drops.get("keys", 0))
+	if keys > 0:
+		apply_reward({ "type": "keys", "amount": keys }, false)
+		_increment_stat("keysEarned", keys, false)
+		_progress_missions("keysEarned", keys)
+		_progress_missions("keysFound", keys)
+	var chest_count := 0
+	var chest_types: Dictionary = Dictionary(drops.get("chest_types", {}))
+	for chest_type in chest_types.keys():
+		var amount := int(chest_types[chest_type])
+		if amount <= 0:
+			continue
+		apply_reward({ "type": "chest", "chest_type": String(chest_type), "amount": amount }, false)
+		chest_count += amount
+	if chest_count > 0:
+		_increment_stat("chestsEarned", chest_count, false)
+		_progress_missions("chestsEarned", chest_count)
+		_progress_missions("chestsFound", chest_count)
+	if keys > 0 or chest_count > 0:
+		_increment_stat("rewardDrops", 1, false)
+		_increment_stat("%sRewardDrops" % source, 1, false)
+
+
+func _infinite_key_drop_chance(summary: Dictionary) -> float:
+	var seconds: int = maxi(0, int(summary.get("seconds", 0)))
+	var rings: int = maxi(0, int(summary.get("rings", 0)))
+	if seconds < 30 and rings < 10:
+		return 0.0
+	var minutes := float(seconds) / 60.0
+	return clampf(0.010 + minutes * 0.008 + float(rings) * 0.00035, 0.0, 0.18)
+
+
+func _infinite_chest_drop_chance(summary: Dictionary) -> float:
+	var seconds: int = maxi(0, int(summary.get("seconds", 0)))
+	var rings: int = maxi(0, int(summary.get("rings", 0)))
+	if seconds < 30 and rings < 10:
+		return 0.0
+	var minutes := float(seconds) / 60.0
+	return clampf(0.006 + minutes * 0.006 + float(rings) * 0.00025, 0.0, 0.16)
+
+
+func _infinite_chest_type(seconds: int, rings: int) -> String:
+	if (seconds >= 1800 or rings >= 300) and randf() < 0.06:
+		return "legendary"
+	if (seconds >= 900 or rings >= 160) and randf() < 0.24:
+		return "epic"
+	if (seconds >= 240 or rings >= 50) and randf() < 0.55:
+		return "rare"
+	return "common"
 
 
 func _phase_chest_type(phase: int) -> String:
@@ -5503,6 +5676,16 @@ func _phase_chest_type(phase: int) -> String:
 		return "epic"
 	if phase >= 20 and randf() < 0.42:
 		return "rare"
+	return "common"
+
+
+func _phase_chest_type_preview(phase: int) -> String:
+	if phase >= 90:
+		return "rare/epic/legendary"
+	if phase >= 60:
+		return "rare/epic"
+	if phase >= 20:
+		return "common/rare"
 	return "common"
 
 

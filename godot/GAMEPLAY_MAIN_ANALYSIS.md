@@ -1209,3 +1209,76 @@ Checklist:
 - Stats atualizam nos pontos corretos: sim
 - Debug funciona: sim
 - Traducoes adicionadas: sim
+
+## Atualizacao - AFK/Offline Finalizado
+
+O sistema AFK/offline existente foi conectado ao fluxo real de abertura do jogo sem criar sistema paralelo.
+
+Fluxo:
+- `GameState.load_game()` compara `last_exit_at` com o horario atual e usa `TimeManager.calculate_afk_rewards()`.
+- O minimo para recompensa continua sendo 5 minutos offline.
+- O limite padrao continua sendo 8 horas, com protecao para tempo absurdo e relogio voltando.
+- `MainMenu.gd` mostra o modal `Offline Rewards / Recompensas Offline` apos o tutorial inicial.
+- A coleta normal chama `GameState.claim_afk_rewards(false)`.
+- Dobrar chama `AdManager.show_rewarded_ad("double_afk_rewards", ...)` e depois `GameState.claim_afk_rewards(true)`.
+
+Recompensas:
+- Moedas, XP normal, diamantes, chaves e baus sao aplicados via `GameState.apply_reward()` quando aplicavel.
+- XP do Passe Neon foi adicionado ao calculo offline como `pass_xp` e aplicado via `GameState.add_neon_pass_xp(pass_xp, "offline_rewards")`.
+- Baus nao sao duplicados pelo anuncio para evitar recompensas especiais repetidas indevidamente.
+
+Protecoes:
+- A recompensa pendente e marcada como `claimed` antes de aplicar valores, evitando duplicacao mesmo se houver save intermediario.
+- `pending_afk_rewards` e limpo depois da coleta.
+- `last_afk_claim_timestamp` e `last_exit_at` sao atualizados na coleta.
+- O botao `Double with Ad / Dobrar com Anuncio` desativa durante o anuncio para evitar duplo toque.
+
+Debug:
+- Simulate 10 min AFK: sim
+- Simulate 1h AFK: sim
+- Simulate 8h AFK: sim
+- Force Show AFK Modal: sim
+- Clear Pending AFK: sim
+
+Checklist:
+- AFK e calculado ao abrir: sim
+- Modal AFK aparece quando ha recompensa: sim
+- Coletar aplica recompensa: sim
+- Dobrar com anuncio funciona: sim
+- Recompensa nao duplica: sim
+- Limite maximo funciona: sim
+- Tempo negativo/relogio voltando tratado: sim
+- Debug AFK funciona: sim
+- Traducoes EN/PT adicionadas: sim
+
+## Drops de Recompensa por Fase e Infinito
+
+O fluxo de resultado agora usa as chances de recompensa ja cadastradas em `LevelData.gd`.
+
+Implementacao:
+- Fase normal vencida chama `GameState.record_phase_complete()`, que sorteia `key_chance` e `chest_chance`.
+- Modo infinito chama `GameState.record_infinite_run(summary)`, que calcula chances por tempo sobrevivido e aneis quebrados.
+- O resultado estruturado fica em `reward_drops`, com `keys`, `chests` e `chest_types`.
+- A aplicacao usa `GameState.apply_reward()` para manter inventario/save no mesmo caminho dos outros premios.
+- `GameplayManager.gd` le `reward_drops` e mostra as linhas de chave/bau no modal de vitoria ou resultado do infinito.
+
+Balanceamento:
+- Fases 1-15 priorizam chave/baú comum em chance baixa.
+- Fases 16-45 podem gerar baus comuns/raros e epicos com baixa chance nas fases altas.
+- Fases 46-100 aumentam chance de baus raros/epicos, com lendario apenas em fases avancadas.
+- Infinito ignora runs muito curtas e escala a chance gradualmente com tempo/aneis.
+
+Debug:
+- Force Chest Drop Next Win arma um bau garantido na proxima vitoria/resultado valido.
+- Force Key Drop Next Win arma uma chave garantida.
+- Print Reward Drop Chances mostra fase atual, chances e preview do infinito.
+
+Checklist:
+- Fases concedem chaves por chance: sim
+- Fases concedem baus por chance: sim
+- Modo infinito concede baus/chaves por desempenho: sim
+- Recompensas aparecem no modal: sim
+- Inventario atualiza: sim
+- Save funciona: sim
+- Missoes/conquistas atualizam metricas de chaves/baus: sim
+- Debug funciona: sim

@@ -244,6 +244,9 @@ func _make_debug_card() -> PanelContainer:
 		[_t("reset_daily_challenge"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily_challenge"), func() -> void: GameState.debug_reset_daily_challenge())],
 		[_t("reroll_daily_challenge"), "#00f0ff", func() -> void: _confirm_debug_action(_t("reroll_daily_challenge"), func() -> void: GameState.debug_randomize_daily_challenge_seed())],
 		[_t("next_daily_challenge"), "#00ff88", func() -> void: _confirm_debug_action(_t("next_daily_challenge"), func() -> void: GameState.debug_simulate_next_daily_challenge_day())],
+		[_t("force_chest_drop_next_win"), "#ffd700", _force_chest_drop_next_win],
+		[_t("force_key_drop_next_win"), "#ff5cff", _force_key_drop_next_win],
+		[_t("print_reward_drop_chances"), "#00f0ff", _print_reward_drop_chances],
 		[_t("force_event_index"), "#00f0ff", _show_force_event_index_modal],
 		[_t("next_event"), "#00ff88", func() -> void: _debug_event_action(func() -> void: GameState.debug_next_weekly_event())],
 		[_t("previous_event"), "#00ff88", func() -> void: _debug_event_action(func() -> void: GameState.debug_previous_weekly_event())],
@@ -567,6 +570,24 @@ func _debug_reset_profile_stats() -> void:
 func _print_profile_stats() -> void:
 	var snapshot := GameState.debug_profile_stats_snapshot()
 	_show_message_modal(_t("print_profile_stats"), JSON.stringify(snapshot, "\t"), "#00f0ff")
+	_refresh_debug_labels()
+
+
+func _force_chest_drop_next_win() -> void:
+	GameState.debug_force_chest_drop_next_win()
+	_show_toast(_t("force_chest_drop_next_win"))
+	_refresh_debug_labels()
+
+
+func _force_key_drop_next_win() -> void:
+	GameState.debug_force_key_drop_next_win()
+	_show_toast(_t("force_key_drop_next_win"))
+	_refresh_debug_labels()
+
+
+func _print_reward_drop_chances() -> void:
+	var snapshot := GameState.debug_reward_drop_chances()
+	_show_message_modal(_t("print_reward_drop_chances"), JSON.stringify(snapshot, "\t"), "#00f0ff")
 	_refresh_debug_labels()
 
 
@@ -1242,6 +1263,9 @@ func _t(key: String) -> String:
 		"reset_daily_challenge": return "Resetar Desafio Diário" if pt else "Reset Daily Challenge"
 		"reroll_daily_challenge": return "Trocar Seed do Desafio" if pt else "Change Challenge Seed"
 		"next_daily_challenge": return "Simular Próximo Dia" if pt else "Simulate Next Day"
+		"force_chest_drop_next_win": return "Forçar Baú na Próxima Vitória" if pt else "Force Chest Drop Next Win"
+		"force_key_drop_next_win": return "Forçar Chave na Próxima Vitória" if pt else "Force Key Drop Next Win"
+		"print_reward_drop_chances": return "Print Chances de Drop" if pt else "Print Reward Drop Chances"
 		"daily_challenge_seed": return "Seed do desafio" if pt else "Challenge seed"
 		"event": return "Evento" if pt else "Event"
 		"force_event_index": return "Forçar Evento Semanal" if pt else "Force Event Index"

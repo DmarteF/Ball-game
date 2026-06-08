@@ -1019,11 +1019,14 @@ func _finish_victory() -> void:
 	var global_coins_reward := _global_coins_from_run(run_coins * reward_multiplier, best_combo, true)
 	var diamond_reward := run_diamonds * reward_multiplier
 	var recorded := GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier, best_combo, criticals, skin_effects, run_upgrades, floori(run_elapsed))
-	pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": diamond_reward, "manual_quit": false, "victory": true, "first_win_bonus": Dictionary(recorded.get("first_win_bonus", {})).duplicate(true) }
+	var final_coins := int(recorded.get("coins", global_coins_reward))
+	var final_xp := int(recorded.get("xp", profile_xp_reward))
+	var final_diamonds := int(recorded.get("diamonds", diamond_reward))
+	pending_result_reward = { "coins": final_coins, "xp": final_xp, "diamonds": final_diamonds, "manual_quit": false, "victory": true, "reward_drops": Dictionary(recorded.get("reward_drops", {})).duplicate(true), "first_win_bonus": Dictionary(recorded.get("first_win_bonus", {})).duplicate(true) }
 	_spawn_particles(arena_center, Color("#00ff88"), 42, 180.0)
 	_play_sfx("victory")
 	_victory_title.text = _txt("LEVEL %s COMPLETE", "FASE %s CONCLUÍDA", "NIVEL %s COMPLETADO", "レベル%s完了", "关卡%s完成") % phase_id
-	_rebuild_victory_rewards(global_coins_reward, profile_xp_reward)
+	_rebuild_victory_rewards(final_coins, final_xp)
 	if _victory_unlock_label:
 		_victory_unlock_label.text = _txt("NEXT LEVEL UNLOCKED", "PRÓXIMA FASE LIBERADA", "SIGUIENTE NIVEL DESBLOQUEADO", "次のレベル解除", "下一关已解锁") if phase_id < LevelData.MAX_PHASE else _txt("ALL LEVELS COMPLETE", "TODAS AS FASES CONCLUÍDAS", "TODOS LOS NIVELES COMPLETADOS", "全レベル完了", "全部关卡完成")
 	if _victory_next_button:
@@ -1060,7 +1063,8 @@ func _finish_defeat() -> void:
 		}
 		var recorded := GameState.record_infinite_run(summary)
 		summary["first_win_bonus"] = Dictionary(recorded.get("first_win_bonus", {})).duplicate(true)
-		pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": run_diamonds, "manual_quit": false, "victory": false, "first_win_bonus": Dictionary(recorded.get("first_win_bonus", {})).duplicate(true) }
+		summary["reward_drops"] = Dictionary(recorded.get("reward_drops", {})).duplicate(true)
+		pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": run_diamonds, "manual_quit": false, "victory": false, "reward_drops": Dictionary(recorded.get("reward_drops", {})).duplicate(true), "first_win_bonus": Dictionary(recorded.get("first_win_bonus", {})).duplicate(true) }
 		_rebuild_defeat_summary(summary)
 	elif _defeat_summary:
 		pending_result_reward = {}
@@ -1294,20 +1298,12 @@ func _build_hud() -> void:
 	add_child(_run_upgrade_bar)
 	_run_atk_button = _make_button("", 0, 58)
 	_run_atk_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_run_atk_button.add_theme_color_override("font_color", Color("#ffffff"))
-	_run_atk_button.add_theme_color_override("font_hover_color", Color("#ffffff"))
-	_run_atk_button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
-	_run_atk_button.add_theme_color_override("font_focus_color", Color("#ffffff"))
-	_apply_button_style(_run_atk_button, _make_style("#06162a", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
+	_prepare_run_shop_button(_run_atk_button, "damage")
 	_run_atk_button.pressed.connect(_buy_run_atk_upgrade)
 	_run_upgrade_bar.add_child(_run_atk_button)
 	_run_gold_button = _make_button("", 0, 58)
 	_run_gold_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_run_gold_button.add_theme_color_override("font_color", Color("#ffffff"))
-	_run_gold_button.add_theme_color_override("font_hover_color", Color("#ffffff"))
-	_run_gold_button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
-	_run_gold_button.add_theme_color_override("font_focus_color", Color("#ffffff"))
-	_apply_button_style(_run_gold_button, _make_style("#06162a", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
+	_prepare_run_shop_button(_run_gold_button, "coin")
 	_run_gold_button.pressed.connect(_buy_run_gold_upgrade)
 	_run_upgrade_bar.add_child(_run_gold_button)
 
@@ -2549,10 +2545,39 @@ func _update_run_upgrade_buttons() -> void:
 		return
 	var atk_cost := _get_run_upgrade_cost("atk")
 	var gold_cost := _get_run_upgrade_cost("gold")
-	_run_atk_button.text = "ATK Lv.%s\n%s %s" % [int(run_shop_upgrades.get("atk", 0)), atk_cost, _txt("COINS", "MOEDAS", "MONEDAS", "コイン", "金币")]
-	_run_gold_button.text = "GOLD Lv.%s\n%s %s" % [int(run_shop_upgrades.get("gold", 0)), gold_cost, _txt("COINS", "MOEDAS", "MONEDAS", "コイン", "金币")]
-	_run_atk_button.disabled = run_coins < atk_cost
-	_run_gold_button.disabled = run_coins < gold_cost
+	_run_atk_button.text = "ATK Lv.%s\n%s %s" % [int(run_shop_upgrades.get("atk", 0)), atk_cost, _txt("GOLD", "OURO", "ORO", "ゴールド", "金币")]
+	_run_gold_button.text = "GOLD Lv.%s\n%s %s" % [int(run_shop_upgrades.get("gold", 0)), gold_cost, _txt("GOLD", "OURO", "ORO", "ゴールド", "金币")]
+	_set_run_shop_button_state(_run_atk_button, run_coins >= atk_cost)
+	_set_run_shop_button_state(_run_gold_button, run_coins >= gold_cost)
+
+
+func _prepare_run_shop_button(button: Button, icon_key: String) -> void:
+	button.add_theme_font_size_override("font_size", 13)
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	button.expand_icon = true
+	var path := String(ICON_PATHS.get(icon_key, ICON_PATHS["upgrade"]))
+	if ResourceLoader.exists(path):
+		button.icon = load(path)
+	_set_run_shop_button_state(button, true)
+
+
+func _set_run_shop_button_state(button: Button, affordable: bool) -> void:
+	var font_color := Color("#ffffff") if affordable else Color("#ff6b7a")
+	var border_color := "#00f0ffaa" if affordable else "#ff3b6aaa"
+	var shadow_color := "#00f0ff55" if affordable else "#ff174455"
+	var bg_color := "#06162add" if affordable else "#2a0611e6"
+	button.disabled = not affordable
+	button.add_theme_color_override("font_color", font_color)
+	button.add_theme_color_override("font_hover_color", font_color)
+	button.add_theme_color_override("font_pressed_color", Color("#001018") if affordable else font_color)
+	button.add_theme_color_override("font_focus_color", font_color)
+	button.add_theme_color_override("font_disabled_color", font_color)
+	button.add_theme_color_override("icon_normal_color", Color("#ffffff") if affordable else Color("#ff6b7a"))
+	button.add_theme_color_override("icon_hover_color", Color("#ffffff") if affordable else Color("#ff6b7a"))
+	button.add_theme_color_override("icon_pressed_color", Color("#001018") if affordable else Color("#ff6b7a"))
+	button.add_theme_color_override("icon_disabled_color", Color("#ff6b7a"))
+	_apply_button_style(button, _make_style(bg_color, 12, border_color, 2, shadow_color, 8))
 
 
 func _open_pause() -> void:
@@ -2680,6 +2705,7 @@ func _rebuild_victory_rewards(global_coins_reward: int, profile_xp_reward: int) 
 	var diamond_total := int(pending_result_reward.get("diamonds", run_diamonds * reward_multiplier))
 	if diamond_total > 0:
 		_victory_rewards.add_child(_make_victory_line("gem", _txt("Diamonds", "Diamantes", "Diamantes", "ダイヤ", "钻石"), "+%s" % diamond_total))
+	_add_reward_drop_lines(_victory_rewards, Dictionary(pending_result_reward.get("reward_drops", {})))
 	var first_win := Dictionary(pending_result_reward.get("first_win_bonus", {}))
 	if bool(first_win.get("ok", false)):
 		_victory_rewards.add_child(_make_victory_line("gem", _txt("First Win Bonus", "Bônus de Primeira Vitória", "Bono de primera victoria", "初勝利ボーナス", "首胜奖励"), _first_win_bonus_label(first_win)))
@@ -2703,6 +2729,7 @@ func _rebuild_defeat_summary(summary: Dictionary) -> void:
 		_defeat_summary.add_child(_make_victory_line("xp", "XP", "+%s" % int(summary.get("xp", 0))))
 		if int(summary.get("diamonds", 0)) > 0:
 			_defeat_summary.add_child(_make_victory_line("gem", _txt("Diamonds", "Diamantes", "Diamantes", "ダイヤ", "钻石"), "+%s" % int(summary.get("diamonds", 0))))
+		_add_reward_drop_lines(_defeat_summary, Dictionary(summary.get("reward_drops", pending_result_reward.get("reward_drops", {}))))
 		var first_win := Dictionary(summary.get("first_win_bonus", pending_result_reward.get("first_win_bonus", {})))
 		if bool(first_win.get("ok", false)):
 			_defeat_summary.add_child(_make_victory_line("gem", _txt("First Win Bonus", "Bônus de Primeira Vitória", "Bono de primera victoria", "初勝利ボーナス", "首胜奖励"), _first_win_bonus_label(first_win)))
@@ -2730,6 +2757,33 @@ func _first_win_bonus_label(first_win: Dictionary) -> String:
 	if parts.is_empty():
 		return String(first_win.get("text", _txt("Completed Today", "Concluído Hoje", "Completado hoy", "本日完了", "今日完成")))
 	return " • ".join(parts)
+
+
+func _add_reward_drop_lines(container: Control, drops: Dictionary) -> void:
+	if drops.is_empty():
+		return
+	var keys := int(drops.get("keys", 0))
+	if keys > 0:
+		container.add_child(_make_victory_line("key", _txt("Key Found", "Chave Encontrada", "Llave encontrada", "鍵発見", "找到钥匙"), "+%s" % keys))
+	var chest_types: Dictionary = Dictionary(drops.get("chest_types", {}))
+	for chest_type in chest_types.keys():
+		var amount := int(chest_types[chest_type])
+		if amount <= 0:
+			continue
+		var label := "%s: %s" % [_txt("Chest Found", "Baú Encontrado", "Cofre encontrado", "宝箱発見", "发现宝箱"), _chest_type_label(String(chest_type))]
+		container.add_child(_make_victory_line("upgrade", label, "x%s" % amount))
+
+
+func _chest_type_label(chest_type: String) -> String:
+	match chest_type:
+		"rare":
+			return _txt("Rare", "Raro", "Raro", "レア", "稀有")
+		"epic":
+			return _txt("Epic", "Épico", "Épico", "エピック", "史诗")
+		"legendary":
+			return _txt("Legendary", "Lendário", "Legendario", "レジェンド", "传奇")
+		_:
+			return _txt("Common", "Comum", "Común", "コモン", "普通")
 
 
 func _can_double_result_reward() -> bool:
@@ -2773,6 +2827,7 @@ func _double_result_reward() -> void:
 				"coins": int(pending_result_reward["coins"]),
 				"xp": int(pending_result_reward["xp"]),
 				"diamonds": int(pending_result_reward["diamonds"]),
+				"reward_drops": pending_result_reward.get("reward_drops", {}),
 				"first_win_bonus": pending_result_reward.get("first_win_bonus", {}),
 				"new_record": false,
 			}

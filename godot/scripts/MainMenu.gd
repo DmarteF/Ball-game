@@ -95,12 +95,21 @@ var _more_items: Array = []
 var _opening_achievements := false
 var _achievement_notice: Button
 var _achievement_notice_hide_at := 0
+var _notification_queue: Array[Dictionary] = []
+var _active_notifications: Array[Dictionary] = []
 var _tutorial_overlay: Control
 var _tutorial_page := 0
 var _tutorial_dont_show := false
 var _afk_overlay: Control
 var _guided_hint: Button
 var _guided_hint_id := ""
+
+const NOTICE_VISIBLE_LIMIT := 4
+const NOTICE_DURATION_MSEC := 5200
+const NOTICE_LEFT := 18.0
+const NOTICE_WIDTH := 254.0
+const NOTICE_HEIGHT := 40.0
+const NOTICE_GAP := 8.0
 
 const TUTORIAL_STEPS := [
 	{ "en_title": "Welcome", "pt_title": "Bem-vindo", "es_title": "Bienvenido", "ja_title": "ようこそ", "zh_title": "欢迎", "en_text": "Break rings by hitting their opening.", "pt_text": "Quebre os anéis acertando a abertura.", "es_text": "Rompe anillos acertando su abertura.", "ja_text": "開口部を狙ってリングを壊しましょう。", "zh_text": "击中开口来击破圆环。" },
@@ -122,7 +131,7 @@ func _ready() -> void:
 	_build_background()
 	_build_top_bar()
 	_build_content()
-	_build_achievement_notice_overlay()
+	_build_home_notifications()
 	_build_more_button()
 	_build_more_modal()
 	resized.connect(_sync_modal_layout)
@@ -131,8 +140,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if _achievement_notice_hide_at > 0 and Time.get_ticks_msec() >= _achievement_notice_hide_at:
-		_hide_achievement_notice()
+	_update_notifications()
 
 
 func _build_background() -> void:
@@ -184,6 +192,130 @@ func _build_achievement_notice_overlay() -> void:
 		GameState.data["achievement_notice_seen_signature"] = signature
 		GameState.save_game()
 		_achievement_notice_hide_at = Time.get_ticks_msec() + 5200
+
+
+func _build_home_notifications() -> void:
+	_notification_queue.clear()
+	_active_notifications.clear()
+	_enqueue_achievement_notification()
+	_enqueue_wheel_notification()
+	_enqueue_daily_notification()
+	_enqueue_mission_notification()
+	_enqueue_event_notification()
+	_pump_notifications()
+
+
+func _enqueue_achievement_notification() -> void:
+	var pending := _pending_achievement_count()
+	if pending <= 0:
+		return
+	var signature := _pending_achievement_signature()
+	if String(GameState.data.get("achievement_notice_seen_signature", "")) == signature:
+		return
+	GameState.data["achievement_notice_seen_signature"] = signature
+	GameState.save_game()
+	_enqueue_notification({
+		"id": "achievements_%s" % signature,
+		"icon": "achievements",
+		"color": "#ffd700",
+		"bg": "#ffd70022",
+		"border": "#ffd700aa",
+		"text": _txt("%s rewards pending", "%s recompensas pendentes", "%s recompensas pendientes", "%s個の報酬待ち", "%s个奖励待领取") % pending,
+		"callback": Callable(self, "_open_achievements_scene"),
+	})
+
+
+func _enqueue_wheel_notification() -> void:
+	var wheel: Dictionary = GameState.data.get("wheel", {})
+	if bool(wheel.get("free_used", false)):
+		return
+	_enqueue_notification({
+		"id": "wheel_ready",
+		"icon": "wheel",
+		"color": "#00ff88",
+		"bg": "#00ff8822",
+		"border": "#00ff88aa",
+		"text": _txt("Wheel ready to spin", "Roleta pronta para girar", "Ruleta lista para girar", "ルーレット使用可能", "转盘可旋转"),
+		"callback": _open_scene.bind(WHEEL_SCENE),
+	})
+
+
+func _enqueue_daily_notification() -> void:
+	var can_daily := has_node("/root/TimeManager") and TimeManager.can_claim_daily_reward()
+	var first_win: Dictionary = GameState.get_first_win_status() if GameState.has_method("get_first_win_status") else {}
+	if not can_daily and not bool(first_win.get("available", false)):
+		return
+	var text := _txt("Daily reward available", "Recompensa diária disponível", "Recompensa diaria disponible", "デイリー報酬あり", "每日奖励可领取")
+	if not can_daily:
+		text = _txt("First win bonus ready", "Bônus de primeira vitória pronto", "Bonus de primera victoria listo", "初勝利ボーナス準備完了", "首胜奖励已就绪")
+	_enqueue_notification({
+		"id": "daily_ready",
+		"icon": "daily_reward",
+		"color": "#ffd700",
+		"bg": "#ffd70022",
+		"border": "#ffd700aa",
+		"text": text,
+		"callback": _open_scene.bind(DAILY_REWARD_SCENE),
+	})
+
+
+func _enqueue_mission_notification() -> void:
+	var count := _pending_mission_count()
+	if count <= 0:
+		return
+	_enqueue_notification({
+		"id": "missions_%s" % count,
+		"icon": "missions",
+		"color": "#ff8a00",
+		"bg": "#ff880022",
+		"border": "#ff8800aa",
+		"text": _txt("%s missions ready", "%s missões prontas", "%s misiones listas", "%s個のミッション完了", "%s个任务可领取") % count,
+		"callback": _open_scene.bind(MISSIONS_SCENE),
+	})
+
+
+func _enqueue_event_notification() -> void:
+	var event_notice := _event_notification_text()
+	if event_notice.is_empty():
+		return
+	_enqueue_notification({
+		"id": "event_ready",
+		"icon": "event",
+		"color": "#00f0ff",
+		"bg": "#00f0ff22",
+		"border": "#00f0ffaa",
+		"text": event_notice,
+		"callback": _open_scene.bind(EVENT_SCENE),
+	})
+
+
+func _pending_mission_count() -> int:
+	var count := 0
+	var daily: Dictionary = GameState.data.get("daily_missions", {})
+	for raw_mission in Array(daily.get("missions", [])):
+		var mission: Dictionary = raw_mission
+		if bool(mission.get("claimed", false)):
+			continue
+		var definition := GameState.get_daily_mission_def(String(mission.get("id", "")))
+		if not definition.is_empty() and int(mission.get("progress", 0)) >= int(definition.get("target", 1)):
+			count += 1
+	return count
+
+
+func _event_notification_text() -> String:
+	var event: Dictionary = GameState.get_weekly_event()
+	if event.is_empty() or not (String(event.get("status", "")) in ["active", "completed"]):
+		return ""
+	for raw_task in Array(event.get("tasks", [])):
+		var task: Dictionary = raw_task
+		if bool(task.get("completed", false)) and not bool(task.get("claimed", false)):
+			return _txt("Event reward ready", "Recompensa de evento pronta", "Recompensa de evento lista", "イベント報酬あり", "活动奖励可领取")
+	var final: Dictionary = event.get("final_reward", {})
+	if bool(final.get("completed", false)) and not bool(final.get("claimed", false)):
+		return _txt("Event final reward ready", "Recompensa final do evento pronta", "Recompensa final del evento lista", "イベント最終報酬あり", "活动最终奖励可领取")
+	if String(event.get("status", "")) == "active":
+		return _txt("Weekly event active", "Evento semanal ativo", "Evento semanal activo", "週間イベント開催中", "每周活动进行中")
+	return ""
 
 
 func _build_content() -> void:
@@ -290,6 +422,109 @@ func _make_achievement_notice(count: int) -> Button:
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.clip_text = true
 	label.custom_minimum_size.x = 168
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(label)
+	return button
+
+
+func _enqueue_notification(data: Dictionary) -> void:
+	var id := String(data.get("id", ""))
+	if id.is_empty() or _has_notification(id):
+		return
+	_notification_queue.append(data)
+
+
+func _has_notification(id: String) -> bool:
+	for item in _active_notifications:
+		if String(item.get("id", "")) == id:
+			return true
+	for item in _notification_queue:
+		if String(item.get("id", "")) == id:
+			return true
+	return false
+
+
+func _pump_notifications() -> void:
+	while _active_notifications.size() < NOTICE_VISIBLE_LIMIT and not _notification_queue.is_empty():
+		var data: Dictionary = _notification_queue.pop_front()
+		var notice := _make_home_notification(data)
+		notice.z_index = 34
+		add_child(notice)
+		_active_notifications.append({
+			"id": String(data.get("id", "")),
+			"node": notice,
+			"hide_at": Time.get_ticks_msec() + NOTICE_DURATION_MSEC,
+		})
+	_layout_bottom_notifications()
+
+
+func _update_notifications() -> void:
+	var now := Time.get_ticks_msec()
+	for i in range(_active_notifications.size() - 1, -1, -1):
+		var item: Dictionary = _active_notifications[i]
+		if now >= int(item.get("hide_at", 0)):
+			_dismiss_notification(i)
+
+
+func _dismiss_notification(index: int) -> void:
+	if index < 0 or index >= _active_notifications.size():
+		return
+	var item: Dictionary = _active_notifications[index]
+	_active_notifications.remove_at(index)
+	var notice: Control = item.get("node", null)
+	if is_instance_valid(notice):
+		var tween := create_tween()
+		tween.tween_property(notice, "modulate:a", 0.0, 0.28)
+		tween.parallel().tween_property(notice, "position:y", notice.position.y - 8.0, 0.28)
+		tween.tween_callback(func() -> void:
+			if is_instance_valid(notice):
+				notice.queue_free()
+			call_deferred("_pump_notifications")
+		)
+	else:
+		call_deferred("_pump_notifications")
+	_layout_bottom_notifications()
+
+
+func _dismiss_notification_node(node: Control) -> void:
+	for i in range(_active_notifications.size() - 1, -1, -1):
+		var item: Dictionary = _active_notifications[i]
+		if item.get("node", null) == node:
+			_dismiss_notification(i)
+			return
+
+
+func _make_home_notification(data: Dictionary) -> Button:
+	var button := Button.new()
+	_clear_button_styles(button)
+	button.custom_minimum_size = Vector2(NOTICE_WIDTH, NOTICE_HEIGHT)
+	button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var bg := String(data.get("bg", "#00f0ff22"))
+	var border := String(data.get("border", "#00f0ffaa"))
+	_apply_button_style(button, _make_style(bg, 12, border, 1, border.replace("aa", "55"), 10))
+	var callback: Callable = data.get("callback", Callable())
+	button.pressed.connect(func() -> void:
+		_dismiss_notification_node(button)
+		if callback.is_valid():
+			callback.call()
+	)
+	var row := HBoxContainer.new()
+	_fill(row)
+	row.offset_left = 10
+	row.offset_right = -10
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(row)
+	row.add_child(_make_icon(String(data.get("icon", "event")), 24, Color(String(data.get("color", "#00f0ff")))))
+	var label := _make_label(String(data.get("text", "")), 11, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.clip_text = true
+	label.custom_minimum_size.x = NOTICE_WIDTH - 74.0
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(label)
 	return button
@@ -851,7 +1086,8 @@ func _make_tutorial_button(text: String, bg: String, border: String, callback: C
 	button.add_theme_font_size_override("font_size", 12)
 	button.add_theme_color_override("font_color", Color("#001018") if bg == "#00f0ff" else Color("#ffffff"))
 	_apply_button_style(button, _make_style(bg, 12, border, 1, border.replace("aa", "55"), 8))
-	button.pressed.connect(callback)
+	if callback.is_valid():
+		button.pressed.connect(callback)
 	return button
 
 
@@ -952,16 +1188,26 @@ func _show_afk_rewards_if_needed() -> bool:
 	)
 	collect.custom_minimum_size.y = 44
 	column.add_child(collect)
-	var double_ad := _make_tutorial_button(_txt("Double with Ad", "Dobrar com Anúncio", "Duplicar con anuncio", "広告で2倍", "看广告翻倍"), "#ffd70022", "#ffd700aa", func() -> void:
-		if has_node("/root/AdManager"):
-			AdManager.show_rewarded_ad("double_afk_rewards", func(ok: bool) -> void:
-				if ok:
-					_collect_afk_rewards(true)
-			)
+	var double_ad := _make_tutorial_button(_txt("Double with Ad", "Dobrar com Anúncio", "Duplicar con anuncio", "広告で2倍", "看广告翻倍"), "#ffd70022", "#ffd700aa", Callable())
+	double_ad.pressed.connect(func() -> void:
+		_request_afk_double_reward(double_ad)
 	)
 	double_ad.custom_minimum_size.y = 44
 	column.add_child(double_ad)
 	return true
+
+
+func _request_afk_double_reward(button: Button) -> void:
+	button.disabled = true
+	if has_node("/root/AdManager"):
+		AdManager.show_rewarded_ad("double_afk_rewards", func(ok: bool) -> void:
+			if ok:
+				_collect_afk_rewards(true)
+			elif is_instance_valid(button):
+				button.disabled = false
+		)
+	else:
+		button.disabled = false
 
 
 func _collect_afk_rewards(double_reward: bool) -> void:
@@ -992,6 +1238,8 @@ func _afk_reward_lines(rewards: Dictionary) -> Array[String]:
 		lines.append("+%s %s" % [int(rewards.get("coins", 0)), _txt("coins", "moedas", "monedas", "コイン", "金币")])
 	if int(rewards.get("xp", 0)) > 0:
 		lines.append("+%s XP" % int(rewards.get("xp", 0)))
+	if int(rewards.get("pass_xp", 0)) > 0:
+		lines.append("+%s %s" % [int(rewards.get("pass_xp", 0)), _txt("Pass XP", "XP do Passe", "XP del Pase", "パスXP", "通行证经验")])
 	if int(rewards.get("diamonds", 0)) > 0:
 		lines.append("+%s %s" % [int(rewards.get("diamonds", 0)), _txt("diamonds", "diamantes", "diamantes", "ダイヤ", "钻石")])
 	if int(rewards.get("keys", 0)) > 0:
@@ -1002,16 +1250,22 @@ func _afk_reward_lines(rewards: Dictionary) -> Array[String]:
 
 
 func _show_guided_hint_if_needed() -> void:
-	if is_instance_valid(_guided_hint):
-		return
 	var hint_id: String = GameState.get_guided_hint_id()
 	if hint_id.is_empty():
 		return
+	if _has_notification("guided_%s" % hint_id):
+		return
 	_guided_hint_id = hint_id
-	_guided_hint = _make_guided_hint(hint_id)
-	_guided_hint.z_index = 35
-	add_child(_guided_hint)
-	_layout_bottom_notifications()
+	_enqueue_notification({
+		"id": "guided_%s" % hint_id,
+		"icon": _guided_hint_icon(hint_id),
+		"color": "#00f0ff",
+		"bg": "#00f0ff22",
+		"border": "#00f0ffaa",
+		"text": _guided_hint_text(hint_id),
+		"callback": Callable(self, "_activate_guided_hint"),
+	})
+	_pump_notifications()
 
 
 func _make_guided_hint(hint_id: String) -> Button:
@@ -1106,11 +1360,12 @@ func _sync_modal_layout() -> void:
 
 func _layout_bottom_notifications() -> void:
 	var bottom := -34.0
-	if is_instance_valid(_achievement_notice):
-		_position_bottom_notification(_achievement_notice, 18.0, 254.0, 40.0, bottom)
-		bottom -= 50.0
-	if is_instance_valid(_guided_hint):
-		_position_bottom_notification(_guided_hint, 20.0, -96.0, 62.0, bottom)
+	for item in _active_notifications:
+		var notice: Control = item.get("node", null)
+		if not is_instance_valid(notice):
+			continue
+		_position_bottom_notification(notice, NOTICE_LEFT, NOTICE_LEFT + NOTICE_WIDTH, NOTICE_HEIGHT, bottom)
+		bottom -= NOTICE_HEIGHT + NOTICE_GAP
 
 
 func _position_bottom_notification(control: Control, left: float, right: float, height: float, bottom: float) -> void:

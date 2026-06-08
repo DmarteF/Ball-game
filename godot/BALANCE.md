@@ -508,3 +508,105 @@ Checklist:
 - Chance baixa de chave: sim
 - Recompensa escala com nivel: sim
 - Duplicacao protegida: sim
+
+## Atualizacao - AFK/Offline Finalizado
+
+O sistema AFK/offline existente foi conectado ao fluxo real de abertura do jogo sem criar sistema paralelo.
+
+Fluxo:
+- `GameState.load_game()` compara `last_exit_at` com o horario atual e usa `TimeManager.calculate_afk_rewards()`.
+- O minimo para recompensa continua sendo 5 minutos offline.
+- O limite padrao continua sendo 8 horas, com protecao para tempo absurdo e relogio voltando.
+- `MainMenu.gd` mostra o modal `Offline Rewards / Recompensas Offline` apos o tutorial inicial.
+- A coleta normal chama `GameState.claim_afk_rewards(false)`.
+- Dobrar chama `AdManager.show_rewarded_ad("double_afk_rewards", ...)` e depois `GameState.claim_afk_rewards(true)`.
+
+Recompensas:
+- Moedas, XP normal, diamantes, chaves e baus sao aplicados via `GameState.apply_reward()` quando aplicavel.
+- XP do Passe Neon foi adicionado ao calculo offline como `pass_xp` e aplicado via `GameState.add_neon_pass_xp(pass_xp, "offline_rewards")`.
+- Baus nao sao duplicados pelo anuncio para evitar recompensas especiais repetidas indevidamente.
+
+Protecoes:
+- A recompensa pendente e marcada como `claimed` antes de aplicar valores, evitando duplicacao mesmo se houver save intermediario.
+- `pending_afk_rewards` e limpo depois da coleta.
+- `last_afk_claim_timestamp` e `last_exit_at` sao atualizados na coleta.
+- O botao `Double with Ad / Dobrar com Anuncio` desativa durante o anuncio para evitar duplo toque.
+
+Debug:
+- Simulate 10 min AFK: sim
+- Simulate 1h AFK: sim
+- Simulate 8h AFK: sim
+- Force Show AFK Modal: sim
+- Clear Pending AFK: sim
+
+Checklist:
+- AFK e calculado ao abrir: sim
+- Modal AFK aparece quando ha recompensa: sim
+- Coletar aplica recompensa: sim
+- Dobrar com anuncio funciona: sim
+- Recompensa nao duplica: sim
+- Limite maximo funciona: sim
+- Tempo negativo/relogio voltando tratado: sim
+- Debug AFK funciona: sim
+- Traducoes EN/PT adicionadas: sim
+
+## Drops de Chaves e Baus por Fase/Infinito
+
+Fases normais usam as chances de `LevelData.gd`:
+- Fases 1-5: chance muito baixa de chave/bau comum.
+- Fases 6-15: chance baixa/moderada de chave e bau comum.
+- Fases 16-30: chance moderada de chave e bau comum/raro.
+- Fases 31-45: chance maior de chave e bau raro, com baixa chance de epico.
+- Fases 46-75: chance real de bau raro/epico.
+- Fases 76-100: chance alta controlada de chave/bau, com lendario apenas como drop raro.
+
+Modo infinito:
+- Runs com menos de 30 segundos e menos de 10 aneis quebrados nao recebem drop extra.
+- Chave: `0.010 + minutos * 0.008 + aneis * 0.00035`, cap 18%.
+- Bau: `0.006 + minutos * 0.006 + aneis * 0.00025`, cap 16%.
+- Tipo de bau escala por desempenho: comum no inicio, raro com runs medias, epico em runs longas e lendario apenas em runs muito fortes.
+
+Economia:
+- Baús/chaves sao aplicados via `GameState.apply_reward()`.
+- Drops entram no inventario e sao salvos imediatamente pelo fluxo existente.
+- Dobrar recompensa por anuncio nao duplica baus/chaves neste patch.
+
+Checklist:
+- Fases concedem chaves por chance: sim
+- Fases concedem baus por chance: sim
+- Modo infinito concede baus/chaves por desempenho: sim
+- Recompensas aparecem no modal: sim
+- Inventario atualiza: sim
+- Save funciona: sim
+- Debug funciona: sim
+
+## Ajuste - Upgrades, Boss e Liga Neon
+
+Upgrades:
+- Os 34 upgrades continuam no banco original.
+- A tela e a gameplay usam `GameState.get_upgrade_max_level()` e `GameState.get_upgrade_run_max_level()`.
+- Upgrades comuns/principais ficam com limite permanente maior, como Dano 50, Moedas 50, Velocidade 40, Critico 40 e XP 45.
+- Durante a partida, o limite temporario e somado ao permanente. Exemplo: Dano 50 permanente pode chegar a 70 durante a rodada.
+- Upgrades mais fortes/raros mantem limites menores para nao quebrar o jogo.
+
+Boss:
+- Ouro e XP de Boss agora usam uma fase normal equivalente por dificuldade:
+  - Normal: fase 12.
+  - Forte: fase 25.
+  - Elite: fase 45.
+  - Lendario: fase 70.
+  - Impossivel: fase 95.
+- Vitoria recebe 100% da recompensa equivalente; derrota recebe 35%.
+- Premios especiais de Boss continuam separados.
+- A arena do Boss tambem escala: mais HP, mais aneis inteiros e leve aumento de pressao conforme dificuldade.
+
+Liga Neon:
+- Ouro e XP da Liga agora usam uma fase equivalente por rank:
+  - Bronze: fase 8.
+  - Prata: fase 16.
+  - Ouro: fase 30.
+  - Diamante: fase 55.
+  - Lendario: fase 75.
+  - Ultimate: fase 92.
+- Vitoria recebe 100% da fase equivalente; derrota recebe 42%; quit recebe 18%.
+- A arena da Liga escala junto com rank, com aneis mais resistentes e maior frequencia de aneis solidos, mantendo 6 aneis fixos na tela.

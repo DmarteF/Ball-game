@@ -200,6 +200,7 @@ func calculate_afk_rewards(offline_seconds: int) -> Dictionary:
 	var xp_per_minute: float = 1.6 + float(level) * 0.34 + float(max_phase) * 0.09
 	var coins: int = max(20, floori(float(minutes) * coins_per_minute * coin_multiplier))
 	var xp: int = max(8, floori(float(minutes) * xp_per_minute * xp_multiplier))
+	var pass_xp: int = max(0, floori(float(minutes) * (0.8 + float(level) * 0.08)))
 	var diamonds := 0
 	if capped_seconds >= 30 * 60 and _afk_roll("diamonds", min(0.28, 0.06 + hours * 0.035 + _afk_diamond_bonus())):
 		diamonds = max(1, floori(hours * 1.35))
@@ -221,6 +222,7 @@ func calculate_afk_rewards(offline_seconds: int) -> Dictionary:
 		"hours": snapped(hours, 0.1),
 		"coins": coins,
 		"xp": xp,
+		"pass_xp": pass_xp,
 		"diamonds": diamonds,
 		"keys": keys,
 		"chests": chests,

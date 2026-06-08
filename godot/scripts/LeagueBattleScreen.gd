@@ -186,9 +186,10 @@ func _prepare_match() -> void:
 	_battle_active = true
 	_battle_started_flash = 1.0
 	var rank := MainPortData.rank_for_trophies(trophies)
+	var battle_difficulty := _battle_difficulty_value(rank)
 	var rival_skin: Dictionary = _skin_dict_from_value(_opponent.get("skin", "neon_blue"))
-	_rival = _make_arena("rival", String(_opponent.get("name", "Rival")), String(rival_skin.get("id", "neon_blue")), float(_opponent.get("quality", 0.45)), true)
-	_player = _make_arena("player", String(GameState.data.get("nickname", "Voce")), String(GameState.data.get("equipped_skin", "neon_blue")), 1.0, false)
+	_rival = _make_arena("rival", String(_opponent.get("name", "Rival")), String(rival_skin.get("id", "neon_blue")), float(_opponent.get("quality", 0.45)), true, battle_difficulty)
+	_player = _make_arena("player", String(GameState.data.get("nickname", "Voce")), String(GameState.data.get("equipped_skin", "neon_blue")), 1.0, false, battle_difficulty)
 	_layout_arenas()
 	_status_label.text = "BOSS %s" % _boss_level_id.to_upper() if _battle_kind == "boss" else "%s %s" % [_tr("league").to_upper(), String(rank.get("name", "Bronze")).to_upper()]
 	_meta_label.text = _txt("Daily duel - %s", "Duelo diário - %s", "Duelo diario - %s", "デイリー決闘 - %s", "每日对决 - %s") % String(_opponent.get("name", "Boss")) if _battle_kind == "boss" else _txt("Season %s - %s trophies", "Temporada %s - %s troféus", "Temporada %s - %s trofeos", "シーズン%s - %sトロフィー", "赛季%s - %s奖杯") % [TimeManager.get_month_key(), trophies]
@@ -229,7 +230,36 @@ func _skin_dict_from_value(value: Variant) -> Dictionary:
 	return skin
 
 
-func _make_arena(id: String, label: String, skin_id: String, quality: float, ai: bool) -> Dictionary:
+func _battle_difficulty_value(rank: Dictionary) -> float:
+	if _battle_kind == "boss":
+		match _boss_level_id:
+			"strong":
+				return 0.22
+			"elite":
+				return 0.40
+			"legendary":
+				return 0.62
+			"impossible":
+				return 0.84
+			_:
+				return 0.08
+	var rank_id := String(rank.get("id", "bronze"))
+	match rank_id:
+		"silver":
+			return 0.18
+		"gold":
+			return 0.32
+		"diamond":
+			return 0.50
+		"legendary":
+			return 0.68
+		"ultimate":
+			return 0.86
+		_:
+			return 0.08
+
+
+func _make_arena(id: String, label: String, skin_id: String, quality: float, ai: bool, battle_difficulty := 0.0) -> Dictionary:
 	var skin := MainPortData.skin_by_id(skin_id)
 	var speed := BASE_BALL_SPEED + (0.18 if ai else 0.0) + quality * 0.28
 	var angle := _safe_motion_angle(randf() * TWO_PI)
@@ -243,6 +273,7 @@ func _make_arena(id: String, label: String, skin_id: String, quality: float, ai:
 		"control": MainPortData.skin_has_control(skin_id),
 		"control_strength": MainPortData.skin_control_strength(skin_id),
 		"quality": quality,
+		"battle_difficulty": clampf(battle_difficulty, 0.0, 1.0),
 		"ai": ai,
 		"center": Vector2.ZERO,
 		"arena_radius": 100.0,
@@ -418,18 +449,19 @@ func _make_ring(state: Dictionary, radius: float, index: int) -> Dictionary:
 	var level := int(state.get("level", 1))
 	var destroyed := int(state.get("rings_destroyed", 0))
 	var quality := float(state.get("quality", 0.5))
-	var solid_every: int = max(4, 10 - min(5, floori(float(level) / 5.0 + float(destroyed) / 48.0)))
-	var is_solid: bool = level >= 4 and index % solid_every == 0
+	var difficulty := float(state.get("battle_difficulty", 0.0))
+	var solid_every: int = max(3, 10 - min(6, floori(float(level) / 5.0 + float(destroyed) / 42.0 + difficulty * 4.0)))
+	var is_solid: bool = index > 0 and level >= 3 and (index + floori(difficulty * 3.0)) % solid_every == 0
 	var direction: float = 1.0 if index % 2 == 0 else -1.0
-	var hp: int = floori((30.0 + float(level) * 6.2 + float(destroyed) * 0.72) * (1.0 + quality * 0.42) * (1.82 if is_solid else 1.0))
-	var gap: float = 0.0 if is_solid else max(PI / 14.0, PI / (3.45 + float(level) * 0.07 + float(destroyed) * 0.003))
-	var rotation_speed: float = (0.0042 + min(0.0075, float(level) * 0.00022 + quality * 0.0014)) * randf_range(0.86, 1.18) * direction
+	var hp: int = floori((30.0 + float(level) * 6.2 + float(destroyed) * 0.78) * (1.0 + quality * 0.42 + difficulty * 0.78) * (1.95 if is_solid else 1.0))
+	var gap: float = 0.0 if is_solid else max(PI / 15.0, PI / (3.45 + float(level) * 0.07 + float(destroyed) * 0.003 + difficulty * 0.32))
+	var rotation_speed: float = (0.0042 + min(0.0088, float(level) * 0.00022 + quality * 0.0014 + difficulty * 0.0011)) * randf_range(0.86, 1.18) * direction
 	return {
 		"id": "%s_ring_%s" % [String(state.get("id", "arena")), index],
 		"type": "solid" if is_solid else "normal",
 		"radius": clampf(radius, MIN_RING_RADIUS, float(state.get("arena_radius", 100.0)) - 4.0),
 		"initial_radius": radius,
-		"closing_speed": 0.0063 + min(0.0135, float(level) * 0.00022 + quality * 0.00085 + float(destroyed) * 0.000006),
+		"closing_speed": 0.0063 + min(0.0148, float(level) * 0.00018 + quality * 0.00078 + difficulty * 0.00115 + float(destroyed) * 0.000006),
 		"rotation": randf() * TWO_PI,
 		"rotation_speed": rotation_speed,
 		"base_rotation_speed": rotation_speed,
@@ -1505,14 +1537,12 @@ func _build_hud() -> void:
 	_hud_layer.add_child(bottom)
 	_run_atk_button = _make_button("", 0, 58)
 	_run_atk_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_apply_button_style(_run_atk_button, _make_style("#06162add", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
-	_set_button_icon(_run_atk_button, "damage")
+	_prepare_run_shop_button(_run_atk_button, "damage")
 	_run_atk_button.pressed.connect(_buy_player_run_upgrade.bind("atk"))
 	bottom.add_child(_run_atk_button)
 	_run_gold_button = _make_button("", 0, 58)
 	_run_gold_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_apply_button_style(_run_gold_button, _make_style("#06162add", 12, "#00f0ffaa", 2, "#00f0ff55", 8))
-	_set_button_icon(_run_gold_button, "coin")
+	_prepare_run_shop_button(_run_gold_button, "coin")
 	_run_gold_button.pressed.connect(_buy_player_run_upgrade.bind("gold"))
 	bottom.add_child(_run_gold_button)
 
@@ -1755,10 +1785,10 @@ func _update_run_upgrade_buttons() -> void:
 		return
 	var atk_cost := _get_run_upgrade_cost(_player, "atk")
 	var gold_cost := _get_run_upgrade_cost(_player, "gold")
-	_run_atk_button.text = "ATK Lv.%s\n%s %s" % [int(_player.get("atk", 0)), atk_cost, _txt("COINS", "MOEDAS", "MONEDAS", "コイン", "金币")]
-	_run_gold_button.text = "GOLD Lv.%s\n%s %s" % [int(_player.get("gold", 0)), gold_cost, _txt("COINS", "MOEDAS", "MONEDAS", "コイン", "金币")]
-	_run_atk_button.disabled = int(_player.get("coins", 0)) < atk_cost or _finished
-	_run_gold_button.disabled = int(_player.get("coins", 0)) < gold_cost or _finished
+	_run_atk_button.text = "ATK Lv.%s\n%s %s" % [int(_player.get("atk", 0)), atk_cost, _txt("GOLD", "OURO", "ORO", "ゴールド", "金币")]
+	_run_gold_button.text = "GOLD Lv.%s\n%s %s" % [int(_player.get("gold", 0)), gold_cost, _txt("GOLD", "OURO", "ORO", "ゴールド", "金币")]
+	_set_run_shop_button_state(_run_atk_button, int(_player.get("coins", 0)) >= atk_cost and not _finished)
+	_set_run_shop_button_state(_run_gold_button, int(_player.get("coins", 0)) >= gold_cost and not _finished)
 
 
 func _update_control_overlay() -> void:
@@ -1867,6 +1897,33 @@ func _set_button_icon(button: Button, icon_key: String) -> void:
 	if ResourceLoader.exists(path):
 		button.icon = load(path)
 		button.expand_icon = true
+
+
+func _prepare_run_shop_button(button: Button, icon_key: String) -> void:
+	button.add_theme_font_size_override("font_size", 13)
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	button.expand_icon = true
+	_set_button_icon(button, icon_key)
+	_set_run_shop_button_state(button, true)
+
+
+func _set_run_shop_button_state(button: Button, affordable: bool) -> void:
+	var font_color := Color("#ffffff") if affordable else Color("#ff6b7a")
+	var border_color := "#00f0ffaa" if affordable else "#ff3b6aaa"
+	var shadow_color := "#00f0ff55" if affordable else "#ff174455"
+	var bg_color := "#06162add" if affordable else "#2a0611e6"
+	button.disabled = not affordable
+	button.add_theme_color_override("font_color", font_color)
+	button.add_theme_color_override("font_hover_color", font_color)
+	button.add_theme_color_override("font_pressed_color", Color("#001018") if affordable else font_color)
+	button.add_theme_color_override("font_focus_color", font_color)
+	button.add_theme_color_override("font_disabled_color", font_color)
+	button.add_theme_color_override("icon_normal_color", Color("#ffffff") if affordable else Color("#ff6b7a"))
+	button.add_theme_color_override("icon_hover_color", Color("#ffffff") if affordable else Color("#ff6b7a"))
+	button.add_theme_color_override("icon_pressed_color", Color("#001018") if affordable else Color("#ff6b7a"))
+	button.add_theme_color_override("icon_disabled_color", Color("#ff6b7a"))
+	_apply_button_style(button, _make_style(bg_color, 12, border_color, 2, shadow_color, 8))
 
 
 func _upgrade_icon_key(id: String) -> String:
