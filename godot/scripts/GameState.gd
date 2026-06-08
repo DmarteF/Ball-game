@@ -799,16 +799,19 @@ const DAILY_MISSION_DEFS := [
 ]
 
 var data: Dictionary = {}
+var _save_timer: Timer
+var _save_pending := false
 
 
 func _ready() -> void:
+	_ensure_save_timer()
 	load_game()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE:
 		data["last_exit_at"] = TimeManager.get_now_timestamp()
-		save_game()
+		flush_save()
 
 
 func default_save() -> Dictionary:
@@ -1145,12 +1148,56 @@ func debug_force_show_afk_modal() -> void:
 	save_game()
 
 
-func save_game(emit_signal := true) -> void:
+func save_game(emit_signal := true, immediate := false) -> void:
 	if not data.is_empty() and data.has("neon_pass_season_id"):
 		_save_neon_pass_season_progress()
-	SaveManager.save_game(data)
 	if emit_signal:
 		changed.emit()
+	if immediate:
+		_write_save_now()
+	else:
+		_queue_save_write()
+
+
+func flush_save() -> void:
+	if data.is_empty():
+		return
+	if data.has("neon_pass_season_id"):
+		_save_neon_pass_season_progress()
+	_write_save_now(true)
+
+
+func _queue_save_write() -> void:
+	if data.is_empty():
+		return
+	_save_pending = true
+	_ensure_save_timer()
+	if _save_timer.is_stopped():
+		_save_timer.start()
+
+
+func _write_save_now(force_backup := false) -> void:
+	if data.is_empty():
+		return
+	_save_pending = false
+	if _save_timer and not _save_timer.is_stopped():
+		_save_timer.stop()
+	SaveManager.save_game(data, force_backup)
+
+
+func _ensure_save_timer() -> void:
+	if _save_timer:
+		return
+	_save_timer = Timer.new()
+	_save_timer.one_shot = true
+	_save_timer.wait_time = 0.55
+	_save_timer.timeout.connect(_on_save_timer_timeout)
+	add_child(_save_timer)
+
+
+func _on_save_timer_timeout() -> void:
+	if _save_pending:
+		_write_save_now()
 
 
 func export_save_text() -> String:

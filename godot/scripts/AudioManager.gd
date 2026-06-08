@@ -2,6 +2,7 @@ extends Node
 
 var _music_player: AudioStreamPlayer
 var _sfx_players: Array[AudioStreamPlayer] = []
+var _sfx_cache: Dictionary = {}
 var _current_music := ""
 var _current_context := ""
 var _last_volume_db := -13.0
@@ -28,7 +29,9 @@ func play_music(path: String, volume_db := -13.0, force_restart := false, contex
 	_current_music = path
 	_current_context = context
 	_last_volume_db = volume_db
-	var stream: AudioStream = load(path)
+	var stream: AudioStream = _load_audio_stream(path)
+	if stream == null:
+		return
 	if stream is AudioStreamMP3:
 		stream.loop = true
 	_music_player.stream = stream
@@ -83,8 +86,11 @@ func current_context() -> String:
 func play_sfx(path: String, volume_db := -5.0) -> void:
 	if _is_sfx_muted() or not ResourceLoader.exists(path):
 		return
+	var stream: AudioStream = _load_audio_stream(path)
+	if stream == null:
+		return
 	var player := AudioStreamPlayer.new()
-	player.stream = load(path)
+	player.stream = stream
 	player.volume_db = volume_db
 	player.bus = "Master"
 	player.finished.connect(player.queue_free)
@@ -102,6 +108,15 @@ func _trim_sfx_players() -> void:
 		var old: AudioStreamPlayer = _sfx_players.pop_front()
 		if is_instance_valid(old):
 			old.queue_free()
+
+
+func _load_audio_stream(path: String) -> AudioStream:
+	if _sfx_cache.has(path):
+		return _sfx_cache[path] as AudioStream
+	var stream: AudioStream = load(path)
+	if stream != null:
+		_sfx_cache[path] = stream
+	return stream
 
 
 func _settings() -> Dictionary:

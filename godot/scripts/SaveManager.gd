@@ -4,6 +4,9 @@ const SAVE_PATH := "user://neon_idle_escape_save.json"
 const BACKUP_SAVE_PATH := "user://neon_idle_escape_save_backup.json"
 const IMPORT_BACKUP_SAVE_PATH := "user://neon_idle_escape_save_before_import.json"
 const SETTINGS_LEGACY_PATH := "user://settings.json"
+const BACKUP_INTERVAL_MSEC := 15000
+
+var _last_backup_msec := 0
 
 
 func load_save() -> Dictionary:
@@ -25,15 +28,19 @@ func _load_json_file(path: String) -> Dictionary:
 	return parsed
 
 
-func save_game(data: Dictionary) -> void:
+func save_game(data: Dictionary, force_backup := false) -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		return
 	var payload := JSON.stringify(data)
 	file.store_string(payload)
+	var now := Time.get_ticks_msec()
+	if not force_backup and _last_backup_msec > 0 and now - _last_backup_msec < BACKUP_INTERVAL_MSEC:
+		return
 	var backup := FileAccess.open(BACKUP_SAVE_PATH, FileAccess.WRITE)
 	if backup != null:
 		backup.store_string(payload)
+		_last_backup_msec = now
 
 
 func create_import_backup() -> bool:
