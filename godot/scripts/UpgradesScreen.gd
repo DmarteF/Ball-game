@@ -352,7 +352,7 @@ func _make_temp_upgrade_card(upgrade: Dictionary) -> PanelContainer:
 		info.add_child(_make_label(String(upgrade.get("unlockRequirement", "Bloqueado")), 11, "#ffcc66", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	else:
 		info.add_child(_make_label("Aparece nas escolhas de level-up durante fases, infinito, Liga e Boss.", 11, "#00f0ffaa", _regular_font, HORIZONTAL_ALIGNMENT_LEFT))
-	info.add_child(_make_label("%s • max Lv.%s" % [String(upgrade.get("rarity", "common")).to_upper(), int(upgrade.get("maxLevel", 1))], 11, _rarity_color(String(upgrade.get("rarity", "common"))), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	info.add_child(_make_label("%s • max Lv.%s" % [String(upgrade.get("rarity", "common")).to_upper(), GameState.get_upgrade_max_level(id)], 11, _rarity_color(String(upgrade.get("rarity", "common"))), _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var status := _make_label("LIBERADO" if unlocked else "BLOQUEADO", 12, "#00ff88" if unlocked else "#ff6b9a", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
 	status.custom_minimum_size.x = 84
 	row.add_child(status)

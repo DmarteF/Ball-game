@@ -64,25 +64,35 @@ Baus de fase escolhem tipo por progresso: comum no inicio, raro a partir do meio
 | Liga Neon derrota | run + 95 moedas |
 | Boss normal | run + 520 moedas |
 
-Os primeiros upgrades custam 70-135 moedas, entao a primeira sessao deve liberar compras rapidamente. Custos usam `base * 1.32^nivel` com uma taxa extra leve depois do nivel 10.
+Os primeiros upgrades custam 70-135 moedas, entao a primeira sessao deve liberar compras rapidamente. Custos agora usam crescimento por raridade entre `1.12` e `1.21`, com taxa por progresso do cap. Isso permite upgrades basicos chegarem ao nivel 40-50 sem explodir o custo no meio do caminho.
 
 ## Upgrades Permanentes
 
-| Upgrade | Custo inicial | Max | Desbloqueio |
-| --- | ---: | ---: | --- |
-| Dano base | 70 | 40 | Fase 1 / nivel 1 |
-| Velocidade base | 85 | 28 | Fase 1 / nivel 1 |
-| Ganho de moeda | 120 | 34 | Fase 1 / nivel 1 |
-| Critico | 110 | 28 | Fase 1 / nivel 1 |
-| XP Boost | 135 | 32 | Fase 3 / nivel 3 |
-| Perfect Chance | 320 | 18 | Fase 5 / nivel 5 |
-| Slow Rings | 440 | 18 | Fase 8 / nivel 9 |
+| Upgrade | Custo inicial | Max permanente | Max durante run | Desbloqueio |
+| --- | ---: | ---: | ---: | --- |
+| Dano base / damage | 104 | 50 | 70 | Fase 1 / nivel 1 |
+| Velocidade / speed | 104 | 40 | 60 | Fase 1 / nivel 1 |
+| Ganho de moeda / coinBoost | 104 | 50 | 70 | Fase 1 / nivel 1 |
+| Critico / critical | 104 | 40 | 60 | Fase 1 / nivel 1 |
+| XP Boost | 152 | 45 | 65 | Fase 3 / nivel 3 |
+| Perfect Chance | 200 | 30 | 45 | Fase 5 / nivel 5 |
+| Magnet Coins | 224 | 35 | 50 | Fase 6 / nivel 6 |
+| Ricochete / Repulse / Fire / Poison | variavel | 25-30 | +12 a +15 niveis temporarios | Fases 5-8 / conquistas |
+| Gelo e efeitos epicos | variavel | 20-30 | +8 a +12 niveis temporarios | Fases 8-15 / conquistas |
+| Lendarios e secretos | alto | 5-18 | +2 a +8 niveis temporarios | Boss, Liga, infinito, conquistas |
 
-Upgrade bloqueado fica escondido da lista de upavel. Quando uma conquista/fase/rank/boss libera o upgrade, ele aparece nas melhorias permanentes ou na lista de melhorias temporarias, conforme o tipo.
+Upgrade bloqueado fica escondido da lista de upavel. Quando uma conquista/fase/rank/boss libera o upgrade, ele aparece nas melhorias permanentes e automaticamente tambem entra na pool temporaria da gameplay.
+
+Regra nova:
+- O nivel permanente e a base da partida.
+- O upgrade temporario da gameplay soma por cima desse nivel, mas apenas durante a run.
+- Exemplo: Dano permanente 30 aparece na escolha de gameplay como `Lv.30 > Lv.31`.
+- Se Dano permanente chegar ao maximo 50, a gameplay ainda pode subir temporariamente ate `Lv.70`.
+- Os efeitos usam curva de retorno decrescente e caps por tipo. Dano, moeda, XP e velocidade escalam mais; gelo, repulse, time freeze, escudos e efeitos lendarios tem caps menores.
 
 ## Upgrades Temporarios
 
-So aparecem os upgrades realmente liberados em `GameState.available_run_upgrades()`. A pool inicial e dano, velocidade, moedas, critico, XP e perfect; efeitos avancados entram por fase, infinito, Liga Neon, Boss e conquistas.
+So aparecem os upgrades realmente liberados em `GameState.available_run_upgrades()`. A pool inicial segue a main: dano, velocidade, moedas e critico. Quando XP, perfect, gelo, fogo ou qualquer outro upgrade e liberado, a tela de Melhorias e a selecao de level-up usam a mesma fonte de verdade.
 
 Diretriz de poder:
 - comum: ganho simples e confiavel;
@@ -294,3 +304,207 @@ Justificativa:
 - Os quatro upgrades iniciais podem ser evoluidos cedo.
 - Upgrades raros/epicos/lendarios sobem mais devagar.
 - Diamantes aceleram progresso, mas seguem caros o bastante para nao substituir moedas como caminho principal.
+
+## Recompensas AFK/Offline
+
+Janela:
+- Minimo para aparecer: 5 minutos offline.
+- Cap padrao: 8 horas.
+- Eventos futuros podem aumentar o cap com `afk_limit`, limitado internamente a 12 horas.
+
+Formula:
+- `coins_per_minute = 4.0 + level * 0.85 + max_phase * 0.22`
+- `xp_per_minute = 1.6 + level * 0.34 + max_phase * 0.09`
+- Moedas usam multiplicadores moderados de `coinBoost`, `secretMagnet`, skin equipada e evento ativo.
+- XP usa multiplicadores moderados de `xpBoost`, skin equipada e evento ativo.
+
+Extras:
+- Diamantes: chance baixa a partir de 30 minutos.
+- Chaves: chance baixa a partir de 2 horas.
+- Bau comum/rare: chance baixa a partir de 4 horas.
+
+Protecoes:
+- Tempo negativo nao gera recompensa.
+- Tempo acima do cap e truncado.
+- Coleta limpa `pending_afk_rewards` e atualiza `last_exit_at`.
+- Dobro por anuncio so acontece quando o callback mockado retorna sucesso.
+
+Checklist:
+- AFK minimo 5 min: sim
+- Cap 8h: sim
+- Moedas e XP balanceados: sim
+- Diamantes raros: sim
+- Chave/bau apenas tempo longo: sim
+- Dobrar com anuncio mockado: sim
+
+## Conquistas de Skins e Colecao
+
+As conquistas de colecao usam o banco real de skins em `MainPortData.SKINS`, entao os totais por raridade/efeito acompanham a colecao atual do projeto.
+
+Metas de total:
+- 5 skins: moedas iniciais.
+- 10 skins: diamantes.
+- 25 skins: chaves.
+- 50 skins: diamantes altos.
+- 75 skins: bau epico.
+- 100 skins: skin especial.
+- Todas as skins disponiveis: skin ultimate especial.
+
+Metas por raridade:
+- Common: 10, 20 e todas.
+- Rare: 10, 20 e todas.
+- Epic: 5, 15 e todas.
+- Legendary: 3, 10 e todas.
+- Mythic: 1, 5 e 10.
+- Ultimate: 1, 3 e 5.
+
+Metas por efeito:
+- Control: 3 skins.
+- Fire, Ice, Critical, Coins, XP, Speed, Chain e Area: 5 skins.
+- Phase e Gravity: 3 skins.
+
+Metas de evolucao:
+- Uma skin no nivel 2.
+- Uma skin no nivel maximo.
+- 5 e 10 skins evoluidas.
+- Uma skin maximizada por raridade.
+
+Metas de uso:
+- 10 vitorias de fase com common, rare e epic.
+- 5 minutos no infinito com Control.
+- Boss vencido com Fire.
+- Liga Neon vencida com Ultimate.
+- 50 perfects com Ice ou Control.
+- 1000 aneis com Legendary ou superior.
+
+Balanceamento:
+- Recompensas baixas usam moedas/diamantes para acelerar o inicio.
+- Recompensas medias usam chaves e baus para incentivar retorno.
+- Recompensas altas podem dar skins especiais, mantendo duplicatas protegidas pela conversao de `apply_reward()`.
+- As metas de uso exigem modos diferentes para valorizar skins sem transformar colecao em requisito obrigatorio de progressao.
+
+Checklist:
+- Conquistas por total de skins: sim
+- Conquistas por raridade: sim
+- Conquistas por efeito: sim
+- Conquistas por evolucao: sim
+- Conquistas por uso em modos: sim
+- Recompensas balanceadas por marco: sim
+
+## Passe Neon
+
+Estrutura:
+- 3 temporadas planejadas.
+- 40 niveis por temporada.
+- 4 semanas por temporada.
+- 10 niveis liberados por semana.
+
+Temporadas:
+- `neon_pass_s1`: Neon Awakening / Despertar Neon.
+- `neon_pass_s2`: Circuit Break / Ruptura de Circuito.
+- `neon_pass_s3`: Cosmic Pulse / Pulso Cosmico.
+
+XP por nivel:
+- Niveis 1-10: 100 XP por nivel.
+- Niveis 11-20: 150 XP por nivel.
+- Niveis 21-30: 220 XP por nivel.
+- Niveis 31-40: 300 XP por nivel.
+
+XP por fonte:
+- Participar de fase normal: 20 XP.
+- Vencer fase normal: +50 XP.
+- Modo infinito jogado: 20 XP base.
+- Modo infinito por tempo/aneis: 10 XP por minuto + 2 XP por anel, limitado a 120 XP extras.
+- Boss tentativa: 40 XP.
+- Boss vitoria: +100 XP.
+- Liga Neon batalha: 40 XP.
+- Liga Neon vitoria: +80 XP.
+- Desafio diario: 60 XP.
+- Evento semanal: 75 XP por tarefa, 150 XP no premio final.
+- Primeira vitoria do dia: +100 XP.
+
+Limite semanal:
+- Semana 1: maximo nivel 10.
+- Semana 2: maximo nivel 20.
+- Semana 3: maximo nivel 30.
+- Semana 4: maximo nivel 40.
+- Quando o cap e atingido, XP extra do Passe nao acumula acima do limite. Isso evita overflow e exploits enquanto as recompensas detalhadas ainda nao existem.
+
+Save:
+- O Passe usa campos `neon_pass_*` no save principal.
+- `neon_pass_season_progress` guarda um snapshot por temporada.
+- Migracoes de save antigo criam o Passe com nivel 1, XP 0 e temporada atual.
+
+Checklist:
+- 3 temporadas cadastradas: sim
+- 40 niveis por temporada: sim
+- Limite de 10 niveis por semana: sim
+- XP separado do XP normal: sim
+- Fontes de XP conectadas: sim
+- Save documentado: sim
+
+## Passe Neon - Recompensas
+
+Distribuicao:
+- Niveis 1-10: moedas, XP, chaves, baus comuns/raros leves, diamantes pequenos e primeira skin exclusiva no nivel 10.
+- Niveis 11-20: moedas maiores, XP maior, diamantes, baus raros e marco de bau raro no nivel 20.
+- Niveis 21-30: chaves, fragmentos, diamantes maiores, baus raros/epicos e bau epico no nivel 30.
+- Niveis 31-40: chave lendaria, bau epico/lendario, diamantes altos e skin final da temporada no nivel 40.
+
+Skins exclusivas:
+- S1 nivel 10: `neon_pass_initial`, rara, bonus de moedas.
+- S1 nivel 40: `neon_pass_guardian`, lendaria, repulsao leve e controle.
+- S2 nivel 10: `weekly_circuit`, epica, corrente e velocidade.
+- S2 nivel 40: `neon_commander`, lendaria, moedas, critico e controle.
+- S3 nivel 10: `pass_avatar`, mitica, XP e controle.
+- S3 nivel 40: `neon_sovereign`, mitica, area e controle.
+
+Regras de coleta:
+- Recompensa so pode ser coletada se o nivel foi alcancado.
+- Cada recompensa e coletada apenas uma vez por temporada.
+- `Claim All` soma todas as recompensas disponiveis e usa a mesma conversao de duplicatas de skins.
+- Ultimate nao entra no Passe atual; deve ficar para evento especial, conquista extrema ou temporada futura.
+
+Save:
+- `neon_pass_claimed_rewards` guarda ids coletados por temporada.
+- Historico curto fica em `neon_pass_reward_history`.
+
+Checklist:
+- 40 recompensas por temporada: sim
+- 3 temporadas com recompensas: sim
+- Skins exclusivas sem Ultimate facil: sim
+- Baús comuns/raros/epicos/lendarios distribuidos: sim
+- Claim individual/Claim All balanceados: sim
+
+## Primeira Vitoria do Dia
+
+Regra:
+- O jogador recebe o bonus uma vez por dia ao vencer um modo elegivel.
+- O reset usa o dia local salvo por `TimeManager.get_day_key()`.
+- O bonus e separado do streak da Recompensa Diaria.
+
+Modos elegiveis:
+- Vitoria em fase normal.
+- Resultado valido no modo infinito.
+- Vitoria contra Boss.
+- Vitoria na Liga Neon.
+- Desafio diario concluido.
+
+Formula inicial:
+- Moedas: `260 + nivel_do_jogador * 55`.
+- XP normal: `120 + nivel_do_jogador * 22`.
+- XP do Passe Neon: `+100`.
+- Diamantes: 1 base, +1 no nivel 10, +1 no nivel 25.
+- Chave: 10% de chance, 16% a partir do nivel 20.
+
+Protecoes:
+- `first_win_claimed_date` impede duplicacao no mesmo dia.
+- `last_first_win_reward` guarda a recompensa exibida/recebida.
+- Saves antigos com `neon_pass_last_first_win_day_key` sao tratados para evitar receber o bonus duas vezes no dia da migracao.
+
+Checklist:
+- Balanceamento inicial definido: sim
+- XP do Passe integrado: sim
+- Chance baixa de chave: sim
+- Recompensa escala com nivel: sim
+- Duplicacao protegida: sim

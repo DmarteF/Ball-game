@@ -1,8 +1,14 @@
 extends Node
 
 const SECONDS_PER_DAY := 86400
+const SECONDS_PER_WEEK := SECONDS_PER_DAY * 7
+const WEEKLY_EVENT_CYCLE_SIZE := 26
 const AFK_MAX_SECONDS := 8 * 60 * 60
+const AFK_MIN_SECONDS := 5 * 60
 const BOSS_COOLDOWN_SECONDS := 20 * 60 * 60
+const NEON_PASS_SEASON_COUNT := 3
+const NEON_PASS_WEEKS_PER_SEASON := 4
+const NEON_PASS_LEVELS_PER_WEEK := 10
 
 
 func get_now_timestamp() -> int:
@@ -15,9 +21,89 @@ func get_month_key(timestamp: int = get_now_timestamp()) -> String:
 
 
 func get_week_key(timestamp: int = get_now_timestamp()) -> String:
-	var days := floori(float(timestamp) / 86400.0)
+	var days := floori(float(timestamp) / float(SECONDS_PER_DAY))
 	var week := floori(float(days) / 7.0)
 	return "week_%s" % week
+
+
+func get_week_index(timestamp: int = get_now_timestamp()) -> int:
+	return floori(float(timestamp) / float(SECONDS_PER_WEEK))
+
+
+func get_week_start_timestamp(timestamp: int = get_now_timestamp()) -> int:
+	return get_week_index(timestamp) * SECONDS_PER_WEEK
+
+
+func get_week_end_timestamp(timestamp: int = get_now_timestamp()) -> int:
+	return get_week_start_timestamp(timestamp) + SECONDS_PER_WEEK
+
+
+func get_weekly_event_index(timestamp: int = get_now_timestamp()) -> int:
+	var override := int(GameState.data.get("debug_event_index_override", -1))
+	if bool(GameState.get_setting("debug_enabled", false)) and override >= 0:
+		return posmod(override, WEEKLY_EVENT_CYCLE_SIZE)
+	return posmod(get_week_index(timestamp), WEEKLY_EVENT_CYCLE_SIZE)
+
+
+func get_neon_pass_season_index(timestamp: int = get_now_timestamp()) -> int:
+	var date := Time.get_datetime_dict_from_unix_time(timestamp)
+	return posmod(int(date.month) - 1, NEON_PASS_SEASON_COUNT)
+
+
+func get_neon_pass_week_index(timestamp: int = get_now_timestamp()) -> int:
+	var date := Time.get_datetime_dict_from_unix_time(timestamp)
+	return clampi(floori(float(int(date.day) - 1) / 7.0) + 1, 1, NEON_PASS_WEEKS_PER_SEASON)
+
+
+func get_neon_pass_weekly_level_cap(timestamp: int = get_now_timestamp()) -> int:
+	return min(NEON_PASS_WEEKS_PER_SEASON * NEON_PASS_LEVELS_PER_WEEK, get_neon_pass_week_index(timestamp) * NEON_PASS_LEVELS_PER_WEEK)
+
+
+func get_seconds_until_neon_pass_week_end(timestamp: int = get_now_timestamp()) -> int:
+	var date := Time.get_datetime_dict_from_unix_time(timestamp)
+	var week_index: int = get_neon_pass_week_index(timestamp)
+	if week_index >= NEON_PASS_WEEKS_PER_SEASON:
+		return get_seconds_until_neon_pass_season_end(timestamp)
+	var end_day: int = min(1 + week_index * 7, _days_in_month(int(date.year), int(date.month)) + 1)
+	var end_timestamp := int(Time.get_unix_time_from_datetime_dict({
+		"year": int(date.year),
+		"month": int(date.month),
+		"day": end_day,
+		"hour": 0,
+		"minute": 0,
+		"second": 0,
+	}))
+	return max(0, end_timestamp - timestamp)
+
+
+func get_seconds_until_neon_pass_season_end(timestamp: int = get_now_timestamp()) -> int:
+	var date := Time.get_datetime_dict_from_unix_time(timestamp)
+	var next_year := int(date.year)
+	var next_month := int(date.month) + 1
+	if next_month > 12:
+		next_month = 1
+		next_year += 1
+	var end_timestamp := int(Time.get_unix_time_from_datetime_dict({
+		"year": next_year,
+		"month": next_month,
+		"day": 1,
+		"hour": 0,
+		"minute": 0,
+		"second": 0,
+	}))
+	return max(0, end_timestamp - timestamp)
+
+
+func _days_in_month(year: int, month: int) -> int:
+	match month:
+		1, 3, 5, 7, 8, 10, 12:
+			return 31
+		4, 6, 9, 11:
+			return 30
+		2:
+			var leap := year % 400 == 0 or (year % 4 == 0 and year % 100 != 0)
+			return 29 if leap else 28
+	return 30
 
 
 func get_day_key(timestamp: int = get_now_timestamp()) -> String:
@@ -98,10 +184,50 @@ func update_daily_streak() -> int:
 
 
 func calculate_afk_rewards(offline_seconds: int) -> Dictionary:
-	var capped_seconds: int = min(max(0, offline_seconds), AFK_MAX_SECONDS)
+	if offline_seconds <= 0:
+		return { "valid": false, "reason": "negative_time", "offline_seconds": max(0, offline_seconds) }
+	var cap_seconds: int = _afk_cap_seconds()
+	var capped_seconds: int = min(max(0, offline_seconds), cap_seconds)
+	if capped_seconds < AFK_MIN_SECONDS:
+		return { "valid": false, "reason": "too_short", "offline_seconds": capped_seconds, "minimum_seconds": AFK_MIN_SECONDS }
+	var minutes: int = floori(float(capped_seconds) / 60.0)
 	var hours: float = float(capped_seconds) / 3600.0
-	var coins: int = floori(hours * (80 + int(GameState.data.get("level", 1)) * 6 + int(GameState.data.get("max_unlocked_phase", 1)) * 4))
-	return { "coins": coins, "hours": snapped(hours, 0.1) }
+	var level: int = max(1, int(GameState.data.get("level", 1)))
+	var max_phase: int = max(1, int(GameState.data.get("max_unlocked_phase", 1)))
+	var coin_multiplier: float = _afk_coin_multiplier()
+	var xp_multiplier: float = _afk_xp_multiplier()
+	var coins_per_minute: float = 4.0 + float(level) * 0.85 + float(max_phase) * 0.22
+	var xp_per_minute: float = 1.6 + float(level) * 0.34 + float(max_phase) * 0.09
+	var coins: int = max(20, floori(float(minutes) * coins_per_minute * coin_multiplier))
+	var xp: int = max(8, floori(float(minutes) * xp_per_minute * xp_multiplier))
+	var diamonds := 0
+	if capped_seconds >= 30 * 60 and _afk_roll("diamonds", min(0.28, 0.06 + hours * 0.035 + _afk_diamond_bonus())):
+		diamonds = max(1, floori(hours * 1.35))
+	var keys := 0
+	if capped_seconds >= 2 * 60 * 60 and _afk_roll("keys", min(0.16, 0.035 + hours * 0.018)):
+		keys = 1
+	var chest_type := ""
+	var chests := 0
+	if capped_seconds >= 4 * 60 * 60 and _afk_roll("chest", min(0.12, 0.025 + hours * 0.012)):
+		chest_type = "rare" if capped_seconds >= 7 * 60 * 60 and _afk_roll("rare_chest", 0.18) else "common"
+		chests = 1
+	return {
+		"valid": true,
+		"offline_seconds": max(0, offline_seconds),
+		"capped_seconds": capped_seconds,
+		"cap_seconds": cap_seconds,
+		"max_reached": offline_seconds > cap_seconds,
+		"minutes": minutes,
+		"hours": snapped(hours, 0.1),
+		"coins": coins,
+		"xp": xp,
+		"diamonds": diamonds,
+		"keys": keys,
+		"chests": chests,
+		"chest_type": chest_type,
+		"coin_multiplier": coin_multiplier,
+		"xp_multiplier": xp_multiplier,
+	}
 
 
 func get_pending_afk_rewards() -> Dictionary:
@@ -109,13 +235,58 @@ func get_pending_afk_rewards() -> Dictionary:
 
 
 func claim_afk_rewards() -> Dictionary:
-	var rewards := get_pending_afk_rewards()
-	if rewards.is_empty():
-		return {}
-	GameState.add_coins(int(rewards.get("coins", 0)))
-	GameState.data["pending_afk_rewards"] = {}
-	GameState.save_game()
-	return rewards
+	return GameState.claim_afk_rewards(false)
+
+
+func _afk_cap_seconds() -> int:
+	var cap := AFK_MAX_SECONDS
+	var event_bonus: float = GameState.get_active_event_bonus_value("afk_limit") if GameState.has_method("get_active_event_bonus_value") else 0.0
+	if event_bonus > 0.0:
+		cap = min(12 * 60 * 60, floori(float(cap) * (1.0 + event_bonus)))
+	return cap
+
+
+func _afk_coin_multiplier() -> float:
+	var multiplier := 1.0
+	var coin_boost: Dictionary = GameState.get_upgrade_effect_value("coinBoost")
+	if String(coin_boost.get("type", "")) in ["coins", "coinMultiplier"]:
+		multiplier += min(0.75, float(coin_boost.get("value", 0.0)) * 0.18)
+	var secret_magnet: Dictionary = GameState.get_upgrade_effect_value("secretMagnet")
+	if String(secret_magnet.get("type", "")) in ["coins", "coinMultiplier"]:
+		multiplier += min(0.35, float(secret_magnet.get("value", 0.0)) * 0.12)
+	var skin_effect: Dictionary = GameState.get_skin_effect_value(String(GameState.data.get("equipped_skin", "neon_blue")))
+	if String(skin_effect.get("type", skin_effect.get("effect", ""))) in ["coin_multiplier", "coin_on_hit", "coins"]:
+		multiplier += min(0.30, float(skin_effect.get("value", 0.0)) * 0.12)
+	var event_bonus: float = GameState.get_active_event_bonus_value("afk_rewards") if GameState.has_method("get_active_event_bonus_value") else 0.0
+	if event_bonus <= 0.0:
+		event_bonus = GameState.get_active_event_bonus_value("coins") if GameState.has_method("get_active_event_bonus_value") else 0.0
+	multiplier += min(0.30, event_bonus)
+	return clampf(multiplier, 1.0, 2.4)
+
+
+func _afk_xp_multiplier() -> float:
+	var multiplier := 1.0
+	var xp_boost: Dictionary = GameState.get_upgrade_effect_value("xpBoost")
+	if String(xp_boost.get("type", "")) == "xp":
+		multiplier += min(0.65, float(xp_boost.get("value", 0.0)) * 0.18)
+	var skin_effect: Dictionary = GameState.get_skin_effect_value(String(GameState.data.get("equipped_skin", "neon_blue")))
+	if String(skin_effect.get("type", skin_effect.get("effect", ""))) in ["xp_multiplier", "xp"]:
+		multiplier += min(0.28, float(skin_effect.get("value", 0.0)) * 0.12)
+	var event_bonus: float = GameState.get_active_event_bonus_value("xp") if GameState.has_method("get_active_event_bonus_value") else 0.0
+	multiplier += min(0.25, event_bonus)
+	return clampf(multiplier, 1.0, 2.0)
+
+
+func _afk_diamond_bonus() -> float:
+	var perfect: Dictionary = GameState.get_upgrade_effect_value("perfectChance")
+	var instinct: Dictionary = GameState.get_upgrade_effect_value("diamondInstinct")
+	return min(0.05, float(perfect.get("value", 0.0)) * 0.12 + float(instinct.get("value", 0.0)) * 0.16)
+
+
+func _afk_roll(salt: String, chance: float) -> bool:
+	var seed_text := "%s:%s:%s" % [int(GameState.data.get("last_exit_at", 0)), int(GameState.data.get("last_login_at", 0)), salt]
+	var roll := float(posmod(seed_text.hash(), 10000)) / 10000.0
+	return roll < clampf(chance, 0.0, 1.0)
 
 
 func get_event_time_remaining(event_id: String) -> int:

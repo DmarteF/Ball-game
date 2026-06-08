@@ -81,6 +81,8 @@ var _all_skin_data: Array = []
 var _detail_overlay: PanelContainer
 var _rarity_filters_expanded := false
 var _effect_filters_expanded := false
+var _generated_skin_manifest: Dictionary = {}
+var _toast_stack: Array[Control] = []
 
 
 func _ready() -> void:
@@ -246,6 +248,11 @@ func _make_collection_summary() -> PanelContainer:
 	column.add_child(_make_label("%s/%s skins" % [unlocked, _all_skin_data.size()], 24, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label("%s%% %s" % [percent, _ui_text("completo", "complete", "completo", "完了", "完成")], 14, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	column.add_child(_make_label(_ui_text("Bloqueadas: %s  •  Novas: %s", "Locked: %s  •  New: %s", "Bloqueadas: %s  •  Nuevas: %s", "ロック中: %s  •  新着: %s", "未解锁：%s  •  新：%s") % [locked, new_count], 12, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	var next_goal := GameState.get_next_skin_collection_goal()
+	if not next_goal.is_empty():
+		var progress := int(next_goal.get("progress", unlocked))
+		var required := int(next_goal.get("required", 1))
+		column.add_child(_make_label(_ui_text("Próxima recompensa: %s/%s skins", "Next reward: %s/%s skins", "Próxima recompensa: %s/%s skins", "次の報酬: %s/%s スキン", "下个奖励：%s/%s 皮肤") % [progress, required], 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
 
@@ -472,6 +479,7 @@ func _make_skin_card(skin: Dictionary) -> PanelContainer:
 func _build_all_skin_data() -> Array:
 	var result: Array = []
 	var seen := {}
+	_generated_skin_manifest = _load_generated_skin_manifest()
 	for skin in MainPortData.SKINS:
 		var item: Dictionary = skin.duplicate(true)
 		item["desc"] = String(item.get("desc", item.get("description", "")))
@@ -480,6 +488,7 @@ func _build_all_skin_data() -> Array:
 			item["effects"].append("Controle")
 		item["source"] = _source_hint_from_skin(item)
 		item["owned"] = String(item.get("id", "")) == "neon_blue"
+		item["collection_order"] = result.size()
 		result.append(item)
 		seen[String(item["id"])] = true
 
@@ -503,8 +512,37 @@ func _sort_skin_data(skins: Array) -> void:
 		var b_owned := _is_owned(String(b.get("id", "")))
 		if a_owned != b_owned:
 			return a_owned
+		var a_order := int(a.get("collection_order", 999999))
+		var b_order := int(b.get("collection_order", 999999))
+		if a_order != b_order:
+			return a_order < b_order
 		return String(a.get("name", a.get("id", ""))).naturalnocasecmp_to(String(b.get("name", b.get("id", "")))) < 0
 	)
+
+
+func _load_generated_skin_manifest() -> Dictionary:
+	var path := "res://assets/skins/generated/skin_assets_manifest.json"
+	if not FileAccess.file_exists(path):
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_ARRAY:
+		return {}
+	var result := {}
+	var order := 0
+	for raw_entry in parsed:
+		if typeof(raw_entry) != TYPE_DICTIONARY:
+			continue
+		var entry: Dictionary = raw_entry
+		var id := String(entry.get("id", ""))
+		if id.is_empty():
+			continue
+		entry["manifest_order"] = order
+		result[id] = entry
+		order += 1
+	return result
 
 
 func _append_asset_skins_from_dir(result: Array, seen: Dictionary, path: String) -> void:
@@ -517,20 +555,51 @@ func _append_asset_skins_from_dir(result: Array, seen: Dictionary, path: String)
 		if not directory.current_is_dir() and file_name.ends_with(".png"):
 			var id := file_name.trim_suffix(".png")
 			if not seen.has(id):
-				var rarity := _rarity_from_id(id)
+				var manifest: Dictionary = _generated_skin_manifest.get(id, {})
+				var rarity := _normalize_rarity(String(manifest.get("rarity", _rarity_from_id(id))))
 				result.append({
 					"id": id,
-					"name": _name_from_id(id),
+					"name": String(manifest.get("name_pt", _name_from_id(id))),
 					"rarity": rarity,
-					"desc": _description_from_id(id),
+					"desc": String(manifest.get("description", _description_from_id(id))),
 					"primary": _primary_from_id(id, rarity),
 					"secondary": _secondary_from_id(id),
-					"effects": _effects_from_id(id),
+					"effects": _effects_from_manifest_or_id(manifest, id),
 					"source": _source_hint_from_id(id, rarity),
 					"owned": false,
+					"collection_order": 10000 + int(manifest.get("manifest_order", result.size())),
 				})
 				seen[id] = true
 		file_name = directory.get_next()
+
+
+func _normalize_rarity(rarity: String) -> String:
+	var value := rarity.to_lower()
+	if value in RARITIES:
+		return value
+	if value in ["comum"]:
+		return "common"
+	if value in ["rara", "raro"]:
+		return "rare"
+	if value in ["epica", "epic"]:
+		return "epic"
+	if value in ["lendaria", "lendario"]:
+		return "legendary"
+	if value in ["mitica", "mitico"]:
+		return "mythic"
+	return "common"
+
+
+func _effects_from_manifest_or_id(manifest: Dictionary, id: String) -> Array[String]:
+	var effect := String(manifest.get("effect", ""))
+	if effect.is_empty():
+		return _effects_from_id(id)
+	var effects := _effects_from_passive({ "type": effect })
+	if MainPortData.skin_has_control(id) and not effects.has("Controle"):
+		effects.append("Controle")
+	if _normalize_rarity(String(manifest.get("rarity", _rarity_from_id(id)))) in ["legendary", "mythic", "ultimate"] and not effects.has("Top"):
+		effects.append("Top")
+	return effects
 
 
 func _effects_from_passive(passive: Dictionary) -> Array[String]:
@@ -1063,11 +1132,31 @@ func _show_upgrade_toast(text: String, color: String) -> void:
 	toast.offset_right = 150
 	toast.offset_top = 76
 	toast.offset_bottom = 112
+	_toast_stack.append(toast)
+	_layout_toasts()
 	var tween := create_tween()
 	tween.tween_property(toast, "modulate:a", 1.0, 0.12)
 	tween.tween_interval(1.0)
 	tween.tween_property(toast, "modulate:a", 0.0, 0.2)
-	tween.tween_callback(toast.queue_free)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(toast):
+			toast.queue_free()
+		_toast_stack.erase(toast)
+		_layout_toasts()
+	)
+
+
+func _layout_toasts() -> void:
+	var next_stack: Array[Control] = []
+	for item in _toast_stack:
+		if is_instance_valid(item):
+			next_stack.append(item)
+	_toast_stack = next_stack
+	for i in range(_toast_stack.size()):
+		var toast := _toast_stack[i]
+		var top := 76.0 + float(i) * 42.0
+		toast.offset_top = top
+		toast.offset_bottom = top + 36.0
 
 
 func _effects_text(skin: Dictionary) -> String:

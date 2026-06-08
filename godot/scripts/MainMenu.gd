@@ -15,6 +15,7 @@ const DAILY_REWARD_SCENE := "res://scenes/DailyReward.tscn"
 const BOSS_SCENE := "res://scenes/Boss.tscn"
 const LEAGUE_SCENE := "res://scenes/League.tscn"
 const ACHIEVEMENTS_SCENE := "res://scenes/Achievements.tscn"
+const NEON_PASS_SCENE := "res://scenes/NeonPass.tscn"
 
 const ICON_PATHS := {
 	"coin": "res://assets/ui/ui_coin.png",
@@ -34,6 +35,7 @@ const ICON_PATHS := {
 	"league": "res://assets/ui/ui_league_neon.png",
 	"achievements": "res://assets/ui/ui_achievements.png",
 	"settings": "res://assets/ui/ui_settings.png",
+	"neon_pass": "res://assets/ui/ui_event.png",
 }
 
 const SECONDARY_ITEMS := [
@@ -45,6 +47,7 @@ const SECONDARY_ITEMS := [
 	{ "label": "Daily Reward", "icon": "daily_reward", "color": "#ffd70088", "scene": DAILY_REWARD_SCENE },
 	{ "label": "Boss", "icon": "boss", "color": "#ff005588", "scene": BOSS_SCENE },
 	{ "label": "Neon League", "icon": "league", "color": "#00ff8888", "scene": LEAGUE_SCENE },
+	{ "label": "Neon Pass", "icon": "neon_pass", "color": "#ff4fd888", "scene": NEON_PASS_SCENE },
 	{ "label": "Achievements", "icon": "achievements", "color": "#ffd70088", "scene": ACHIEVEMENTS_SCENE },
 	{ "label": "Settings", "icon": "settings", "color": "#b8f3ff88", "scene": SETTINGS_SCENE },
 ]
@@ -95,6 +98,7 @@ var _achievement_notice_hide_at := 0
 var _tutorial_overlay: Control
 var _tutorial_page := 0
 var _tutorial_dont_show := false
+var _afk_overlay: Control
 var _guided_hint: Button
 var _guided_hint_id := ""
 
@@ -174,16 +178,9 @@ func _build_achievement_notice_overlay() -> void:
 			return
 		var notice := _make_achievement_notice(pending)
 		_achievement_notice = notice
-		notice.anchor_left = 0.0
-		notice.anchor_top = 1.0
-		notice.anchor_right = 0.0
-		notice.anchor_bottom = 1.0
-		notice.offset_left = 18.0
-		notice.offset_top = -146.0
-		notice.offset_right = 254.0
-		notice.offset_bottom = -106.0
 		notice.z_index = 30
 		add_child(notice)
+		_layout_bottom_notifications()
 		GameState.data["achievement_notice_seen_signature"] = signature
 		GameState.save_game()
 		_achievement_notice_hide_at = Time.get_ticks_msec() + 5200
@@ -307,7 +304,11 @@ func _hide_achievement_notice() -> void:
 	var tween := create_tween()
 	tween.tween_property(notice, "modulate:a", 0.0, 0.35)
 	tween.parallel().tween_property(notice, "position:y", notice.position.y - 8.0, 0.35)
-	tween.tween_callback(notice.queue_free)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(notice):
+			notice.queue_free()
+		call_deferred("_layout_bottom_notifications")
+	)
 
 
 func _open_achievements_scene() -> void:
@@ -597,6 +598,7 @@ func _menu_label(key: String) -> String:
 		"daily_reward": return _tr("daily_reward")
 		"boss": return _tr("boss")
 		"league": return _tr("league")
+		"neon_pass": return _tr("neon_pass")
 		"achievements": return _tr("achievements")
 		"settings": return _tr("settings")
 	return key
@@ -760,7 +762,7 @@ func _maybe_show_tutorial_or_hint() -> void:
 	if GameState.should_show_tutorial():
 		_show_tutorial_overlay()
 	else:
-		_show_guided_hint_if_needed()
+		_maybe_show_afk_or_hint()
 
 
 func _show_tutorial_overlay() -> void:
@@ -882,27 +884,134 @@ func _close_tutorial_overlay() -> void:
 	if is_instance_valid(_tutorial_overlay):
 		_tutorial_overlay.queue_free()
 	_tutorial_overlay = null
+	call_deferred("_maybe_show_afk_or_hint")
+
+
+func _maybe_show_afk_or_hint() -> void:
+	if _show_afk_rewards_if_needed():
+		return
+	_show_guided_hint_if_needed()
+
+
+func _show_afk_rewards_if_needed() -> bool:
+	if is_instance_valid(_afk_overlay):
+		return true
+	if not GameState.has_pending_afk_rewards():
+		GameState.data.erase("force_show_afk_modal")
+		return false
+	var rewards: Dictionary = GameState.get_pending_afk_rewards()
+	_afk_overlay = Control.new()
+	_fill(_afk_overlay)
+	_afk_overlay.z_index = 118
+	_afk_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_afk_overlay)
+
+	var dim := ColorRect.new()
+	_fill(dim)
+	dim.color = Color("#03000acc")
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_afk_overlay.add_child(dim)
+
+	var center := CenterContainer.new()
+	_fill(center)
+	center.offset_left = 18
+	center.offset_top = 20
+	center.offset_right = -18
+	center.offset_bottom = -20
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_afk_overlay.add_child(center)
+
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(326, 410)
+	card.add_theme_stylebox_override("panel", _make_style("#140822f4", 18, "#00f0ffaa", 2, "#00f0ff55", 18))
+	center.add_child(card)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	card.add_child(margin)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	margin.add_child(column)
+	column.add_child(_make_label(_txt("Offline Rewards", "Recompensas Offline", "Recompensas Offline", "オフライン報酬", "离线奖励").to_upper(), 24, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	var icon_holder := CenterContainer.new()
+	icon_holder.custom_minimum_size.y = 58
+	icon_holder.add_child(_make_icon("coin", 52, Color("#ffd700")))
+	column.add_child(icon_holder)
+	column.add_child(_make_label("%s %s" % [_txt("You were away for", "Você ficou fora por", "Estuviste fuera por", "離れていた時間", "离线时间"), _format_afk_duration(int(rewards.get("capped_seconds", rewards.get("offline_seconds", 0))))], 14, "#ffffffcc", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	if bool(rewards.get("max_reached", false)):
+		column.add_child(_make_label(_txt("Max offline time reached", "Tempo offline máximo atingido", "Tiempo offline máximo alcanzado", "最大オフライン時間に到達", "已达到最大离线时间"), 12, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+	for line in _afk_reward_lines(rewards):
+		column.add_child(_make_label(line, 16, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
+
+	var collect := _make_tutorial_button(_txt("Collect", "Coletar", "Cobrar", "受け取る", "领取"), "#00f0ff", "#00f0ff", func() -> void:
+		_collect_afk_rewards(false)
+	)
+	collect.custom_minimum_size.y = 44
+	column.add_child(collect)
+	var double_ad := _make_tutorial_button(_txt("Double with Ad", "Dobrar com Anúncio", "Duplicar con anuncio", "広告で2倍", "看广告翻倍"), "#ffd70022", "#ffd700aa", func() -> void:
+		if has_node("/root/AdManager"):
+			AdManager.show_rewarded_ad("double_afk_rewards", func(ok: bool) -> void:
+				if ok:
+					_collect_afk_rewards(true)
+			)
+	)
+	double_ad.custom_minimum_size.y = 44
+	column.add_child(double_ad)
+	return true
+
+
+func _collect_afk_rewards(double_reward: bool) -> void:
+	var result: Dictionary = GameState.claim_afk_rewards(double_reward)
+	if has_node("/root/AudioManager"):
+		AudioManager.play_sfx("res://assets/sounds/coin_gain.mp3" if bool(result.get("ok", false)) else "res://assets/sounds/button_error.mp3", -7.0)
+	_close_afk_overlay()
+
+
+func _close_afk_overlay() -> void:
+	if is_instance_valid(_afk_overlay):
+		_afk_overlay.queue_free()
+	_afk_overlay = null
 	call_deferred("_show_guided_hint_if_needed")
+
+
+func _format_afk_duration(seconds: int) -> String:
+	var hours := seconds / 3600
+	var minutes := (seconds % 3600) / 60
+	if hours > 0:
+		return "%sh %smin" % [hours, minutes]
+	return "%smin" % max(1, minutes)
+
+
+func _afk_reward_lines(rewards: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if int(rewards.get("coins", 0)) > 0:
+		lines.append("+%s %s" % [int(rewards.get("coins", 0)), _txt("coins", "moedas", "monedas", "コイン", "金币")])
+	if int(rewards.get("xp", 0)) > 0:
+		lines.append("+%s XP" % int(rewards.get("xp", 0)))
+	if int(rewards.get("diamonds", 0)) > 0:
+		lines.append("+%s %s" % [int(rewards.get("diamonds", 0)), _txt("diamonds", "diamantes", "diamantes", "ダイヤ", "钻石")])
+	if int(rewards.get("keys", 0)) > 0:
+		lines.append("+%s %s" % [int(rewards.get("keys", 0)), _txt("keys", "chaves", "llaves", "鍵", "钥匙")])
+	if int(rewards.get("chests", 0)) > 0:
+		lines.append("+%s %s %s" % [int(rewards.get("chests", 0)), String(rewards.get("chest_type", "common")).capitalize(), _txt("chest", "baú", "cofre", "宝箱", "宝箱")])
+	return lines
 
 
 func _show_guided_hint_if_needed() -> void:
 	if is_instance_valid(_guided_hint):
 		return
-	var hint_id := GameState.get_guided_hint_id()
+	var hint_id: String = GameState.get_guided_hint_id()
 	if hint_id.is_empty():
 		return
 	_guided_hint_id = hint_id
 	_guided_hint = _make_guided_hint(hint_id)
-	_guided_hint.anchor_left = 0.0
-	_guided_hint.anchor_top = 1.0
-	_guided_hint.anchor_right = 1.0
-	_guided_hint.anchor_bottom = 1.0
-	_guided_hint.offset_left = 20.0
-	_guided_hint.offset_top = -158.0
-	_guided_hint.offset_right = -96.0
-	_guided_hint.offset_bottom = -96.0
 	_guided_hint.z_index = 35
 	add_child(_guided_hint)
+	_layout_bottom_notifications()
 
 
 func _make_guided_hint(hint_id: String) -> Button:
@@ -984,6 +1093,7 @@ func _txt(en: String, pt := "", es := "", ja := "", zh := "") -> String:
 
 
 func _sync_modal_layout() -> void:
+	_layout_bottom_notifications()
 	if _more_panel == null:
 		return
 
@@ -992,6 +1102,26 @@ func _sync_modal_layout() -> void:
 	var item_width: float = max(120.0, floor((panel_width - 32.0 - 10.0) / 2.0))
 	for item in _more_items:
 		item.custom_minimum_size = Vector2(item_width, 76.0)
+
+
+func _layout_bottom_notifications() -> void:
+	var bottom := -34.0
+	if is_instance_valid(_achievement_notice):
+		_position_bottom_notification(_achievement_notice, 18.0, 254.0, 40.0, bottom)
+		bottom -= 50.0
+	if is_instance_valid(_guided_hint):
+		_position_bottom_notification(_guided_hint, 20.0, -96.0, 62.0, bottom)
+
+
+func _position_bottom_notification(control: Control, left: float, right: float, height: float, bottom: float) -> void:
+	control.anchor_left = 0.0
+	control.anchor_top = 1.0
+	control.anchor_right = 1.0 if right < 0.0 else 0.0
+	control.anchor_bottom = 1.0
+	control.offset_left = left
+	control.offset_right = right
+	control.offset_top = bottom - height
+	control.offset_bottom = bottom
 
 
 func _show_more_modal() -> void:

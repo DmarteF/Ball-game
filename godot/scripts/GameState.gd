@@ -9,6 +9,177 @@ const TARGET_ACHIEVEMENT_COUNT := 100
 const SAVE_EXPORT_VERSION := 1
 const SAVE_EXPORT_FORMAT := "neon_idle_escape_godot_save"
 const STARTER_UPGRADE_IDS := ["damage", "speed", "coinBoost", "critical"]
+const NEON_PASS_MAX_LEVEL := 40
+const NEON_PASS_LEVELS_PER_WEEK := 10
+const NEON_PASS_SEASONS := [
+	{ "id": "neon_pass_s1", "name": "Neon Awakening", "name_pt": "Despertar Neon" },
+	{ "id": "neon_pass_s2", "name": "Circuit Break", "name_pt": "Ruptura de Circuito" },
+	{ "id": "neon_pass_s3", "name": "Cosmic Pulse", "name_pt": "Pulso Cósmico" },
+]
+const NEON_PASS_SOURCE_XP := {
+	"normal_level_played": 20,
+	"normal_level_win": 50,
+	"infinite_played": 20,
+	"boss_attempt": 40,
+	"boss_win": 100,
+	"league_battle": 40,
+	"league_win": 80,
+	"daily_challenge": 60,
+	"event_mission": 75,
+	"first_win_of_day": 100,
+}
+const NEON_PASS_SKIN_REWARDS := {
+	"neon_pass_s1": {
+		10: "neon_pass_initial",
+		40: "neon_pass_guardian",
+	},
+	"neon_pass_s2": {
+		10: "weekly_circuit",
+		40: "neon_commander",
+	},
+	"neon_pass_s3": {
+		10: "pass_avatar",
+		40: "neon_sovereign",
+	},
+}
+const UPGRADE_MAX_LEVEL_OVERRIDES := {
+	"damage": 50,
+	"speed": 40,
+	"coinBoost": 50,
+	"critical": 40,
+	"xpBoost": 45,
+	"perfectChance": 30,
+	"magnetCoins": 35,
+	"burn": 30,
+	"penetration": 30,
+	"ricochet": 28,
+	"bounce": 25,
+	"ringRepulse": 25,
+	"frost": 30,
+	"shockwave": 25,
+	"chainLightning": 24,
+	"slowField": 24,
+	"bomb": 20,
+	"laser": 20,
+	"laserCut": 20,
+	"shieldPulse": 18,
+	"bossHunter": 25,
+	"secretMagnet": 30,
+	"diamondInstinct": 24,
+	"trophyInstinct": 20,
+	"multihit": 12,
+	"chainBreak": 16,
+	"criticalOverload": 16,
+	"timeFreeze": 12,
+	"chronoBreak": 10,
+	"voidPulse": 14,
+	"comboOverdrive": 14,
+	"lastShield": 5,
+	"royalBreaker": 18,
+	"rivalCrusher": 16,
+}
+const UPGRADE_EFFECT_CAPS := {
+	"damage": 3.6,
+	"speed": 1.65,
+	"coinBoost": 3.5,
+	"critical": 0.35,
+	"xpBoost": 3.0,
+	"perfectChance": 0.08,
+	"diamondInstinct": 0.08,
+	"frost": 0.48,
+	"timeFreeze": 0.42,
+	"chronoBreak": 0.38,
+	"slowField": 0.45,
+	"ringRepulse": 0.42,
+	"chainLightning": 0.50,
+	"chainBreak": 0.48,
+	"shockwave": 0.44,
+	"voidPulse": 0.44,
+	"bomb": 0.42,
+	"burn": 1.55,
+	"penetration": 1.45,
+	"laser": 1.60,
+	"laserCut": 1.55,
+	"multihit": 0.72,
+	"criticalOverload": 0.33,
+	"royalBreaker": 1.20,
+	"bossHunter": 1.05,
+	"trophyInstinct": 0.42,
+	"comboOverdrive": 0.62,
+	"magnetCoins": 2.10,
+	"secretMagnet": 1.65,
+	"ricochet": 1.15,
+	"bounce": 1.00,
+}
+const UPGRADE_RUN_BONUS_CAPS := {
+	"damage": 20,
+	"speed": 20,
+	"coinBoost": 20,
+	"critical": 20,
+	"xpBoost": 20,
+	"perfectChance": 15,
+	"magnetCoins": 15,
+	"burn": 15,
+	"penetration": 15,
+	"ricochet": 15,
+	"bounce": 12,
+	"ringRepulse": 12,
+	"frost": 12,
+	"shockwave": 10,
+	"chainLightning": 10,
+	"slowField": 10,
+	"bomb": 8,
+	"laser": 8,
+	"laserCut": 8,
+	"shieldPulse": 6,
+	"bossHunter": 10,
+	"secretMagnet": 10,
+	"diamondInstinct": 8,
+	"trophyInstinct": 8,
+	"multihit": 5,
+	"chainBreak": 6,
+	"criticalOverload": 6,
+	"timeFreeze": 4,
+	"chronoBreak": 4,
+	"voidPulse": 5,
+	"comboOverdrive": 6,
+	"lastShield": 2,
+	"royalBreaker": 6,
+	"rivalCrusher": 6,
+}
+const UPGRADE_RUN_EXTRA_EFFECT_CAPS := {
+	"damage": 0.90,
+	"speed": 0.32,
+	"coinBoost": 0.85,
+	"critical": 0.07,
+	"xpBoost": 0.75,
+	"perfectChance": 0.018,
+	"diamondInstinct": 0.018,
+	"frost": 0.08,
+	"timeFreeze": 0.05,
+	"chronoBreak": 0.04,
+	"slowField": 0.06,
+	"ringRepulse": 0.06,
+	"chainLightning": 0.08,
+	"chainBreak": 0.07,
+	"shockwave": 0.07,
+	"voidPulse": 0.06,
+	"bomb": 0.06,
+	"burn": 0.32,
+	"penetration": 0.28,
+	"laser": 0.30,
+	"laserCut": 0.30,
+	"multihit": 0.12,
+	"criticalOverload": 0.05,
+	"royalBreaker": 0.22,
+	"bossHunter": 0.20,
+	"trophyInstinct": 0.08,
+	"comboOverdrive": 0.12,
+	"magnetCoins": 0.42,
+	"secretMagnet": 0.32,
+	"ricochet": 0.16,
+	"bounce": 0.12,
+}
 const SKIN_MAX_LEVEL_BY_RARITY := {
 	"common": 5,
 	"rare": 6,
@@ -35,13 +206,13 @@ const SKIN_UPGRADE_GROWTH := {
 }
 
 const PERMANENT_UPGRADE_DEFS := {
-	"baseDamage": { "base_cost": 70, "max": 40, "phase": 1, "level": 1 },
-	"baseSpeed": { "base_cost": 85, "max": 28, "phase": 1, "level": 1 },
-	"coinMultiplier": { "base_cost": 120, "max": 34, "phase": 1, "level": 1 },
-	"critChance": { "base_cost": 110, "max": 28, "phase": 1, "level": 1 },
-	"xpBoost": { "base_cost": 135, "max": 32, "phase": 3, "level": 3 },
-	"perfectChance": { "base_cost": 320, "max": 18, "phase": 5, "level": 5 },
-	"slowRings": { "base_cost": 440, "max": 18, "phase": 8, "level": 9 },
+	"baseDamage": { "base_cost": 70, "max": 50, "phase": 1, "level": 1 },
+	"baseSpeed": { "base_cost": 85, "max": 40, "phase": 1, "level": 1 },
+	"coinMultiplier": { "base_cost": 120, "max": 50, "phase": 1, "level": 1 },
+	"critChance": { "base_cost": 110, "max": 40, "phase": 1, "level": 1 },
+	"xpBoost": { "base_cost": 135, "max": 45, "phase": 3, "level": 3 },
+	"perfectChance": { "base_cost": 320, "max": 30, "phase": 5, "level": 5 },
+	"slowRings": { "base_cost": 440, "max": 30, "phase": 8, "level": 9 },
 }
 
 const TEMP_UPGRADE_UNLOCKS := {
@@ -71,6 +242,22 @@ const SKIN_UNLOCK_MILESTONES := {
 	"crystal": { "phase": 12, "level": 7, "source": "Marco de fase temporario" },
 	"comet": { "phase": 15, "level": 9, "source": "Marco de fase temporario" },
 }
+
+const SKIN_RARITY_ORDER := ["common", "rare", "epic", "legendary", "mythic", "ultimate"]
+const SKIN_COLLECTION_TOTAL_MILESTONES := [5, 10, 25, 50, 75, 100]
+const SKIN_EFFECT_ACHIEVEMENTS := [
+	{ "id": "control", "label": "Control", "label_pt": "Controle", "metric": "skinEffectControlUnlocked", "required": 3, "reward": { "type": "diamonds", "amount": 22 }, "rarity": "rare" },
+	{ "id": "fire", "label": "Fire", "label_pt": "Fogo", "metric": "skinEffectFireUnlocked", "required": 5, "reward": { "type": "coins", "amount": 1800 }, "rarity": "rare" },
+	{ "id": "ice", "label": "Ice", "label_pt": "Gelo", "metric": "skinEffectIceUnlocked", "required": 5, "reward": { "type": "diamonds", "amount": 28 }, "rarity": "epic" },
+	{ "id": "critical", "label": "Critical", "label_pt": "Critico", "metric": "skinEffectCriticalUnlocked", "required": 5, "reward": { "type": "keys", "amount": 1 }, "rarity": "epic" },
+	{ "id": "coins", "label": "Coins", "label_pt": "Moedas", "metric": "skinEffectCoinsUnlocked", "required": 5, "reward": { "type": "coins", "amount": 2500 }, "rarity": "rare" },
+	{ "id": "xp", "label": "XP", "label_pt": "XP", "metric": "skinEffectXPUnlocked", "required": 5, "reward": { "type": "xp", "amount": 450 }, "rarity": "rare" },
+	{ "id": "speed", "label": "Speed", "label_pt": "Velocidade", "metric": "skinEffectSpeedUnlocked", "required": 5, "reward": { "type": "diamonds", "amount": 24 }, "rarity": "epic" },
+	{ "id": "chain", "label": "Chain", "label_pt": "Corrente", "metric": "skinEffectChainUnlocked", "required": 5, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+	{ "id": "area", "label": "Area", "label_pt": "Area", "metric": "skinEffectAreaUnlocked", "required": 5, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+	{ "id": "phase", "label": "Phase", "label_pt": "Fase", "metric": "skinEffectPhaseUnlocked", "required": 3, "reward": { "type": "diamonds", "amount": 35 }, "rarity": "epic" },
+	{ "id": "gravity", "label": "Gravity", "label_pt": "Gravidade", "metric": "skinEffectGravityUnlocked", "required": 3, "reward": { "type": "keys", "amount": 2 }, "rarity": "legendary" },
+]
 
 const ACHIEVEMENTS := [
 	{ "id": "first_steps", "name": "First Steps", "name_pt": "Primeiros Passos", "desc": "Play your first run.", "desc_pt": "Jogue a primeira partida.", "metric": "runsPlayed", "required": 1, "reward": { "type": "coins", "amount": 250 }, "rarity": "common" },
@@ -180,10 +367,192 @@ func get_achievements() -> Array[Dictionary]:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
 	for achievement in RUN_UPGRADE_UNLOCK_ACHIEVEMENTS:
 		_append_unique_achievement(result, Dictionary(achievement).duplicate(true))
+	_append_skin_collection_achievements(result)
 	_append_phase_achievements(result)
 	_append_infinite_achievements(result)
 	_append_progress_achievements(result)
-	return result.slice(0, min(TARGET_ACHIEVEMENT_COUNT, result.size()))
+	return result
+
+
+func _append_skin_collection_achievements(result: Array[Dictionary]) -> void:
+	var total_skins := _skin_total_available()
+	for target in SKIN_COLLECTION_TOTAL_MILESTONES:
+		if target > total_skins:
+			continue
+		_append_unique_achievement(result, {
+			"id": "skin_collection_total_%s" % target,
+			"name": "Collect %s Skins" % target,
+			"name_pt": "Colete %s Skins" % target,
+			"desc": "Collect %s skins." % target,
+			"desc_pt": "Colete %s skins." % target,
+			"metric": "skinsUnlocked",
+			"required": target,
+			"reward": _skin_collection_reward(target),
+			"rarity": _milestone_rarity(target),
+			"category": "collection",
+			"subtype": "skin_total",
+		})
+	if total_skins > 0:
+		_append_unique_achievement(result, {
+			"id": "skin_collection_all_available",
+			"name": "Complete Skin Collection",
+			"name_pt": "Colecao de Skins Completa",
+			"desc": "Collect every available skin.",
+			"desc_pt": "Colete todas as skins disponiveis.",
+			"metric": "skinsUnlocked",
+			"required": total_skins,
+			"reward": { "type": "skin", "skin_id": "prismatic_omega" },
+			"rarity": "ultimate",
+			"category": "collection",
+			"subtype": "skin_total",
+		})
+	_append_skin_rarity_achievements(result)
+	_append_skin_effect_achievements(result)
+	_append_skin_evolution_achievements(result)
+	_append_skin_usage_achievements(result)
+
+
+func _append_skin_rarity_achievements(result: Array[Dictionary]) -> void:
+	var milestones := {
+		"common": [10, 20],
+		"rare": [10, 20],
+		"epic": [5, 15],
+		"legendary": [3, 10],
+		"mythic": [1, 5, 10],
+		"ultimate": [1, 3, 5],
+	}
+	for rarity in SKIN_RARITY_ORDER:
+		var total := _skin_rarity_total(rarity)
+		var metric := "%sSkinsUnlocked" % rarity
+		for target in Array(milestones.get(rarity, [])):
+			if target > total:
+				continue
+			_append_unique_achievement(result, _skin_metric_achievement(
+				"skin_rarity_%s_%s" % [rarity, target],
+				"Collect %s %s skins" % [target, _rarity_label(rarity).to_lower()],
+				"Colete %s skins %s" % [target, _rarity_label_pt(rarity).to_lower()],
+				"Collect %s %s skins." % [target, _rarity_label(rarity).to_lower()],
+				"Colete %s skins %s." % [target, _rarity_label_pt(rarity).to_lower()],
+				metric,
+				target,
+				_skin_rarity_reward(rarity, target),
+				rarity,
+				"collection",
+				"skin_rarity"
+			))
+		if total > 0:
+			_append_unique_achievement(result, _skin_metric_achievement(
+				"skin_rarity_%s_all" % rarity,
+				"All %s Skins" % _rarity_label(rarity),
+				"Todas as Skins %s" % _rarity_label_pt(rarity),
+				"Collect every %s skin." % _rarity_label(rarity).to_lower(),
+				"Colete todas as skins %s." % _rarity_label_pt(rarity).to_lower(),
+				metric,
+				total,
+				_skin_rarity_all_reward(rarity),
+				rarity,
+				"collection",
+				"skin_rarity_all"
+			))
+
+
+func _append_skin_effect_achievements(result: Array[Dictionary]) -> void:
+	for meta in SKIN_EFFECT_ACHIEVEMENTS:
+		var effect_id := String(meta.get("id", ""))
+		var total := _skin_effect_total(effect_id)
+		var required := int(meta.get("required", 1))
+		if total <= 0:
+			continue
+		required = min(required, total)
+		_append_unique_achievement(result, _skin_metric_achievement(
+			"skin_effect_%s_%s" % [effect_id, required],
+			"%s Skin Collector" % String(meta.get("label", effect_id)).capitalize(),
+			"Colecionador de %s" % String(meta.get("label_pt", effect_id)),
+			"Collect %s skins with %s effects." % [required, String(meta.get("label", effect_id)).to_lower()],
+			"Colete %s skins com efeito %s." % [required, String(meta.get("label_pt", effect_id)).to_lower()],
+			String(meta.get("metric", "")),
+			required,
+			Dictionary(meta.get("reward", {})).duplicate(true),
+			String(meta.get("rarity", "rare")),
+			"skins",
+			"skin_effect"
+		))
+
+
+func _append_skin_evolution_achievements(result: Array[Dictionary]) -> void:
+	var definitions := [
+		{ "id": "skin_evolution_level_2", "name": "First Polish", "name_pt": "Primeiro Polimento", "desc": "Upgrade any skin to level 2.", "desc_pt": "Melhore uma skin ate o nivel 2.", "metric": "skinAnyLevel2", "required": 1, "reward": { "type": "coins", "amount": 900 }, "rarity": "common" },
+		{ "id": "skin_evolution_first_max", "name": "Max Glow", "name_pt": "Brilho Maximo", "desc": "Upgrade any skin to max level.", "desc_pt": "Melhore uma skin ate o nivel maximo.", "metric": "skinMaxedCount", "required": 1, "reward": { "type": "diamonds", "amount": 45 }, "rarity": "epic" },
+		{ "id": "skin_evolution_upgrade_5", "name": "Skin Workshop I", "name_pt": "Oficina de Skins I", "desc": "Upgrade 5 different skins.", "desc_pt": "Melhore 5 skins diferentes.", "metric": "skinsUpgradedCount", "required": 5, "reward": { "type": "keys", "amount": 1 }, "rarity": "rare" },
+		{ "id": "skin_evolution_upgrade_10", "name": "Skin Workshop II", "name_pt": "Oficina de Skins II", "desc": "Upgrade 10 different skins.", "desc_pt": "Melhore 10 skins diferentes.", "metric": "skinsUpgradedCount", "required": 10, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+	]
+	for definition in definitions:
+		var achievement := Dictionary(definition).duplicate(true)
+		achievement["category"] = "skins"
+		achievement["subtype"] = "skin_evolution"
+		_append_unique_achievement(result, achievement)
+	for rarity in SKIN_RARITY_ORDER:
+		_append_unique_achievement(result, _skin_metric_achievement(
+			"skin_evolution_max_%s" % rarity,
+			"Max %s Skin" % _rarity_label(rarity),
+			"Skin %s Maxima" % _rarity_label_pt(rarity),
+			"Upgrade one %s skin to max level." % _rarity_label(rarity).to_lower(),
+			"Melhore uma skin %s ate o nivel maximo." % _rarity_label_pt(rarity).to_lower(),
+			"skin%sMaxed" % rarity.capitalize(),
+			1,
+			_skin_rarity_all_reward(rarity),
+			rarity,
+			"skins",
+			"skin_evolution"
+		))
+
+
+func _append_skin_usage_achievements(result: Array[Dictionary]) -> void:
+	var definitions := [
+		{ "id": "skin_usage_common_phase_10", "name": "Common Champion", "name_pt": "Campeao Comum", "desc": "Win 10 phases with a common skin equipped.", "desc_pt": "Venca 10 fases com uma skin comum equipada.", "metric": "skinCommonPhaseWins", "required": 10, "reward": { "type": "coins", "amount": 1600 }, "rarity": "common" },
+		{ "id": "skin_usage_rare_phase_10", "name": "Rare Champion", "name_pt": "Campeao Raro", "desc": "Win 10 phases with a rare skin equipped.", "desc_pt": "Venca 10 fases com uma skin rara equipada.", "metric": "skinRarePhaseWins", "required": 10, "reward": { "type": "diamonds", "amount": 22 }, "rarity": "rare" },
+		{ "id": "skin_usage_epic_phase_10", "name": "Epic Champion", "name_pt": "Campeao Epico", "desc": "Win 10 phases with an epic skin equipped.", "desc_pt": "Venca 10 fases com uma skin epica equipada.", "metric": "skinEpicPhaseWins", "required": 10, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+		{ "id": "skin_usage_control_infinite_5m", "name": "Controlled Survival", "name_pt": "Sobrevivencia Controlada", "desc": "Survive 5 minutes in Infinite Mode with a Control skin.", "desc_pt": "Sobreviva 5 minutos no Modo Infinito com uma skin de Controle.", "metric": "skinControlInfiniteSeconds", "required": 300, "reward": { "type": "diamonds", "amount": 50 }, "rarity": "epic" },
+		{ "id": "skin_usage_fire_boss_win", "name": "Fire Boss Breaker", "name_pt": "Quebra-Boss de Fogo", "desc": "Defeat a boss with a Fire skin.", "desc_pt": "Derrote um boss com uma skin de Fogo.", "metric": "skinFireBossWins", "required": 1, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "rarity": "epic" },
+		{ "id": "skin_usage_ultimate_league_win", "name": "Ultimate League Glow", "name_pt": "Brilho Ultimate da Liga", "desc": "Win a Neon League match with an Ultimate skin.", "desc_pt": "Venca uma partida da Liga Neon com uma skin Ultimate.", "metric": "skinUltimateLeagueWins", "required": 1, "reward": { "type": "diamonds", "amount": 90 }, "rarity": "ultimate" },
+		{ "id": "skin_usage_ice_control_perfects_50", "name": "Precision Chill", "name_pt": "Precisao Gelada", "desc": "Make 50 Perfect Escapes with Ice or Control skins.", "desc_pt": "Faca 50 Perfect Escapes com skins de Gelo ou Controle.", "metric": "skinIceControlPerfects", "required": 50, "reward": { "type": "keys", "amount": 3 }, "rarity": "legendary" },
+		{ "id": "skin_usage_legendary_rings_1000", "name": "Legendary Breaker", "name_pt": "Quebrador Lendario", "desc": "Destroy 1000 rings with legendary or better skins.", "desc_pt": "Destrua 1000 aneis com skins lendarias ou superiores.", "metric": "skinLegendaryPlusRings", "required": 1000, "reward": { "type": "chest", "chest_type": "epic", "amount": 1 }, "rarity": "legendary" },
+	]
+	for definition in definitions:
+		var achievement := Dictionary(definition).duplicate(true)
+		achievement["category"] = "skins"
+		achievement["subtype"] = "skin_usage"
+		_append_unique_achievement(result, achievement)
+
+
+func _skin_metric_achievement(id: String, name: String, name_pt: String, desc: String, desc_pt: String, metric: String, required: int, reward: Dictionary, rarity: String, category: String, subtype: String) -> Dictionary:
+	return {
+		"id": id,
+		"name": name,
+		"name_pt": name_pt,
+		"desc": desc,
+		"desc_pt": desc_pt,
+		"metric": metric,
+		"required": required,
+		"reward": reward,
+		"rarity": rarity,
+		"category": category,
+		"subtype": subtype,
+	}
+
+
+func get_next_skin_collection_goal() -> Dictionary:
+	_update_skin_collection_stats()
+	var stats: Dictionary = data.get("stats", {})
+	for achievement in get_achievements():
+		if String(achievement.get("subtype", "")) != "skin_total":
+			continue
+		var progress := int(stats.get(String(achievement.get("metric", "")), 0))
+		if progress < int(achievement.get("required", 1)):
+			var result := achievement.duplicate(true)
+			result["progress"] = progress
+			return result
+	return {}
 
 
 func _append_phase_achievements(result: Array[Dictionary]) -> void:
@@ -410,9 +779,13 @@ func default_save() -> Dictionary:
 			},
 		},
 		"last_exit_at": now,
-		"last_login_at": now,
-		"last_daily_reward_at": 0,
-		"daily_streak": 0,
+			"last_login_at": now,
+			"last_daily_reward_at": 0,
+			"first_win_claimed_date": "",
+			"first_win_completed_today": false,
+			"last_first_win_reward": {},
+			"last_afk_claim_timestamp": 0,
+			"daily_streak": 0,
 		"pending_afk_rewards": {},
 		"events": {},
 		"boss": { "last_attempt_at": 0 },
@@ -440,6 +813,19 @@ func default_save() -> Dictionary:
 			"days": {},
 			"last_result": {},
 		},
+		"neon_pass_season_id": "neon_pass_s1",
+		"neon_pass_level": 1,
+		"neon_pass_xp": 0,
+		"neon_pass_week_index": 1,
+		"neon_pass_weekly_level_cap": NEON_PASS_LEVELS_PER_WEEK,
+		"neon_pass_total_xp": 0,
+		"neon_pass_last_updated_at": now,
+		"neon_pass_last_first_win_day_key": "",
+		"neon_pass_season_progress": {},
+		"neon_pass_claimed_rewards": {},
+		"neon_pass_reward_history": [],
+		"neon_pass_debug_week_offset": 0,
+		"neon_pass_debug_season_offset": 0,
 		"ads": {
 			"mock_enabled": true,
 			"completed": {},
@@ -452,13 +838,26 @@ func default_save() -> Dictionary:
 		},
 		"daily_missions": { "day_key": "", "missions": [] },
 		"achievements": {},
+		"skin_usage": {},
 		"stats": {
+			"totalPlayTimeSeconds": 0,
+			"totalMatches": 0,
+			"wins": 0,
+			"losses": 0,
+			"phaseCompletions": 0,
+			"totalXpEarned": 0,
+			"totalCoinsEarned": 0,
+			"totalDiamondsEarned": 0,
+			"totalKeysEarned": 0,
 			"runs_played": 0,
 			"rings_destroyed": 0,
 			"perfect_escapes": 0,
 			"diamonds_found": 0,
 			"chests_opened": 0,
+			"chestsOpened": 0,
+			"chestsEarned": 0,
 			"skins_unlocked": 1,
+			"skinsMaxed": 0,
 			"rareSkinsUnlocked": 0,
 			"epicSkinsUnlocked": 0,
 			"legendarySkinsUnlocked": 0,
@@ -485,6 +884,8 @@ func default_save() -> Dictionary:
 			"bossRuns": 0,
 			"bossWins": 0,
 			"bossLosses": 0,
+			"bossDamageTotal": 0,
+			"bossBestTime": 0,
 			"bossNormalWins": 0,
 			"bossStrongWins": 0,
 			"bossEliteWins": 0,
@@ -500,12 +901,15 @@ func default_save() -> Dictionary:
 			"wheelSpins": 0,
 			"storePurchases": 0,
 			"upgradesBought": 0,
+			"upgradesUnlocked": 4,
+			"upgradesMaxed": 0,
 			"skinEquips": 0,
 			"leagueMatches": 0,
 			"leagueWins": 0,
 			"leagueLosses": 0,
 			"leagueQuits": 0,
 			"leagueTrophies": 0,
+			"highestLeagueTrophies": 0,
 			"leagueTrophiesTotal": 0,
 			"leagueWinStreak": 0,
 			"leagueRankIndex": 0,
@@ -514,6 +918,12 @@ func default_save() -> Dictionary:
 			"leagueDiamondReached": 0,
 			"leagueLegendaryReached": 0,
 			"leagueUltimateReached": 0,
+			"neonPassXpEarned": 0,
+			"neonPassRewardsClaimed": 0,
+			"eventsCompleted": 0,
+			"eventMissionsCompleted": 0,
+			"eventRewardsClaimed": 0,
+			"bestInfiniteReward": 0,
 		},
 	}
 
@@ -526,15 +936,135 @@ func load_game() -> void:
 	_sanitize_persistent_unlocks()
 	refresh_unlocks(false)
 	var now := TimeManager.get_now_timestamp()
-	var offline_seconds := TimeManager.get_offline_seconds()
-	var rewards := TimeManager.calculate_afk_rewards(offline_seconds)
-	data["pending_afk_rewards"] = rewards if int(rewards.get("coins", 0)) >= 25 else {}
+	_prepare_afk_rewards_on_login(now)
 	data["last_login_at"] = now
 	save_game(false)
 	changed.emit()
 
 
+func _prepare_afk_rewards_on_login(now: int) -> void:
+	var existing: Dictionary = data.get("pending_afk_rewards", {})
+	if not existing.is_empty() and not bool(existing.get("claimed", false)):
+		return
+	var last_exit: int = int(data.get("last_exit_at", 0))
+	if last_exit <= 0 or now <= last_exit:
+		data["pending_afk_rewards"] = {}
+		return
+	var offline_seconds: int = max(0, now - last_exit)
+	var rewards: Dictionary = TimeManager.calculate_afk_rewards(offline_seconds)
+	if bool(rewards.get("valid", false)):
+		rewards["id"] = "afk_%s_%s" % [last_exit, now]
+		rewards["created_at"] = now
+		rewards["last_exit_at"] = last_exit
+		rewards["claimed"] = false
+		rewards["doubled"] = false
+		data["pending_afk_rewards"] = rewards
+	else:
+		data["pending_afk_rewards"] = {}
+
+
+func has_pending_afk_rewards() -> bool:
+	var rewards: Dictionary = data.get("pending_afk_rewards", {})
+	return not rewards.is_empty() and bool(rewards.get("valid", false)) and not bool(rewards.get("claimed", false))
+
+
+func get_pending_afk_rewards() -> Dictionary:
+	return Dictionary(data.get("pending_afk_rewards", {})).duplicate(true)
+
+
+func claim_afk_rewards(double_reward := false) -> Dictionary:
+	var rewards: Dictionary = data.get("pending_afk_rewards", {})
+	if rewards.is_empty() or bool(rewards.get("claimed", false)) or not bool(rewards.get("valid", false)):
+		return { "ok": false, "reason": "no_afk" }
+	var multiplier := 2 if double_reward and not bool(rewards.get("doubled", false)) else 1
+	var coins := int(rewards.get("coins", 0)) * multiplier
+	var xp := int(rewards.get("xp", 0)) * multiplier
+	var diamonds := int(rewards.get("diamonds", 0)) * multiplier
+	var keys := int(rewards.get("keys", 0)) * multiplier
+	var chests := int(rewards.get("chests", 0)) * multiplier
+	var chest_type := String(rewards.get("chest_type", "common"))
+	if coins > 0:
+		data["coins"] = max(0, int(data.get("coins", 0)) + coins)
+		_increment_stat("runCoins", coins, false)
+		_add_earning_stats(coins, 0, 0, 0)
+	if xp > 0:
+		data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
+		data["xp"] = max(0, int(data.get("xp", 0)) + xp)
+		_add_earning_stats(0, xp, 0, 0)
+		while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
+			data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
+			data["level"] = int(data.get("level", 1)) + 1
+	if diamonds > 0:
+		data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
+		_increment_stat("diamondsFound", diamonds, false)
+		_add_earning_stats(0, 0, diamonds, 0)
+	if keys > 0:
+		data["keys"] = max(0, int(data.get("keys", 0)) + keys)
+		_add_earning_stats(0, 0, 0, keys)
+	if chests > 0 and not chest_type.is_empty():
+		add_inventory_item("chest_%s" % chest_type, "chest", "Chest %s" % chest_type.capitalize(), chest_type, chests)
+	var now := TimeManager.get_now_timestamp()
+	data["pending_afk_rewards"] = {}
+	data["last_afk_claim_timestamp"] = now
+	data["last_exit_at"] = now
+	data["last_reward_text"] = _afk_reward_text(coins, xp, diamonds, keys, chests, chest_type)
+	refresh_unlocks(false)
+	_update_achievements(false)
+	save_game()
+	return {
+		"ok": true,
+		"reward": {
+			"coins": coins,
+			"xp": xp,
+			"diamonds": diamonds,
+			"keys": keys,
+			"chests": chests,
+			"chest_type": chest_type,
+		},
+		"text": String(data.get("last_reward_text", "")),
+		"doubled": multiplier > 1,
+	}
+
+
+func _afk_reward_text(coins: int, xp: int, diamonds: int, keys: int, chests: int, chest_type: String) -> String:
+	var parts: Array[String] = []
+	if coins > 0:
+		parts.append("+%s coins" % coins)
+	if xp > 0:
+		parts.append("+%s XP" % xp)
+	if diamonds > 0:
+		parts.append("+%s diamonds" % diamonds)
+	if keys > 0:
+		parts.append("+%s keys" % keys)
+	if chests > 0:
+		parts.append("+%s %s chest" % [chests, chest_type])
+	return "Offline rewards: %s" % ", ".join(parts)
+
+
+func debug_simulate_afk(seconds: int) -> void:
+	var now := TimeManager.get_now_timestamp()
+	data["last_exit_at"] = max(0, now - max(0, seconds))
+	data["pending_afk_rewards"] = {}
+	_prepare_afk_rewards_on_login(now)
+	save_game()
+
+
+func debug_clear_pending_afk() -> void:
+	data["pending_afk_rewards"] = {}
+	data["last_afk_claim_timestamp"] = TimeManager.get_now_timestamp()
+	save_game()
+
+
+func debug_force_show_afk_modal() -> void:
+	if not has_pending_afk_rewards():
+		debug_simulate_afk(60 * 60)
+	data["force_show_afk_modal"] = true
+	save_game()
+
+
 func save_game(emit_signal := true) -> void:
+	if not data.is_empty() and data.has("neon_pass_season_id"):
+		_save_neon_pass_season_progress()
 	SaveManager.save_game(data)
 	if emit_signal:
 		changed.emit()
@@ -632,6 +1162,8 @@ func debug_unlock_all() -> void:
 	data["new_skins"] = skins.duplicate()
 	refresh_unlocks(false)
 	migrate_save_to_skin_levels()
+	_update_skin_collection_stats()
+	_update_achievements(false)
 	save_game()
 
 
@@ -695,6 +1227,65 @@ func debug_unlock_all_skins() -> void:
 	data["new_skins"] = skins.duplicate()
 	migrate_save_to_skin_levels()
 	refresh_unlocks(false)
+	_update_skin_collection_stats()
+	_update_achievements(false)
+	save_game()
+
+
+func debug_unlock_random_skin() -> Dictionary:
+	var locked: Array = []
+	for skin_id in _all_known_skin_ids():
+		if not Array(data.get("unlocked_skins", [])).has(skin_id):
+			locked.append(String(skin_id))
+	if locked.is_empty():
+		return { "ok": false, "reason": "all_unlocked", "count": 0 }
+	var chosen := String(locked[randi() % locked.size()])
+	unlock_skin(chosen)
+	return { "ok": true, "id": chosen, "name": _skin_display_name(chosen), "count": 1 }
+
+
+func debug_unlock_skin_batch(amount: int = 10) -> Dictionary:
+	var unlocked_count := 0
+	var names: Array = []
+	for i in range(max(1, amount)):
+		var result := debug_unlock_random_skin()
+		if not bool(result.get("ok", false)):
+			break
+		unlocked_count += 1
+		names.append(String(result.get("name", result.get("id", ""))))
+	return { "ok": unlocked_count > 0, "count": unlocked_count, "names": names }
+
+
+func debug_max_collection_achievements() -> void:
+	debug_unlock_all_skins()
+	debug_max_all_skins()
+	var stats: Dictionary = data.get("stats", {})
+	stats["skinCommonPhaseWins"] = max(int(stats.get("skinCommonPhaseWins", 0)), 10)
+	stats["skinRarePhaseWins"] = max(int(stats.get("skinRarePhaseWins", 0)), 10)
+	stats["skinEpicPhaseWins"] = max(int(stats.get("skinEpicPhaseWins", 0)), 10)
+	stats["skinControlInfiniteSeconds"] = max(int(stats.get("skinControlInfiniteSeconds", 0)), 300)
+	stats["skinFireBossWins"] = max(int(stats.get("skinFireBossWins", 0)), 1)
+	stats["skinUltimateLeagueWins"] = max(int(stats.get("skinUltimateLeagueWins", 0)), 1)
+	stats["skinIceControlPerfects"] = max(int(stats.get("skinIceControlPerfects", 0)), 50)
+	stats["skinLegendaryPlusRings"] = max(int(stats.get("skinLegendaryPlusRings", 0)), 1000)
+	data["stats"] = stats
+	_update_skin_collection_stats()
+	_update_achievements(false)
+	save_game()
+
+
+func debug_reset_skin_achievements() -> void:
+	var achievements: Dictionary = data.get("achievements", {})
+	for achievement in get_achievements():
+		if _is_skin_achievement(achievement):
+			achievements.erase(String(achievement.get("id", "")))
+	data["achievements"] = achievements
+	var stats: Dictionary = data.get("stats", {})
+	for key in _skin_usage_stat_keys():
+		stats[key] = 0
+	data["stats"] = stats
+	_update_skin_collection_stats()
+	_update_achievements(false)
 	save_game()
 
 
@@ -709,6 +1300,34 @@ func _all_known_skin_ids() -> Array:
 	if not skins.has("neon_blue"):
 		skins.push_front("neon_blue")
 	return skins
+
+
+func _skin_display_name(id: String) -> String:
+	var skin := MainPortData.skin_by_id(id)
+	if skin.is_empty():
+		return id.capitalize()
+	return String(skin.get("name", skin.get("name_en", id)))
+
+
+func _is_skin_achievement(achievement: Dictionary) -> bool:
+	var category := String(achievement.get("category", ""))
+	var id := String(achievement.get("id", ""))
+	var metric := String(achievement.get("metric", ""))
+	var reward: Dictionary = Dictionary(achievement.get("reward", {}))
+	return category in ["skins", "collection"] or id.begins_with("skin_") or metric.begins_with("skin") or String(reward.get("type", "")) == "skin"
+
+
+func _skin_usage_stat_keys() -> Array:
+	return [
+		"skinCommonPhaseWins",
+		"skinRarePhaseWins",
+		"skinEpicPhaseWins",
+		"skinControlInfiniteSeconds",
+		"skinFireBossWins",
+		"skinUltimateLeagueWins",
+		"skinIceControlPerfects",
+		"skinLegendaryPlusRings",
+	]
 
 
 func _append_skin_ids_from_dir(skins: Array, path: String) -> void:
@@ -732,9 +1351,795 @@ func debug_reset_daily_reward() -> void:
 	save_game()
 
 
+func debug_reset_first_win_of_day() -> void:
+	data["first_win_claimed_date"] = ""
+	data["first_win_completed_today"] = false
+	data["last_first_win_reward"] = {}
+	data["neon_pass_last_first_win_day_key"] = ""
+	save_game()
+
+
+func debug_complete_first_win_of_day() -> Dictionary:
+	return claim_first_win_of_day("debug_complete")
+
+
+func debug_claim_first_win_reward() -> Dictionary:
+	return claim_first_win_of_day("debug_claim")
+
+
 func debug_reset_wheel_timer() -> void:
 	data["wheel"] = { "day_key": "", "free_used": false, "ad_spins_used": 0, "last_reward": {} }
 	_ensure_live_systems()
+	save_game()
+
+
+func debug_force_event_index(index: int) -> void:
+	data["debug_event_index_override"] = posmod(index, TimeManager.WEEKLY_EVENT_CYCLE_SIZE)
+	get_weekly_event()
+	save_game()
+
+
+func debug_next_weekly_event() -> void:
+	var current := TimeManager.get_weekly_event_index()
+	debug_force_event_index(current + 1)
+
+
+func debug_previous_weekly_event() -> void:
+	var current := TimeManager.get_weekly_event_index()
+	debug_force_event_index(current - 1)
+
+
+func debug_reset_event_override() -> void:
+	data.erase("debug_event_index_override")
+	save_game()
+
+
+func debug_complete_current_event() -> void:
+	var event := get_weekly_event()
+	var event_id := String(event.get("id", ""))
+	if event_id.is_empty():
+		return
+	var events: Dictionary = data.get("events", {})
+	var state: Dictionary = events.get(event_id, {})
+	var progress: Dictionary = state.get("progress", {})
+	for raw_task in Array(event.get("tasks", [])):
+		var task: Dictionary = raw_task
+		var metric := String(task.get("metric", ""))
+		progress[metric] = int(task.get("target", 1))
+	state["progress"] = progress
+	events[event_id] = state
+	data["events"] = events
+	save_game()
+
+
+func debug_reset_current_event() -> void:
+	var event := get_weekly_event()
+	var event_id := String(event.get("id", ""))
+	if event_id.is_empty():
+		return
+	var events: Dictionary = data.get("events", {})
+	events.erase(event_id)
+	data["events"] = events
+	get_weekly_event()
+	save_game()
+
+
+func debug_claim_current_event_reward() -> Dictionary:
+	debug_complete_current_event()
+	return claim_weekly_event_reward("final_reward")
+
+
+func debug_weekly_event_state() -> Dictionary:
+	var event := get_weekly_event()
+	var event_id := String(event.get("id", ""))
+	var state: Dictionary = data.get("events", {}).get(event_id, {})
+	return {
+		"event_id": event_id,
+		"event_index": int(event.get("event_index", 0)),
+		"title": String(event.get("title", "")),
+		"status": String(event.get("status", "")),
+		"claimed": Array(state.get("claimed", [])).duplicate(),
+		"progress": Dictionary(state.get("progress", {})).duplicate(true),
+		"baseline": Dictionary(state.get("baseline", {})).duplicate(true),
+	}
+
+
+func _neon_pass_effective_timestamp() -> int:
+	var week_offset := int(data.get("neon_pass_debug_week_offset", 0))
+	var season_offset := int(data.get("neon_pass_debug_season_offset", 0))
+	var offset_weeks := week_offset + season_offset * TimeManager.NEON_PASS_WEEKS_PER_SEASON
+	return TimeManager.get_now_timestamp() + offset_weeks * TimeManager.SECONDS_PER_WEEK
+
+
+func _neon_pass_season_for_timestamp(timestamp: int) -> Dictionary:
+	var index := TimeManager.get_neon_pass_season_index(timestamp)
+	return Dictionary(NEON_PASS_SEASONS[index]).duplicate(true)
+
+
+func _neon_pass_context() -> Dictionary:
+	var timestamp := _neon_pass_effective_timestamp()
+	var season := _neon_pass_season_for_timestamp(timestamp)
+	var week_index := TimeManager.get_neon_pass_week_index(timestamp)
+	return {
+		"timestamp": timestamp,
+		"season": season,
+		"season_id": String(season.get("id", "neon_pass_s1")),
+		"week_index": week_index,
+		"weekly_level_cap": TimeManager.get_neon_pass_weekly_level_cap(timestamp),
+		"seconds_until_week_end": TimeManager.get_seconds_until_neon_pass_week_end(timestamp),
+		"seconds_until_season_end": TimeManager.get_seconds_until_neon_pass_season_end(timestamp),
+	}
+
+
+func _neon_pass_progress_snapshot() -> Dictionary:
+	return {
+		"level": int(data.get("neon_pass_level", 1)),
+		"xp": int(data.get("neon_pass_xp", 0)),
+		"total_xp": int(data.get("neon_pass_total_xp", 0)),
+		"last_updated_at": int(data.get("neon_pass_last_updated_at", 0)),
+		"last_first_win_day_key": String(data.get("neon_pass_last_first_win_day_key", "")),
+	}
+
+
+func _save_neon_pass_season_progress() -> void:
+	var season_id := String(data.get("neon_pass_season_id", ""))
+	if season_id.is_empty():
+		return
+	var progress: Dictionary = data.get("neon_pass_season_progress", {})
+	if typeof(progress) != TYPE_DICTIONARY:
+		progress = {}
+	progress[season_id] = _neon_pass_progress_snapshot()
+	data["neon_pass_season_progress"] = progress
+
+
+func _restore_neon_pass_progress(season_id: String, progress: Dictionary) -> void:
+	var saved: Dictionary = Dictionary(progress.get(season_id, {}))
+	data["neon_pass_level"] = clampi(int(saved.get("level", 1)), 1, NEON_PASS_MAX_LEVEL)
+	data["neon_pass_xp"] = max(0, int(saved.get("xp", 0)))
+	data["neon_pass_total_xp"] = max(0, int(saved.get("total_xp", 0)))
+	data["neon_pass_last_updated_at"] = int(saved.get("last_updated_at", TimeManager.get_now_timestamp()))
+	data["neon_pass_last_first_win_day_key"] = String(saved.get("last_first_win_day_key", ""))
+
+
+func _ensure_neon_pass_state() -> void:
+	var context := _neon_pass_context()
+	var season_id := String(context.get("season_id", "neon_pass_s1"))
+	var progress: Dictionary = data.get("neon_pass_season_progress", {})
+	if typeof(progress) != TYPE_DICTIONARY:
+		progress = {}
+	var claimed_rewards: Dictionary = data.get("neon_pass_claimed_rewards", {})
+	if typeof(claimed_rewards) != TYPE_DICTIONARY:
+		claimed_rewards = {}
+	if typeof(claimed_rewards.get(season_id, [])) != TYPE_ARRAY:
+		claimed_rewards[season_id] = []
+	if typeof(data.get("neon_pass_reward_history", [])) != TYPE_ARRAY:
+		data["neon_pass_reward_history"] = []
+	var current_id := String(data.get("neon_pass_season_id", season_id))
+	if current_id != season_id:
+		if not current_id.is_empty():
+			progress[current_id] = _neon_pass_progress_snapshot()
+		_restore_neon_pass_progress(season_id, progress)
+	data["neon_pass_season_id"] = season_id
+	data["neon_pass_week_index"] = int(context.get("week_index", 1))
+	data["neon_pass_weekly_level_cap"] = int(context.get("weekly_level_cap", NEON_PASS_LEVELS_PER_WEEK))
+	data["neon_pass_last_updated_at"] = TimeManager.get_now_timestamp()
+	data["neon_pass_season_progress"] = progress
+	data["neon_pass_claimed_rewards"] = claimed_rewards
+	_normalize_neon_pass_progress()
+	_save_neon_pass_season_progress()
+
+
+func _normalize_neon_pass_progress() -> void:
+	var cap := clampi(int(data.get("neon_pass_weekly_level_cap", NEON_PASS_LEVELS_PER_WEEK)), 1, NEON_PASS_MAX_LEVEL)
+	var level := clampi(int(data.get("neon_pass_level", 1)), 1, NEON_PASS_MAX_LEVEL)
+	var xp: int = max(0, int(data.get("neon_pass_xp", 0)))
+	level = min(level, cap)
+	while level < cap and level < NEON_PASS_MAX_LEVEL and xp >= get_neon_pass_xp_needed_for_level(level):
+		xp -= get_neon_pass_xp_needed_for_level(level)
+		level += 1
+	if level >= cap or level >= NEON_PASS_MAX_LEVEL:
+		xp = 0
+	else:
+		xp = min(xp, max(0, get_neon_pass_xp_needed_for_level(level) - 1))
+	data["neon_pass_level"] = level
+	data["neon_pass_xp"] = xp
+
+
+func get_neon_pass_xp_needed_for_level(level: int) -> int:
+	if level <= 10:
+		return 100
+	if level <= 20:
+		return 150
+	if level <= 30:
+		return 220
+	return 300
+
+
+func _neon_pass_skin_for_level(season_id: String, level: int) -> String:
+	var season_skins: Dictionary = Dictionary(NEON_PASS_SKIN_REWARDS.get(season_id, {}))
+	return String(season_skins.get(level, ""))
+
+
+func _neon_pass_reward_for_level(season_id: String, level: int) -> Dictionary:
+	var skin_id := _neon_pass_skin_for_level(season_id, level)
+	if not skin_id.is_empty():
+		return {
+			"type": "skin",
+			"skin_id": skin_id,
+			"amount": 1,
+		}
+	if level == 38:
+		return { "type": "chest", "chest_type": "legendary", "amount": 1 }
+	if level == 35:
+		return { "type": "legendary_keys", "amount": 1 }
+	if level == 30:
+		return { "type": "chest", "chest_type": "epic", "amount": 1 }
+	if level == 20:
+		return { "type": "chest", "chest_type": "rare", "amount": 1 }
+	if level % 9 == 0:
+		return { "type": "diamonds", "amount": 10 + level / 3 }
+	if level % 8 == 0:
+		return { "type": "fragments", "skin_id": "neon_blue", "amount": 12 + level }
+	if level % 6 == 0:
+		return { "type": "keys", "amount": 1 + int(level >= 24) }
+	if level % 5 == 0:
+		var chest_type := "rare" if level >= 15 else "common"
+		return { "type": "chest", "chest_type": chest_type, "amount": 1 }
+	if level % 3 == 0:
+		return { "type": "xp", "amount": 120 + level * 18 }
+	return { "type": "coins", "amount": 300 + level * 85 + int(level / 10) * 250 }
+
+
+func _neon_pass_reward_icon(reward: Dictionary) -> String:
+	match String(reward.get("type", "")):
+		"coins":
+			return "coin"
+		"diamonds", "gems":
+			return "gem"
+		"keys":
+			return "key"
+		"legendaryKeys", "legendary_keys":
+			return "legendary_key"
+		"xp", "profileXp", "profile_xp":
+			return "xp"
+		"fragments":
+			return "fragments"
+		"skin":
+			return "skins"
+		"chest":
+			return "chest_%s" % String(reward.get("chest_type", reward.get("chestType", "common")))
+	return "coin"
+
+
+func _neon_pass_reward_rarity(reward: Dictionary) -> String:
+	match String(reward.get("type", "")):
+		"skin":
+			return _skin_rarity_from_id(String(reward.get("skin_id", reward.get("skinId", ""))))
+		"chest":
+			return String(reward.get("chest_type", reward.get("chestType", "common"))).to_lower()
+		"legendaryKeys", "legendary_keys":
+			return "legendary"
+	return "common"
+
+
+func _neon_pass_reward_title(reward: Dictionary) -> Dictionary:
+	var amount := int(reward.get("amount", 1))
+	match String(reward.get("type", "")):
+		"coins":
+			return { "en": "%s Coins" % amount, "pt": "%s Moedas" % amount }
+		"diamonds", "gems":
+			return { "en": "%s Diamonds" % amount, "pt": "%s Diamantes" % amount }
+		"keys":
+			return { "en": "%s Keys" % amount, "pt": "%s Chaves" % amount }
+		"legendaryKeys", "legendary_keys":
+			return { "en": "%s Legendary Key" % amount, "pt": "%s Chave Lendaria" % amount }
+		"xp", "profileXp", "profile_xp":
+			return { "en": "%s XP" % amount, "pt": "%s XP" % amount }
+		"fragments":
+			return { "en": "%s Fragments" % amount, "pt": "%s Fragmentos" % amount }
+		"skin":
+			var skin_id := String(reward.get("skin_id", reward.get("skinId", "")))
+			var skin := MainPortData.skin_by_id(skin_id)
+			var en_name := String(skin.get("name_en", skin.get("name", skin_id.capitalize()))) if not skin.is_empty() else skin_id.capitalize()
+			var pt_name := String(skin.get("name_pt", skin.get("name", en_name))) if not skin.is_empty() else en_name
+			return { "en": en_name, "pt": pt_name }
+		"chest":
+			var chest_type := String(reward.get("chest_type", reward.get("chestType", "common"))).capitalize()
+			return { "en": "%s Chest" % chest_type, "pt": "Bau %s" % chest_type }
+	return { "en": "Reward", "pt": "Recompensa" }
+
+
+func get_neon_pass_rewards(season_id := "") -> Array:
+	_ensure_neon_pass_state()
+	var active_season_id := String(data.get("neon_pass_season_id", "neon_pass_s1"))
+	var target_season_id := active_season_id if String(season_id).is_empty() else String(season_id)
+	var current_level := int(data.get("neon_pass_level", 1)) if target_season_id == active_season_id else 0
+	var weekly_cap := int(data.get("neon_pass_weekly_level_cap", NEON_PASS_LEVELS_PER_WEEK)) if target_season_id == active_season_id else NEON_PASS_MAX_LEVEL
+	var claimed_by_season: Dictionary = data.get("neon_pass_claimed_rewards", {})
+	var claimed_ids: Array = claimed_by_season.get(target_season_id, [])
+	var rewards: Array = []
+	for level in range(1, NEON_PASS_MAX_LEVEL + 1):
+		var reward := _neon_pass_reward_for_level(target_season_id, level)
+		var reward_id := "%s_l%02d" % [target_season_id, level]
+		var title := _neon_pass_reward_title(reward)
+		var reached := level <= current_level
+		var claimed := claimed_ids.has(reward_id)
+		rewards.append({
+			"id": reward_id,
+			"season_id": target_season_id,
+			"level": level,
+			"reward": reward,
+			"title": String(title.get("en", "Reward")),
+			"title_pt": String(title.get("pt", title.get("en", "Reward"))),
+			"icon": _neon_pass_reward_icon(reward),
+			"rarity": _neon_pass_reward_rarity(reward),
+			"reached": reached,
+			"claimed": claimed,
+			"available": reached and not claimed,
+			"capped": level > weekly_cap,
+		})
+	return rewards
+
+
+func _neon_pass_reward_entry(level: int) -> Dictionary:
+	for entry in get_neon_pass_rewards():
+		if int(Dictionary(entry).get("level", 0)) == level:
+			return Dictionary(entry)
+	return {}
+
+
+func get_neon_pass_claimed_rewards(season_id := "") -> Array:
+	_ensure_neon_pass_state()
+	var target_season_id := String(data.get("neon_pass_season_id", "neon_pass_s1")) if String(season_id).is_empty() else String(season_id)
+	var claimed_by_season: Dictionary = data.get("neon_pass_claimed_rewards", {})
+	return Array(claimed_by_season.get(target_season_id, [])).duplicate()
+
+
+func can_claim_neon_pass_reward(level: int) -> bool:
+	var entry := _neon_pass_reward_entry(level)
+	return bool(entry.get("available", false))
+
+
+func _mark_neon_pass_reward_claimed(season_id: String, reward_id: String) -> void:
+	var claimed_by_season: Dictionary = data.get("neon_pass_claimed_rewards", {})
+	if typeof(claimed_by_season) != TYPE_DICTIONARY:
+		claimed_by_season = {}
+	var claimed_ids: Array = claimed_by_season.get(season_id, [])
+	if not claimed_ids.has(reward_id):
+		claimed_ids.append(reward_id)
+	claimed_by_season[season_id] = claimed_ids
+	data["neon_pass_claimed_rewards"] = claimed_by_season
+
+
+func claim_neon_pass_reward(level: int) -> Dictionary:
+	_ensure_neon_pass_state()
+	var entry := _neon_pass_reward_entry(level)
+	if entry.is_empty():
+		return { "ok": false, "reason": "missing" }
+	if bool(entry.get("claimed", false)):
+		return { "ok": false, "reason": "claimed" }
+	if not bool(entry.get("reached", false)):
+		return { "ok": false, "reason": "locked" }
+	var reward: Dictionary = Dictionary(entry.get("reward", {})).duplicate(true)
+	var season_id := String(entry.get("season_id", data.get("neon_pass_season_id", "neon_pass_s1")))
+	var reward_id := String(entry.get("id", ""))
+	_mark_neon_pass_reward_claimed(season_id, reward_id)
+	var text := apply_reward(reward, false)
+	var history: Array = data.get("neon_pass_reward_history", [])
+	history.append({
+		"id": reward_id,
+		"season_id": season_id,
+		"level": level,
+		"reward": reward.duplicate(true),
+		"claimed_at": TimeManager.get_now_timestamp(),
+	})
+	data["neon_pass_reward_history"] = history.slice(max(0, history.size() - 80), history.size())
+	data["last_reward_text"] = text
+	_increment_stat("neonPassRewardsClaimed", 1, false)
+	save_game()
+	entry["reward"] = reward
+	entry["claimed"] = true
+	entry["available"] = false
+	return {
+		"ok": true,
+		"reward": reward,
+		"entry": entry,
+		"text": text,
+		"claimed": 1,
+	}
+
+
+func claim_all_neon_pass_rewards() -> Dictionary:
+	_ensure_neon_pass_state()
+	var claimed_count := 0
+	var applied_rewards: Array = []
+	var reward_summary := {
+		"coins": 0,
+		"diamonds": 0,
+		"keys": 0,
+		"legendary_keys": 0,
+		"xp": 0,
+		"fragments": 0,
+		"chests": 0,
+		"skins": 0,
+	}
+	var history: Array = data.get("neon_pass_reward_history", [])
+	for entry in get_neon_pass_rewards():
+		var row: Dictionary = Dictionary(entry)
+		if not bool(row.get("available", false)):
+			continue
+		var reward: Dictionary = Dictionary(row.get("reward", {})).duplicate(true)
+		_mark_neon_pass_reward_claimed(String(row.get("season_id", data.get("neon_pass_season_id", "neon_pass_s1"))), String(row.get("id", "")))
+		apply_reward(reward, false)
+		_accumulate_neon_pass_reward_summary(reward_summary, reward)
+		applied_rewards.append({
+			"entry": row,
+			"reward": reward,
+		})
+		history.append({
+			"id": String(row.get("id", "")),
+			"season_id": String(row.get("season_id", data.get("neon_pass_season_id", "neon_pass_s1"))),
+			"level": int(row.get("level", 0)),
+			"reward": reward.duplicate(true),
+			"claimed_at": TimeManager.get_now_timestamp(),
+		})
+		claimed_count += 1
+	if claimed_count <= 0:
+		return { "ok": false, "reason": "not_ready" }
+	data["neon_pass_reward_history"] = history.slice(max(0, history.size() - 80), history.size())
+	var text := _neon_pass_reward_summary_text(reward_summary, claimed_count)
+	data["last_reward_text"] = text
+	_increment_stat("neonPassRewardsClaimed", claimed_count, false)
+	save_game()
+	return {
+		"ok": true,
+		"reward": reward_summary,
+		"rewards": applied_rewards,
+		"text": text,
+		"claimed": claimed_count,
+	}
+
+
+func _accumulate_neon_pass_reward_summary(summary: Dictionary, reward: Dictionary) -> void:
+	var amount := int(reward.get("amount", 1))
+	match String(reward.get("type", "")):
+		"coins":
+			summary["coins"] = int(summary.get("coins", 0)) + amount
+		"diamonds", "gems":
+			summary["diamonds"] = int(summary.get("diamonds", 0)) + amount
+		"keys":
+			summary["keys"] = int(summary.get("keys", 0)) + amount
+		"legendaryKeys", "legendary_keys":
+			summary["legendary_keys"] = int(summary.get("legendary_keys", 0)) + amount
+		"xp", "profileXp", "profile_xp":
+			summary["xp"] = int(summary.get("xp", 0)) + amount
+		"fragments":
+			summary["fragments"] = int(summary.get("fragments", 0)) + amount
+		"chest":
+			summary["chests"] = int(summary.get("chests", 0)) + amount
+		"skin":
+			summary["skins"] = int(summary.get("skins", 0)) + 1
+
+
+func _neon_pass_reward_summary_text(summary: Dictionary, claimed_count: int) -> String:
+	var parts: Array[String] = ["%s recompensas" % claimed_count]
+	if int(summary.get("coins", 0)) > 0:
+		parts.append("+%s moedas" % int(summary.get("coins", 0)))
+	if int(summary.get("diamonds", 0)) > 0:
+		parts.append("+%s diamantes" % int(summary.get("diamonds", 0)))
+	if int(summary.get("keys", 0)) > 0:
+		parts.append("+%s chaves" % int(summary.get("keys", 0)))
+	if int(summary.get("legendary_keys", 0)) > 0:
+		parts.append("+%s chaves lendarias" % int(summary.get("legendary_keys", 0)))
+	if int(summary.get("xp", 0)) > 0:
+		parts.append("+%s XP" % int(summary.get("xp", 0)))
+	if int(summary.get("fragments", 0)) > 0:
+		parts.append("+%s fragmentos" % int(summary.get("fragments", 0)))
+	if int(summary.get("chests", 0)) > 0:
+		parts.append("+%s baus" % int(summary.get("chests", 0)))
+	if int(summary.get("skins", 0)) > 0:
+		parts.append("+%s skins" % int(summary.get("skins", 0)))
+	return "Passe Neon: %s" % ", ".join(parts)
+
+
+func get_neon_pass_state() -> Dictionary:
+	_ensure_neon_pass_state()
+	var context := _neon_pass_context()
+	var season: Dictionary = context.get("season", {})
+	var level := int(data.get("neon_pass_level", 1))
+	var cap := int(data.get("neon_pass_weekly_level_cap", NEON_PASS_LEVELS_PER_WEEK))
+	var xp_needed := get_neon_pass_xp_needed_for_level(level)
+	var rewards := get_neon_pass_rewards()
+	var claimable_count := 0
+	for reward_entry in rewards:
+		if bool(Dictionary(reward_entry).get("available", false)):
+			claimable_count += 1
+	return {
+		"season_id": String(data.get("neon_pass_season_id", "neon_pass_s1")),
+		"season_name": String(season.get("name", "Neon Awakening")),
+		"season_name_pt": String(season.get("name_pt", "Despertar Neon")),
+		"week_index": int(data.get("neon_pass_week_index", 1)),
+		"weekly_level_cap": cap,
+		"level": level,
+		"xp": int(data.get("neon_pass_xp", 0)),
+		"xp_needed": xp_needed,
+		"total_xp": int(data.get("neon_pass_total_xp", 0)),
+		"max_level": NEON_PASS_MAX_LEVEL,
+		"levels_per_week": NEON_PASS_LEVELS_PER_WEEK,
+		"cap_reached": level >= cap or level >= NEON_PASS_MAX_LEVEL,
+		"seconds_until_week_end": int(context.get("seconds_until_week_end", 0)),
+		"seconds_until_season_end": int(context.get("seconds_until_season_end", 0)),
+		"last_updated_at": int(data.get("neon_pass_last_updated_at", 0)),
+		"rewards": rewards,
+		"claimed_rewards": get_neon_pass_claimed_rewards(),
+		"claimable_count": claimable_count,
+	}
+
+
+func add_neon_pass_xp(amount: int, source: String) -> Dictionary:
+	_ensure_neon_pass_state()
+	var incoming: int = max(0, amount)
+	var cap := int(data.get("neon_pass_weekly_level_cap", NEON_PASS_LEVELS_PER_WEEK))
+	var level := int(data.get("neon_pass_level", 1))
+	if incoming <= 0:
+		return { "ok": false, "reason": "empty", "xp_added": 0, "source": source, "state": get_neon_pass_state() }
+	if level >= cap or level >= NEON_PASS_MAX_LEVEL:
+		data["neon_pass_xp"] = 0
+		data["neon_pass_last_updated_at"] = TimeManager.get_now_timestamp()
+		save_game(false)
+		return { "ok": false, "reason": "weekly_cap", "xp_added": 0, "source": source, "state": get_neon_pass_state() }
+	var xp: int = int(data.get("neon_pass_xp", 0)) + incoming
+	var levels_gained := 0
+	var discarded := 0
+	while level < cap and level < NEON_PASS_MAX_LEVEL:
+		var needed := get_neon_pass_xp_needed_for_level(level)
+		if xp < needed:
+			break
+		xp -= needed
+		level += 1
+		levels_gained += 1
+		if level >= cap or level >= NEON_PASS_MAX_LEVEL:
+			discarded = xp
+			xp = 0
+			break
+	var accepted: int = max(0, incoming - discarded)
+	data["neon_pass_level"] = level
+	data["neon_pass_xp"] = xp
+	data["neon_pass_total_xp"] = max(0, int(data.get("neon_pass_total_xp", 0)) + accepted)
+	_increment_stat("neonPassXpEarned", accepted, false)
+	data["neon_pass_last_updated_at"] = TimeManager.get_now_timestamp()
+	data["neon_pass_last_xp_source"] = source
+	data["neon_pass_last_xp_added"] = accepted
+	save_game(false)
+	return {
+		"ok": accepted > 0,
+		"reason": "weekly_cap" if discarded > 0 else "ok",
+		"xp_added": accepted,
+		"source": source,
+		"levels_gained": levels_gained,
+		"discarded_xp": discarded,
+		"state": get_neon_pass_state(),
+	}
+
+
+func add_neon_pass_source_xp(source: String, amount := -1) -> Dictionary:
+	var value := amount if amount >= 0 else int(NEON_PASS_SOURCE_XP.get(source, 0))
+	return add_neon_pass_xp(value, source)
+
+
+func _add_neon_pass_first_win_bonus(source := "eligible_win") -> Dictionary:
+	return claim_first_win_of_day(source)
+
+
+func _ensure_first_win_state() -> void:
+	var legacy_day := String(data.get("neon_pass_last_first_win_day_key", ""))
+	if String(data.get("first_win_claimed_date", "")).is_empty() and not legacy_day.is_empty():
+		data["first_win_claimed_date"] = legacy_day
+	var today := TimeManager.get_day_key()
+	var claimed_date := String(data.get("first_win_claimed_date", ""))
+	data["first_win_completed_today"] = claimed_date == today
+	if typeof(data.get("last_first_win_reward", {})) != TYPE_DICTIONARY:
+		data["last_first_win_reward"] = {}
+
+
+func _first_win_reward_for_today() -> Dictionary:
+	var player_level: int = max(1, int(data.get("level", 1)))
+	var diamonds: int = 1
+	if player_level >= 10:
+		diamonds += 1
+	if player_level >= 25:
+		diamonds += 1
+	var key_chance: float = 0.10
+	if player_level >= 20:
+		key_chance = 0.16
+	return {
+		"type": "bundle",
+		"source": "first_win_of_day",
+		"coins": 260 + player_level * 55,
+		"xp": 120 + player_level * 22,
+		"pass_xp": int(NEON_PASS_SOURCE_XP.get("first_win_of_day", 100)),
+		"diamonds": diamonds,
+		"keys": 0,
+		"key_chance": key_chance,
+	}
+
+
+func _finalize_first_win_reward(reward: Dictionary) -> Dictionary:
+	var result := reward.duplicate(true)
+	var key_chance := float(result.get("key_chance", 0.0))
+	if key_chance > 0.0 and randf() < key_chance:
+		result["keys"] = int(result.get("keys", 0)) + 1
+	return result
+
+
+func _apply_first_win_reward(reward: Dictionary) -> Dictionary:
+	var coins := int(reward.get("coins", 0))
+	var xp := int(reward.get("xp", 0))
+	var pass_xp := int(reward.get("pass_xp", 0))
+	var diamonds := int(reward.get("diamonds", 0))
+	var keys := int(reward.get("keys", 0))
+	if coins > 0:
+		data["coins"] = max(0, int(data.get("coins", 0)) + coins)
+		_add_earning_stats(coins, 0, 0, 0)
+	if diamonds > 0:
+		data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
+		_increment_stat("diamondsFound", diamonds, false)
+		_increment_stat("diamonds_found", diamonds, false)
+		_add_earning_stats(0, 0, diamonds, 0)
+	if keys > 0:
+		data["keys"] = max(0, int(data.get("keys", 0)) + keys)
+		_add_earning_stats(0, 0, 0, keys)
+	if xp > 0:
+		add_profile_xp(xp)
+	var pass_result := {}
+	if pass_xp > 0:
+		pass_result = add_neon_pass_xp(pass_xp, "first_win_of_day")
+	return pass_result
+
+
+func _first_win_reward_text(reward: Dictionary, show_chance := false) -> String:
+	var parts: Array[String] = []
+	if int(reward.get("coins", 0)) > 0:
+		parts.append("+%s gold" % int(reward.get("coins", 0)))
+	if int(reward.get("xp", 0)) > 0:
+		parts.append("+%s XP" % int(reward.get("xp", 0)))
+	if int(reward.get("pass_xp", 0)) > 0:
+		parts.append("+%s Pass XP" % int(reward.get("pass_xp", 0)))
+	if int(reward.get("diamonds", 0)) > 0:
+		parts.append("+%s diamonds" % int(reward.get("diamonds", 0)))
+	if int(reward.get("keys", 0)) > 0:
+		parts.append("+%s keys" % int(reward.get("keys", 0)))
+	elif show_chance and float(reward.get("key_chance", 0.0)) > 0.0:
+		parts.append("%s%% key chance" % int(round(float(reward.get("key_chance", 0.0)) * 100.0)))
+	return " • ".join(parts)
+
+
+func get_first_win_of_day_state() -> Dictionary:
+	_ensure_first_win_state()
+	var completed := bool(data.get("first_win_completed_today", false))
+	var preview_reward := _first_win_reward_for_today()
+	var last_reward: Dictionary = Dictionary(data.get("last_first_win_reward", {})).duplicate(true)
+	return {
+		"day_key": TimeManager.get_day_key(),
+		"completed_today": completed,
+		"claimed": completed,
+		"available": not completed,
+		"reward": last_reward if completed and not last_reward.is_empty() else preview_reward,
+		"preview_reward": preview_reward,
+		"last_reward": last_reward,
+		"reward_text": _first_win_reward_text(preview_reward, true),
+		"last_reward_text": _first_win_reward_text(last_reward, false) if not last_reward.is_empty() else "",
+		"seconds_until_reset": TimeManager.get_seconds_until_next_day(),
+	}
+
+
+func claim_first_win_of_day(source := "eligible_win") -> Dictionary:
+	_ensure_first_win_state()
+	var today := TimeManager.get_day_key()
+	if String(data.get("first_win_claimed_date", "")) == today:
+		return {
+			"ok": false,
+			"reason": "already_claimed",
+			"reward": Dictionary(data.get("last_first_win_reward", {})).duplicate(true),
+			"text": String(data.get("last_reward_text", "")),
+		}
+	var reward := _finalize_first_win_reward(_first_win_reward_for_today())
+	data["first_win_claimed_date"] = today
+	data["first_win_completed_today"] = true
+	data["neon_pass_last_first_win_day_key"] = today
+	data["last_first_win_reward"] = reward.duplicate(true)
+	var pass_result := _apply_first_win_reward(reward)
+	var text := _first_win_reward_text(reward, false)
+	data["last_reward_text"] = text
+	_increment_stat("firstWinBonuses", 1, false)
+	_progress_missions("firstWinBonuses", 1)
+	_update_achievements(false)
+	save_game()
+	return {
+		"ok": true,
+		"source": source,
+		"reward": reward,
+		"text": text,
+		"pass_result": pass_result,
+	}
+
+
+func _add_neon_pass_infinite_xp(seconds: int, rings: int) -> void:
+	add_neon_pass_source_xp("infinite_played")
+	var survival_xp: int = max(0, floori(float(max(0, seconds)) / 60.0) * 10 + min(120, max(0, rings) * 2))
+	if survival_xp > 0:
+		add_neon_pass_xp(survival_xp, "infinite_survival_time")
+
+
+func debug_neon_pass_state() -> Dictionary:
+	return get_neon_pass_state()
+
+
+func debug_add_neon_pass_xp(amount := 500) -> Dictionary:
+	return add_neon_pass_xp(amount, "debug")
+
+
+func debug_set_neon_pass_level(level: int) -> void:
+	_ensure_neon_pass_state()
+	var cap := int(data.get("neon_pass_weekly_level_cap", NEON_PASS_LEVELS_PER_WEEK))
+	data["neon_pass_level"] = clampi(level, 1, min(cap, NEON_PASS_MAX_LEVEL))
+	data["neon_pass_xp"] = 0
+	data["neon_pass_last_updated_at"] = TimeManager.get_now_timestamp()
+	save_game()
+
+
+func debug_reset_neon_pass() -> void:
+	var context := _neon_pass_context()
+	data["neon_pass_season_id"] = String(context.get("season_id", "neon_pass_s1"))
+	data["neon_pass_level"] = 1
+	data["neon_pass_xp"] = 0
+	data["neon_pass_week_index"] = int(context.get("week_index", 1))
+	data["neon_pass_weekly_level_cap"] = int(context.get("weekly_level_cap", NEON_PASS_LEVELS_PER_WEEK))
+	data["neon_pass_total_xp"] = 0
+	data["neon_pass_last_updated_at"] = TimeManager.get_now_timestamp()
+	data["neon_pass_last_first_win_day_key"] = ""
+	_save_neon_pass_season_progress()
+	save_game()
+
+
+func debug_simulate_next_neon_pass_week() -> void:
+	data["neon_pass_debug_week_offset"] = int(data.get("neon_pass_debug_week_offset", 0)) + 1
+	_ensure_neon_pass_state()
+	save_game()
+
+
+func debug_simulate_next_neon_pass_season() -> void:
+	data["neon_pass_debug_season_offset"] = int(data.get("neon_pass_debug_season_offset", 0)) + 1
+	data["neon_pass_debug_week_offset"] = 0
+	_ensure_neon_pass_state()
+	save_game()
+
+
+func debug_unlock_all_neon_pass_rewards() -> void:
+	_ensure_neon_pass_state()
+	var missing_weeks: int = max(0, TimeManager.NEON_PASS_WEEKS_PER_SEASON - int(data.get("neon_pass_week_index", 1)))
+	if missing_weeks > 0:
+		data["neon_pass_debug_week_offset"] = int(data.get("neon_pass_debug_week_offset", 0)) + missing_weeks
+		_ensure_neon_pass_state()
+	data["neon_pass_level"] = NEON_PASS_MAX_LEVEL
+	data["neon_pass_xp"] = 0
+	data["neon_pass_weekly_level_cap"] = NEON_PASS_MAX_LEVEL
+	data["neon_pass_last_updated_at"] = TimeManager.get_now_timestamp()
+	save_game()
+
+
+func debug_claim_all_neon_pass_rewards() -> Dictionary:
+	debug_unlock_all_neon_pass_rewards()
+	return claim_all_neon_pass_rewards()
+
+
+func debug_reset_claimed_neon_pass_rewards() -> void:
+	_ensure_neon_pass_state()
+	var season_id := String(data.get("neon_pass_season_id", "neon_pass_s1"))
+	var claimed_by_season: Dictionary = data.get("neon_pass_claimed_rewards", {})
+	claimed_by_season[season_id] = []
+	data["neon_pass_claimed_rewards"] = claimed_by_season
+	data["neon_pass_reward_history"] = []
 	save_game()
 
 
@@ -765,6 +2170,55 @@ func debug_upgrade_state() -> Dictionary:
 		"gameplay_pool_ids": pool_ids,
 		"upgrade_levels": Dictionary(data.get("upgrade_levels", {})).duplicate(true),
 	}
+
+
+func debug_add_profile_stats_test_data() -> void:
+	_ensure_profile_stats_state()
+	var stats: Dictionary = data.get("stats", {})
+	stats["totalPlayTimeSeconds"] = int(stats.get("totalPlayTimeSeconds", 0)) + 5400
+	stats["runsPlayed"] = int(stats.get("runsPlayed", 0)) + 18
+	stats["runs_played"] = int(stats.get("runs_played", 0)) + 18
+	stats["phaseWins"] = int(stats.get("phaseWins", 0)) + 9
+	stats["wins"] = int(stats.get("wins", 0)) + 9
+	stats["losses"] = int(stats.get("losses", 0)) + 3
+	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + 360
+	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + 360
+	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + 42
+	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + 42
+	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), 12)
+	stats["totalCoinsEarned"] = int(stats.get("totalCoinsEarned", 0)) + 9200
+	stats["totalXpEarned"] = int(stats.get("totalXpEarned", 0)) + 2100
+	stats["totalDiamondsEarned"] = int(stats.get("totalDiamondsEarned", 0)) + 35
+	stats["totalKeysEarned"] = int(stats.get("totalKeysEarned", 0)) + 4
+	stats["chestsOpened"] = int(stats.get("chestsOpened", 0)) + 3
+	stats["bossWins"] = int(stats.get("bossWins", 0)) + 1
+	stats["boss_wins"] = int(stats.get("boss_wins", 0)) + 1
+	stats["bossDamageTotal"] = int(stats.get("bossDamageTotal", 0)) + 15000
+	stats["bestInfiniteSeconds"] = max(int(stats.get("bestInfiniteSeconds", 0)), 210)
+	stats["bestInfiniteRings"] = max(int(stats.get("bestInfiniteRings", 0)), 58)
+	stats["leagueMatches"] = int(stats.get("leagueMatches", 0)) + 5
+	stats["leagueWins"] = int(stats.get("leagueWins", 0)) + 3
+	stats["neonPassXpEarned"] = int(stats.get("neonPassXpEarned", 0)) + 700
+	stats["eventMissionsCompleted"] = int(stats.get("eventMissionsCompleted", 0)) + 2
+	data["stats"] = stats
+	var usage: Dictionary = data.get("skin_usage", {})
+	var equipped := String(data.get("equipped_skin", "neon_blue"))
+	usage[equipped] = int(usage.get(equipped, 0)) + 12
+	data["skin_usage"] = usage
+	_ensure_profile_stats_state()
+	save_game()
+
+
+func debug_reset_profile_stats() -> void:
+	data["stats"] = _profile_stat_defaults()
+	data["skin_usage"] = {}
+	_update_skin_collection_stats()
+	_ensure_profile_stats_state()
+	save_game()
+
+
+func debug_profile_stats_snapshot() -> Dictionary:
+	return get_profile_stats_snapshot()
 
 
 func _looks_like_save_data(candidate: Dictionary) -> bool:
@@ -859,7 +2313,7 @@ func _ensure_upgrade_state() -> void:
 	var cleaned_levels := {}
 	for upgrade in MainPortData.run_upgrades():
 		var id := String(upgrade.get("id", ""))
-		var max_level := int(upgrade.get("maxLevel", 1))
+		var max_level := get_upgrade_max_level(id)
 		var level := clampi(int(levels.get(id, 0)), 0, max_level)
 		if level > 0:
 			cleaned_levels[id] = level
@@ -885,6 +2339,9 @@ func _ensure_live_systems() -> void:
 	_ensure_daily_challenge_state()
 	_ensure_boss_state()
 	_ensure_league_season()
+	_ensure_neon_pass_state()
+	_ensure_first_win_state()
+	_ensure_profile_stats_state()
 	var achievements: Dictionary = data.get("achievements", {})
 	for achievement in get_achievements():
 		var id := String(achievement["id"])
@@ -893,6 +2350,182 @@ func _ensure_live_systems() -> void:
 	data["achievements"] = achievements
 	_ensure_tutorial_state()
 	_update_achievements(false)
+
+
+func _profile_stat_defaults() -> Dictionary:
+	return {
+		"totalPlayTimeSeconds": 0,
+		"totalMatches": 0,
+		"wins": 0,
+		"losses": 0,
+		"phaseCompletions": 0,
+		"totalXpEarned": 0,
+		"totalCoinsEarned": 0,
+		"totalDiamondsEarned": 0,
+		"totalKeysEarned": 0,
+		"runs_played": 0,
+		"runsPlayed": 0,
+		"rings_destroyed": 0,
+		"ringsDestroyed": 0,
+		"perfect_escapes": 0,
+		"perfectEscapes": 0,
+		"diamonds_found": 0,
+		"diamondsFound": 0,
+		"chests_opened": 0,
+		"chestsOpened": 0,
+		"chestsEarned": 0,
+		"skins_unlocked": 1,
+		"skinsUnlocked": 1,
+		"skinsMaxed": 0,
+		"skinMaxedCount": 0,
+		"skinsUpgradedCount": 0,
+		"highest_phase": 1,
+		"highestPhase": 1,
+		"highest_run_level": 1,
+		"infinite_runs": 0,
+		"infiniteRuns": 0,
+		"best_infinite_seconds": 0,
+		"bestInfiniteSeconds": 0,
+		"best_infinite_rings": 0,
+		"bestInfiniteRings": 0,
+		"best_infinite_score": 0,
+		"bestInfiniteScore": 0,
+		"infiniteBestLevel": 0,
+		"bestInfiniteReward": 0,
+		"bestCombo": 0,
+		"runCoins": 0,
+		"runUpgrades": 0,
+		"criticals": 0,
+		"skinEffects": 0,
+		"boss_runs": 0,
+		"boss_wins": 0,
+		"boss_losses": 0,
+		"bossRuns": 0,
+		"bossWins": 0,
+		"bossLosses": 0,
+		"bossDamageTotal": 0,
+		"bossBestTime": 0,
+		"dailyChallengeRuns": 0,
+		"dailyChallengeCompletions": 0,
+		"phaseWins": 0,
+		"wheelSpins": 0,
+		"storePurchases": 0,
+		"upgradesBought": 0,
+		"upgradesUnlocked": STARTER_UPGRADE_IDS.size(),
+		"upgradesMaxed": 0,
+		"skinEquips": 0,
+		"leagueMatches": 0,
+		"leagueWins": 0,
+		"leagueLosses": 0,
+		"leagueQuits": 0,
+		"leagueTrophies": 0,
+		"highestLeagueTrophies": 0,
+		"leagueTrophiesTotal": 0,
+		"leagueWinStreak": 0,
+		"leagueRankIndex": 0,
+		"neonPassXpEarned": 0,
+		"neonPassRewardsClaimed": 0,
+		"eventsCompleted": 0,
+		"eventMissionsCompleted": 0,
+		"eventRewardsClaimed": 0,
+	}
+
+
+func _ensure_profile_stats_state() -> void:
+	var stats: Dictionary = data.get("stats", {})
+	if typeof(stats) != TYPE_DICTIONARY:
+		stats = {}
+	for key in _profile_stat_defaults().keys():
+		if not stats.has(key):
+			stats[key] = _profile_stat_defaults()[key]
+	data["stats"] = stats
+	if not data.has("skin_usage") or typeof(data.get("skin_usage")) != TYPE_DICTIONARY:
+		data["skin_usage"] = {}
+	_update_skin_collection_stats()
+	stats = data.get("stats", {})
+	var runs: int = max(int(stats.get("runsPlayed", 0)), int(stats.get("runs_played", 0)))
+	var league_matches: int = int(stats.get("leagueMatches", 0))
+	var boss_matches: int = max(int(stats.get("bossRuns", 0)), int(stats.get("boss_runs", 0)))
+	var wins: int = int(stats.get("phaseWins", 0)) + max(int(stats.get("bossWins", 0)), int(stats.get("boss_wins", 0))) + int(stats.get("leagueWins", 0)) + int(stats.get("dailyChallengeCompletions", 0))
+	var losses: int = max(int(stats.get("bossLosses", 0)), int(stats.get("boss_losses", 0))) + int(stats.get("leagueLosses", 0)) + int(stats.get("leagueQuits", 0))
+	stats["runsPlayed"] = runs
+	stats["runs_played"] = runs
+	stats["totalMatches"] = max(int(stats.get("totalMatches", 0)), runs + league_matches + boss_matches)
+	stats["wins"] = max(int(stats.get("wins", 0)), wins)
+	stats["losses"] = max(int(stats.get("losses", 0)), losses)
+	stats["phaseCompletions"] = max(int(stats.get("phaseCompletions", 0)), int(stats.get("phaseWins", 0)))
+	stats["ringsDestroyed"] = max(int(stats.get("ringsDestroyed", 0)), int(stats.get("rings_destroyed", 0)))
+	stats["perfectEscapes"] = max(int(stats.get("perfectEscapes", 0)), int(stats.get("perfect_escapes", 0)))
+	stats["diamondsFound"] = max(int(stats.get("diamondsFound", 0)), int(stats.get("diamonds_found", 0)))
+	stats["chestsOpened"] = max(int(stats.get("chestsOpened", 0)), int(stats.get("chests_opened", 0)))
+	stats["skinsUnlocked"] = Array(data.get("unlocked_skins", [])).size()
+	stats["skins_unlocked"] = stats["skinsUnlocked"]
+	stats["skinsMaxed"] = max(int(stats.get("skinsMaxed", 0)), int(stats.get("skinMaxedCount", 0)))
+	stats["highestPhase"] = max(max(int(stats.get("highestPhase", 1)), int(stats.get("highest_phase", 1))), int(data.get("max_unlocked_phase", 1)))
+	stats["highest_phase"] = stats["highestPhase"]
+	stats["totalCoinsEarned"] = max(int(stats.get("totalCoinsEarned", 0)), int(stats.get("runCoins", 0)))
+	stats["totalDiamondsEarned"] = max(int(stats.get("totalDiamondsEarned", 0)), int(stats.get("diamondsFound", 0)))
+	stats["upgradesUnlocked"] = get_unlocked_upgrade_ids().size()
+	stats["upgradesMaxed"] = _profile_maxed_upgrade_count()
+	var league: Dictionary = data.get("league", {})
+	var trophies := int(league.get("trophies", stats.get("leagueTrophies", 0)))
+	stats["leagueTrophies"] = trophies
+	stats["highestLeagueTrophies"] = max(int(stats.get("highestLeagueTrophies", 0)), trophies)
+	stats["neonPassXpEarned"] = max(int(stats.get("neonPassXpEarned", 0)), int(data.get("neon_pass_total_xp", 0)))
+	stats["neonPassRewardsClaimed"] = max(int(stats.get("neonPassRewardsClaimed", 0)), _profile_neon_pass_claimed_count())
+	data["stats"] = stats
+
+
+func _profile_neon_pass_claimed_count() -> int:
+	var claimed_by_season: Dictionary = data.get("neon_pass_claimed_rewards", {})
+	var count := 0
+	for key in claimed_by_season.keys():
+		count += Array(claimed_by_season.get(key, [])).size()
+	return count
+
+
+func _profile_maxed_upgrade_count() -> int:
+	var count := 0
+	for upgrade in get_unlocked_upgrades():
+		var id := String(upgrade.get("id", ""))
+		if not id.is_empty() and get_upgrade_level(id) >= get_upgrade_max_level(id):
+			count += 1
+	return count
+
+
+func _profile_most_used_skin_id() -> String:
+	var usage: Dictionary = data.get("skin_usage", {})
+	var best_id := String(data.get("equipped_skin", "neon_blue"))
+	var best_count := -1
+	for key in usage.keys():
+		var id := String(key)
+		var count := int(usage.get(key, 0))
+		if count > best_count:
+			best_count = count
+			best_id = id
+	return best_id
+
+
+func get_profile_stats_snapshot() -> Dictionary:
+	_ensure_profile_stats_state()
+	var stats: Dictionary = data.get("stats", {})
+	var pass_state := get_neon_pass_state()
+	var league: Dictionary = data.get("league", {})
+	var trophies := int(league.get("trophies", stats.get("leagueTrophies", 0)))
+	var rank := MainPortData.rank_for_trophies(trophies)
+	return {
+		"stats": stats.duplicate(true),
+		"equipped_skin_id": String(data.get("equipped_skin", "neon_blue")),
+		"most_used_skin_id": _profile_most_used_skin_id(),
+		"skin_usage": Dictionary(data.get("skin_usage", {})).duplicate(true),
+		"unlocked_skins": Array(data.get("unlocked_skins", [])).duplicate(),
+		"unlocked_upgrades": get_unlocked_upgrade_ids(),
+		"league_rank_id": String(rank.get("id", "bronze")),
+		"league_rank_name": String(rank.get("name", "Bronze")),
+		"league_trophies": trophies,
+		"neon_pass": pass_state,
+		"events": Dictionary(data.get("events", {})).duplicate(true),
+	}
 
 
 func _ensure_tutorial_state() -> void:
@@ -1035,16 +2668,28 @@ func get_upgrade_cost(id: String, current_level := -1, currency := "coins") -> i
 	var level := get_upgrade_level(id) if current_level < 0 else current_level
 	var rarity := String(definition.get("rarity", "common"))
 	var rarity_multiplier := 1.0
+	var growth := 1.135
 	match rarity:
 		"rare":
 			rarity_multiplier = 1.55
+			growth = 1.15
 		"epic":
 			rarity_multiplier = 2.25
+			growth = 1.165
 		"legendary":
 			rarity_multiplier = 3.25
+			growth = 1.18
+	var cap: int = max(1, get_upgrade_max_level(id))
+	if cap <= 12:
+		growth += 0.035
+	elif cap <= 20:
+		growth += 0.018
+	elif cap >= 40:
+		growth -= 0.012
 	var base_cost := 80 + int(definition.get("unlockLevel", 1)) * 24
-	var late_tax: float = 1.0 + max(0.0, float(level - 10)) * 0.025
-	var coin_cost := floori(float(base_cost) * rarity_multiplier * pow(1.32, level) * late_tax)
+	var progress := clampf(float(level) / float(cap), 0.0, 1.0)
+	var late_tax: float = 1.0 + progress * (0.65 + rarity_multiplier * 0.12)
+	var coin_cost := floori(float(base_cost) * rarity_multiplier * pow(growth, level) * late_tax)
 	if currency == "diamonds":
 		var diamond_multiplier := 1.15
 		match rarity:
@@ -1075,62 +2720,71 @@ func apply_upgrade_level_scaling(upgrade_data: Dictionary, level: int) -> Dictio
 	var value := 0.0
 	match id:
 		"damage":
-			value = clamp_upgrade_effect(id, 0.15 * level)
+			value = _scaled_upgrade_effect(id, level, 3.6)
 			return { "type": "damage", "value": value, "label": "+%s%% dano" % roundi(value * 100.0) }
 		"speed":
-			value = clamp_upgrade_effect(id, 0.20 * level)
+			value = _scaled_upgrade_effect(id, level, 1.65)
 			return { "type": "speed", "value": value, "label": "+%s%% velocidade" % roundi(value * 100.0) }
 		"coinBoost":
-			value = clamp_upgrade_effect(id, 0.50 * level)
+			value = _scaled_upgrade_effect(id, level, 3.5)
 			return { "type": "coins", "value": value, "label": "+%s%% moedas" % roundi(value * 100.0) }
 		"critical":
-			value = clamp_upgrade_effect(id, 0.05 * level)
+			value = _scaled_upgrade_effect(id, level, 0.35)
 			return { "type": "critical", "value": value, "label": "+%s%% critico" % roundi(value * 100.0) }
 		"xpBoost":
-			value = clamp_upgrade_effect(id, 0.50 * level)
+			value = _scaled_upgrade_effect(id, level, 3.0)
 			return { "type": "xp", "value": value, "label": "+%s%% XP" % roundi(value * 100.0) }
 		"perfectChance", "diamondInstinct":
-			value = clamp_upgrade_effect(id, 0.01 * level if id == "perfectChance" else 0.018 * level)
+			value = _scaled_upgrade_effect(id, level, 0.08)
 			return { "type": "perfect", "value": value, "label": "+%.1f%% diamante/perfect" % (value * 100.0) }
 		"frost":
-			value = clamp_upgrade_effect(id, 0.18 + level * 0.035)
+			value = _scaled_upgrade_effect(id, level, 0.48)
 			return { "type": "freeze", "value": value, "label": "%.1f%% chance gelo" % (value * 100.0) }
 		"timeFreeze", "chronoBreak", "slowField":
-			value = clamp_upgrade_effect(id, 0.08 + level * 0.035)
+			value = _scaled_upgrade_effect(id, level, float(UPGRADE_EFFECT_CAPS.get(id, 0.42)))
 			return { "type": "slow", "value": value, "label": "%.1f%% chance lentidao" % (value * 100.0) }
 		"ringRepulse":
-			value = clamp_upgrade_effect(id, 0.10 + level * 0.035)
+			value = _scaled_upgrade_effect(id, level, 0.42)
 			return { "type": "repulse", "value": value, "label": "%.1f%% chance repulsao" % (value * 100.0) }
 		"chainLightning", "chainBreak":
-			value = clamp_upgrade_effect(id, 0.16 + level * 0.035)
+			value = _scaled_upgrade_effect(id, level, float(UPGRADE_EFFECT_CAPS.get(id, 0.48)))
 			return { "type": "chain", "value": value, "label": "%.1f%% corrente" % (value * 100.0) }
 		"shockwave", "voidPulse", "bomb":
-			value = clamp_upgrade_effect(id, 0.08 + level * 0.03)
+			value = _scaled_upgrade_effect(id, level, float(UPGRADE_EFFECT_CAPS.get(id, 0.42)))
 			return { "type": "area", "value": value, "label": "%.1f%% area" % (value * 100.0) }
 		"burn", "penetration", "laser", "laserCut", "multihit", "criticalOverload", "royalBreaker", "bossHunter", "trophyInstinct", "comboOverdrive", "magnetCoins", "secretMagnet", "ricochet", "bounce":
-			value = clamp_upgrade_effect(id, 0.06 * level)
+			value = _scaled_upgrade_effect(id, level, float(UPGRADE_EFFECT_CAPS.get(id, 1.0)))
 			return { "type": "bonus", "value": value, "label": "+%s%% bonus" % roundi(value * 100.0) }
-	value = clamp_upgrade_effect(id, 0.05 * level)
+	value = _scaled_upgrade_effect(id, level, float(UPGRADE_EFFECT_CAPS.get(id, 1.0)))
 	return { "type": "upgrade", "value": value, "label": "Lv.%s" % level }
+
+
+func _scaled_upgrade_effect(id: String, level: int, maximum: float) -> float:
+	if level <= 0:
+		return 0.0
+	var max_level: int = max(1, get_upgrade_max_level(id))
+	var progress := clampf(float(level) / float(max_level), 0.0, 1.0)
+	var eased := pow(progress, 0.72)
+	return clamp_upgrade_effect(id, maximum * eased)
 
 
 func clamp_upgrade_effect(id: String, effect_value: float) -> float:
 	match id:
 		"speed", "ricochet", "bounce":
-			return clampf(effect_value, 0.0, 1.80)
+			return clampf(effect_value, 0.0, 1.95)
 		"critical", "criticalOverload":
-			return clampf(effect_value, 0.0, 0.35)
+			return clampf(effect_value, 0.0, 0.42)
 		"perfectChance", "diamondInstinct":
-			return clampf(effect_value, 0.0, 0.08)
+			return clampf(effect_value, 0.0, 0.10)
 		"frost", "timeFreeze", "chronoBreak", "slowField":
-			return clampf(effect_value, 0.0, 0.48)
+			return clampf(effect_value, 0.0, 0.58)
 		"coinBoost", "magnetCoins", "secretMagnet":
-			return clampf(effect_value, 0.0, 4.0)
+			return clampf(effect_value, 0.0, 4.35)
 		"xpBoost":
-			return clampf(effect_value, 0.0, 3.5)
+			return clampf(effect_value, 0.0, 3.8)
 		"chainLightning", "chainBreak", "shockwave", "voidPulse", "bomb", "ringRepulse":
-			return clampf(effect_value, 0.0, 0.55)
-	return clampf(effect_value, 0.0, 4.5)
+			return clampf(effect_value, 0.0, 0.65)
+	return clampf(effect_value, 0.0, 5.2)
 
 
 func get_upgrade_upgrade_preview(id: String) -> Dictionary:
@@ -1151,7 +2805,86 @@ func get_upgrade_preview(id: String) -> Dictionary:
 
 
 func get_upgrade_max_level(id: String) -> int:
+	if UPGRADE_MAX_LEVEL_OVERRIDES.has(id):
+		return int(UPGRADE_MAX_LEVEL_OVERRIDES[id])
 	return int(MainPortData.upgrade_by_id(id).get("maxLevel", 0))
+
+
+func get_upgrade_run_bonus_cap(id: String) -> int:
+	if UPGRADE_RUN_BONUS_CAPS.has(id):
+		return int(UPGRADE_RUN_BONUS_CAPS[id])
+	var rarity := String(MainPortData.upgrade_by_id(id).get("rarity", "common"))
+	match rarity:
+		"common":
+			return 18
+		"rare":
+			return 12
+		"epic":
+			return 8
+		"legendary":
+			return 5
+	return 6
+
+
+func get_upgrade_run_max_level(id: String) -> int:
+	return get_upgrade_max_level(id) + get_upgrade_run_bonus_cap(id)
+
+
+func get_upgrade_run_total_level(id: String, temporary_level := 0) -> int:
+	var permanent_level := clampi(get_upgrade_level(id), 0, get_upgrade_max_level(id))
+	var temp_level := clampi(temporary_level, 0, get_upgrade_run_bonus_cap(id))
+	return clampi(permanent_level + temp_level, 0, get_upgrade_run_max_level(id))
+
+
+func get_upgrade_run_effect_value(id: String, temporary_level := 0) -> Dictionary:
+	var permanent_level := clampi(get_upgrade_level(id), 0, get_upgrade_max_level(id))
+	var temp_level := clampi(temporary_level, 0, get_upgrade_run_bonus_cap(id))
+	var permanent_effect := get_upgrade_effect_value(id, permanent_level)
+	var result: Dictionary = permanent_effect.duplicate(true)
+	var base_value := float(permanent_effect.get("value", 0.0))
+	var bonus_cap: int = max(1, get_upgrade_run_bonus_cap(id))
+	var extra_max := float(UPGRADE_RUN_EXTRA_EFFECT_CAPS.get(id, float(UPGRADE_EFFECT_CAPS.get(id, 0.18)) * 0.22))
+	var extra_value := 0.0
+	if temp_level > 0:
+		extra_value = extra_max * pow(clampf(float(temp_level) / float(bonus_cap), 0.0, 1.0), 0.78)
+	var total_level := permanent_level + temp_level
+	var total_value := clamp_upgrade_effect(id, base_value + extra_value)
+	result["value"] = total_value
+	result["level"] = total_level
+	result["permanent_level"] = permanent_level
+	result["temporary_level"] = temp_level
+	result["max_level"] = get_upgrade_run_max_level(id)
+	result["label"] = _upgrade_effect_label(id, String(result.get("type", "upgrade")), total_value, total_level)
+	return result
+
+
+func _upgrade_effect_label(id: String, effect_type: String, value: float, level: int) -> String:
+	match id:
+		"damage":
+			return "+%s%% dano" % roundi(value * 100.0)
+		"speed":
+			return "+%s%% velocidade" % roundi(value * 100.0)
+		"coinBoost", "magnetCoins", "secretMagnet":
+			return "+%s%% moedas" % roundi(value * 100.0)
+		"critical", "criticalOverload":
+			return "+%s%% critico" % roundi(value * 100.0)
+		"xpBoost":
+			return "+%s%% XP" % roundi(value * 100.0)
+		"perfectChance", "diamondInstinct":
+			return "+%.1f%% diamante/perfect" % (value * 100.0)
+		"frost":
+			return "%.1f%% chance gelo" % (value * 100.0)
+		"timeFreeze", "chronoBreak", "slowField":
+			return "%.1f%% chance lentidao" % (value * 100.0)
+		"ringRepulse":
+			return "%.1f%% chance repulsao" % (value * 100.0)
+		"chainLightning", "chainBreak":
+			return "%.1f%% corrente" % (value * 100.0)
+		"shockwave", "voidPulse", "bomb":
+			return "%.1f%% area" % (value * 100.0)
+	if effect_type == "bonus":
+		return "+%s%% bonus" % roundi(value * 100.0)
+	return "Lv.%s" % level
 
 
 func get_upgrade_level(id: String) -> int:
@@ -1164,8 +2897,19 @@ func is_upgrade_unlocked(id: String) -> bool:
 	return Array(data.get("unlocked_upgrade_ids", [])).has(id)
 
 
+func _balanced_upgrade_data(upgrade: Dictionary) -> Dictionary:
+	var copy: Dictionary = Dictionary(upgrade).duplicate(true)
+	var id := String(copy.get("id", ""))
+	if not id.is_empty():
+		copy["maxLevel"] = get_upgrade_max_level(id)
+	return copy
+
+
 func get_all_upgrades() -> Array[Dictionary]:
-	return MainPortData.run_upgrades()
+	var result: Array[Dictionary] = []
+	for upgrade in MainPortData.run_upgrades():
+		result.append(_balanced_upgrade_data(upgrade))
+	return result
 
 
 func get_unlocked_upgrade_ids() -> Array[String]:
@@ -1184,7 +2928,7 @@ func get_unlocked_upgrades() -> Array[Dictionary]:
 	for upgrade in MainPortData.run_upgrades():
 		var id := String(upgrade.get("id", ""))
 		if ids.has(id):
-			result.append(Dictionary(upgrade).duplicate(true))
+			result.append(_balanced_upgrade_data(upgrade))
 	return result
 
 
@@ -1194,7 +2938,7 @@ func get_locked_upgrades() -> Array[Dictionary]:
 	for upgrade in MainPortData.run_upgrades():
 		var id := String(upgrade.get("id", ""))
 		if not unlocked.has(id):
-			result.append(Dictionary(upgrade).duplicate(true))
+			result.append(_balanced_upgrade_data(upgrade))
 	return result
 
 
@@ -1266,16 +3010,21 @@ func apply_reward(reward: Dictionary, save_after := false) -> String:
 	match reward_type:
 		"coins":
 			data["coins"] = max(0, int(data.get("coins", 0)) + amount)
+			_add_earning_stats(amount, 0, 0, 0)
 			text = "+%s coins" % amount
 		"diamonds", "gems":
 			data["diamonds"] = max(0, int(data.get("diamonds", 0)) + amount)
 			_increment_stat("diamondsFound", amount, false)
+			_increment_stat("diamonds_found", amount, false)
+			_add_earning_stats(0, 0, amount, 0)
 			text = "+%s diamonds" % amount
 		"keys":
 			data["keys"] = max(0, int(data.get("keys", 0)) + amount)
+			_add_earning_stats(0, 0, 0, amount)
 			text = "+%s keys" % amount
 		"legendaryKeys", "legendary_keys":
 			data["legendary_keys"] = max(0, int(data.get("legendary_keys", 0)) + amount)
+			_add_earning_stats(0, 0, 0, amount)
 			text = "+%s legendary keys" % amount
 		"xp":
 			add_profile_xp(amount)
@@ -1295,6 +3044,8 @@ func apply_reward(reward: Dictionary, save_after := false) -> String:
 				var compensation := _duplicate_skin_compensation(skin_id)
 				data["diamonds"] = max(0, int(data.get("diamonds", 0)) + compensation)
 				_increment_stat("diamondsFound", compensation, false)
+				_increment_stat("diamonds_found", compensation, false)
+				_add_earning_stats(0, 0, compensation, 0)
 				reward["converted_from_skin"] = skin_id
 				reward["type"] = "diamonds"
 				reward["amount"] = compensation
@@ -1545,24 +3296,29 @@ func shop_claim(action_id: String) -> Dictionary:
 			if not spend_diamonds(80):
 				return { "ok": false, "reason": "diamonds" }
 			data["keys"] = int(data.get("keys", 0)) + 6
+			_add_earning_stats(0, 0, 0, 6)
 			result["reward"] = { "type": "keys", "amount": 6 }
 			result["text"] = "+6 keys"
 		"legendary_keys_pack":
 			if not spend_diamonds(180):
 				return { "ok": false, "reason": "diamonds" }
 			data["legendary_keys"] = int(data.get("legendary_keys", 0)) + 2
+			_add_earning_stats(0, 0, 0, 2)
 			result["reward"] = { "type": "legendary_keys", "amount": 2 }
 			result["text"] = "+2 legendary keys"
 		"ad_gems":
 			data["diamonds"] = int(data.get("diamonds", 0)) + 12
+			_add_earning_stats(0, 0, 12, 0)
 			result["reward"] = { "type": "diamonds", "amount": 12 }
 			result["text"] = "+12 diamonds"
 		"ad_coins":
 			data["coins"] = int(data.get("coins", 0)) + 300
+			_add_earning_stats(300, 0, 0, 0)
 			result["reward"] = { "type": "coins", "amount": 300 }
 			result["text"] = "+300 coins"
 		"ad_key":
 			data["keys"] = int(data.get("keys", 0)) + 1
+			_add_earning_stats(0, 0, 0, 1)
 			result["reward"] = { "type": "keys", "amount": 1 }
 			result["text"] = "+1 key"
 		"ad_chest":
@@ -1571,6 +3327,7 @@ func shop_claim(action_id: String) -> Dictionary:
 			result["text"] = "+1 common chest"
 		_:
 			data["diamonds"] = int(data.get("diamonds", 0)) + 10
+			_add_earning_stats(0, 0, 10, 0)
 			result["reward"] = { "type": "diamonds", "amount": 10 }
 			result["text"] = "Mock purchase +10 diamonds"
 	_increment_stat("storePurchases", 1, false)
@@ -1581,65 +3338,304 @@ func shop_claim(action_id: String) -> Dictionary:
 	return result
 
 
-func get_weekly_event() -> Dictionary:
+func get_weekly_event(offset := 0) -> Dictionary:
+	return _build_weekly_event(offset, offset == 0)
+
+
+func get_next_weekly_event_preview() -> Dictionary:
+	return _build_weekly_event(1, false)
+
+
+func get_active_event_bonus() -> Dictionary:
+	var event := get_weekly_event()
+	if String(event.get("status", "")) != "active":
+		return {}
+	return Dictionary(event.get("bonus", {})).duplicate(true)
+
+
+func get_active_event_bonus_value(bonus_type: String) -> float:
+	var bonus := get_active_event_bonus()
+	if String(bonus.get("type", "")) == bonus_type:
+		return float(bonus.get("value", 0.0))
+	return 0.0
+
+
+func _build_weekly_event(offset: int, persist_state: bool) -> Dictionary:
+	var definitions := _weekly_event_definitions()
+	if definitions.is_empty():
+		return {}
 	var now := TimeManager.get_now_timestamp()
-	var week_index := floori(float(now) / float(7 * 86400))
-	var starts_at := week_index * 7 * 86400
-	var ends_at := starts_at + 7 * 86400
-	var event_id := "codex_neon_week_%s" % week_index
-	var event_state := _weekly_event_state(event_id)
-	var tasks: Array[Dictionary] = [
-		{ "id": "phases_10", "title": "Complete 10 fases", "desc": "Avance nas fases normais durante a semana Codex.", "metric": "phaseWins", "target": 10, "reward": { "type": "coins", "amount": 900 }, "icon": "event", "tone": "#00f0ff" },
-		{ "id": "infinite_120", "title": "Sobreviva 2 minutos no Infinito", "desc": "Bata 120 segundos no Modo Infinito.", "metric": "bestInfiniteSeconds", "target": 120, "reward": { "type": "diamonds", "amount": 45 }, "icon": "gem", "tone": "#00ff88" },
-		{ "id": "league_2", "title": "Vença 2 lutas da Liga Neon", "desc": "Ganhe lutas de ranking nesta semana.", "metric": "leagueWins", "target": 2, "reward": { "type": "chest", "chest_type": "rare", "amount": 1 }, "icon": "league", "tone": "#ffd700" },
-	]
-	for i in range(tasks.size()):
-		var task: Dictionary = tasks[i]
-		var progress := _event_metric_value(String(task.get("metric", "")))
+	var base_week_index := TimeManager.get_week_index(now)
+	var absolute_week_index := base_week_index + offset
+	var cycle_index := posmod(TimeManager.get_weekly_event_index(now) + offset, definitions.size())
+	var starts_at := TimeManager.get_week_start_timestamp(now) + offset * TimeManager.SECONDS_PER_WEEK
+	var ends_at := starts_at + TimeManager.SECONDS_PER_WEEK
+	var definition: Dictionary = definitions[cycle_index]
+	var event_id := "%s_%s" % [String(definition.get("id", "weekly_event")), TimeManager.get_week_key(starts_at)]
+	var state := _weekly_event_state(event_id, definition, starts_at, ends_at) if persist_state else {}
+	var tasks: Array[Dictionary] = []
+	var claimed: Array = state.get("claimed", [])
+	for raw_task in Array(definition.get("tasks", [])):
+		var task: Dictionary = raw_task.duplicate(true)
+		var metric := String(task.get("metric", ""))
+		var progress := 0
+		if persist_state:
+			progress = _weekly_event_task_progress(metric, state)
+		task["title"] = _localized_weekly_field(task, "title")
+		task["desc"] = _localized_weekly_field(task, "desc")
 		task["progress"] = progress
 		task["completed"] = progress >= int(task.get("target", 1))
-		task["claimed"] = Array(event_state.get("claimed", [])).has(String(task.get("id", "")))
-		tasks[i] = task
+		task["claimed"] = claimed.has(String(task.get("id", "")))
+		tasks.append(task)
 	var completed_count := 0
 	for task in tasks:
 		if bool(task.get("completed", false)):
 			completed_count += 1
-	var final_claimed := Array(event_state.get("claimed", [])).has("final_skin")
+	var final: Dictionary = Dictionary(definition.get("final", {})).duplicate(true)
+	var final_id := String(final.get("id", "final_reward"))
+	final["title"] = _localized_weekly_field(final, "title")
+	final["desc"] = _localized_weekly_field(final, "desc")
+	final["progress"] = completed_count
+	final["target"] = tasks.size()
+	final["completed"] = completed_count >= tasks.size()
+	final["claimed"] = claimed.has(final_id)
+	var status := "active"
+	if now < starts_at:
+		status = "future"
+	elif now >= ends_at:
+		status = "ended"
+	elif bool(final.get("claimed", false)):
+		status = "completed"
 	return {
 		"id": event_id,
-		"base_id": "codex_neon_week",
-		"title": "Evento Codex Neon",
-		"desc": "Evento semanal de fases, infinito e Liga Neon. Dura uma semana e fica na aba Eventos.",
+		"base_id": String(definition.get("id", "")),
+		"event_index": cycle_index,
+		"week_index": absolute_week_index,
+		"title": _localized_weekly_field(definition, "title"),
+		"desc": _localized_weekly_field(definition, "desc"),
+		"theme": String(definition.get("theme", "")),
+		"color": String(definition.get("color", "#00f0ff")),
+		"icon": String(definition.get("icon", "event")),
+		"bonus": Dictionary(definition.get("bonus", {})).duplicate(true),
+		"bonus_text": _localized_weekly_field(definition, "bonus"),
 		"starts_at": starts_at,
 		"ends_at": ends_at,
 		"seconds_remaining": max(0, ends_at - now),
 		"tasks": tasks,
-		"final": {
-			"id": "final_skin",
-			"title": "Recompensa final",
-			"desc": "Conclua os 3 objetivos para liberar uma skin especial.",
-			"progress": completed_count,
-			"target": tasks.size(),
-			"completed": completed_count >= tasks.size(),
-			"claimed": final_claimed,
-			"reward": { "type": "skin", "skin_id": "infinite_vortex_mythic", "amount": 1 },
-			"icon": "skins",
-			"tone": "#ff00aa",
-		},
+		"final": final,
+		"status": status,
 	}
+
+
+func _weekly_event_definitions() -> Array[Dictionary]:
+	return [
+		_weekly_event("neon_week", "Neon Week", "Semana Neon", "A bright start focused on rings, phases and coins.", "Um inicio brilhante focado em aneis, fases e moedas.", "neon", "#00f0ff", { "type": "coins", "value": 0.20 }, "+20% coins focus.", "+20% foco em moedas.", [
+			_weekly_task("rings_120", "Break 120 rings", "Quebrar 120 aneis", "Destroy rings in any mode.", "Destrua aneis em qualquer modo.", "ringsDestroyed", 120, { "type": "coins", "amount": 900 }, "event", "#00f0ff"),
+			_weekly_task("phases_5", "Complete 5 phases", "Concluir 5 fases", "Win normal phases.", "Venca fases normais.", "phaseWins", 5, { "type": "xp", "amount": 260 }, "play", "#00ff88"),
+			_weekly_task("coins_3500", "Earn 3500 run coins", "Ganhar 3500 moedas de run", "Collect coins from gameplay.", "Colete moedas jogando.", "runCoins", 3500, { "type": "diamonds", "amount": 18 }, "coin", "#ffd700"),
+		], _weekly_final({ "type": "chest", "chest_type": "rare", "amount": 1 }, "Rare Neon Chest", "Bau Neon Raro", "Complete every Neon Week goal.", "Conclua todos os objetivos da Semana Neon.", "chest_rare", "#00f0ff")),
+		_weekly_event("chest_week", "Chest Week", "Semana dos Baus", "Keys, chests and phase wins are highlighted.", "Chaves, baus e vitorias de fase ficam em destaque.", "chests", "#ffd700", { "type": "chest_chance", "value": 0.08 }, "Higher chest chance.", "Chance maior de bau.", [
+			_weekly_task("open_2", "Open 2 chests", "Abrir 2 baus", "Open any stored chest.", "Abra qualquer bau guardado.", "chestsOpened", 2, { "type": "keys", "amount": 1 }, "chest_rare", "#ffd700"),
+			_weekly_task("wheel_2", "Spin the wheel 2 times", "Girar a roleta 2 vezes", "Use free or rewarded spins.", "Use giros gratis ou recompensados.", "wheelSpins", 2, { "type": "coins", "amount": 850 }, "wheel", "#00f0ff"),
+			_weekly_task("phases_4", "Complete 4 phases", "Concluir 4 fases", "Win normal phases.", "Venca fases normais.", "phaseWins", 4, { "type": "diamonds", "amount": 15 }, "play", "#00ff88"),
+		], _weekly_final({ "type": "chest", "chest_type": "epic", "amount": 1 }, "Epic Chest", "Bau Epico", "Complete every chest goal.", "Conclua todos os objetivos de baus.", "chest_epic", "#b000ff")),
+		_weekly_event("diamond_week", "Diamond Week", "Semana dos Diamantes", "Perfect escapes and diamond drops shine brighter.", "Perfect Escapes e diamantes brilham mais.", "diamonds", "#67e8f9", { "type": "diamond_perfect", "value": 0.03 }, "Extra diamond chance on Perfect.", "Chance extra de diamante no Perfect.", [
+			_weekly_task("perfect_8", "Make 8 Perfect Escapes", "Fazer 8 Perfect Escapes", "Hit ring openings cleanly.", "Acerte aberturas com precisao.", "perfectEscapes", 8, { "type": "diamonds", "amount": 20 }, "gem", "#67e8f9"),
+			_weekly_task("diamonds_8", "Find 8 diamonds", "Encontrar 8 diamantes", "Earn diamonds from any source.", "Ganhe diamantes de qualquer fonte.", "diamondsFound", 8, { "type": "coins", "amount": 1000 }, "gem", "#00f0ff"),
+			_weekly_task("wheel_2", "Spin the wheel 2 times", "Girar a roleta 2 vezes", "Try your luck this week.", "Teste sua sorte nesta semana.", "wheelSpins", 2, { "type": "keys", "amount": 1 }, "wheel", "#ffd700"),
+		], _weekly_final({ "type": "diamonds", "amount": 55 }, "Diamond Cache", "Reserva de Diamantes", "Complete every diamond goal.", "Conclua todos os objetivos de diamantes.", "gem", "#67e8f9")),
+		_weekly_event("fire_week", "Fire Week", "Semana de Fogo", "Fire and critical impacts get the spotlight.", "Fogo e impactos criticos ficam em destaque.", "fire", "#ff6b00", { "type": "fire_effect", "value": 0.15 }, "Fire effects are stronger.", "Efeitos de fogo ficam mais fortes.", [
+			_weekly_task("skin_effects_8", "Trigger 8 skin effects", "Ativar 8 efeitos de skin", "Use skins with active effects.", "Use skins com efeitos ativos.", "skinEffects", 8, { "type": "coins", "amount": 950 }, "skins", "#ff6b00"),
+			_weekly_task("crit_12", "Make 12 critical hits", "Fazer 12 criticos", "Critical hits count in all modes.", "Criticos contam em todos os modos.", "criticals", 12, { "type": "diamonds", "amount": 18 }, "crit", "#ff0055"),
+			_weekly_task("boss_1", "Defeat 1 boss", "Derrotar 1 boss", "Win any boss difficulty.", "Venca qualquer dificuldade de boss.", "bossWins", 1, { "type": "keys", "amount": 1 }, "boss", "#ff6b00"),
+		], _weekly_final({ "type": "skin", "skin_id": "fire", "amount": 1 }, "Fire Skin", "Skin de Fogo", "Complete every fire goal.", "Conclua todos os objetivos de fogo.", "skins", "#ff6b00")),
+		_weekly_event("ice_week", "Ice Week", "Semana de Gelo", "Slow, freeze and clean phase progress.", "Lentidao, gelo e progresso limpo em fases.", "ice", "#8eeaff", { "type": "ice_duration", "value": 0.15 }, "Ice effects last longer.", "Efeitos de gelo duram mais.", [
+			_weekly_task("perfect_10", "Make 10 Perfect Escapes", "Fazer 10 Perfect Escapes", "Clean openings feed the freeze core.", "Aberturas limpas alimentam o nucleo gelado.", "perfectEscapes", 10, { "type": "diamonds", "amount": 22 }, "perfect", "#8eeaff"),
+			_weekly_task("rings_180", "Break 180 rings", "Quebrar 180 aneis", "Destroy rings in any mode.", "Destrua aneis em qualquer modo.", "ringsDestroyed", 180, { "type": "coins", "amount": 1200 }, "event", "#00f0ff"),
+			_weekly_task("phases_6", "Complete 6 phases", "Concluir 6 fases", "Normal phases count.", "Fases normais contam.", "phaseWins", 6, { "type": "xp", "amount": 360 }, "play", "#00ff88"),
+		], _weekly_final({ "type": "chest", "chest_type": "epic", "amount": 1 }, "Frozen Epic Chest", "Bau Epico Congelado", "Complete every ice goal.", "Conclua todos os objetivos de gelo.", "chest_epic", "#8eeaff")),
+		_weekly_event("control_week", "Control Week", "Semana de Controle", "Directional skins and precise openings matter.", "Skins de controle e aberturas precisas importam.", "control", "#00ff88", { "type": "control_charge", "value": 1.0 }, "+1 safe temporary control charge.", "+1 carga temporaria segura de controle.", [
+			_weekly_task("perfect_12", "Hit 12 openings", "Acertar 12 aberturas", "Perfect Escapes count as control mastery.", "Perfect Escapes contam como dominio de controle.", "perfectEscapes", 12, { "type": "diamonds", "amount": 24 }, "perfect", "#00ff88"),
+			_weekly_task("infinite_90", "Survive 90s in Infinite", "Sobreviver 90s no Infinito", "Set or improve your Infinite time.", "Marque ou melhore seu tempo no Infinito.", "bestInfiniteSeconds", 90, { "type": "coins", "amount": 1100 }, "infinite", "#00f0ff"),
+			_weekly_task("skin_equips_1", "Equip 1 skin", "Equipar 1 skin", "Try a useful control skin.", "Teste uma skin util.", "skinEquips", 1, { "type": "fragments", "skin_id": "control_orb", "amount": 8 }, "skins", "#ff00aa"),
+		], _weekly_final({ "type": "diamonds", "amount": 45 }, "Control Cache", "Reserva de Controle", "Complete every control goal.", "Conclua todos os objetivos de controle.", "gem", "#00ff88")),
+		_weekly_event("league_week", "Neon League Week", "Semana da Liga Neon", "Ranked battles pay extra attention to wins.", "Batalhas ranqueadas valorizam vitorias.", "league", "#ffd700", { "type": "league_trophies", "value": 0.10 }, "+10% trophies on wins.", "+10% trofeus em vitorias.", [
+			_weekly_task("league_matches_3", "Play 3 League matches", "Jogar 3 partidas da Liga", "Fight ranked rivals.", "Enfrente rivais ranqueados.", "leagueMatches", 3, { "type": "coins", "amount": 1200 }, "league", "#ffd700"),
+			_weekly_task("league_wins_2", "Win 2 League matches", "Vencer 2 partidas da Liga", "Win ranked fights.", "Venca lutas ranqueadas.", "leagueWins", 2, { "type": "diamonds", "amount": 28 }, "league", "#00ff88"),
+			_weekly_task("rings_180", "Break 180 battle rings", "Quebrar 180 aneis de batalha", "League and boss rings count too.", "Aneis de Liga e boss tambem contam.", "ringsDestroyed", 180, { "type": "keys", "amount": 1 }, "event", "#00f0ff"),
+		], _weekly_final({ "type": "chest", "chest_type": "rare", "amount": 2 }, "League Chest Pair", "Par de Baus da Liga", "Complete every League goal.", "Conclua todos os objetivos da Liga.", "chest_rare", "#ffd700")),
+		_weekly_event("boss_week", "Boss Week", "Semana do Boss", "Boss fights grant focused weekly progress.", "Lutas contra boss geram progresso semanal.", "boss", "#ff0055", { "type": "boss_damage", "value": 0.15 }, "+15% boss damage focus.", "+15% foco de dano contra boss.", [
+			_weekly_task("boss_matches_2", "Fight bosses 2 times", "Lutar contra bosses 2 vezes", "Any boss difficulty counts.", "Qualquer dificuldade de boss conta.", "bossMatches", 2, { "type": "coins", "amount": 1300 }, "boss", "#ff0055"),
+			_weekly_task("boss_win_1", "Defeat 1 boss", "Derrotar 1 boss", "Win a boss fight.", "Venca uma luta contra boss.", "bossWins", 1, { "type": "diamonds", "amount": 35 }, "boss", "#ffd700"),
+			_weekly_task("crit_18", "Make 18 critical hits", "Fazer 18 criticos", "Critical impacts count anywhere.", "Impactos criticos contam em qualquer modo.", "criticals", 18, { "type": "keys", "amount": 1 }, "crit", "#ff6b00"),
+		], _weekly_final({ "type": "chest", "chest_type": "epic", "amount": 1 }, "Boss Epic Chest", "Bau Epico do Boss", "Complete every boss goal.", "Conclua todos os objetivos de boss.", "chest_epic", "#ff0055")),
+		_weekly_event("infinite_week", "Infinite Week", "Semana do Infinito", "Endless survival and ring destruction rule.", "Sobrevivencia sem fim e destruicao de aneis dominam.", "infinite", "#00ffcc", { "type": "infinite_rewards", "value": 0.20 }, "+20% Infinite reward focus.", "+20% foco em recompensa do Infinito.", [
+			_weekly_task("infinite_runs_3", "Play Infinite 3 times", "Jogar Infinito 3 vezes", "Start Infinite runs.", "Inicie partidas infinitas.", "infiniteRuns", 3, { "type": "coins", "amount": 1100 }, "infinite", "#00ffcc"),
+			_weekly_task("infinite_150", "Survive 150s in Infinite", "Sobreviver 150s no Infinito", "Improve your best time.", "Melhore seu melhor tempo.", "bestInfiniteSeconds", 150, { "type": "diamonds", "amount": 30 }, "infinite", "#00f0ff"),
+			_weekly_task("infinite_rings_35", "Break 35 Infinite rings", "Quebrar 35 aneis no Infinito", "Best Infinite ring count.", "Melhor quantidade de aneis no Infinito.", "bestInfiniteRings", 35, { "type": "xp", "amount": 420 }, "event", "#ffd700"),
+		], _weekly_final({ "type": "skin", "skin_id": "infinite_pulse", "amount": 1 }, "Infinite Pulse", "Pulso Infinito", "Complete every Infinite goal.", "Conclua todos os objetivos do Infinito.", "skins", "#00ffcc")),
+		_weekly_event("critical_week", "Critical Week", "Semana dos Criticos", "Critical impacts bring faster weekly rewards.", "Impactos criticos trazem recompensas semanais.", "critical", "#ff2d75", { "type": "crit_chance", "value": 0.05 }, "+5% critical chance focus.", "+5% foco em chance critica.", [
+			_weekly_task("crit_25", "Make 25 critical hits", "Fazer 25 criticos", "Criticals count in all modes.", "Criticos contam em todos os modos.", "criticals", 25, { "type": "diamonds", "amount": 28 }, "crit", "#ff2d75"),
+			_weekly_task("rings_220", "Break 220 rings", "Quebrar 220 aneis", "Break rings after critical boosts.", "Quebre aneis com bonus critico.", "ringsDestroyed", 220, { "type": "coins", "amount": 1500 }, "event", "#00f0ff"),
+			_weekly_task("phases_7", "Complete 7 phases", "Concluir 7 fases", "Win normal phases.", "Venca fases normais.", "phaseWins", 7, { "type": "xp", "amount": 460 }, "play", "#00ff88"),
+		], _weekly_final({ "type": "diamonds", "amount": 70 }, "Critical Diamonds", "Diamantes Criticos", "Complete every critical goal.", "Conclua todos os objetivos criticos.", "gem", "#ff2d75")),
+		_weekly_event("cosmic_week", "Cosmic Week", "Semana Cosmica", "Epic skins, XP and Infinite runs glow brighter.", "Skins epicas, XP e Infinito brilham mais.", "cosmic", "#8b5cf6", { "type": "cosmic_reward", "value": 0.10 }, "Small cosmic reward focus.", "Pequeno foco de recompensa cosmica.", [
+			_weekly_task("xp_coins_4500", "Earn 4500 run coins", "Ganhar 4500 moedas de run", "Farm gameplay resources.", "Farme recursos jogando.", "runCoins", 4500, { "type": "xp", "amount": 500 }, "coin", "#ffd700"),
+			_weekly_task("infinite_runs_2", "Play Infinite 2 times", "Jogar Infinito 2 vezes", "Cosmic loops count.", "Loops cosmicos contam.", "infiniteRuns", 2, { "type": "diamonds", "amount": 25 }, "infinite", "#8b5cf6"),
+			_weekly_task("skin_effects_12", "Trigger 12 skin effects", "Ativar 12 efeitos de skin", "Let special skins shine.", "Deixe skins especiais brilharem.", "skinEffects", 12, { "type": "coins", "amount": 1300 }, "skins", "#ff00aa"),
+		], _weekly_final({ "type": "chest", "chest_type": "epic", "amount": 1 }, "Cosmic Epic Chest", "Bau Epico Cosmico", "Complete every cosmic goal.", "Conclua todos os objetivos cosmicos.", "chest_epic", "#8b5cf6")),
+		_weekly_event("key_week", "Key Week", "Semana das Chaves", "Wheel, chests and phases focus on key rewards.", "Roleta, baus e fases focam em chaves.", "keys", "#facc15", { "type": "key_chance", "value": 0.08 }, "Better key chance focus.", "Foco em chance melhor de chaves.", [
+			_weekly_task("wheel_3", "Spin the wheel 3 times", "Girar a roleta 3 vezes", "Look for keys and bonus prizes.", "Procure chaves e premios bonus.", "wheelSpins", 3, { "type": "keys", "amount": 1 }, "wheel", "#facc15"),
+			_weekly_task("chests_2", "Open 2 chests", "Abrir 2 baus", "Use your stored chests.", "Use seus baus guardados.", "chestsOpened", 2, { "type": "diamonds", "amount": 22 }, "chest_rare", "#00f0ff"),
+			_weekly_task("phases_6", "Complete 6 phases", "Concluir 6 fases", "Win normal phases.", "Venca fases normais.", "phaseWins", 6, { "type": "coins", "amount": 1250 }, "play", "#00ff88"),
+		], _weekly_final({ "type": "keys", "amount": 3 }, "Key Bundle", "Pacote de Chaves", "Complete every key goal.", "Conclua todos os objetivos de chaves.", "key", "#facc15")),
+		_weekly_event("golden_week", "Golden Week", "Semana Dourada", "Coins, upgrades and skin growth are the focus.", "Moedas, melhorias e evolucao de skin sao o foco.", "gold", "#ffd700", { "type": "coins", "value": 0.30 }, "+30% coin focus.", "+30% foco em moedas.", [
+			_weekly_task("coins_6000", "Earn 6000 run coins", "Ganhar 6000 moedas de run", "Farm coins in any mode.", "Farme moedas em qualquer modo.", "runCoins", 6000, { "type": "coins", "amount": 1800 }, "coin", "#ffd700"),
+			_weekly_task("upgrades_2", "Buy 2 upgrades", "Comprar 2 melhorias", "Permanent upgrades count.", "Melhorias permanentes contam.", "upgradesBought", 2, { "type": "diamonds", "amount": 24 }, "upgrades", "#00f0ff"),
+			_weekly_task("phase_8", "Complete 8 phases", "Concluir 8 fases", "Win normal phases.", "Venca fases normais.", "phaseWins", 8, { "type": "xp", "amount": 520 }, "play", "#00ff88"),
+		], _weekly_final({ "type": "coins", "amount": 4500 }, "Golden Vault", "Cofre Dourado", "Complete every golden goal.", "Conclua todos os objetivos dourados.", "coin", "#ffd700")),
+		_weekly_event("skins_week", "Skins Week", "Semana das Skins", "Chests and skin collection take center stage.", "Baus e colecao de skins ficam no centro.", "skins", "#ff4fd8", { "type": "skin_chance", "value": 0.06 }, "Better skin chance in chests.", "Chance melhor de skin em baus.", [
+			_weekly_task("chests_3", "Open 3 chests", "Abrir 3 baus", "Open stored chests.", "Abra baus guardados.", "chestsOpened", 3, { "type": "diamonds", "amount": 30 }, "chest_rare", "#ff4fd8"),
+			_weekly_task("equip_2", "Equip 2 skins", "Equipar 2 skins", "Try different skins.", "Teste skins diferentes.", "skinEquips", 2, { "type": "coins", "amount": 1400 }, "skins", "#00f0ff"),
+			_weekly_task("effects_14", "Trigger 14 skin effects", "Ativar 14 efeitos de skin", "Use skins with passives.", "Use skins com passivas.", "skinEffects", 14, { "type": "keys", "amount": 1 }, "skins", "#00ff88"),
+		], _weekly_final({ "type": "skin", "skin_id": "star_rare", "amount": 1 }, "Guaranteed Rare Skin", "Skin Rara Garantida", "Complete every skins goal.", "Conclua todos os objetivos de skins.", "skins", "#ff4fd8")),
+		_weekly_event("mythic_week", "Mythic Week", "Semana das Miticas", "Advanced phases, bosses and Infinite goals matter.", "Fases avancadas, bosses e Infinito importam.", "mythic", "#b000ff", { "type": "mythic_fragments", "value": 0.04 }, "Small rare+ fragment focus.", "Pequeno foco em fragmentos raros+.", [
+			_weekly_task("phase_10", "Complete 10 phases", "Concluir 10 fases", "Normal phase wins count.", "Vitorias em fases normais contam.", "phaseWins", 10, { "type": "diamonds", "amount": 35 }, "play", "#00ff88"),
+			_weekly_task("boss_1", "Defeat 1 boss", "Derrotar 1 boss", "Win any boss fight.", "Venca qualquer boss.", "bossWins", 1, { "type": "keys", "amount": 1 }, "boss", "#ff0055"),
+			_weekly_task("infinite_210", "Survive 210s in Infinite", "Sobreviver 210s no Infinito", "Push your endless record.", "Empurre seu recorde infinito.", "bestInfiniteSeconds", 210, { "type": "coins", "amount": 1800 }, "infinite", "#00f0ff"),
+		], _weekly_final({ "type": "chest", "chest_type": "rare", "amount": 2 }, "Mythic Prep Chests", "Baus de Preparo Mitico", "Complete every mythic goal.", "Conclua todos os objetivos miticos.", "chest_rare", "#b000ff")),
+		_weekly_event("ultimate_week", "Ultimate Week", "Semana Ultimate", "Hard goals with premium resources.", "Objetivos dificeis com recursos premium.", "ultimate", "#ffffff", { "type": "hard_progress", "value": 0.10 }, "Extra difficult progress focus.", "Foco extra em progresso dificil.", [
+			_weekly_task("rings_420", "Break 420 rings", "Quebrar 420 aneis", "All modes count.", "Todos os modos contam.", "ringsDestroyed", 420, { "type": "diamonds", "amount": 45 }, "event", "#ffffff"),
+			_weekly_task("league_wins_3", "Win 3 League matches", "Vencer 3 partidas da Liga", "Ranked wins count.", "Vitorias ranqueadas contam.", "leagueWins", 3, { "type": "coins", "amount": 2200 }, "league", "#ffd700"),
+			_weekly_task("boss_2", "Defeat 2 bosses", "Derrotar 2 bosses", "Daily bosses count.", "Bosses diarios contam.", "bossWins", 2, { "type": "keys", "amount": 2 }, "boss", "#ff0055"),
+		], _weekly_final({ "type": "chest", "chest_type": "rare", "amount": 3 }, "Ultimate Supply", "Suprimento Ultimate", "Complete every ultimate goal.", "Conclua todos os objetivos ultimate.", "chest_rare", "#ffffff")),
+		_weekly_event("lightning_week", "Lightning Week", "Semana Relampago", "Fast runs, combos and perfects gain focus.", "Runs rapidas, combos e perfects ganham foco.", "lightning", "#faff00", { "type": "xp", "value": 0.18 }, "More XP focus.", "Mais foco em XP.", [
+			_weekly_task("combo_12", "Reach combo 12", "Alcancar combo 12", "Best combo counts.", "Melhor combo conta.", "bestCombo", 12, { "type": "xp", "amount": 520 }, "combo", "#faff00"),
+			_weekly_task("perfect_14", "Make 14 Perfect Escapes", "Fazer 14 Perfect Escapes", "Precise breaks count.", "Quebras precisas contam.", "perfectEscapes", 14, { "type": "diamonds", "amount": 30 }, "perfect", "#00f0ff"),
+			_weekly_task("phase_8", "Complete 8 phases", "Concluir 8 fases", "Win normal phases.", "Venca fases normais.", "phaseWins", 8, { "type": "coins", "amount": 1500 }, "play", "#00ff88"),
+		], _weekly_final({ "type": "chest", "chest_type": "rare", "amount": 1 }, "Lightning Rare Chest", "Bau Raro Relampago", "Complete every lightning goal.", "Conclua todos os objetivos relampago.", "chest_rare", "#faff00")),
+		_weekly_event("shadow_week", "Shadow Week", "Semana Sombria", "Hard modes and darker rewards.", "Modos dificeis e recompensas sombrias.", "shadow", "#7c3aed", { "type": "hard_rewards", "value": 0.12 }, "Better hard-mode reward focus.", "Foco em recompensas melhores em modos dificeis.", [
+			_weekly_task("phase_12", "Complete 12 phases", "Concluir 12 fases", "Normal phases count.", "Fases normais contam.", "phaseWins", 12, { "type": "coins", "amount": 2000 }, "play", "#7c3aed"),
+			_weekly_task("boss_1", "Defeat 1 boss", "Derrotar 1 boss", "Boss victory counts.", "Vitoria contra boss conta.", "bossWins", 1, { "type": "diamonds", "amount": 35 }, "boss", "#ff0055"),
+			_weekly_task("league_2", "Win 2 League matches", "Vencer 2 partidas da Liga", "League wins count.", "Vitorias da Liga contam.", "leagueWins", 2, { "type": "keys", "amount": 1 }, "league", "#ffd700"),
+		], _weekly_final({ "type": "chest", "chest_type": "epic", "amount": 1 }, "Shadow Epic Chest", "Bau Epico Sombrio", "Complete every shadow goal.", "Conclua todos os objetivos sombrios.", "chest_epic", "#7c3aed")),
+		_weekly_event("prism_week", "Prismatic Week", "Semana Prismatica", "Wheel spins and mixed resource gains.", "Giros da roleta e ganhos mistos de recursos.", "prism", "#ff4fd8", { "type": "wheel_luck", "value": 0.08 }, "Better wheel focus.", "Foco em roleta melhorada.", [
+			_weekly_task("wheel_4", "Spin the wheel 4 times", "Girar a roleta 4 vezes", "Use all spin options.", "Use todas as opcoes de giro.", "wheelSpins", 4, { "type": "diamonds", "amount": 32 }, "wheel", "#ff4fd8"),
+			_weekly_task("coins_5200", "Earn 5200 run coins", "Ganhar 5200 moedas de run", "Collect gameplay coins.", "Colete moedas jogando.", "runCoins", 5200, { "type": "coins", "amount": 1600 }, "coin", "#ffd700"),
+			_weekly_task("daily_2", "Play 2 Daily Challenges", "Jogar 2 Desafios Diarios", "Daily Challenge runs count.", "Partidas do Desafio Diario contam.", "dailyChallengeRuns", 2, { "type": "keys", "amount": 1 }, "event", "#00ff88"),
+		], _weekly_final({ "type": "diamonds", "amount": 80 }, "Prismatic Diamonds", "Diamantes Prismaticos", "Complete every prism goal.", "Conclua todos os objetivos prismaticos.", "gem", "#ff4fd8")),
+		_weekly_event("upgrades_week", "Upgrades Week", "Semana dos Upgrades", "Permanent upgrades cost less in spirit and progress faster.", "Melhorias permanentes ficam em foco.", "upgrades", "#00f0ff", { "type": "upgrade_discount", "value": 0.08 }, "Small permanent upgrade discount focus.", "Pequeno foco em desconto de melhorias permanentes.", [
+			_weekly_task("buy_3", "Buy 3 upgrades", "Comprar 3 melhorias", "Permanent upgrade purchases count.", "Compras de melhoria permanente contam.", "upgradesBought", 3, { "type": "diamonds", "amount": 35 }, "upgrades", "#00f0ff"),
+			_weekly_task("phase_8", "Complete 8 phases", "Concluir 8 fases", "Normal phases count.", "Fases normais contam.", "phaseWins", 8, { "type": "coins", "amount": 1900 }, "play", "#00ff88"),
+			_weekly_task("coins_5000", "Earn 5000 run coins", "Ganhar 5000 moedas de run", "Fund your upgrades.", "Financie suas melhorias.", "runCoins", 5000, { "type": "xp", "amount": 500 }, "coin", "#ffd700"),
+		], _weekly_final({ "type": "diamonds", "amount": 70 }, "Upgrade Fund", "Fundo de Melhorias", "Complete every upgrade goal.", "Conclua todos os objetivos de melhoria.", "gem", "#00f0ff")),
+		_weekly_event("evolution_week", "Evolution Week", "Semana da Evolucao", "Skin upgrades and wins push progression.", "Upgrades de skin e vitorias empurram progresso.", "evolution", "#00ff88", { "type": "skin_upgrade_discount", "value": 0.08 }, "Small skin upgrade discount focus.", "Pequeno foco em desconto para upar skins.", [
+			_weekly_task("skin_equips_2", "Equip 2 skins", "Equipar 2 skins", "Try evolved skins.", "Teste skins evoluidas.", "skinEquips", 2, { "type": "coins", "amount": 1500 }, "skins", "#00ff88"),
+			_weekly_task("phase_9", "Complete 9 phases", "Concluir 9 fases", "Normal phases count.", "Fases normais contam.", "phaseWins", 9, { "type": "diamonds", "amount": 30 }, "play", "#00f0ff"),
+			_weekly_task("effects_18", "Trigger 18 skin effects", "Ativar 18 efeitos de skin", "Skin effects count in gameplay.", "Efeitos de skin contam na gameplay.", "skinEffects", 18, { "type": "fragments", "skin_id": "neon_blue", "amount": 20 }, "skins", "#ff4fd8"),
+		], _weekly_final({ "type": "diamonds", "amount": 65 }, "Evolution Crystals", "Cristais de Evolucao", "Complete every evolution goal.", "Conclua todos os objetivos de evolucao.", "gem", "#00ff88")),
+		_weekly_event("perfect_week", "Perfect Week", "Semana dos Perfects", "Perfects grant more weekly XP and diamonds.", "Perfects rendem mais XP e diamantes semanais.", "perfect", "#ffffff", { "type": "perfect_xp", "value": 0.20 }, "Perfect grants more XP focus.", "Perfect da mais foco em XP.", [
+			_weekly_task("perfect_22", "Make 22 Perfect Escapes", "Fazer 22 Perfect Escapes", "Clean openings count.", "Aberturas limpas contam.", "perfectEscapes", 22, { "type": "diamonds", "amount": 45 }, "perfect", "#ffffff"),
+			_weekly_task("combo_15", "Reach combo 15", "Alcancar combo 15", "Best combo counts.", "Melhor combo conta.", "bestCombo", 15, { "type": "coins", "amount": 1800 }, "combo", "#ffd700"),
+			_weekly_task("diamonds_12", "Find 12 diamonds", "Encontrar 12 diamantes", "Diamonds from all sources count.", "Diamantes de todas as fontes contam.", "diamondsFound", 12, { "type": "xp", "amount": 600 }, "gem", "#00f0ff"),
+		], _weekly_final({ "type": "chest", "chest_type": "epic", "amount": 1 }, "Perfect Epic Chest", "Bau Epico Perfect", "Complete every perfect goal.", "Conclua todos os objetivos perfect.", "chest_epic", "#ffffff")),
+		_weekly_event("combo_week", "Combo Week", "Semana dos Combos", "Long streaks bring coin-heavy rewards.", "Sequencias longas trazem recompensas de moedas.", "combo", "#ffb000", { "type": "combo_coins", "value": 0.12 }, "Combo gives extra coin focus.", "Combo da foco em moedas extras.", [
+			_weekly_task("combo_10", "Reach combo 10", "Alcancar combo 10", "Any mode counts.", "Qualquer modo conta.", "bestCombo", 10, { "type": "coins", "amount": 1300 }, "combo", "#ffb000"),
+			_weekly_task("combo_20", "Reach combo 20", "Alcancar combo 20", "Push the streak further.", "Leve a sequencia mais longe.", "bestCombo", 20, { "type": "diamonds", "amount": 35 }, "combo", "#ff6b00"),
+			_weekly_task("rings_260", "Break 260 rings", "Quebrar 260 aneis", "Ring clears support combo week.", "Quebras de aneis apoiam a semana.", "ringsDestroyed", 260, { "type": "keys", "amount": 1 }, "event", "#00f0ff"),
+		], _weekly_final({ "type": "coins", "amount": 5000 }, "Combo Treasury", "Tesouro de Combo", "Complete every combo goal.", "Conclua todos os objetivos de combo.", "coin", "#ffb000")),
+		_weekly_event("champions_week", "Champions Week", "Semana dos Campeoes", "Play every major mode for a legendary finish.", "Jogue todos os modos principais para um final lendario.", "champions", "#ffd700", { "type": "all_modes_reward", "value": 0.12 }, "League/Boss/Infinite reward focus.", "Foco em recompensas de Liga/Boss/Infinito.", [
+			_weekly_task("league_win_2", "Win 2 League matches", "Vencer 2 partidas da Liga", "Ranked wins count.", "Vitorias ranqueadas contam.", "leagueWins", 2, { "type": "diamonds", "amount": 35 }, "league", "#ffd700"),
+			_weekly_task("boss_win_1", "Defeat 1 boss", "Derrotar 1 boss", "Boss victory counts.", "Vitoria contra boss conta.", "bossWins", 1, { "type": "keys", "amount": 1 }, "boss", "#ff0055"),
+			_weekly_task("infinite_240", "Survive 240s in Infinite", "Sobreviver 240s no Infinito", "Endless survival counts.", "Sobrevivencia infinita conta.", "bestInfiniteSeconds", 240, { "type": "coins", "amount": 2200 }, "infinite", "#00f0ff"),
+		], _weekly_final({ "type": "chest", "chest_type": "rare", "amount": 3 }, "Champion Chests", "Baus dos Campeoes", "Complete every champion goal.", "Conclua todos os objetivos de campeao.", "chest_rare", "#ffd700")),
+		_weekly_event("eclipse_week", "Eclipse Week", "Semana do Eclipse", "High pressure goals near the end of the cycle.", "Objetivos de alta pressao perto do fim do ciclo.", "eclipse", "#111111", { "type": "eclipse_reward", "value": 0.12 }, "Hard event reward focus.", "Foco em recompensa de evento dificil.", [
+			_weekly_task("phase_14", "Complete 14 phases", "Concluir 14 fases", "Normal phase wins count.", "Vitorias em fases normais contam.", "phaseWins", 14, { "type": "diamonds", "amount": 45 }, "play", "#00ff88"),
+			_weekly_task("boss_2", "Defeat 2 bosses", "Derrotar 2 bosses", "Boss wins count.", "Vitorias contra boss contam.", "bossWins", 2, { "type": "keys", "amount": 2 }, "boss", "#ff0055"),
+			_weekly_task("infinite_rings_60", "Break 60 Infinite rings", "Quebrar 60 aneis no Infinito", "Best Infinite ring count.", "Melhor contagem de aneis no Infinito.", "bestInfiniteRings", 60, { "type": "coins", "amount": 2600 }, "infinite", "#00f0ff"),
+		], _weekly_final({ "type": "skin", "skin_id": "black_sun", "amount": 1 }, "Eclipse Skin", "Skin do Eclipse", "Complete every eclipse goal.", "Conclua todos os objetivos do eclipse.", "skins", "#111111")),
+		_weekly_event("singularity_week", "Singularity Week", "Semana da Singularidade", "The cycle closes with the biggest weekly goals.", "O ciclo fecha com os maiores objetivos semanais.", "singularity", "#ff2d75", { "type": "cycle_finale", "value": 0.15 }, "Final cycle reward focus.", "Foco em recompensa final do ciclo.", [
+			_weekly_task("rings_520", "Break 520 rings", "Quebrar 520 aneis", "All rings count.", "Todos os aneis contam.", "ringsDestroyed", 520, { "type": "diamonds", "amount": 60 }, "event", "#ff2d75"),
+			_weekly_task("all_modes_6", "Play 6 runs", "Jogar 6 partidas", "Any mode counts.", "Qualquer modo conta.", "runsPlayed", 6, { "type": "coins", "amount": 3200 }, "play", "#00f0ff"),
+			_weekly_task("league_boss", "Win League and Boss", "Vencer Liga e Boss", "Earn 2 League wins this week.", "Ganhe 2 vitorias na Liga nesta semana.", "leagueWins", 2, { "type": "keys", "amount": 2 }, "league", "#ffd700"),
+		], _weekly_final({ "type": "diamonds", "amount": 120 }, "Singularity Reward", "Recompensa da Singularidade", "Complete every singularity goal.", "Conclua todos os objetivos da singularidade.", "gem", "#ff2d75")),
+	]
+
+
+func _weekly_event(id: String, title_en: String, title_pt: String, desc_en: String, desc_pt: String, theme: String, color: String, bonus: Dictionary, bonus_en: String, bonus_pt: String, tasks: Array, final: Dictionary) -> Dictionary:
+	return {
+		"id": id,
+		"title_en": title_en,
+		"title_pt": title_pt,
+		"desc_en": desc_en,
+		"desc_pt": desc_pt,
+		"theme": theme,
+		"color": color,
+		"icon": "event",
+		"bonus": bonus,
+		"bonus_en": bonus_en,
+		"bonus_pt": bonus_pt,
+		"tasks": tasks,
+		"final": final,
+	}
+
+
+func _weekly_task(id: String, title_en: String, title_pt: String, desc_en: String, desc_pt: String, metric: String, target: int, reward: Dictionary, icon: String, tone: String) -> Dictionary:
+	return {
+		"id": id,
+		"title_en": title_en,
+		"title_pt": title_pt,
+		"desc_en": desc_en,
+		"desc_pt": desc_pt,
+		"metric": metric,
+		"target": target,
+		"reward": reward,
+		"icon": icon,
+		"tone": tone,
+	}
+
+
+func _weekly_final(reward: Dictionary, title_en: String, title_pt: String, desc_en: String, desc_pt: String, icon: String, tone: String) -> Dictionary:
+	return {
+		"id": "final_reward",
+		"title_en": title_en,
+		"title_pt": title_pt,
+		"desc_en": desc_en,
+		"desc_pt": desc_pt,
+		"reward": reward,
+		"icon": icon,
+		"tone": tone,
+	}
+
+
+func _localized_weekly_field(source: Dictionary, field: String) -> String:
+	var language := String(data.get("settings", {}).get("language", "en"))
+	if has_node("/root/LocalizationManager"):
+		language = LocalizationManager.current_language()
+	if language.begins_with("pt"):
+		return String(source.get("%s_pt" % field, source.get("%s_en" % field, source.get(field, ""))))
+	return String(source.get("%s_en" % field, source.get(field, "")))
+
+
+func _weekly_event_task_progress(metric: String, state: Dictionary) -> int:
+	var progress: Dictionary = state.get("progress", {})
+	var baseline: Dictionary = state.get("baseline", {})
+	var current: int = _event_metric_value(metric)
+	var delta: int = max(0, current - int(baseline.get(metric, current)))
+	return max(delta, int(progress.get(metric, 0)))
 
 
 func claim_weekly_event_reward(reward_id: String) -> Dictionary:
 	var event := get_weekly_event()
 	var event_id := String(event.get("id", ""))
-	var state := _weekly_event_state(event_id)
+	var state: Dictionary = data.get("events", {}).get(event_id, {})
 	var claimed: Array = state.get("claimed", [])
 	if claimed.has(reward_id):
 		return { "ok": false, "reason": "already_claimed" }
 	var reward: Dictionary = {}
 	var ready := false
-	if reward_id == "final_skin":
-		var final: Dictionary = event.get("final", {})
+	var final: Dictionary = event.get("final", {})
+	if reward_id == String(final.get("id", "final_reward")):
 		ready = bool(final.get("completed", false))
 		reward = Dictionary(final.get("reward", {})).duplicate(true)
 	else:
@@ -1658,6 +3654,12 @@ func claim_weekly_event_reward(reward_id: String) -> Dictionary:
 	events[event_id] = state
 	data["events"] = events
 	data["last_reward_text"] = text
+	_increment_stat("eventRewardsClaimed", 1, false)
+	if reward_id == String(final.get("id", "final_reward")):
+		_increment_stat("eventsCompleted", 1, false)
+	else:
+		_increment_stat("eventMissionsCompleted", 1, false)
+	add_neon_pass_xp(150 if reward_id == String(final.get("id", "final_reward")) else int(NEON_PASS_SOURCE_XP.get("event_mission", 75)), "event_mission")
 	save_game()
 	return { "ok": true, "reward": reward, "text": text }
 
@@ -1723,9 +3725,11 @@ func record_daily_challenge_run(summary: Dictionary) -> Dictionary:
 	var rings_value := int(summary.get("rings", 0))
 	var seconds := int(summary.get("seconds", 0))
 	var score := int(summary.get("score", 0))
+	var perfect_value := int(summary.get("perfects", 0))
 	var coins: int = max(25, int(summary.get("coins", 0)) + rings_value * 8 + seconds * 2)
 	var xp: int = max(20, int(summary.get("xp", 0)) + rings_value * 4 + seconds)
 	data["coins"] = int(data.get("coins", 0)) + coins
+	_add_earning_stats(coins, 0, 0, 0)
 	add_profile_xp(xp)
 	var daily: Dictionary = data.get("daily_challenge", {})
 	var records: Dictionary = daily.get("records", {})
@@ -1750,16 +3754,30 @@ func record_daily_challenge_run(summary: Dictionary) -> Dictionary:
 	stats["dailyChallengeCompletions"] = int(stats.get("dailyChallengeCompletions", 0)) + (1 if completed else 0)
 	stats["dailyChallengeBestScore"] = max(int(stats.get("dailyChallengeBestScore", 0)), score)
 	stats["dailyChallengeBestRings"] = max(int(stats.get("dailyChallengeBestRings", 0)), rings_value)
+	stats["totalPlayTimeSeconds"] = int(stats.get("totalPlayTimeSeconds", 0)) + seconds
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_value
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_value
+	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + perfect_value
+	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + perfect_value
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
 	data["stats"] = stats
+	_track_skin_mode_usage("daily_challenge", completed, seconds, rings_value, perfect_value)
 	_progress_missions("runsPlayed", 1)
+	_progress_missions("dailyChallengeRuns", 1)
+	if completed:
+		_progress_missions("dailyChallengeCompletions", 1)
+	_progress_missions("dailyChallengeBestScore", score)
+	_progress_missions("dailyChallengeBestRings", rings_value)
 	_progress_missions("ringsDestroyed", rings_value)
+	_progress_missions("perfectEscapes", perfect_value)
 	_progress_missions("runCoins", coins)
+	add_neon_pass_source_xp("daily_challenge")
+	var first_win := {}
+	if completed:
+		first_win = _add_neon_pass_first_win_bonus("daily_challenge")
 	_update_achievements(false)
 	save_game()
-	return { "coins": coins, "xp": xp, "completed": completed, "reward_available": completed and not bool(day_state.get("claimed", false)) }
+	return { "coins": coins, "xp": xp, "completed": completed, "reward_available": completed and not bool(day_state.get("claimed", false)), "first_win_bonus": first_win }
 
 
 func claim_daily_challenge_reward(double_reward := false) -> Dictionary:
@@ -1816,13 +3834,25 @@ func debug_simulate_next_daily_challenge_day() -> void:
 	save_game()
 
 
-func _weekly_event_state(event_id: String) -> Dictionary:
+func _weekly_event_state(event_id: String, definition: Dictionary = {}, starts_at := 0, ends_at := 0) -> Dictionary:
 	var events: Dictionary = data.get("events", {})
 	var state: Dictionary = events.get(event_id, {})
 	if state.is_empty():
-		state = { "claimed": [] }
-		events[event_id] = state
-		data["events"] = events
+		state = { "claimed": [], "started_at": TimeManager.get_now_timestamp(), "progress": {}, "baseline": {} }
+	var baseline: Dictionary = state.get("baseline", {})
+	for raw_task in Array(definition.get("tasks", [])):
+		var task: Dictionary = raw_task
+		var metric := String(task.get("metric", ""))
+		if metric.is_empty():
+			continue
+		if not baseline.has(metric):
+			baseline[metric] = _event_metric_value(metric)
+	state["baseline"] = baseline
+	state["starts_at"] = starts_at
+	state["ends_at"] = ends_at
+	state["definition_id"] = String(definition.get("id", event_id))
+	events[event_id] = state
+	data["events"] = events
 	return state
 
 
@@ -1870,6 +3900,7 @@ func _apply_daily_challenge_bundle(reward: Dictionary, multiplier: int) -> Strin
 	var parts: Array[String] = []
 	if coins > 0:
 		data["coins"] = int(data.get("coins", 0)) + coins
+		_add_earning_stats(coins, 0, 0, 0)
 		parts.append("+%s moedas" % coins)
 	if xp > 0:
 		add_profile_xp(xp)
@@ -1877,9 +3908,12 @@ func _apply_daily_challenge_bundle(reward: Dictionary, multiplier: int) -> Strin
 	if diamonds > 0:
 		data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
 		_increment_stat("diamondsFound", diamonds, false)
+		_increment_stat("diamonds_found", diamonds, false)
+		_add_earning_stats(0, 0, diamonds, 0)
 		parts.append("+%s diamantes" % diamonds)
 	if keys > 0:
 		data["keys"] = int(data.get("keys", 0)) + keys
+		_add_earning_stats(0, 0, 0, keys)
 		parts.append("+%s chaves" % keys)
 	if reward.has("chest_type"):
 		var chest_type := String(reward.get("chest_type", "rare"))
@@ -1897,7 +3931,40 @@ func _event_metric_value(metric: String) -> int:
 			return int(stats.get("bestInfiniteSeconds", data.get("infinite_best_seconds", 0)))
 		"leagueWins":
 			return int(stats.get("leagueWins", 0))
+		"coins":
+			return int(data.get("coins", 0))
+		"diamonds":
+			return int(data.get("diamonds", 0))
+		"keys":
+			return int(data.get("keys", 0))
 	return int(stats.get(metric, 0))
+
+
+func _progress_weekly_event_metric(metric: String, amount: int) -> void:
+	var event := get_weekly_event()
+	var event_id := String(event.get("id", ""))
+	if event_id.is_empty() or not (String(event.get("status", "")) in ["active", "completed"]):
+		return
+	var events: Dictionary = data.get("events", {})
+	var state: Dictionary = events.get(event_id, {})
+	if state.is_empty():
+		return
+	var matches_event := false
+	for raw_task in Array(event.get("tasks", [])):
+		var task: Dictionary = raw_task
+		if String(task.get("metric", "")) == metric:
+			matches_event = true
+			break
+	if not matches_event:
+		return
+	var progress: Dictionary = state.get("progress", {})
+	if metric in ["bestCombo", "bestInfiniteSeconds", "bestInfiniteRings", "dailyChallengeBestScore", "dailyChallengeBestRings", "leagueWinStreak"]:
+		progress[metric] = max(int(progress.get(metric, 0)), amount)
+	else:
+		progress[metric] = int(progress.get(metric, 0)) + amount
+	state["progress"] = progress
+	events[event_id] = state
+	data["events"] = events
 
 
 func can_start_boss_level(level_id: String) -> bool:
@@ -1947,6 +4014,7 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 	var diamonds_bonus := 0
 	if coins_bonus > 0:
 		data["coins"] = int(data.get("coins", 0)) + coins_bonus
+		_add_earning_stats(coins_bonus, 0, 0, 0)
 	if String(reward.get("type", "")) != "coins":
 		apply_reward(reward)
 	if result == "win":
@@ -1954,7 +4022,14 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 		if diamonds_bonus > 0:
 			data["diamonds"] = int(data.get("diamonds", 0)) + diamonds_bonus
 			_increment_stat("diamondsFound", diamonds_bonus, false)
+			_increment_stat("diamonds_found", diamonds_bonus, false)
+			_add_earning_stats(0, 0, diamonds_bonus, 0)
 	add_profile_xp(xp_bonus)
+	add_neon_pass_source_xp("boss_attempt")
+	var first_win := {}
+	if result == "win":
+		add_neon_pass_source_xp("boss_win")
+		first_win = _add_neon_pass_first_win_bonus("boss_win")
 	var stats: Dictionary = data.get("stats", {})
 	stats["boss_runs"] = int(stats.get("boss_runs", 0)) + 1
 	stats["boss_wins"] = int(stats.get("boss_wins", 0)) + (1 if result == "win" else 0)
@@ -1968,12 +4043,27 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 		stats["bossBestLevelIndex"] = max(int(stats.get("bossBestLevelIndex", 0)), _boss_level_index(level_id) + 1)
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + int(summary.get("rings", 0))
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + int(summary.get("rings", 0))
+	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + int(summary.get("perfects", 0))
+	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + int(summary.get("perfects", 0))
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins_bonus
 	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + int(summary.get("run_upgrades", 0))
 	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds_bonus
 	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds_bonus
+	stats["totalPlayTimeSeconds"] = int(stats.get("totalPlayTimeSeconds", 0)) + int(summary.get("seconds", 0))
+	var boss_damage: int = max(max(int(summary.get("damage", 0)), int(summary.get("score", 0))), int(summary.get("rings", 0)) * int(definition.get("base_hp", 100)))
+	stats["bossDamageTotal"] = int(stats.get("bossDamageTotal", 0)) + max(0, boss_damage)
+	if result == "win":
+		var boss_seconds := int(summary.get("seconds", 0))
+		if boss_seconds > 0:
+			var previous_best := int(stats.get("bossBestTime", 0))
+			stats["bossBestTime"] = boss_seconds if previous_best <= 0 else min(previous_best, boss_seconds)
 	data["stats"] = stats
+	_track_skin_mode_usage("boss", result == "win", int(summary.get("seconds", 0)), int(summary.get("rings", 0)), int(summary.get("perfects", 0)))
+	_progress_missions("bossMatches", 1)
+	if result == "win":
+		_progress_missions("bossWins", 1)
 	_progress_missions("ringsDestroyed", int(summary.get("rings", 0)))
+	_progress_missions("perfectEscapes", int(summary.get("perfects", 0)))
 	_progress_missions("runCoins", coins_bonus)
 	_update_achievements(false)
 	save_game()
@@ -1983,6 +4073,7 @@ func record_boss_match(level_id: String, result: String, summary: Dictionary) ->
 		"diamonds": diamonds_bonus,
 		"reward": reward,
 		"boss_level": level_id,
+		"first_win_bonus": first_win,
 	}
 
 
@@ -2167,26 +4258,74 @@ func _achievement_def(id: String) -> Dictionary:
 
 func _update_skin_collection_stats() -> void:
 	var stats: Dictionary = data.get("stats", {})
-	var rare_count := 0
-	var epic_count := 0
-	var legendary_count := 0
+	var rarity_counts := {}
+	for rarity in SKIN_RARITY_ORDER:
+		rarity_counts[rarity] = 0
+	var effect_counts := {
+		"control": 0,
+		"fire": 0,
+		"ice": 0,
+		"critical": 0,
+		"coins": 0,
+		"xp": 0,
+		"speed": 0,
+		"chain": 0,
+		"area": 0,
+		"phase": 0,
+		"gravity": 0,
+	}
+	var skin_levels: Dictionary = data.get("skin_levels", {})
+	var upgraded_count := 0
+	var any_level_2 := 0
+	var maxed_count := 0
+	var maxed_by_rarity := {}
+	for rarity in SKIN_RARITY_ORDER:
+		maxed_by_rarity[rarity] = 0
 	for skin_id in Array(data.get("unlocked_skins", [])):
-		match _skin_rarity_from_id(String(skin_id)):
-			"rare":
-				rare_count += 1
-			"epic":
-				epic_count += 1
-			"legendary", "mythic", "ultimate":
-				legendary_count += 1
-	stats["skinsUnlocked"] = Array(data.get("unlocked_skins", [])).size()
-	stats["skins_unlocked"] = Array(data.get("unlocked_skins", [])).size()
-	stats["rareSkinsUnlocked"] = rare_count
-	stats["epicSkinsUnlocked"] = epic_count
-	stats["legendarySkinsUnlocked"] = legendary_count
+		var id := String(skin_id)
+		var rarity := _skin_rarity_from_id(id)
+		rarity_counts[rarity] = int(rarity_counts.get(rarity, 0)) + 1
+		for effect_id in _skin_effect_ids_from_id(id):
+			if effect_counts.has(effect_id):
+				effect_counts[effect_id] = int(effect_counts.get(effect_id, 0)) + 1
+		var level := int(skin_levels.get(id, 1))
+		if level >= 2:
+			any_level_2 = 1
+			upgraded_count += 1
+		if level >= get_skin_max_level(id):
+			maxed_count += 1
+			maxed_by_rarity[rarity] = int(maxed_by_rarity.get(rarity, 0)) + 1
+	var unlocked_count := Array(data.get("unlocked_skins", [])).size()
+	stats["totalSkinsAvailable"] = _skin_total_available()
+	stats["skinsUnlocked"] = unlocked_count
+	stats["skins_unlocked"] = unlocked_count
+	for rarity in SKIN_RARITY_ORDER:
+		stats["%sSkinsUnlocked" % rarity] = int(rarity_counts.get(rarity, 0))
+		stats["skin%sMaxed" % rarity.capitalize()] = int(maxed_by_rarity.get(rarity, 0))
+	stats["legendaryPlusSkinsUnlocked"] = int(rarity_counts.get("legendary", 0)) + int(rarity_counts.get("mythic", 0)) + int(rarity_counts.get("ultimate", 0))
+	stats["skinEffectControlUnlocked"] = int(effect_counts.get("control", 0))
+	stats["skinEffectFireUnlocked"] = int(effect_counts.get("fire", 0))
+	stats["skinEffectIceUnlocked"] = int(effect_counts.get("ice", 0))
+	stats["skinEffectCriticalUnlocked"] = int(effect_counts.get("critical", 0))
+	stats["skinEffectCoinsUnlocked"] = int(effect_counts.get("coins", 0))
+	stats["skinEffectXPUnlocked"] = int(effect_counts.get("xp", 0))
+	stats["skinEffectSpeedUnlocked"] = int(effect_counts.get("speed", 0))
+	stats["skinEffectChainUnlocked"] = int(effect_counts.get("chain", 0))
+	stats["skinEffectAreaUnlocked"] = int(effect_counts.get("area", 0))
+	stats["skinEffectPhaseUnlocked"] = int(effect_counts.get("phase", 0))
+	stats["skinEffectGravityUnlocked"] = int(effect_counts.get("gravity", 0))
+	stats["skinAnyLevel2"] = any_level_2
+	stats["skinsUpgradedCount"] = upgraded_count
+	stats["skinMaxedCount"] = maxed_count
 	data["stats"] = stats
 
 
 func _skin_rarity_from_id(id: String) -> String:
+	var skin := MainPortData.skin_by_id(id)
+	if not skin.is_empty():
+		var rarity := String(skin.get("rarity", "common")).to_lower()
+		if SKIN_RARITY_ORDER.has(rarity):
+			return rarity
 	if id.contains("ultimate") or id in ["omega_infinity", "singularity_crown", "divine_core", "cosmic_champion", "league_king_neon", "initial_neon_champion"]:
 		return "ultimate"
 	if id.contains("mythic") or id.contains("chrono_loop"):
@@ -2200,11 +4339,162 @@ func _skin_rarity_from_id(id: String) -> String:
 	return "common"
 
 
+func _skin_total_available() -> int:
+	return _all_known_skin_ids().size()
+
+
+func _skin_rarity_total(rarity: String) -> int:
+	var count := 0
+	for skin_id in _all_known_skin_ids():
+		if _skin_rarity_from_id(String(skin_id)) == rarity:
+			count += 1
+	return count
+
+
+func _skin_effect_total(effect_id: String) -> int:
+	var count := 0
+	for skin_id in _all_known_skin_ids():
+		if _skin_effect_ids_from_id(String(skin_id)).has(effect_id):
+			count += 1
+	return count
+
+
+func _skin_effect_ids_from_id(id: String) -> Array:
+	var effects: Array = []
+	var tokens: Array = [id]
+	var skin := MainPortData.skin_by_id(id)
+	if not skin.is_empty():
+		tokens.append(String(skin.get("name", "")))
+		tokens.append(String(skin.get("name_pt", "")))
+		tokens.append(String(skin.get("name_en", "")))
+		tokens.append(String(skin.get("desc", "")))
+		tokens.append(String(skin.get("desc_pt", "")))
+		tokens.append(String(skin.get("desc_en", "")))
+		var passive: Dictionary = Dictionary(skin.get("passive", {}))
+		tokens.append(String(passive.get("type", "")))
+		for raw_effect in Array(skin.get("effects", [])):
+			tokens.append(String(raw_effect))
+	if MainPortData.skin_has_control(id):
+		_append_unique_string(effects, "control")
+	var text := " ".join(tokens).to_lower()
+	if text.contains("control") or text.contains("controle"):
+		_append_unique_string(effects, "control")
+	if text.contains("burn") or text.contains("fire") or text.contains("flame") or text.contains("fogo") or text.contains("phoenix") or text.contains("dragon") or text.contains("solar"):
+		_append_unique_string(effects, "fire")
+	if text.contains("freeze") or text.contains("slow_ring") or text.contains("slow ring") or text.contains("ice") or text.contains("frost") or text.contains("gelo") or text.contains("chill"):
+		_append_unique_string(effects, "ice")
+	if text.contains("crit") or text.contains("critical") or text.contains("mega_crit") or text.contains("cosmic_critical") or text.contains("critico"):
+		_append_unique_string(effects, "critical")
+	if text.contains("coin") or text.contains("moeda") or text.contains("gold") or text.contains("piggy") or text.contains("emperor"):
+		_append_unique_string(effects, "coins")
+	if text.contains("xp") or text.contains("experience") or text.contains("experiencia"):
+		_append_unique_string(effects, "xp")
+	if text.contains("speed") or text.contains("veloc") or text.contains("comet") or text.contains("dash"):
+		_append_unique_string(effects, "speed")
+	if text.contains("chain") or text.contains("corrente") or text.contains("lightning") or text.contains("electric") or text.contains("plasma") or text.contains("orbital_blade"):
+		_append_unique_string(effects, "chain")
+	if text.contains("area_damage") or text.contains("area") or text.contains("shockwave") or text.contains("explos") or text.contains("all_bonus") or text.contains("league_king_wave"):
+		_append_unique_string(effects, "area")
+	if text.contains("phase_solid") or text.contains("phase") or text.contains("fase") or text.contains("ghost") or text.contains("phantom") or text.contains("void"):
+		_append_unique_string(effects, "phase")
+	if text.contains("gravity") or text.contains("gravidade") or text.contains("black_hole") or text.contains("singularity") or text.contains("collapsed") or text.contains("black sun") or text.contains("void"):
+		_append_unique_string(effects, "gravity")
+	return effects
+
+
+func _append_unique_string(values: Array, value: String) -> void:
+	if not values.has(value):
+		values.append(value)
+
+
+func _rarity_label(rarity: String) -> String:
+	match rarity:
+		"common":
+			return "Common"
+		"rare":
+			return "Rare"
+		"epic":
+			return "Epic"
+		"legendary":
+			return "Legendary"
+		"mythic":
+			return "Mythic"
+		"ultimate":
+			return "Ultimate"
+	return rarity.capitalize()
+
+
+func _rarity_label_pt(rarity: String) -> String:
+	match rarity:
+		"common":
+			return "Comuns"
+		"rare":
+			return "Raras"
+		"epic":
+			return "Epicas"
+		"legendary":
+			return "Lendarias"
+		"mythic":
+			return "Miticas"
+		"ultimate":
+			return "Ultimate"
+	return rarity.capitalize()
+
+
+func _skin_collection_reward(target: int) -> Dictionary:
+	if target >= 100:
+		return { "type": "skin", "skin_id": "genesis_core" }
+	if target >= 75:
+		return { "type": "chest", "chest_type": "epic", "amount": 1 }
+	if target >= 50:
+		return { "type": "diamonds", "amount": 120 }
+	if target >= 25:
+		return { "type": "keys", "amount": 3 }
+	if target >= 10:
+		return { "type": "diamonds", "amount": 30 }
+	return { "type": "coins", "amount": 900 }
+
+
+func _skin_rarity_reward(rarity: String, target: int) -> Dictionary:
+	match rarity:
+		"common":
+			return { "type": "coins", "amount": 700 + target * 60 }
+		"rare":
+			return { "type": "diamonds", "amount": 18 + target }
+		"epic":
+			return { "type": "keys", "amount": 1 + (1 if target >= 15 else 0) }
+		"legendary":
+			return { "type": "chest", "chest_type": "rare", "amount": 1 }
+		"mythic":
+			return { "type": "diamonds", "amount": 80 + target * 8 }
+		"ultimate":
+			return { "type": "chest", "chest_type": "epic", "amount": 1 }
+	return { "type": "coins", "amount": 1000 }
+
+
+func _skin_rarity_all_reward(rarity: String) -> Dictionary:
+	match rarity:
+		"common":
+			return { "type": "chest", "chest_type": "common", "amount": 2 }
+		"rare":
+			return { "type": "chest", "chest_type": "rare", "amount": 1 }
+		"epic":
+			return { "type": "diamonds", "amount": 160 }
+		"legendary":
+			return { "type": "chest", "chest_type": "epic", "amount": 1 }
+		"mythic":
+			return { "type": "skin", "skin_id": "genesis_core" }
+		"ultimate":
+			return { "type": "skin", "skin_id": "prismatic_omega" }
+	return { "type": "coins", "amount": 1200 }
+
+
 func _update_achievements(save_after := true) -> void:
 	var achievements: Dictionary = data.get("achievements", {})
 	var stats: Dictionary = data.get("stats", {})
 	stats["skinsUnlocked"] = Array(data.get("unlocked_skins", [])).size()
 	_update_skin_collection_stats()
+	_ensure_profile_stats_state()
 	stats = data.get("stats", {})
 	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), int(data.get("max_unlocked_phase", 1)))
 	stats["runsPlayed"] = max(int(stats.get("runsPlayed", 0)), int(stats.get("runs_played", 0)))
@@ -2245,6 +4535,7 @@ func _progress_missions(metric: String, amount: int) -> void:
 	if amount <= 0:
 		return
 	_ensure_live_systems()
+	_progress_weekly_event_metric(metric, amount)
 	var daily: Dictionary = data.get("daily_missions", {})
 	var missions: Array = daily.get("missions", [])
 	for i in range(missions.size()):
@@ -2269,7 +4560,22 @@ func _increment_stat(metric: String, amount: int, save_after := true) -> void:
 		save_game()
 
 
+func _add_earning_stats(coins := 0, xp := 0, diamonds := 0, keys := 0) -> void:
+	var stats: Dictionary = data.get("stats", {})
+	if coins > 0:
+		stats["totalCoinsEarned"] = int(stats.get("totalCoinsEarned", 0)) + coins
+	if xp > 0:
+		stats["totalXpEarned"] = int(stats.get("totalXpEarned", 0)) + xp
+	if diamonds > 0:
+		stats["totalDiamondsEarned"] = int(stats.get("totalDiamondsEarned", 0)) + diamonds
+	if keys > 0:
+		stats["totalKeysEarned"] = int(stats.get("totalKeysEarned", 0)) + keys
+	data["stats"] = stats
+
+
 func add_coins(amount: int) -> void:
+	if amount > 0:
+		_add_earning_stats(amount, 0, 0, 0)
 	data["coins"] = max(0, int(data.get("coins", 0)) + amount)
 	save_game()
 
@@ -2282,6 +4588,8 @@ func spend_coins(amount: int) -> bool:
 
 
 func add_diamonds(amount: int) -> void:
+	if amount > 0:
+		_add_earning_stats(0, 0, amount, 0)
 	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + amount)
 	save_game()
 
@@ -2294,6 +4602,8 @@ func spend_diamonds(amount: int) -> bool:
 
 
 func add_keys(amount: int) -> void:
+	if amount > 0:
+		_add_earning_stats(0, 0, 0, amount)
 	data["keys"] = max(0, int(data.get("keys", 0)) + amount)
 	save_game()
 
@@ -2332,6 +4642,7 @@ func equip_skin(id: String) -> bool:
 	data["equipped_skin"] = id
 	_increment_stat("skinEquips", 1, false)
 	_progress_missions("skinEquips", 1)
+	_update_achievements(false)
 	save_game()
 	return true
 
@@ -2410,6 +4721,8 @@ func _upgrade_skin(id: String, currency: String) -> Dictionary:
 	var levels: Dictionary = data.get("skin_levels", {})
 	levels[id] = level + 1
 	data["skin_levels"] = levels
+	_update_skin_collection_stats()
+	_update_achievements(false)
 	save_game()
 	return { "ok": true, "level": level + 1, "max_level": max_level, "cost": cost, "currency": currency }
 
@@ -2494,6 +4807,8 @@ func debug_level_up_equipped_skin() -> void:
 	var levels: Dictionary = data.get("skin_levels", {})
 	levels[id] = min(get_skin_max_level(id), get_skin_level(id) + 1)
 	data["skin_levels"] = levels
+	_update_skin_collection_stats()
+	_update_achievements(false)
 	save_game()
 
 
@@ -2502,6 +4817,8 @@ func debug_max_equipped_skin() -> void:
 	var levels: Dictionary = data.get("skin_levels", {})
 	levels[id] = get_skin_max_level(id)
 	data["skin_levels"] = levels
+	_update_skin_collection_stats()
+	_update_achievements(false)
 	save_game()
 
 
@@ -2510,6 +4827,8 @@ func debug_max_all_skins() -> void:
 	for id in Array(data.get("unlocked_skins", [])):
 		levels[String(id)] = get_skin_max_level(String(id))
 	data["skin_levels"] = levels
+	_update_skin_collection_stats()
+	_update_achievements(false)
 	save_game()
 
 
@@ -2518,6 +4837,8 @@ func debug_reset_skin_levels() -> void:
 	for id in Array(data.get("unlocked_skins", [])):
 		levels[String(id)] = 1
 	data["skin_levels"] = levels
+	_update_skin_collection_stats()
+	_update_achievements(false)
 	save_game()
 
 
@@ -2630,7 +4951,45 @@ func select_infinite() -> bool:
 	return true
 
 
+func _track_skin_mode_usage(mode: String, won: bool, seconds: int, rings: int, perfects: int) -> void:
+	var skin_id := String(data.get("equipped_skin", "neon_blue"))
+	if not Array(data.get("unlocked_skins", [])).has(skin_id):
+		skin_id = "neon_blue"
+	var usage: Dictionary = data.get("skin_usage", {})
+	usage[skin_id] = int(usage.get(skin_id, 0)) + 1
+	data["skin_usage"] = usage
+	var rarity := _skin_rarity_from_id(skin_id)
+	var effects := _skin_effect_ids_from_id(skin_id)
+	var stats: Dictionary = data.get("stats", {})
+	if won and mode == "phase":
+		match rarity:
+			"common":
+				stats["skinCommonPhaseWins"] = int(stats.get("skinCommonPhaseWins", 0)) + 1
+			"rare":
+				stats["skinRarePhaseWins"] = int(stats.get("skinRarePhaseWins", 0)) + 1
+			"epic":
+				stats["skinEpicPhaseWins"] = int(stats.get("skinEpicPhaseWins", 0)) + 1
+	if mode == "infinite" and effects.has("control"):
+		stats["skinControlInfiniteSeconds"] = max(int(stats.get("skinControlInfiniteSeconds", 0)), seconds)
+	if won and mode == "boss" and effects.has("fire"):
+		stats["skinFireBossWins"] = int(stats.get("skinFireBossWins", 0)) + 1
+	if won and mode == "league" and rarity == "ultimate":
+		stats["skinUltimateLeagueWins"] = int(stats.get("skinUltimateLeagueWins", 0)) + 1
+	if perfects > 0 and (effects.has("ice") or effects.has("control")):
+		stats["skinIceControlPerfects"] = int(stats.get("skinIceControlPerfects", 0)) + perfects
+	if rings > 0 and _skin_rarity_rank(rarity) >= _skin_rarity_rank("legendary"):
+		stats["skinLegendaryPlusRings"] = int(stats.get("skinLegendaryPlusRings", 0)) + rings
+	data["stats"] = stats
+
+
+func _skin_rarity_rank(rarity: String) -> int:
+	var index := SKIN_RARITY_ORDER.find(rarity)
+	return index if index >= 0 else 0
+
+
 func add_profile_xp(amount: int) -> void:
+	if amount > 0:
+		_add_earning_stats(0, amount, 0, 0)
 	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + amount)
 	data["xp"] = max(0, int(data.get("xp", 0)) + amount)
 	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
@@ -2640,7 +4999,7 @@ func add_profile_xp(amount: int) -> void:
 	save_game()
 
 
-func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int, perfect_escapes: int, diamonds: int = 0, best_combo: int = 0, criticals: int = 0, skin_effects: int = 0, run_upgrades: int = 0) -> void:
+func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int, perfect_escapes: int, diamonds: int = 0, best_combo: int = 0, criticals: int = 0, skin_effects: int = 0, run_upgrades: int = 0, seconds: int = 0) -> Dictionary:
 	var phase_config := LevelData.get_phase_config(phase)
 	var bonus_coins := int(phase_config.get("reward_coins", 0))
 	var bonus_xp := int(phase_config.get("reward_xp", 0))
@@ -2660,6 +5019,7 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	data["keys"] = max(0, int(data.get("keys", 0)) + bonus_keys)
 	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp + bonus_xp)
 	data["xp"] = max(0, int(data.get("xp", 0)) + xp + bonus_xp)
+	_add_earning_stats(coins + bonus_coins, xp + bonus_xp, bonus_diamonds, bonus_keys)
 	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
 		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
 		data["level"] = int(data.get("level", 1)) + 1
@@ -2675,6 +5035,7 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + bonus_diamonds
 	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + bonus_diamonds
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins + bonus_coins
+	stats["totalPlayTimeSeconds"] = int(stats.get("totalPlayTimeSeconds", 0)) + max(0, seconds)
 	if chest_rewarded:
 		stats["chestsEarned"] = int(stats.get("chestsEarned", 0)) + 1
 	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), best_combo)
@@ -2686,6 +5047,7 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	stats["highestPhase"] = max(int(stats.get("highestPhase", 1)), min(MAX_PHASE, phase + 1))
 	data["current_phase"] = max(int(data.get("current_phase", 1)), min(MAX_PHASE, phase + 1))
 	data["stats"] = stats
+	_track_skin_mode_usage("phase", true, max(0, seconds), rings_destroyed, perfect_escapes)
 	_progress_missions("runsPlayed", 1)
 	_progress_missions("phaseWins", 1)
 	_progress_missions("ringsDestroyed", rings_destroyed)
@@ -2696,12 +5058,23 @@ func record_phase_complete(phase: int, coins: int, xp: int, rings_destroyed: int
 	_progress_missions("skinEffects", skin_effects)
 	_progress_missions("runUpgrades", run_upgrades)
 	_progress_missions("noReviveWins", 1)
+	add_neon_pass_source_xp("normal_level_played")
+	add_neon_pass_source_xp("normal_level_win")
+	var first_win := _add_neon_pass_first_win_bonus("normal_level_win")
 	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
+	return {
+		"coins": coins + bonus_coins,
+		"xp": xp + bonus_xp,
+		"diamonds": bonus_diamonds,
+		"keys": bonus_keys,
+		"chest_rewarded": chest_rewarded,
+		"first_win_bonus": first_win,
+	}
 
 
-func record_infinite_run(summary: Dictionary) -> void:
+func record_infinite_run(summary: Dictionary) -> Dictionary:
 	var coins := int(summary.get("coins", 0))
 	var xp := int(summary.get("xp", 0))
 	var diamonds := int(summary.get("diamonds", 0))
@@ -2713,10 +5086,12 @@ func record_infinite_run(summary: Dictionary) -> void:
 	var skin_effect_value := int(summary.get("skin_effects", 0))
 	var run_upgrade_value := int(summary.get("run_upgrades", 0))
 	var run_level_value := int(summary.get("run_level", 1))
+	var perfect_value := int(summary.get("perfects", 0))
 	data["coins"] = max(0, int(data.get("coins", 0)) + coins)
 	data["diamonds"] = max(0, int(data.get("diamonds", 0)) + diamonds)
 	data["profile_xp"] = max(0, int(data.get("profile_xp", 0)) + xp)
 	data["xp"] = max(0, int(data.get("xp", 0)) + xp)
+	_add_earning_stats(coins, xp, diamonds, 0)
 	while int(data.get("profile_xp", 0)) >= _xp_needed_for_level(int(data.get("level", 1))):
 		data["profile_xp"] = int(data.get("profile_xp", 0)) - _xp_needed_for_level(int(data.get("level", 1)))
 		data["level"] = int(data.get("level", 1)) + 1
@@ -2730,6 +5105,8 @@ func record_infinite_run(summary: Dictionary) -> void:
 	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
 	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + perfect_value
+	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + perfect_value
 	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), combo_value)
 	stats["best_infinite_seconds"] = max(int(stats.get("best_infinite_seconds", 0)), seconds)
 	stats["bestInfiniteSeconds"] = max(int(stats.get("bestInfiniteSeconds", 0)), seconds)
@@ -2737,21 +5114,40 @@ func record_infinite_run(summary: Dictionary) -> void:
 	stats["bestInfiniteRings"] = max(int(stats.get("bestInfiniteRings", 0)), rings_value)
 	stats["best_infinite_score"] = max(int(stats.get("best_infinite_score", 0)), score)
 	stats["bestInfiniteScore"] = max(int(stats.get("bestInfiniteScore", 0)), score)
+	stats["bestInfiniteReward"] = max(int(stats.get("bestInfiniteReward", 0)), coins + diamonds * 80 + xp)
+	stats["totalPlayTimeSeconds"] = int(stats.get("totalPlayTimeSeconds", 0)) + seconds
 	stats["infiniteBestLevel"] = max(int(stats.get("infiniteBestLevel", 0)), run_level_value)
 	stats["criticals"] = int(stats.get("criticals", 0)) + critical_value
 	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + skin_effect_value
 	stats["runUpgrades"] = int(stats.get("runUpgrades", 0)) + run_upgrade_value
 	data["stats"] = stats
+	_track_skin_mode_usage("infinite", false, seconds, rings_value, perfect_value)
 	_progress_missions("runsPlayed", 1)
+	_progress_missions("infiniteRuns", 1)
+	_progress_missions("bestInfiniteSeconds", seconds)
+	_progress_missions("bestInfiniteRings", rings_value)
 	_progress_missions("ringsDestroyed", rings_value)
+	_progress_missions("perfectEscapes", perfect_value)
 	_progress_missions("runCoins", coins)
 	_progress_missions("bestCombo", combo_value)
 	_progress_missions("criticals", critical_value)
 	_progress_missions("skinEffects", skin_effect_value)
 	_progress_missions("runUpgrades", run_upgrade_value)
+	_add_neon_pass_infinite_xp(seconds, rings_value)
+	var first_win := {}
+	if seconds >= 20 or rings_value >= 3 or score > 0:
+		first_win = _add_neon_pass_first_win_bonus("infinite_valid_result")
 	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
+	return {
+		"coins": coins,
+		"xp": xp,
+		"diamonds": diamonds,
+		"rings": rings_value,
+		"seconds": seconds,
+		"first_win_bonus": first_win,
+	}
 
 
 func on_ring_destroyed(amount := 1) -> void:
@@ -2772,7 +5168,8 @@ func on_level_completed(level_id: int, summary: Dictionary = {}) -> void:
 		int(summary.get("best_combo", 0)),
 		int(summary.get("criticals", 0)),
 		int(summary.get("skin_effects", 0)),
-		int(summary.get("run_upgrades", 0))
+		int(summary.get("run_upgrades", 0)),
+		int(summary.get("seconds", 0))
 	)
 
 
@@ -2830,13 +5227,17 @@ func record_mode_quit(mode: String, summary: Dictionary) -> void:
 	var diamonds: int = max(0, int(summary.get("diamonds", 0)))
 	data["coins"] = int(data.get("coins", 0)) + coins
 	data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
+	_add_earning_stats(coins, 0, diamonds, 0)
 	add_profile_xp(xp)
 	var stats: Dictionary = data.get("stats", {})
 	stats["runsPlayed"] = int(stats.get("runsPlayed", 0)) + 1
 	stats["runs_played"] = int(stats.get("runs_played", 0)) + 1
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + int(summary.get("rings", 0))
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + int(summary.get("rings", 0))
+	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + int(summary.get("perfects", 0))
+	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + int(summary.get("perfects", 0))
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
+	stats["totalPlayTimeSeconds"] = int(stats.get("totalPlayTimeSeconds", 0)) + int(summary.get("seconds", 0))
 	stats["bestCombo"] = max(int(stats.get("bestCombo", 0)), int(summary.get("best_combo", 0)))
 	stats["criticals"] = int(stats.get("criticals", 0)) + int(summary.get("criticals", 0))
 	stats["skinEffects"] = int(stats.get("skinEffects", 0)) + int(summary.get("skin_effects", 0))
@@ -2852,13 +5253,19 @@ func record_mode_quit(mode: String, summary: Dictionary) -> void:
 		stats["best_infinite_score"] = max(int(stats.get("best_infinite_score", 0)), int(summary.get("score", 0)))
 		stats["infiniteBestLevel"] = max(int(stats.get("infiniteBestLevel", 0)), int(summary.get("run_level", 1)))
 	data["stats"] = stats
+	_track_skin_mode_usage(mode, false, int(summary.get("seconds", 0)), int(summary.get("rings", 0)), int(summary.get("perfects", 0)))
 	_progress_missions("runsPlayed", 1)
 	_progress_missions("ringsDestroyed", int(summary.get("rings", 0)))
+	_progress_missions("perfectEscapes", int(summary.get("perfects", 0)))
 	_progress_missions("runCoins", coins)
 	_progress_missions("bestCombo", int(summary.get("best_combo", 0)))
 	_progress_missions("criticals", int(summary.get("criticals", 0)))
 	_progress_missions("skinEffects", int(summary.get("skin_effects", 0)))
 	_progress_missions("runUpgrades", int(summary.get("run_upgrades", 0)))
+	if mode == "infinite":
+		_add_neon_pass_infinite_xp(int(summary.get("seconds", 0)), int(summary.get("rings", 0)))
+	elif mode == "phase":
+		add_neon_pass_source_xp("normal_level_played")
 	refresh_unlocks(false)
 	_update_achievements(false)
 	save_game()
@@ -2910,7 +5317,13 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 		add_inventory_item("chest_rare", "chest", "Chest Rare", "rare", 1)
 	data["coins"] = int(data.get("coins", 0)) + coins
 	data["diamonds"] = int(data.get("diamonds", 0)) + diamonds
+	_add_earning_stats(coins, 0, diamonds, 0)
 	add_profile_xp(xp)
+	add_neon_pass_source_xp("league_battle")
+	var first_win := {}
+	if result == "win":
+		add_neon_pass_source_xp("league_win")
+		first_win = _add_neon_pass_first_win_bonus("league_win")
 
 	var stats: Dictionary = data.get("stats", {})
 	stats["leagueMatches"] = int(stats.get("leagueMatches", 0)) + 1
@@ -2918,14 +5331,18 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	stats["leagueLosses"] = int(stats.get("leagueLosses", 0)) + (1 if result == "loss" else 0)
 	stats["leagueQuits"] = int(stats.get("leagueQuits", 0)) + (1 if result == "quit" else 0)
 	stats["leagueTrophies"] = trophies
+	stats["highestLeagueTrophies"] = max(int(stats.get("highestLeagueTrophies", 0)), trophies)
 	stats["leagueTrophiesTotal"] = int(stats.get("leagueTrophiesTotal", 0)) + max(0, trophy_delta)
 	stats["leagueWinStreak"] = max(int(stats.get("leagueWinStreak", 0)), int(league.get("best_streak", 0)))
 	stats["leagueRankIndex"] = max(int(stats.get("leagueRankIndex", 0)), _league_rank_index(rank_id))
 	stats["ringsDestroyed"] = int(stats.get("ringsDestroyed", 0)) + rings_value
 	stats["rings_destroyed"] = int(stats.get("rings_destroyed", 0)) + rings_value
+	stats["perfectEscapes"] = int(stats.get("perfectEscapes", 0)) + int(summary.get("perfects", 0))
+	stats["perfect_escapes"] = int(stats.get("perfect_escapes", 0)) + int(summary.get("perfects", 0))
 	stats["runCoins"] = int(stats.get("runCoins", 0)) + coins
 	stats["diamondsFound"] = int(stats.get("diamondsFound", 0)) + diamonds
 	stats["diamonds_found"] = int(stats.get("diamonds_found", 0)) + diamonds
+	stats["totalPlayTimeSeconds"] = int(stats.get("totalPlayTimeSeconds", 0)) + seconds
 	if not promotion_skin_id.is_empty():
 		var skins: Array = data.get("unlocked_skins", [])
 		if not skins.has(promotion_skin_id):
@@ -2947,13 +5364,18 @@ func record_neon_league_match(result: String, summary: Dictionary) -> Dictionary
 	if rank_id == "ultimate":
 		stats["leagueUltimateReached"] = 1
 	data["stats"] = stats
+	_track_skin_mode_usage("league", result == "win", seconds, rings_value, int(summary.get("perfects", 0)))
+	_progress_missions("leagueMatches", 1)
+	if result == "win":
+		_progress_missions("leagueWins", 1)
 	_progress_missions("ringsDestroyed", rings_value)
+	_progress_missions("perfectEscapes", int(summary.get("perfects", 0)))
 	_progress_missions("runCoins", coins)
 	if not promotion_skin_id.is_empty():
 		_update_skin_collection_stats()
 	_update_achievements(false)
 	save_game()
-	return { "coins": coins, "xp": xp, "diamonds": diamonds, "trophy_delta": trophy_delta, "trophies": trophies, "rank": rank, "promotion_skin": promotion_skin_id }
+	return { "coins": coins, "xp": xp, "diamonds": diamonds, "trophy_delta": trophy_delta, "trophies": trophies, "rank": rank, "promotion_skin": promotion_skin_id, "first_win_bonus": first_win }
 
 
 func set_audio_muted(muted: bool) -> void:

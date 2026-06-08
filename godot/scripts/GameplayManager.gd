@@ -126,6 +126,7 @@ var rapid_clear_streak := 0
 var last_ring_clear_msec := 0
 var background_palette_index := 0
 var ring_palette_index := 0
+var run_elapsed := 0.0
 var infinite_elapsed := 0.0
 var infinite_level := 1
 var infinite_score := 0
@@ -150,6 +151,7 @@ var _skin_texture: Texture2D
 var _background_texture_rect: TextureRect
 var _hud_phase: Label
 var _hud_resources: HBoxContainer
+var _hud_account_resources: HBoxContainer
 var _resource_labels: Dictionary = {}
 var _hud_meta: Label
 var _hud_timer_panel: PanelContainer
@@ -286,6 +288,7 @@ func _start_level() -> void:
 	ring_pacing_multiplier = 1.0
 	rapid_clear_streak = 0
 	last_ring_clear_msec = 0
+	run_elapsed = 0.0
 	infinite_elapsed = 0.0
 	infinite_level = 1
 	infinite_score = 0
@@ -315,6 +318,7 @@ func _start_level() -> void:
 func _update_game(delta_steps: float) -> void:
 	_update_arena_metrics()
 	var delta_seconds := delta_steps / PHYSICS_STEPS_PER_SECOND
+	run_elapsed += delta_seconds
 	var target_speed: float = _target_ball_speed()
 	ball_velocity = _stabilize_velocity(_clamp_vector_speed(ball_velocity, target_speed * 0.78, target_speed * 1.42))
 	var travel := ball_velocity.length() * delta_steps
@@ -987,7 +991,7 @@ func _is_ball_crushed() -> bool:
 
 
 func _try_consume_escape_shield() -> bool:
-	var shield_level: int = int(current_upgrades.get("shieldPulse", 0)) + int(current_upgrades.get("lastShield", 0))
+	var shield_level: int = _run_upgrade_total_level("shieldPulse") + _run_upgrade_total_level("lastShield")
 	if shield_level <= 0 or shield_pulse_used:
 		return false
 	shield_pulse_used = true
@@ -1014,8 +1018,8 @@ func _finish_victory() -> void:
 	var profile_xp_reward := _run_profile_xp() * reward_multiplier
 	var global_coins_reward := _global_coins_from_run(run_coins * reward_multiplier, best_combo, true)
 	var diamond_reward := run_diamonds * reward_multiplier
-	GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier, best_combo, criticals, skin_effects, run_upgrades)
-	pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": diamond_reward, "manual_quit": false, "victory": true }
+	var recorded := GameState.record_phase_complete(phase_id, global_coins_reward, profile_xp_reward, rings_destroyed, perfect_escapes, run_diamonds * reward_multiplier, best_combo, criticals, skin_effects, run_upgrades, floori(run_elapsed))
+	pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": diamond_reward, "manual_quit": false, "victory": true, "first_win_bonus": Dictionary(recorded.get("first_win_bonus", {})).duplicate(true) }
 	_spawn_particles(arena_center, Color("#00ff88"), 42, 180.0)
 	_play_sfx("victory")
 	_victory_title.text = _txt("LEVEL %s COMPLETE", "FASE %s CONCLUÍDA", "NIVEL %s COMPLETADO", "レベル%s完了", "关卡%s完成") % phase_id
@@ -1047,14 +1051,16 @@ func _finish_defeat() -> void:
 			"diamonds": run_diamonds,
 			"score": infinite_score,
 			"best_combo": best_combo,
+			"perfects": perfect_escapes,
 			"criticals": criticals,
 			"skin_effects": skin_effects,
 			"run_upgrades": run_upgrades,
 			"run_level": run_level,
 			"new_record": floori(infinite_elapsed) > previous_best_seconds,
 		}
-		GameState.record_infinite_run(summary)
-		pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": run_diamonds, "manual_quit": false, "victory": false }
+		var recorded := GameState.record_infinite_run(summary)
+		summary["first_win_bonus"] = Dictionary(recorded.get("first_win_bonus", {})).duplicate(true)
+		pending_result_reward = { "coins": global_coins_reward, "xp": profile_xp_reward, "diamonds": run_diamonds, "manual_quit": false, "victory": false, "first_win_bonus": Dictionary(recorded.get("first_win_bonus", {})).duplicate(true) }
 		_rebuild_defeat_summary(summary)
 	elif _defeat_summary:
 		pending_result_reward = {}
@@ -1077,13 +1083,14 @@ func _finish_daily_challenge(completed: bool) -> void:
 	var profile_xp_reward := _run_profile_xp()
 	var score := rings_destroyed * 100 + floori(infinite_elapsed) * 8 + best_combo * 30 + (500 if completed else 0)
 	var summary := {
-		"seconds": floori(infinite_elapsed),
+		"seconds": floori(infinite_elapsed if is_infinite or is_daily_challenge else run_elapsed),
 		"rings": rings_destroyed,
 		"coins": global_coins_reward,
 		"xp": profile_xp_reward,
 		"diamonds": run_diamonds,
 		"score": score,
 		"best_combo": best_combo,
+		"perfects": perfect_escapes,
 		"criticals": criticals,
 		"skin_effects": skin_effects,
 		"run_upgrades": run_upgrades,
@@ -1092,7 +1099,8 @@ func _finish_daily_challenge(completed: bool) -> void:
 		"new_record": score > int(daily_challenge.get("best_score", 0)),
 	}
 	var recorded := GameState.record_daily_challenge_run(summary)
-	pending_result_reward = { "coins": int(recorded.get("coins", global_coins_reward)), "xp": int(recorded.get("xp", profile_xp_reward)), "diamonds": 0, "manual_quit": false, "victory": completed }
+	summary["first_win_bonus"] = Dictionary(recorded.get("first_win_bonus", {})).duplicate(true)
+	pending_result_reward = { "coins": int(recorded.get("coins", global_coins_reward)), "xp": int(recorded.get("xp", profile_xp_reward)), "diamonds": 0, "manual_quit": false, "victory": completed, "first_win_bonus": Dictionary(recorded.get("first_win_bonus", {})).duplicate(true) }
 	_rebuild_defeat_summary(summary)
 	_defeat_title.text = _txt("DAILY CHALLENGE COMPLETE", "DESAFIO DIÁRIO CONCLUÍDO", "DESAFÍO DIARIO COMPLETADO", "デイリーチャレンジ完了", "每日挑战完成") if completed else _txt("CHALLENGE RESULT", "RESULTADO DO DESAFIO", "RESULTADO DEL DESAFÍO", "チャレンジ結果", "挑战结果")
 	if completed and bool(recorded.get("reward_available", false)):
@@ -1225,10 +1233,15 @@ func _build_hud() -> void:
 	_hud_resources = HBoxContainer.new()
 	_hud_resources.add_theme_constant_override("separation", 6)
 	hud.add_child(_hud_resources)
-	_hud_resources.add_child(_make_resource_badge("coin", "0", "coins"))
-	_hud_resources.add_child(_make_resource_badge("gem", "0", "gems"))
-	_hud_resources.add_child(_make_resource_badge("coin", "0", "account"))
-	_hud_resources.add_child(_make_resource_badge("key", "0", "keys"))
+	_hud_resources.add_child(_make_resource_badge("coin", "RUN 0", "coins"))
+	_hud_resources.add_child(_make_resource_badge("gem", "RUN 0", "gems"))
+
+	_hud_account_resources = HBoxContainer.new()
+	_hud_account_resources.add_theme_constant_override("separation", 6)
+	hud.add_child(_hud_account_resources)
+	_hud_account_resources.add_child(_make_resource_badge("coin", "GOLD 0", "account_coins"))
+	_hud_account_resources.add_child(_make_resource_badge("gem", "DIA 0", "account_diamonds"))
+	_hud_account_resources.add_child(_make_resource_badge("key", "KEY 0", "account_keys"))
 
 	_hud_timer_panel = PanelContainer.new()
 	_hud_timer_panel.visible = false
@@ -1526,6 +1539,7 @@ func _make_resource_badge(icon_key: String, value: String, label_key: String) ->
 	margin.add_child(row)
 	row.add_child(_make_icon_texture(icon_key, 20))
 	var label := _make_label(value, 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 	_resource_labels[label_key] = label
@@ -1536,6 +1550,12 @@ func _set_resource_value(key: String, value: int) -> void:
 	if _resource_labels.has(key):
 		var label: Label = _resource_labels[key]
 		label.text = str(value)
+
+
+func _set_resource_text(key: String, value: String) -> void:
+	if _resource_labels.has(key):
+		var label: Label = _resource_labels[key]
+		label.text = value
 
 
 func _make_icon_texture(icon_key: String, icon_size: int) -> TextureRect:
@@ -1580,10 +1600,11 @@ func _make_progress_bar(fill_color: String) -> ProgressBar:
 func _update_hud() -> void:
 	var active: int = _active_ring_count()
 	_hud_phase.text = _txt("DAILY CHALLENGE", "DESAFIO DIÁRIO", "DESAFÍO DIARIO", "デイリーチャレンジ", "每日挑战") if is_daily_challenge else _txt("INFINITE", "INFINITO", "INFINITO", "無限", "无限") if is_infinite else _txt("LEVEL %s", "FASE %s", "NIVEL %s", "レベル%s", "关卡%s") % phase_id
-	_set_resource_value("coins", run_coins)
-	_set_resource_value("gems", run_diamonds)
-	_set_resource_value("account", int(GameState.data.get("coins", 0)))
-	_set_resource_value("keys", int(GameState.data.get("keys", 0)))
+	_set_resource_text("coins", "%s %s" % [_txt("RUN", "RUN", "RUN", "RUN", "RUN"), run_coins])
+	_set_resource_text("gems", "%s %s" % [_txt("RUN", "RUN", "RUN", "RUN", "RUN"), run_diamonds])
+	_set_resource_text("account_coins", "%s %s" % [_txt("GOLD", "OURO", "ORO", "ゴールド", "金币"), int(GameState.data.get("coins", 0))])
+	_set_resource_text("account_diamonds", "%s %s" % [_txt("DIA", "DIA", "DIA", "ダイヤ", "钻石"), int(GameState.data.get("diamonds", 0))])
+	_set_resource_text("account_keys", "%s %s" % [_txt("KEY", "CHV", "LLV", "鍵", "钥匙"), int(GameState.data.get("keys", 0))])
 	var difficulty_text := "%s %s" % [_txt("DAILY", "DIÁRIO", "DIARIO", "デイリー", "每日"), String(daily_challenge.get("difficulty_label", ""))] if is_daily_challenge else "%s Lv.%s" % [_txt("INFINITE", "INFINITO", "INFINITO", "無限", "无限"), infinite_level] if is_infinite else LocalizationManager.phrase(String(phase_config["difficulty"]).to_upper()) if has_node("/root/LocalizationManager") else String(phase_config["difficulty"]).to_upper()
 	var combo_text := "   %s x%s" % [_txt("COMBO", "COMBO", "COMBO", "コンボ", "连击"), combo] if combo >= 2 else ""
 	if _hud_timer_panel and _hud_timer_label:
@@ -1822,15 +1843,26 @@ func _randomize_ring_gap_spaced(ring: Dictionary, existing: Array = []) -> Dicti
 	return ring
 
 
+func _run_upgrade_temp_level(id: String) -> int:
+	return int(current_upgrades.get(id, 0))
+
+
+func _run_upgrade_total_level(id: String) -> int:
+	return GameState.get_upgrade_run_total_level(id, _run_upgrade_temp_level(id))
+
+
+func _run_upgrade_value(id: String) -> float:
+	return float(GameState.get_upgrade_run_effect_value(id, _run_upgrade_temp_level(id)).get("value", 0.0))
+
+
 func _base_damage() -> int:
-	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	var base_damage := 10.0 * pow(1.1, int(upgrades.get("baseDamage", 0)))
-	var temporary_damage := int(current_upgrades.get("damage", 0)) * 0.15
+	var base_damage := 10.0
+	var damage_bonus := _run_upgrade_value("damage")
 	var skin_bonus := _skin_damage_bonus()
 	var arena_bonus := int(run_shop_upgrades.get("atk", 0)) * 0.12
-	var secret_bonus := int(current_upgrades.get("royalBreaker", 0)) * 0.12 + int(current_upgrades.get("bossHunter", 0)) * 0.06
-	var combo_bonus: float = minf(0.32, float(combo) * 0.012 * float(int(current_upgrades.get("comboOverdrive", 0))))
-	return max(1, roundi(base_damage * (1.0 + skin_bonus + arena_bonus + temporary_damage + secret_bonus + combo_bonus)))
+	var secret_bonus := _run_upgrade_value("royalBreaker") + _run_upgrade_value("bossHunter") * 0.55
+	var combo_bonus: float = minf(0.32, float(combo) * 0.012 * float(_run_upgrade_total_level("comboOverdrive")))
+	return max(1, roundi(base_damage * (1.0 + skin_bonus + arena_bonus + damage_bonus + secret_bonus + combo_bonus)))
 
 
 func _target_ball_speed() -> float:
@@ -1841,47 +1873,36 @@ func _target_ball_speed() -> float:
 
 
 func _speed_multiplier() -> float:
-	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	var base_speed := 100.0 * pow(1.08, int(upgrades.get("baseSpeed", 0)))
-	var temporary_speed := int(current_upgrades.get("speed", 0)) * 0.20
-	return 1.0 + base_speed / 1200.0 + _skin_speed_bonus() + temporary_speed + int(current_upgrades.get("ricochet", 0)) * 0.025 + int(current_upgrades.get("bounce", 0)) * 0.02
+	return 1.0 + _skin_speed_bonus() + _run_upgrade_value("speed") + _run_upgrade_value("ricochet") * 0.12 + _run_upgrade_value("bounce") * 0.10
 
 
 func _gold_multiplier() -> float:
-	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	var base := 1.0 + int(upgrades.get("coinMultiplier", 0)) * 0.15
-	var temporary_gold := int(current_upgrades.get("coinBoost", 0)) * 0.5 + int(current_upgrades.get("magnetCoins", 0)) * 0.25 + int(current_upgrades.get("secretMagnet", 0)) * 0.18
-	temporary_gold += min(0.26, float(combo) * 0.01 * float(int(current_upgrades.get("comboOverdrive", 0))))
-	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.12 + _skin_coin_bonus() + temporary_gold)
+	var upgrade_gold := _run_upgrade_value("coinBoost") + _run_upgrade_value("magnetCoins") + _run_upgrade_value("secretMagnet")
+	upgrade_gold += min(0.26, float(combo) * 0.01 * float(_run_upgrade_total_level("comboOverdrive")))
+	return 1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.12 + _skin_coin_bonus() + upgrade_gold
 
 
 func _xp_multiplier() -> float:
-	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	var base := 1.0 + int(upgrades.get("xpBoost", 0)) * 0.2
-	var temporary_xp := int(current_upgrades.get("xpBoost", 0)) * 0.5
-	return base * (1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.05 + _skin_xp_bonus() + temporary_xp)
+	return 1.0 + int(run_shop_upgrades.get("gold", 0)) * 0.05 + _skin_xp_bonus() + _run_upgrade_value("xpBoost") + _run_upgrade_value("bossHunter") * 0.28
 
 
 func _crit_chance() -> float:
-	var upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	return 5.0 + int(upgrades.get("critChance", 0)) * 2.0 + int(current_upgrades.get("critical", 0)) * 5.0 + int(current_upgrades.get("criticalOverload", 0)) * 2.0 + _skin_crit_bonus()
+	return 5.0 + _run_upgrade_value("critical") * 100.0 + _run_upgrade_value("criticalOverload") * 100.0 + _skin_crit_bonus()
 
 
 func _crit_damage() -> float:
-	return 2.0 + int(current_upgrades.get("criticalOverload", 0)) * 0.3
+	return 2.0 + _run_upgrade_value("criticalOverload")
 
 
 func _perfect_diamond_bonus() -> float:
 	var skin_id := String(GameState.data.get("equipped_skin", "neon_blue"))
-	var permanent_upgrades: Dictionary = GameState.data.get("permanent_upgrades", {})
-	var temporary_bonus := int(current_upgrades.get("perfectChance", 0)) * 0.01
-	var permanent_bonus := int(permanent_upgrades.get("perfectChance", 0)) * 0.01
-	var instinct_bonus := int(current_upgrades.get("diamondInstinct", 0)) * 0.018
+	var perfect_bonus := _run_upgrade_value("perfectChance")
+	var instinct_bonus := _run_upgrade_value("diamondInstinct")
 	if skin_id == "neon_blue":
-		return 0.005 + temporary_bonus + permanent_bonus + instinct_bonus
+		return 0.005 + perfect_bonus + instinct_bonus
 	if skin_id in ["star_rare", "planet", "crystal", "alien_rare", "purple_crystal", "cosmic_eye", "astral_eye"]:
-		return 0.02 + temporary_bonus + permanent_bonus + instinct_bonus
-	return temporary_bonus + permanent_bonus + instinct_bonus
+		return 0.02 + perfect_bonus + instinct_bonus
+	return perfect_bonus + instinct_bonus
 
 
 func _skin_damage_bonus() -> float:
@@ -1934,54 +1955,56 @@ func _try_apply_skin_effect(ring_index: int, trigger: String) -> int:
 
 func _try_apply_upgrade_effects(ring_index: int, trigger: String, base_damage_value: int) -> int:
 	var bonus_damage := 0
-	var frost_level := int(current_upgrades.get("frost", 0))
-	if frost_level > 0 and _can_trigger_upgrade_effect("frost", 0.18 + frost_level * 0.035, max(760, 1650 - frost_level * 120)):
+	var frost_level := _run_upgrade_total_level("frost")
+	if frost_level > 0 and _can_trigger_upgrade_effect("frost", _run_upgrade_value("frost"), max(760, 1650 - frost_level * 120)):
 		_mark_upgrade_effect_triggered("frost", max(760, 1650 - frost_level * 120))
 		bonus_damage += _apply_effect_to_ring(ring_index, "freeze", 0.48, Color("#9be8ff"), "upgrade")
-	if int(current_upgrades.get("timeFreeze", 0)) > 0 or int(current_upgrades.get("chronoBreak", 0)) > 0:
-		var time_level := int(current_upgrades.get("timeFreeze", 0)) + int(current_upgrades.get("chronoBreak", 0))
-		if _can_trigger_upgrade_effect("timeFreeze", 0.08 + time_level * 0.035, max(1200, 2800 - time_level * 220)):
+	if _run_upgrade_total_level("timeFreeze") > 0 or _run_upgrade_total_level("chronoBreak") > 0:
+		var time_level := _run_upgrade_total_level("timeFreeze") + _run_upgrade_total_level("chronoBreak")
+		var time_chance: float = max(_run_upgrade_value("timeFreeze"), _run_upgrade_value("chronoBreak"))
+		if _can_trigger_upgrade_effect("timeFreeze", time_chance, max(1200, 2800 - time_level * 220)):
 			_mark_upgrade_effect_triggered("timeFreeze", max(1200, 2800 - time_level * 220))
 			_apply_time_freeze(1300 + time_level * 240)
-	var slow_field_level := int(current_upgrades.get("slowField", 0))
-	if slow_field_level > 0 and trigger in ["hit", "break"] and _can_trigger_upgrade_effect("slowField", 0.09 + slow_field_level * 0.025, max(1050, 2500 - slow_field_level * 160)):
+	var slow_field_level := _run_upgrade_total_level("slowField")
+	if slow_field_level > 0 and trigger in ["hit", "break"] and _can_trigger_upgrade_effect("slowField", _run_upgrade_value("slowField"), max(1050, 2500 - slow_field_level * 160)):
 		_mark_upgrade_effect_triggered("slowField", max(1050, 2500 - slow_field_level * 160))
 		_apply_time_freeze(820 + slow_field_level * 180)
-	if int(current_upgrades.get("burn", 0)) > 0:
-		bonus_damage += floori(max(1, base_damage_value) * (0.26 + int(current_upgrades.get("burn", 0)) * 0.08))
+	if _run_upgrade_total_level("burn") > 0:
+		bonus_damage += floori(max(1, base_damage_value) * (0.20 + _run_upgrade_value("burn") * 0.38))
 		_apply_effect_to_ring(ring_index, "burn", 0.22, Color("#ff8800"), "upgrade")
-	if int(current_upgrades.get("penetration", 0)) > 0:
-		bonus_damage += floori(max(1, base_damage_value) * (0.18 + int(current_upgrades.get("penetration", 0)) * 0.05))
+	if _run_upgrade_total_level("penetration") > 0:
+		bonus_damage += floori(max(1, base_damage_value) * (0.15 + _run_upgrade_value("penetration") * 0.34))
 		_apply_effect_to_ring(ring_index, "poison", 0.18, Color("#39ff14"), "upgrade")
-	var repulse_level := int(current_upgrades.get("ringRepulse", 0))
-	if repulse_level > 0 and trigger == "hit" and _can_trigger_upgrade_effect("ringRepulse", 0.10 + repulse_level * 0.035, max(720, 1500 - repulse_level * 110)):
+	var repulse_level := _run_upgrade_total_level("ringRepulse")
+	if repulse_level > 0 and trigger == "hit" and _can_trigger_upgrade_effect("ringRepulse", _run_upgrade_value("ringRepulse"), max(720, 1500 - repulse_level * 110)):
 		_mark_upgrade_effect_triggered("ringRepulse")
 		_apply_effect_to_ring(ring_index, "repulse", 8.0 + repulse_level * 2.5, Color("#c084fc"), "upgrade")
-	if int(current_upgrades.get("chainLightning", 0)) > 0 and _can_trigger_upgrade_effect("chainLightning", 0.16 + int(current_upgrades.get("chainLightning", 0)) * 0.035, 720):
+	if _run_upgrade_total_level("chainLightning") > 0 and _can_trigger_upgrade_effect("chainLightning", _run_upgrade_value("chainLightning"), 720):
 		_mark_upgrade_effect_triggered("chainLightning", 720)
 		_apply_effect_to_ring(ring_index, "chain", 0.30, Color("#38bdf8"), "upgrade")
-	if int(current_upgrades.get("shockwave", 0)) > 0 or int(current_upgrades.get("voidPulse", 0)) > 0:
-		var area_level := int(current_upgrades.get("shockwave", 0)) + int(current_upgrades.get("voidPulse", 0))
-		if trigger == "break" or _can_trigger_upgrade_effect("shockwave", 0.08 + area_level * 0.03, 740):
+	if _run_upgrade_total_level("shockwave") > 0 or _run_upgrade_total_level("voidPulse") > 0:
+		var area_level := _run_upgrade_total_level("shockwave") + _run_upgrade_total_level("voidPulse")
+		var area_chance: float = max(_run_upgrade_value("shockwave"), _run_upgrade_value("voidPulse"))
+		if trigger == "break" or _can_trigger_upgrade_effect("shockwave", area_chance, 740):
 			_mark_upgrade_effect_triggered("shockwave", 740)
 			bonus_damage += _apply_effect_to_ring(ring_index, "area", 0.30 + area_level * 0.04, Color("#7c3aed"), "upgrade")
-	if int(current_upgrades.get("bomb", 0)) > 0:
-		var bomb_level := int(current_upgrades.get("bomb", 0))
-		if trigger == "break" or _can_trigger_upgrade_effect("bomb", 0.08 + bomb_level * 0.025, max(900, 1900 - bomb_level * 120)):
+	if _run_upgrade_total_level("bomb") > 0:
+		var bomb_level := _run_upgrade_total_level("bomb")
+		if trigger == "break" or _can_trigger_upgrade_effect("bomb", _run_upgrade_value("bomb"), max(900, 1900 - bomb_level * 120)):
 			_mark_upgrade_effect_triggered("bomb", max(900, 1900 - bomb_level * 120))
 			bonus_damage += _apply_effect_to_ring(ring_index, "area", 0.38 + bomb_level * 0.08, Color("#ffcc33"), "upgrade")
-	if int(current_upgrades.get("multihit", 0)) > 0:
-		var multi_level := int(current_upgrades.get("multihit", 0))
+	if _run_upgrade_total_level("multihit") > 0:
+		var multi_level := _run_upgrade_total_level("multihit")
 		if _can_trigger_upgrade_effect("multihit", 0.10 + multi_level * 0.035, max(780, 1600 - multi_level * 140)):
 			_mark_upgrade_effect_triggered("multihit", max(780, 1600 - multi_level * 140))
 			bonus_damage += max(1, floori(float(base_damage_value) * (0.28 + multi_level * 0.12)))
 			bonus_damage += _damage_neighbor_ring(ring_index, max(1, floori(float(base_damage_value) * 0.24)), Color("#ffffff"))
-	if int(current_upgrades.get("laserCut", 0)) > 0 or int(current_upgrades.get("laser", 0)) > 0:
-		var laser_level := int(current_upgrades.get("laserCut", 0)) + int(current_upgrades.get("laser", 0))
+	if _run_upgrade_total_level("laserCut") > 0 or _run_upgrade_total_level("laser") > 0:
+		var laser_level := _run_upgrade_total_level("laserCut") + _run_upgrade_total_level("laser")
 		if randf() < 0.10 + laser_level * 0.025:
 			bonus_damage += max(1, floori(max(1, base_damage_value) * (0.55 + laser_level * 0.12)))
-	if int(current_upgrades.get("chainBreak", 0)) > 0 and trigger == "break":
-		bonus_damage += _apply_effect_to_ring(ring_index, "chain", 0.42 + int(current_upgrades.get("chainBreak", 0)) * 0.06, Color("#ffd700"), "upgrade")
+	if _run_upgrade_total_level("chainBreak") > 0 and trigger == "break":
+		bonus_damage += _apply_effect_to_ring(ring_index, "chain", 0.34 + _run_upgrade_value("chainBreak") * 0.38, Color("#ffd700"), "upgrade")
 	return bonus_damage
 
 
@@ -1994,7 +2017,7 @@ func _can_trigger_upgrade_effect(id: String, chance: float, cooldown_ms: int) ->
 
 
 func _mark_upgrade_effect_triggered(id: String, cooldown_ms := -1) -> void:
-	var level := int(current_upgrades.get(id, 0))
+	var level := _run_upgrade_total_level(id)
 	var duration := cooldown_ms
 	if duration < 0:
 		duration = max(720, 1500 - level * 110)
@@ -2303,11 +2326,12 @@ func _is_run_upgrade_available(upgrade: Dictionary, unlocked: Array) -> bool:
 		return false
 	if not MainPortData.is_run_upgrade_defined(id):
 		return false
-	if int(upgrade.get("maxLevel", 0)) <= 0:
+	var max_level := GameState.get_upgrade_run_max_level(id)
+	if max_level <= 0:
 		return false
 	if Array(upgrade.get("effects", [])).is_empty():
 		return false
-	if int(current_upgrades.get(id, 0)) >= int(upgrade.get("maxLevel", 1)):
+	if _run_upgrade_total_level(id) >= max_level:
 		return false
 	return unlocked.has(id)
 
@@ -2391,7 +2415,7 @@ func _level_up_feedback(pt: String, en: String) -> String:
 
 func _make_level_up_button(upgrade: Dictionary) -> Button:
 	var id := String(upgrade["id"])
-	var current_level := int(current_upgrades.get(id, 0))
+	var current_level := _run_upgrade_total_level(id)
 	var button := _make_button("      %s\n      %s\n      Lv.%s > Lv.%s" % [String(upgrade["name"]).to_upper(), String(upgrade["description"]), current_level, current_level + 1], 286, 70)
 	button.add_theme_color_override("font_color", Color("#ffffff"))
 	button.add_theme_color_override("font_hover_color", Color("#ffffff"))
@@ -2426,7 +2450,13 @@ func _select_level_up_upgrade(id: String) -> void:
 		_spawn_floating(_level_up_feedback("Melhoria bloqueada", "Upgrade locked"), arena_center + Vector2(-34, -62), Color("#ff6b9a"))
 		_play_sfx("upgrade_select")
 		return
-	current_upgrades[id] = int(current_upgrades.get(id, 0)) + 1
+	var temp_level := int(current_upgrades.get(id, 0))
+	var next_temp_level := clampi(temp_level + 1, 0, GameState.get_upgrade_run_bonus_cap(id))
+	if next_temp_level <= temp_level:
+		_spawn_floating(_level_up_feedback("Limite da partida atingido", "Run limit reached"), arena_center + Vector2(-46, -62), Color("#ffd700"))
+		_play_sfx("upgrade_select")
+		return
+	current_upgrades[id] = next_temp_level
 	run_upgrades += 1
 	temporary_upgrade = _describe_current_upgrades()
 	level_up_active = false
@@ -2455,7 +2485,7 @@ func _describe_current_upgrades() -> Dictionary:
 	for key in current_upgrades.keys():
 		last_key = String(key)
 		var def := MainPortData.upgrade_by_id(last_key)
-		labels.append("%s Lv.%s" % [String(def.get("name", names.get(key, key))), int(current_upgrades[key])])
+		labels.append("%s Lv.%s" % [String(def.get("name", names.get(key, key))), _run_upgrade_total_level(last_key)])
 	var short := labels[labels.size() - 1] if labels.size() > 0 else ""
 	return { "name": "Upgrades da run", "level": current_upgrades.size(), "effect": ", ".join(labels), "short": short, "icon_key": _upgrade_icon_key(last_key) }
 
@@ -2589,13 +2619,14 @@ func _finish_quit_reward() -> void:
 		global_coins_reward = max(global_coins_reward, minimum_coins)
 		profile_xp_reward = max(profile_xp_reward, minimum_xp)
 	var summary := {
-		"seconds": floori(infinite_elapsed),
+		"seconds": floori(infinite_elapsed if is_infinite or is_daily_challenge else run_elapsed),
 		"rings": rings_destroyed,
 		"coins": global_coins_reward,
 		"xp": profile_xp_reward,
 		"diamonds": diamonds,
 		"score": infinite_score,
 		"best_combo": best_combo,
+		"perfects": perfect_escapes,
 		"criticals": criticals,
 		"skin_effects": skin_effects,
 		"run_upgrades": run_upgrades,
@@ -2649,6 +2680,9 @@ func _rebuild_victory_rewards(global_coins_reward: int, profile_xp_reward: int) 
 	var diamond_total := int(pending_result_reward.get("diamonds", run_diamonds * reward_multiplier))
 	if diamond_total > 0:
 		_victory_rewards.add_child(_make_victory_line("gem", _txt("Diamonds", "Diamantes", "Diamantes", "ダイヤ", "钻石"), "+%s" % diamond_total))
+	var first_win := Dictionary(pending_result_reward.get("first_win_bonus", {}))
+	if bool(first_win.get("ok", false)):
+		_victory_rewards.add_child(_make_victory_line("gem", _txt("First Win Bonus", "Bônus de Primeira Vitória", "Bono de primera victoria", "初勝利ボーナス", "首胜奖励"), _first_win_bonus_label(first_win)))
 	_victory_rewards.add_child(_make_victory_line("perfect", _txt("Perfects", "Perfects", "Perfects", "Perfect", "完美"), str(perfect_escapes)))
 	_victory_rewards.add_child(_make_victory_line("upgrade", _txt("Run Level", "Level da rodada", "Nivel de ronda", "ランレベル", "本局等级"), str(run_level)))
 
@@ -2669,12 +2703,33 @@ func _rebuild_defeat_summary(summary: Dictionary) -> void:
 		_defeat_summary.add_child(_make_victory_line("xp", "XP", "+%s" % int(summary.get("xp", 0))))
 		if int(summary.get("diamonds", 0)) > 0:
 			_defeat_summary.add_child(_make_victory_line("gem", _txt("Diamonds", "Diamantes", "Diamantes", "ダイヤ", "钻石"), "+%s" % int(summary.get("diamonds", 0))))
+		var first_win := Dictionary(summary.get("first_win_bonus", pending_result_reward.get("first_win_bonus", {})))
+		if bool(first_win.get("ok", false)):
+			_defeat_summary.add_child(_make_victory_line("gem", _txt("First Win Bonus", "Bônus de Primeira Vitória", "Bono de primera victoria", "初勝利ボーナス", "首胜奖励"), _first_win_bonus_label(first_win)))
 		if int(summary.get("coins", 0)) <= 0 and int(summary.get("xp", 0)) <= 0 and int(summary.get("diamonds", 0)) <= 0:
 			_defeat_summary.add_child(_make_label(_txt("No reward earned yet.", "Nenhuma recompensa obtida ainda.", "Aún no obtuviste recompensas.", "まだ報酬はありません。", "尚未获得奖励。"), 13, "#ffffffaa", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 		if new_record:
 			_defeat_summary.add_child(_make_label(_txt("NEW RECORD!", "NOVO RECORDE!", "¡NUEVO RÉCORD!", "新記録!", "新纪录！"), 15, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
 		_defeat_title.text = _txt("The ball was trapped by the rings.", "A bolinha foi presa pelos anéis.", "La bola quedó atrapada por los anillos.", "ボールがリングに閉じ込められました。", "小球被圆环困住了。")
+
+
+func _first_win_bonus_label(first_win: Dictionary) -> String:
+	var reward: Dictionary = Dictionary(first_win.get("reward", {}))
+	var parts: Array[String] = []
+	if int(reward.get("coins", 0)) > 0:
+		parts.append("+%s %s" % [int(reward.get("coins", 0)), _txt("gold", "ouro", "oro", "ゴールド", "金币")])
+	if int(reward.get("xp", 0)) > 0:
+		parts.append("+%s XP" % int(reward.get("xp", 0)))
+	if int(reward.get("pass_xp", 0)) > 0:
+		parts.append("+%s %s" % [int(reward.get("pass_xp", 0)), _txt("Pass XP", "XP do Passe", "XP del Pase", "パスXP", "通行证经验")])
+	if int(reward.get("diamonds", 0)) > 0:
+		parts.append("+%s %s" % [int(reward.get("diamonds", 0)), _txt("diamonds", "diamantes", "diamantes", "ダイヤ", "钻石")])
+	if int(reward.get("keys", 0)) > 0:
+		parts.append("+%s %s" % [int(reward.get("keys", 0)), _txt("keys", "chaves", "llaves", "鍵", "钥匙")])
+	if parts.is_empty():
+		return String(first_win.get("text", _txt("Completed Today", "Concluído Hoje", "Completado hoy", "本日完了", "今日完成")))
+	return " • ".join(parts)
 
 
 func _can_double_result_reward() -> bool:
@@ -2718,6 +2773,7 @@ func _double_result_reward() -> void:
 				"coins": int(pending_result_reward["coins"]),
 				"xp": int(pending_result_reward["xp"]),
 				"diamonds": int(pending_result_reward["diamonds"]),
+				"first_win_bonus": pending_result_reward.get("first_win_bonus", {}),
 				"new_record": false,
 			}
 			_rebuild_defeat_summary(summary)

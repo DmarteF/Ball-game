@@ -1552,3 +1552,281 @@ Checklist:
 - Gameplay/HUD/resultados traduzidos: sim
 - Perfil e Configuracoes traduzidos: sim
 - Anuncio mock traduzido: sim
+
+## Atualizacao - Recompensas AFK/Offline
+
+O fluxo AFK/offline foi finalizado.
+
+Arquivos principais:
+- `scripts/TimeManager.gd`: calcula tempo offline, minimo de 5 minutos, limite padrao de 8 horas e recompensas proporcionais.
+- `scripts/GameState.gd`: cria `pending_afk_rewards` no login, aplica coleta, protege contra duplicacao e salva `last_afk_claim_timestamp`.
+- `scripts/MainMenu.gd`: mostra o modal `Offline Rewards / Recompensas Offline` depois do tutorial inicial e antes das dicas guiadas.
+- `scripts/AdManager.gd`: adiciona o motivo `double_afk_rewards`.
+- `scripts/SettingsScreen.gd`: adiciona debug para simular 10 min, 1h, 8h, limpar pendencia e forcar modal. O debug de forcar modal volta ao menu para acionar o mesmo fluxo real do jogador.
+
+Regras:
+- Recompensa aparece apenas a partir de 5 minutos offline.
+- Tempo negativo ou relogio voltando nao gera recompensa.
+- Tempo muito grande e limitado ao cap.
+- Coleta normal aplica moedas, XP, diamantes, chaves e bau quando existirem.
+- Dobrar com anuncio mockado chama `AdManager.show_rewarded_ad("double_afk_rewards", callback)`.
+- Depois de coletar, a pendencia e limpa e `last_exit_at` e atualizado para evitar duplicacao.
+
+Checklist:
+- Timestamp de saida salvo: sim
+- AFK calculado ao abrir: sim
+- Modal AFK aparece: sim
+- Coletar funciona: sim
+- Dobrar com anuncio funciona: sim
+- Nao duplica recompensa: sim
+- Limite maximo funciona: sim
+- Tempo negativo tratado: sim
+- Debug AFK funciona: sim
+- Traducoes EN/PT adicionadas: sim
+
+## Atualizacao - Conquistas de Skins e Colecao
+
+O sistema de conquistas agora inclui metas especificas de colecao de skins usando o sistema existente de `GameState.get_achievements()`.
+
+Arquivos principais:
+- `scripts/GameState.gd`: gera conquistas de colecao total, raridade, efeito, evolucao e uso de skins; salva progresso em `data.achievements` e estatisticas em `data.stats`.
+- `scripts/VisualFeatureScreen.gd`: adiciona filtro `Skins / Colecao` na tela de Conquistas.
+- `scripts/SkinsScreen.gd`: mostra a proxima meta de colecao no resumo da tela de Skins.
+- `scripts/SettingsScreen.gd`: adiciona debug para liberar skin aleatoria, liberar 10 skins, maximizar conquistas de colecao e resetar conquistas de skin.
+
+Categorias:
+- Total de skins: 5, 10, 25, 50, 75, 100 e todas as skins disponiveis.
+- Raridade: common, rare, epic, legendary, mythic e ultimate.
+- Efeito: control, fire, ice, critical, coins, XP, speed, chain, area, phase e gravity.
+- Evolucao: nivel 2, skin no maximo, 5/10 skins evoluidas e uma skin maxima por raridade.
+- Uso: vitorias de fase por raridade, infinito com skin de controle, boss com fogo, Liga Neon com ultimate, perfects com gelo/controle e aneis com lendaria ou superior.
+
+Regras:
+- Skins novas continuam marcadas em `new_skins`.
+- Skins bloqueadas nao revelam asset real na colecao.
+- Recompensas de conquista continuam coletaveis uma unica vez.
+- O progresso atualiza ao ganhar skin, evoluir skin, equipar skin e finalizar partidas nos modos fase, infinito, desafio diario, boss e Liga Neon.
+
+Debug:
+- Unlock Random Skin.
+- Unlock 10 Skins.
+- Max Collection Achievements.
+- Reset Skin Achievements.
+
+Checklist:
+- Conquistas por total de skins: sim
+- Conquistas por raridade: sim
+- Conquistas por efeito: sim
+- Conquistas por evolucao de skin: sim
+- Conquistas por uso em modos: sim
+- Progresso salva corretamente: sim
+- Recompensa nao duplica: sim
+- Categoria Skins/Colecao aparece em Conquistas: sim
+- Integra com tela Skins/Colecao: sim
+- Debug funciona: sim
+- Traducoes EN/PT adicionadas: sim
+
+## Atualizacao - Base Visual do Passe Neon
+
+Foi adicionada a base visual do Passe Neon, sem implementar ainda XP real, recompensas reais ou temporadas completas.
+
+Arquivos principais:
+- `scenes/NeonPass.tscn`: nova cena do Passe Neon.
+- `scripts/NeonPassScreen.gd`: tela visual com cabecalho, temporada, semana, tempo restante, nivel visual, XP visual e trilha de 40 niveis.
+- `scripts/MainMenu.gd`: botao `Neon Pass / Passe Neon` adicionado ao menu `Mais`.
+- `scripts/LocalizationManager.gd`: traducoes EN/PT e chaves equivalentes para idiomas extras ja suportados.
+
+Visual:
+- Trilha preparada para 40 niveis.
+- Cada nivel possui quadrado/card de recompensa.
+- Niveis bloqueados ficam apagados.
+- Niveis alcancados ficam destacados.
+- Niveis coletados mostram check.
+- Recompensas disponiveis recebem brilho neon.
+- A barra visual preenche ate o proximo quadrado usando valores mockados.
+
+Pendencias do proximo patch:
+- XP real do Passe.
+- Coleta real de recompensas.
+- Temporadas completas.
+- Estatisticas e integracao com missoes/eventos.
+
+Checklist:
+- Botao Passe Neon aparece na tela inicial/menu: sim
+- Botao abre tela Passe Neon: sim
+- Tela Passe Neon criada: sim
+- Layout preparado para 40 niveis: sim
+- Barra/trilha visual criada: sim
+- Safe area respeitada: sim
+- Traducoes adicionadas: sim
+
+## Atualizacao - Logica Principal do Passe Neon
+
+O Passe Neon agora possui logica central de XP, niveis, temporada, limite semanal e save.
+As recompensas detalhadas do Passe continuam pendentes para um patch futuro.
+
+Temporadas cadastradas:
+- `neon_pass_s1`: Neon Awakening / Despertar Neon.
+- `neon_pass_s2`: Circuit Break / Ruptura de Circuito.
+- `neon_pass_s3`: Cosmic Pulse / Pulso Cosmico.
+
+Regras:
+- Cada temporada tem 40 niveis.
+- Cada temporada possui 4 semanas.
+- Cada semana libera no maximo 10 niveis.
+- Semana 1: nivel maximo 10.
+- Semana 2: nivel maximo 20.
+- Semana 3: nivel maximo 30.
+- Semana 4: nivel maximo 40.
+- Ao atingir o limite semanal, XP extra do Passe e ignorado para nao quebrar o sistema.
+
+XP do Passe:
+- Separado do XP normal do jogador.
+- `add_neon_pass_xp(amount, source)` e a funcao central.
+- Fontes ligadas: fases normais, vitorias de fase, infinito, boss, Liga Neon, desafio diario, evento semanal e primeira vitoria do dia.
+
+Save:
+- `neon_pass_season_id`
+- `neon_pass_level`
+- `neon_pass_xp`
+- `neon_pass_week_index`
+- `neon_pass_weekly_level_cap`
+- `neon_pass_total_xp`
+- `neon_pass_last_updated_at`
+- `neon_pass_season_progress`
+
+Debug em Configuracoes:
+- Add Neon Pass XP.
+- Set Neon Pass Level.
+- Reset Neon Pass.
+- Next Week.
+- Next Season.
+
+Checklist:
+- 3 temporadas cadastradas: sim
+- 40 niveis por temporada: sim
+- Limite de 10 niveis por semana: sim
+- XP do Passe separado do XP normal: sim
+- XP ganho por participar de partidas: sim
+- XP ganho por vitorias: sim
+- Save do Passe funciona: sim
+- Debug do Passe funciona: sim
+- Tela mostra dados reais: sim
+- Traducoes adicionadas: sim
+
+## Atualizacao - Recompensas Reais do Passe Neon
+
+O Passe Neon agora possui recompensas reais nos 40 niveis de cada uma das 3 temporadas.
+
+Implementacao:
+- `GameState.gd` gera a tabela de recompensas por temporada/nivel.
+- `GameState.claim_neon_pass_reward(level)` coleta uma recompensa individual.
+- `GameState.claim_all_neon_pass_rewards()` coleta todas as recompensas disponiveis sem duplicar.
+- `GameState.apply_reward()` e usado para aplicar moedas, XP, diamantes, chaves, baus, fragmentos e skins.
+- `neon_pass_claimed_rewards` salva as recompensas coletadas por temporada.
+- `neon_pass_reward_history` guarda historico curto de coletas.
+- `NeonPassScreen.gd` mostra icones reais, quantidade, raridade, estado bloqueado/coletavel/coletado e RewardModal.
+
+Skins exclusivas:
+- Temporada 1: `neon_pass_initial` e `neon_pass_guardian`.
+- Temporada 2: `weekly_circuit` e `neon_commander`.
+- Temporada 3: `pass_avatar` e `neon_sovereign`.
+
+Regras:
+- Nivel alcancado libera coleta.
+- Recompensa coletada recebe check e nao pode duplicar.
+- Claim All agrupa tudo em um modal resumido.
+- Skins duplicadas seguem a regra existente de conversao em diamantes.
+- Ultimate nao foi adicionada ao Passe; fica reservada para eventos futuros.
+
+Debug em Configuracoes:
+- Unlock All Neon Pass Rewards.
+- Claim All Neon Pass Rewards.
+- Reset Claimed Neon Pass Rewards.
+
+Checklist:
+- 40 recompensas por temporada: sim
+- 3 temporadas tem recompensas: sim
+- Skins exclusivas do Passe criadas: sim
+- Recompensas aparecem na trilha: sim
+- Claim individual funciona: sim
+- Claim All funciona: sim
+- Recompensas nao duplicam: sim
+- RewardModal funciona: sim
+- Save de recompensas coletadas funciona: sim
+- Skins do Passe entram na colecao: sim
+- Traducoes adicionadas: sim
+
+## Atualizacao - Primeira Vitoria do Dia
+
+A tela `Daily Reward / Recompensa diaria` agora inclui a secao `First Win of the Day / Primeira Vitoria do Dia`.
+
+Funcionamento:
+- A recompensa e aplicada automaticamente na primeira vitoria valida do dia.
+- Modos elegiveis: fase normal vencida, modo infinito com resultado valido, boss vencido, Liga Neon vencida e desafio diario concluido.
+- O reset usa `TimeManager.get_day_key()` e `TimeManager.get_seconds_until_next_day()`.
+- O bonus nao substitui a sequencia diaria de 7 dias; e um bonus separado.
+
+Recompensa:
+- Moedas e XP normal escalam com o nivel do jogador.
+- O Passe Neon recebe `+100 Pass XP` via `add_neon_pass_xp(..., "first_win_of_day")` quando disponivel.
+- Diamantes pequenos sao fixos por faixa de nivel.
+- Chave tem chance baixa e segura.
+
+Save:
+- `first_win_claimed_date`
+- `first_win_completed_today`
+- `last_first_win_reward`
+- `neon_pass_last_first_win_day_key` continua como compatibilidade/migracao do bonus antigo do Passe.
+
+Debug em Configuracoes:
+- Reset First Win of Day.
+- Complete First Win of Day.
+- Claim First Win Reward.
+
+Checklist:
+- Primeira Vitoria aparece na Daily Reward: sim
+- Reseta por dia: sim
+- Recompensa so uma vez por dia: sim
+- Aplica ao vencer modo elegivel: sim
+- Da XP do Passe se disponivel: sim
+- Aparece no resultado da partida: sim
+- Save funciona: sim
+- Debug funciona: sim
+- Traducoes adicionadas: sim
+
+## Atualizacao - Estatisticas Detalhadas no Perfil
+
+A tela Perfil agora possui a secao `Detailed Stats / Estatisticas Detalhadas` com categorias compactas para mobile.
+
+Categorias exibidas:
+- Gerais: tempo total jogado, partidas, vitorias, derrotas, fases concluidas, maior fase, nivel do jogador e XP total.
+- Gameplay: aneis quebrados, perfects, melhor combo, moedas/diamantes/chaves ganhas e baus abertos.
+- Skins: total desbloqueado, skins maximizadas, skin equipada, skin mais usada e resumo por raridade.
+- Melhorias: desbloqueadas, compradas/evoluidas e maximizadas.
+- Boss: chefes derrotados, derrotas, dano total e melhor tempo.
+- Modo infinito: melhor tempo, maior quantidade de aneis e melhor recompensa.
+- Liga Neon: batalhas, vitorias, derrotas e maior rank/trofeus.
+- Passe Neon: XP total do Passe, nivel atual, recompensas coletadas e temporada atual.
+- Eventos: eventos concluidos, missoes de evento concluidas e recompensas coletadas.
+
+Save/estado:
+- `GameState.gd` migra saves antigos com `_ensure_profile_stats_state()`.
+- Novos contadores ficam em `data["stats"]`.
+- Uso de skins fica em `data["skin_usage"]` para calcular a skin mais usada.
+- `GameState.get_profile_stats_snapshot()` centraliza os dados que o Perfil mostra.
+
+Debug em Configuracoes:
+- Add Profile Stats Test Data.
+- Reset Profile Stats, com confirmacao.
+- Print Profile Stats.
+
+Checklist:
+- Secao Estatisticas aparece no Perfil: sim
+- Categorias organizadas: sim
+- Safe area respeitada: sim
+- Estatisticas salvam: sim
+- Save antigo migra sem quebrar: sim
+- Stats atualizam nos pontos corretos: sim
+- Debug funciona: sim
+- Traducoes adicionadas: sim

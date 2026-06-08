@@ -13,6 +13,7 @@ const REASONS := [
 	"shop_free_diamonds",
 	"boss_retry",
 	"league_double_rewards",
+	"double_afk_rewards",
 ]
 
 const COOLDOWNS := {
@@ -26,6 +27,7 @@ const COOLDOWNS := {
 	"double_rewards": 0,
 	"boss_retry": 0,
 	"league_double_rewards": 0,
+	"double_afk_rewards": 0,
 }
 
 const SESSION_LIMITS := {}
@@ -287,6 +289,7 @@ func _reason_label(reason: String) -> String:
 		"shop_free_diamonds": return _txt("Free shop diamonds", "Diamantes grátis da loja", "Diamantes gratis de tienda", "ショップ無料ダイヤ", "商店免费钻石")
 		"boss_retry": return _txt("Boss retry", "Tentar Boss novamente", "Reintentar Boss", "ボス再挑戦", "Boss重试")
 		"league_double_rewards": return _txt("League double rewards", "Dobrar recompensas da Liga", "Duplicar recompensas de Liga", "リーグ報酬2倍", "联赛奖励翻倍")
+		"double_afk_rewards": return _txt("Double offline rewards", "Dobrar recompensas offline", "Duplicar recompensas offline", "オフライン報酬2倍", "离线奖励翻倍")
 	return reason
 
 

@@ -249,21 +249,155 @@ func _make_league_card() -> PanelContainer:
 func _make_stats_card() -> PanelContainer:
 	var card := _make_card()
 	var body := _card_body(card)
-	body.add_child(_make_section_title(_txt("STATS", "ESTATÍSTICAS", "ESTADÍSTICAS", "統計", "统计")))
-	for line in [
-		_txt("Runs played: %s", "Partidas jogadas: %s", "Partidas jugadas: %s", "プレイ回数: %s", "游玩次数：%s") % _stat("runs_played", 0),
-		_txt("Rings destroyed: %s", "Anéis destruídos: %s", "Anillos destruidos: %s", "リング破壊: %s", "破坏圆环：%s") % _stat("rings_destroyed", 0),
-		_txt("Perfect escapes: %s", "Escapes perfeitos: %s", "Escapes perfectos: %s", "Perfect Escape: %s", "完美逃脱：%s") % _stat("perfect_escapes", 0),
-		_txt("Diamonds found: %s", "Diamantes encontrados: %s", "Diamantes encontrados: %s", "ダイヤ発見: %s", "发现钻石：%s") % _stat("diamonds_found", 0),
-		_txt("Chests opened: %s", "Baús abertos: %s", "Cofres abiertos: %s", "宝箱開封: %s", "打开宝箱：%s") % _stat("chests_opened", 0),
-		_txt("Skins unlocked: %s", "Skins desbloqueadas: %s", "Skins desbloqueadas: %s", "解除済みスキン: %s", "已解锁皮肤：%s") % Array(GameState.data.get("unlocked_skins", [])).size(),
-		_txt("Highest level: %s", "Maior fase: %s", "Nivel máximo: %s", "最高レベル: %s", "最高关卡：%s") % GameState.data.get("max_unlocked_phase", 1),
-		_txt("Highest run level: %s", "Maior nível na partida: %s", "Mayor nivel en partida: %s", "ラン最高Lv.: %s", "本局最高等级：%s") % _stat("highest_run_level", 1),
-		_txt("Boss wins: %s", "Vitórias no Boss: %s", "Victorias contra Boss: %s", "ボス勝利: %s", "Boss胜利：%s") % _stat("boss_wins", 0),
-		_txt("Boss losses: %s", "Derrotas no Boss: %s", "Derrotas contra Boss: %s", "ボス敗北: %s", "Boss失败：%s") % _stat("boss_losses", 0),
-	]:
-		body.add_child(_make_stat(line))
+	body.add_child(_make_section_title(_txt("DETAILED STATS", "ESTATÍSTICAS DETALHADAS", "ESTADÍSTICAS DETALLADAS", "詳細統計", "详细统计")))
+	_add_detailed_stats(body)
 	return card
+
+
+func _add_detailed_stats(body: VBoxContainer) -> void:
+	var snapshot := GameState.get_profile_stats_snapshot()
+	var stats: Dictionary = snapshot.get("stats", {})
+	var pass_state: Dictionary = snapshot.get("neon_pass", {})
+	var season_key := "season_name_pt" if _current_language().begins_with("pt") else "season_name"
+	var pass_season := String(pass_state.get(season_key, pass_state.get("season_name", "")))
+	_add_stats_category(body, _txt("GENERAL", "GERAIS", "GENERAL", "全般", "通用"), [
+		{ "icon": "xp", "label": _txt("Total Play Time", "Tempo Total Jogado", "Tiempo Total Jugado", "総プレイ時間", "总游玩时间"), "value": _format_duration(int(stats.get("totalPlayTimeSeconds", 0))) },
+		{ "icon": "achievements", "label": _txt("Total Matches", "Total de Partidas", "Partidas Totales", "総試合数", "总场次"), "value": _format_number(int(stats.get("totalMatches", 0))) },
+		{ "icon": "achievements", "label": _txt("Wins", "Vitórias", "Victorias", "勝利", "胜利"), "value": _format_number(int(stats.get("wins", 0))) },
+		{ "icon": "locked", "label": _txt("Losses", "Derrotas", "Derrotas", "敗北", "失败"), "value": _format_number(int(stats.get("losses", 0))) },
+		{ "icon": "achievements", "label": _txt("Phases Completed", "Fases Concluídas", "Fases Completadas", "完了フェーズ", "完成关卡"), "value": _format_number(int(stats.get("phaseCompletions", stats.get("phaseWins", 0)))) },
+		{ "icon": "achievements", "label": _txt("Highest Phase", "Maior Fase", "Fase Máxima", "最高フェーズ", "最高关卡"), "value": _format_number(int(stats.get("highestPhase", GameState.data.get("max_unlocked_phase", 1)))) },
+		{ "icon": "xp", "label": _txt("Player Level", "Nível do Jogador", "Nivel del Jugador", "プレイヤーレベル", "玩家等级"), "value": _format_number(int(GameState.data.get("level", 1))) },
+		{ "icon": "xp", "label": _txt("Total XP", "XP Total", "XP Total", "総XP", "总经验"), "value": _format_number(int(stats.get("totalXpEarned", GameState.data.get("xp", 0)))) },
+	])
+	_add_stats_category(body, _txt("GAMEPLAY", "JOGABILIDADE", "JUGABILIDAD", "ゲームプレイ", "玩法"), [
+		{ "icon": "achievements", "label": _txt("Rings Broken", "Anéis Quebrados", "Anillos Rotos", "破壊リング", "破坏圆环"), "value": _format_number(int(stats.get("ringsDestroyed", 0))) },
+		{ "icon": "achievements", "label": "Perfects", "value": _format_number(int(stats.get("perfectEscapes", 0))) },
+		{ "icon": "xp", "label": _txt("Best Combo", "Melhor Combo", "Mejor Combo", "最高コンボ", "最佳连击"), "value": _format_number(int(stats.get("bestCombo", 0))) },
+		{ "icon": "coin", "label": _txt("Total Coins Earned", "Moedas Totais Ganhas", "Monedas Totales Ganadas", "総獲得コイン", "总获得金币"), "value": _format_number(int(stats.get("totalCoinsEarned", stats.get("runCoins", 0)))) },
+		{ "icon": "gem", "label": _txt("Total Diamonds Earned", "Diamantes Totais Ganhos", "Diamantes Totales Ganados", "総獲得ダイヤ", "总获得钻石"), "value": _format_number(int(stats.get("totalDiamondsEarned", stats.get("diamondsFound", 0)))) },
+		{ "icon": "key", "label": _txt("Keys Earned", "Chaves Ganhas", "Llaves Ganadas", "獲得キー", "获得钥匙"), "value": _format_number(int(stats.get("totalKeysEarned", 0))) },
+		{ "icon": "key", "label": _txt("Chests Opened", "Baús Abertos", "Cofres Abiertos", "開封宝箱", "已开宝箱"), "value": _format_number(int(stats.get("chestsOpened", 0))) },
+	])
+	_add_stats_category(body, _txt("SKINS", "SKINS", "SKINS", "スキン", "皮肤"), [
+		{ "icon": "achievements", "label": _txt("Skins Unlocked", "Skins Desbloqueadas", "Skins Desbloqueadas", "解除済みスキン", "已解锁皮肤"), "value": "%s/%s" % [_format_number(int(stats.get("skinsUnlocked", 0))), _format_number(int(stats.get("totalSkinsAvailable", 0)))] },
+		{ "icon": "achievements", "label": _txt("Skins Maxed", "Skins Maximizadas", "Skins Maximizadas", "最大スキン", "满级皮肤"), "value": _format_number(int(stats.get("skinsMaxed", stats.get("skinMaxedCount", 0)))) },
+		{ "icon": "achievements", "label": _txt("Equipped Skin", "Skin Equipada", "Skin Equipada", "装備中スキン", "已装备皮肤"), "value": _skin_name_from_id(String(snapshot.get("equipped_skin_id", "neon_blue"))) },
+		{ "icon": "achievements", "label": _txt("Most Used Skin", "Skin Mais Usada", "Skin Más Usada", "最多使用スキン", "最常用皮肤"), "value": _skin_name_from_id(String(snapshot.get("most_used_skin_id", "neon_blue"))) },
+		{ "icon": "achievements", "label": _txt("By Rarity", "Por Raridade", "Por Rareza", "レア度別", "按稀有度"), "value": _skin_rarity_summary(stats) },
+	])
+	_add_stats_category(body, _txt("UPGRADES", "MELHORIAS", "MEJORAS", "強化", "升级"), [
+		{ "icon": "locked", "label": _txt("Upgrades Unlocked", "Melhorias Desbloqueadas", "Mejoras Desbloqueadas", "解除済み強化", "已解锁升级"), "value": "%s/%s" % [_format_number(int(stats.get("upgradesUnlocked", 0))), _format_number(GameState.get_all_upgrades().size())] },
+		{ "icon": "coin", "label": _txt("Upgrades Bought", "Melhorias Compradas/Evoluídas", "Mejoras Compradas", "購入済み強化", "已购买升级"), "value": _format_number(int(stats.get("upgradesBought", 0))) },
+		{ "icon": "achievements", "label": _txt("Upgrades Maxed", "Melhorias Maximizadas", "Mejoras Maximizadas", "最大強化", "满级升级"), "value": _format_number(int(stats.get("upgradesMaxed", 0))) },
+	])
+	_add_stats_category(body, "BOSS", [
+		{ "icon": "achievements", "label": _txt("Bosses Defeated", "Chefes Derrotados", "Jefes Derrotados", "ボス撃破", "击败首领"), "value": _format_number(int(stats.get("bossWins", 0))) },
+		{ "icon": "locked", "label": _txt("Boss Losses", "Derrotas no Boss", "Derrotas contra Boss", "ボス敗北", "首领失败"), "value": _format_number(int(stats.get("bossLosses", 0))) },
+		{ "icon": "xp", "label": _txt("Total Boss Damage", "Dano Total em Chefe", "Daño Total a Jefe", "ボス総ダメージ", "首领总伤害"), "value": _format_number(int(stats.get("bossDamageTotal", 0))) },
+		{ "icon": "xp", "label": _txt("Best Boss Time", "Melhor Tempo no Boss", "Mejor Tiempo contra Boss", "ボス最速", "首领最佳时间"), "value": _format_duration(int(stats.get("bossBestTime", 0))) },
+	])
+	_add_stats_category(body, _txt("INFINITE MODE", "MODO INFINITO", "MODO INFINITO", "無限モード", "无限模式"), [
+		{ "icon": "xp", "label": _txt("Best Infinite Time", "Melhor Tempo no Infinito", "Mejor Tiempo en Infinito", "無限最高時間", "无限最佳时间"), "value": _format_duration(int(stats.get("bestInfiniteSeconds", 0))) },
+		{ "icon": "achievements", "label": _txt("Best Infinite Rings", "Mais Anéis no Infinito", "Más Anillos en Infinito", "無限最高リング", "无限最多圆环"), "value": _format_number(int(stats.get("bestInfiniteRings", 0))) },
+		{ "icon": "coin", "label": _txt("Best Infinite Reward", "Melhor Recompensa no Infinito", "Mejor Recompensa en Infinito", "無限最高報酬", "无限最佳奖励"), "value": _format_number(int(stats.get("bestInfiniteReward", 0))) },
+	])
+	_add_stats_category(body, _txt("NEON LEAGUE", "LIGA NEON", "LIGA NEON", "ネオンリーグ", "霓虹联赛"), [
+		{ "icon": "achievements", "label": _txt("League Battles", "Batalhas na Liga", "Batallas de Liga", "リーグ戦", "联赛战斗"), "value": _format_number(int(stats.get("leagueMatches", 0))) },
+		{ "icon": "achievements", "label": _txt("League Wins", "Vitórias na Liga", "Victorias de Liga", "リーグ勝利", "联赛胜利"), "value": _format_number(int(stats.get("leagueWins", 0))) },
+		{ "icon": "locked", "label": _txt("League Losses", "Derrotas na Liga", "Derrotas de Liga", "リーグ敗北", "联赛失败"), "value": _format_number(int(stats.get("leagueLosses", 0))) },
+		{ "icon": "xp", "label": _txt("Highest League Rank", "Maior Rank da Liga", "Mayor Rango de Liga", "最高リーグランク", "最高联赛段位"), "value": "%s • %s" % [String(snapshot.get("league_rank_name", "Bronze")), _format_number(int(stats.get("highestLeagueTrophies", 0)))] },
+	])
+	_add_stats_category(body, _txt("NEON PASS", "PASSE NEON", "PASE NEON", "ネオンパス", "霓虹通行证"), [
+		{ "icon": "xp", "label": _txt("Neon Pass XP", "XP do Passe Neon", "XP del Pase Neon", "ネオンパスXP", "霓虹通行证经验"), "value": _format_number(int(stats.get("neonPassXpEarned", pass_state.get("total_xp", 0)))) },
+		{ "icon": "xp", "label": _txt("Current Pass Level", "Nível Atual do Passe", "Nivel Actual del Pase", "現在のパスLv", "当前通行证等级"), "value": "%s/%s" % [int(pass_state.get("level", 1)), int(pass_state.get("max_level", 40))] },
+		{ "icon": "achievements", "label": _txt("Pass Rewards Claimed", "Recompensas do Passe Coletadas", "Recompensas del Pase Cobradas", "受取済みパス報酬", "已领取通行证奖励"), "value": _format_number(int(stats.get("neonPassRewardsClaimed", 0))) },
+		{ "icon": "achievements", "label": _txt("Current Season", "Temporada Atual", "Temporada Actual", "現在のシーズン", "当前赛季"), "value": pass_season },
+	])
+	_add_stats_category(body, _txt("EVENTS", "EVENTOS", "EVENTOS", "イベント", "活动"), [
+		{ "icon": "achievements", "label": _txt("Events Completed", "Eventos Concluídos", "Eventos Completados", "完了イベント", "完成活动"), "value": _format_number(int(stats.get("eventsCompleted", 0))) },
+		{ "icon": "achievements", "label": _txt("Event Missions Completed", "Missões de Evento Concluídas", "Misiones de Evento Completadas", "イベントミッション完了", "活动任务完成"), "value": _format_number(int(stats.get("eventMissionsCompleted", 0))) },
+		{ "icon": "coin", "label": _txt("Event Rewards Claimed", "Recompensas de Evento Coletadas", "Recompensas de Evento Cobradas", "イベント報酬受取", "活动奖励领取"), "value": _format_number(int(stats.get("eventRewardsClaimed", 0))) },
+	])
+
+
+func _add_stats_category(body: VBoxContainer, title: String, rows: Array) -> void:
+	body.add_child(_make_label(title, 12, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	for entry in rows:
+		var item: Dictionary = entry
+		body.add_child(_make_stat_row(String(item.get("icon", "achievements")), String(item.get("label", "")), String(item.get("value", "0"))))
+
+
+func _make_stat_row(icon_key: String, label_text: String, value_text: String) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _make_style("#ffffff0e", 9, "#ffffff18", 1))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 7)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 7)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	margin.add_child(row)
+	row.add_child(_make_icon(icon_key if ICON_PATHS.has(icon_key) else "achievements", 16, Color("#00f0ff")))
+	var label := _make_label(label_text, 12, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	var value := _make_label(value_text, 12, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_RIGHT)
+	value.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	value.custom_minimum_size.x = 92 if _is_narrow_screen() else 150
+	row.add_child(value)
+	return panel
+
+
+func _format_number(value: int) -> String:
+	var text := str(abs(value))
+	var result := ""
+	while text.length() > 3:
+		result = ".%s%s" % [text.substr(text.length() - 3, 3), result]
+		text = text.substr(0, text.length() - 3)
+	result = "%s%s" % [text, result]
+	return "-%s" % result if value < 0 else result
+
+
+func _format_duration(seconds: int) -> String:
+	seconds = max(0, seconds)
+	var hours := seconds / 3600
+	var minutes := (seconds % 3600) / 60
+	var secs := seconds % 60
+	if hours > 0:
+		return "%sh %sm" % [hours, minutes]
+	if minutes > 0:
+		return "%sm %ss" % [minutes, secs]
+	return "%ss" % secs
+
+
+func _skin_name_from_id(id: String) -> String:
+	var skin := MainPortData.skin_by_id(id)
+	if skin.is_empty():
+		return id.capitalize()
+	if _current_language().begins_with("pt"):
+		return String(skin.get("name_pt", skin.get("name", id.capitalize())))
+	return String(skin.get("name_en", skin.get("name", id.capitalize())))
+
+
+func _skin_rarity_summary(stats: Dictionary) -> String:
+	var parts := [
+		"C %s" % int(stats.get("commonSkinsUnlocked", 0)),
+		"R %s" % int(stats.get("rareSkinsUnlocked", 0)),
+		"E %s" % int(stats.get("epicSkinsUnlocked", 0)),
+		"L %s" % int(stats.get("legendarySkinsUnlocked", 0)),
+		"M %s" % int(stats.get("mythicSkinsUnlocked", 0)),
+		"U %s" % int(stats.get("ultimateSkinsUnlocked", 0)),
+	]
+	return "  ".join(parts)
+
+
+func _current_language() -> String:
+	return LocalizationManager.current_language() if has_node("/root/LocalizationManager") else _language
 
 
 func _make_abilities_card() -> PanelContainer:

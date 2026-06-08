@@ -22,6 +22,7 @@ var _debug_enabled := false
 var _debug_fps_label: Label
 var _debug_stats_label: Label
 var _debug_update_accum := 0.0
+var _toast_stack: Array[Control] = []
 
 
 func _process(delta: float) -> void:
@@ -205,6 +206,14 @@ func _make_debug_card() -> PanelContainer:
 		[_t("add_100_keys"), "#ff5cff", func() -> void: _debug_add_resource("keys", 100)],
 		[_t("add_1k_xp"), "#7dd3fc", func() -> void: _debug_add_xp(1000)],
 		[_t("add_10k_xp"), "#7dd3fc", func() -> void: _debug_add_xp(10000)],
+		[_t("add_pass_xp"), "#ff4fd8", _debug_add_neon_pass_xp],
+		[_t("set_neon_pass_level"), "#ff4fd8", _show_set_neon_pass_level_modal],
+		[_t("reset_neon_pass"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_neon_pass"), func() -> void: _debug_neon_pass_action(func() -> void: GameState.debug_reset_neon_pass()))],
+		[_t("next_week"), "#00ff88", func() -> void: _debug_neon_pass_action(func() -> void: GameState.debug_simulate_next_neon_pass_week())],
+		[_t("next_season"), "#00ff88", func() -> void: _debug_neon_pass_action(func() -> void: GameState.debug_simulate_next_neon_pass_season())],
+		[_t("unlock_all_neon_pass_rewards"), "#ffd700", func() -> void: _confirm_debug_action(_t("unlock_all_neon_pass_rewards"), func() -> void: _debug_neon_pass_action(func() -> void: GameState.debug_unlock_all_neon_pass_rewards()))],
+		[_t("claim_all_neon_pass_rewards"), "#00f0ff", func() -> void: _debug_neon_pass_action(func() -> void: GameState.debug_claim_all_neon_pass_rewards())],
+		[_t("reset_claimed_neon_pass_rewards"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_claimed_neon_pass_rewards"), func() -> void: _debug_neon_pass_action(func() -> void: GameState.debug_reset_claimed_neon_pass_rewards()))],
 		[_t("add_1_level"), "#00ff88", func() -> void: _debug_add_levels(1)],
 		[_t("add_10_levels"), "#00ff88", func() -> void: _debug_add_levels(10)],
 	]))
@@ -216,15 +225,36 @@ func _make_debug_card() -> PanelContainer:
 		[_t("max_all_upgrades"), "#ffffff", func() -> void: _confirm_debug_action(_t("max_all_upgrades"), func() -> void: GameState.debug_max_all_upgrade_levels())],
 		[_t("lock_starter_upgrades"), "#ffb000", func() -> void: _confirm_debug_action(_t("lock_starter_upgrades"), func() -> void: GameState.debug_lock_all_except_starter_upgrades())],
 		[_t("reset_upgrade_levels"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_upgrade_levels"), func() -> void: GameState.debug_reset_upgrade_levels())],
+		[_t("unlock_random_skin"), "#00ff88", _unlock_random_skin],
+		[_t("unlock_10_skins"), "#00f0ff", _unlock_10_skins],
 		[_t("unlock_all_skins"), "#ffffff", func() -> void: _confirm_debug_action(_t("unlock_all_skins"), func() -> void: GameState.debug_unlock_all_skins())],
 		[_t("level_up_equipped_skin"), "#00ff88", func() -> void: _debug_skin_action(func() -> void: GameState.debug_level_up_equipped_skin())],
 		[_t("max_equipped_skin"), "#00f0ff", func() -> void: _debug_skin_action(func() -> void: GameState.debug_max_equipped_skin())],
 		[_t("max_all_skins"), "#ffffff", func() -> void: _confirm_debug_action(_t("max_all_skins"), func() -> void: _debug_skin_action(func() -> void: GameState.debug_max_all_skins()))],
+		[_t("max_collection_achievements"), "#ffd700", func() -> void: _confirm_debug_action(_t("max_collection_achievements"), func() -> void: _debug_skin_action(func() -> void: GameState.debug_max_collection_achievements()))],
+		[_t("reset_skin_achievements"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_skin_achievements"), func() -> void: _debug_skin_action(func() -> void: GameState.debug_reset_skin_achievements()))],
 		[_t("reset_skin_levels"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_skin_levels"), func() -> void: _debug_skin_action(func() -> void: GameState.debug_reset_skin_levels()))],
+		[_t("add_profile_stats_test_data"), "#00ff88", _debug_add_profile_stats_test_data],
+		[_t("print_profile_stats"), "#00f0ff", _print_profile_stats],
+		[_t("reset_profile_stats"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_profile_stats"), func() -> void: _debug_reset_profile_stats())],
 		[_t("reset_daily"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily"), func() -> void: GameState.debug_reset_daily_reward())],
+		[_t("reset_first_win"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_first_win"), func() -> void: GameState.debug_reset_first_win_of_day())],
+		[_t("complete_first_win"), "#00ff88", func() -> void: _debug_first_win_action(func() -> void: GameState.debug_complete_first_win_of_day())],
+		[_t("claim_first_win_reward"), "#ffd700", func() -> void: _debug_first_win_action(func() -> void: GameState.debug_claim_first_win_reward())],
 		[_t("reset_daily_challenge"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_daily_challenge"), func() -> void: GameState.debug_reset_daily_challenge())],
 		[_t("reroll_daily_challenge"), "#00f0ff", func() -> void: _confirm_debug_action(_t("reroll_daily_challenge"), func() -> void: GameState.debug_randomize_daily_challenge_seed())],
 		[_t("next_daily_challenge"), "#00ff88", func() -> void: _confirm_debug_action(_t("next_daily_challenge"), func() -> void: GameState.debug_simulate_next_daily_challenge_day())],
+		[_t("force_event_index"), "#00f0ff", _show_force_event_index_modal],
+		[_t("next_event"), "#00ff88", func() -> void: _debug_event_action(func() -> void: GameState.debug_next_weekly_event())],
+		[_t("previous_event"), "#00ff88", func() -> void: _debug_event_action(func() -> void: GameState.debug_previous_weekly_event())],
+		[_t("complete_current_event"), "#ffd700", func() -> void: _confirm_debug_action(_t("complete_current_event"), func() -> void: GameState.debug_complete_current_event())],
+		[_t("reset_current_event"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_current_event"), func() -> void: GameState.debug_reset_current_event())],
+		[_t("claim_event_reward"), "#ff4fd8", func() -> void: _confirm_debug_action(_t("claim_event_reward"), func() -> void: GameState.debug_claim_current_event_reward())],
+		[_t("simulate_10m_afk"), "#00f0ff", func() -> void: _debug_afk_action(func() -> void: GameState.debug_simulate_afk(10 * 60))],
+		[_t("simulate_1h_afk"), "#00f0ff", func() -> void: _debug_afk_action(func() -> void: GameState.debug_simulate_afk(60 * 60))],
+		[_t("simulate_8h_afk"), "#00f0ff", func() -> void: _debug_afk_action(func() -> void: GameState.debug_simulate_afk(8 * 60 * 60))],
+		[_t("clear_pending_afk"), "#ffb000", func() -> void: _confirm_debug_action(_t("clear_pending_afk"), func() -> void: GameState.debug_clear_pending_afk())],
+		[_t("force_show_afk"), "#00ff88", _debug_force_show_afk_modal],
 		[_t("reset_wheel"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_wheel"), func() -> void: GameState.debug_reset_wheel_timer())],
 		[_t("reset_tutorial"), "#ffb000", func() -> void: _confirm_debug_action(_t("reset_tutorial"), func() -> void: GameState.reset_tutorial_for_debug())],
 		[_t("export_debug_save"), "#00f0ff", _show_export_save],
@@ -464,6 +494,21 @@ func _debug_skin_action(action: Callable) -> void:
 	_refresh_debug_labels()
 
 
+func _unlock_random_skin() -> void:
+	var result := GameState.debug_unlock_random_skin()
+	if bool(result.get("ok", false)):
+		_show_toast("%s: %s" % [_t("skin_unlocked"), String(result.get("name", result.get("id", "")))])
+	else:
+		_show_toast(_t("all_skins_unlocked"))
+	_refresh_debug_labels()
+
+
+func _unlock_10_skins() -> void:
+	var result := GameState.debug_unlock_skin_batch(10)
+	_show_toast("%s: %s" % [_t("skins_unlocked"), int(result.get("count", 0))])
+	_refresh_debug_labels()
+
+
 func _confirm_debug_action(title: String, action: Callable) -> void:
 	var cancel := Button.new()
 	cancel.text = _t("cancel")
@@ -507,10 +552,150 @@ func _print_upgrade_state() -> void:
 	_refresh_debug_labels()
 
 
+func _debug_add_profile_stats_test_data() -> void:
+	GameState.debug_add_profile_stats_test_data()
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _debug_reset_profile_stats() -> void:
+	GameState.debug_reset_profile_stats()
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _print_profile_stats() -> void:
+	var snapshot := GameState.debug_profile_stats_snapshot()
+	_show_message_modal(_t("print_profile_stats"), JSON.stringify(snapshot, "\t"), "#00f0ff")
+	_refresh_debug_labels()
+
+
 func _unlock_next_upgrade() -> void:
 	var result := GameState.debug_unlock_next_upgrade()
 	_show_toast(String(result.get("name", result.get("reason", "OK"))))
 	_refresh_debug_labels()
+
+
+func _debug_event_action(action: Callable) -> void:
+	action.call()
+	var state := GameState.debug_weekly_event_state()
+	_show_toast("%s #%s" % [_t("event"), int(state.get("event_index", 0)) + 1])
+	_refresh_debug_labels()
+
+
+func _debug_afk_action(action: Callable) -> void:
+	action.call()
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+
+
+func _debug_first_win_action(action: Callable) -> void:
+	if action.is_valid():
+		action.call()
+	var state := GameState.get_first_win_of_day_state()
+	_show_toast(_t("completed_today") if bool(state.get("completed_today", false)) else _t("available_today"))
+	_refresh_debug_labels()
+
+
+func _debug_neon_pass_action(action: Callable) -> void:
+	action.call()
+	var state := GameState.debug_neon_pass_state()
+	_show_toast("%s %s/%s" % [_t("neon_pass"), int(state.get("level", 1)), int(state.get("weekly_level_cap", 10))])
+	_refresh_debug_labels()
+
+
+func _debug_add_neon_pass_xp() -> void:
+	var result := GameState.debug_add_neon_pass_xp(500)
+	var state: Dictionary = result.get("state", GameState.debug_neon_pass_state())
+	_show_toast("+%s XP • %s %s/%s" % [int(result.get("xp_added", 0)), _t("level"), int(state.get("level", 1)), int(state.get("weekly_level_cap", 10))])
+	_refresh_debug_labels()
+
+
+func _show_set_neon_pass_level_modal() -> void:
+	_close_modal()
+	var overlay := _make_modal_root()
+	var body := _modal_body(overlay, _t("set_neon_pass_level"), "#ff4fd8")
+	var state := GameState.debug_neon_pass_state()
+	var label := _make_label("%s: %s" % [_t("weekly_cap"), int(state.get("weekly_level_cap", 10))], 13, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(label)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 280)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(scroll)
+	var grid := GridContainer.new()
+	grid.columns = 4 if _is_narrow_screen() else 5
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	scroll.add_child(grid)
+	for i in range(1, 41):
+		var level := i
+		var button := _make_save_button(str(level), "#ff4fd8", func() -> void:
+			GameState.debug_set_neon_pass_level(level)
+			_close_modal()
+			var updated := GameState.debug_neon_pass_state()
+			_show_toast("%s %s/%s" % [_t("neon_pass"), int(updated.get("level", 1)), int(updated.get("weekly_level_cap", 10))])
+			_refresh_debug_labels()
+		)
+		button.disabled = level > int(state.get("weekly_level_cap", 10))
+		grid.add_child(button)
+	var close := _make_save_button(_t("close"), "#ffffff", _close_modal)
+	body.add_child(close)
+	add_child(overlay)
+	_active_modal = overlay
+
+
+func _debug_force_show_afk_modal() -> void:
+	GameState.debug_force_show_afk_modal()
+	_show_toast(_t("debug_done"))
+	_refresh_debug_labels()
+	if has_node("/root/NavigationManager"):
+		NavigationManager.navigate_to("res://scenes/MainMenu.tscn")
+
+
+func _show_force_event_index_modal() -> void:
+	_close_modal()
+	var overlay := _make_modal_root()
+	var body := _modal_body(overlay, _t("force_event_index"), "#00f0ff")
+	var label := _make_label(_t("force_event_index_desc"), 13, "#ffffffcc", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(label)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 260)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(scroll)
+	var grid := GridContainer.new()
+	grid.columns = 2 if _is_narrow_screen() else 3
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	scroll.add_child(grid)
+	for i in range(TimeManager.WEEKLY_EVENT_CYCLE_SIZE):
+		var index := i
+		var button := _make_save_button("%02d" % (index + 1), "#00f0ff", func() -> void:
+			GameState.debug_force_event_index(index)
+			_close_modal()
+			_show_toast("%s #%s" % [_t("event"), index + 1])
+			_refresh_debug_labels()
+		)
+		grid.add_child(button)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	body.add_child(row)
+	var reset := _make_save_button(_t("reset_event_override"), "#ffb000", func() -> void:
+		GameState.debug_reset_event_override()
+		_close_modal()
+		_show_toast(_t("debug_done"))
+		_refresh_debug_labels()
+	)
+	row.add_child(reset)
+	var close := _make_save_button(_t("close"), "#ffffff", _close_modal)
+	row.add_child(close)
+	add_child(overlay)
+	_active_modal = overlay
 
 
 func _refresh_debug_labels() -> void:
@@ -549,6 +734,21 @@ func _refresh_debug_labels() -> void:
 		lines.append("%s: %s" % [_t("ad_completed"), JSON.stringify(ads.get("completed", {}))])
 		lines.append("%s: %s" % [_t("ad_failed"), JSON.stringify(ads.get("failed", {}))])
 		lines.append("%s: %s / %s: %s" % [_t("force_ad_success"), bool(ads.get("force_success", false)), _t("force_ad_failure"), bool(ads.get("force_failure", false))])
+	var event_state := GameState.debug_weekly_event_state()
+	lines.append("%s: #%s %s (%s)" % [_t("event"), int(event_state.get("event_index", 0)) + 1, String(event_state.get("title", "")), String(event_state.get("status", ""))])
+	var pass_state := GameState.debug_neon_pass_state()
+	lines.append("%s: %s • %s %s • XP %s/%s • %s %s" % [
+		_t("neon_pass"),
+		String(pass_state.get("season_name", "")),
+		_t("week"),
+		int(pass_state.get("week_index", 1)),
+		int(pass_state.get("xp", 0)),
+		int(pass_state.get("xp_needed", 100)),
+		_t("weekly_cap"),
+		int(pass_state.get("weekly_level_cap", 10)),
+	])
+	var afk: Dictionary = GameState.get_pending_afk_rewards()
+	lines.append("%s: %s / %s %s / %s XP" % [_t("offline_rewards"), bool(GameState.has_pending_afk_rewards()), int(afk.get("coins", 0)), _t("coins"), int(afk.get("xp", 0))])
 	_debug_stats_label.text = "\n".join(lines)
 
 
@@ -572,10 +772,27 @@ func _show_toast(message: String) -> void:
 	toast.add_child(margin)
 	margin.add_child(_make_label(message, 13, "#ffffff", _bold_font, HORIZONTAL_ALIGNMENT_CENTER))
 	add_child(toast)
+	_toast_stack.append(toast)
+	_layout_toasts()
 	get_tree().create_timer(1.6).timeout.connect(func() -> void:
 		if is_instance_valid(toast):
 			toast.queue_free()
+		_toast_stack.erase(toast)
+		_layout_toasts()
 	)
+
+
+func _layout_toasts() -> void:
+	var next_stack: Array[Control] = []
+	for item in _toast_stack:
+		if is_instance_valid(item):
+			next_stack.append(item)
+	_toast_stack = next_stack
+	for i in range(_toast_stack.size()):
+		var toast := _toast_stack[i]
+		var top := 24.0 + float(i) * 56.0
+		toast.offset_top = top
+		toast.offset_bottom = top + 48.0
 
 
 func _show_code_modal(title: String, message: String, code: String, editable: bool, extra_buttons: Array) -> void:
@@ -939,6 +1156,17 @@ func _t(key: String) -> String:
 		"coins": return "Moedas" if pt else "Coins"
 		"diamonds": return "Diamantes" if pt else "Diamonds"
 		"level": return "Nível" if pt else "Level"
+		"week": return _txt("Week", "Semana", "Semana", "週", "周")
+		"neon_pass": return _txt("Neon Pass", "Passe Neon", "Pase Neon", "ネオンパス", "霓虹通行证")
+		"weekly_cap": return _txt("Weekly Cap", "Limite Semanal", "Límite Semanal", "週間上限", "每周上限")
+		"add_pass_xp": return _txt("Add Pass XP", "Adicionar XP do Passe", "Añadir XP del Pase", "パスXP追加", "添加通行证经验")
+		"set_neon_pass_level": return _txt("Set Neon Pass Level", "Definir Nível do Passe", "Definir Nivel del Pase", "パスレベル設定", "设置通行证等级")
+		"reset_neon_pass": return _txt("Reset Neon Pass", "Resetar Passe Neon", "Resetear Pase Neon", "ネオンパスリセット", "重置霓虹通行证")
+		"next_week": return _txt("Next Week", "Próxima Semana", "Próxima Semana", "次の週", "下一周")
+		"next_season": return _txt("Next Season", "Próxima Temporada", "Próxima Temporada", "次のシーズン", "下一赛季")
+		"unlock_all_neon_pass_rewards": return _txt("Unlock All Neon Pass Rewards", "Liberar Todas Recompensas do Passe", "Liberar Todas las Recompensas del Pase", "ネオンパス報酬を全解除", "解锁全部霓虹通行证奖励")
+		"claim_all_neon_pass_rewards": return _txt("Claim All Neon Pass Rewards", "Coletar Todas Recompensas do Passe", "Cobrar Todas las Recompensas del Pase", "ネオンパス報酬を全受取", "领取全部霓虹通行证奖励")
+		"reset_claimed_neon_pass_rewards": return _txt("Reset Claimed Neon Pass Rewards", "Resetar Recompensas Coletadas do Passe", "Resetear Recompensas Cobradas del Pase", "受取済みパス報酬をリセット", "重置已领取通行证奖励")
 		"max_phase": return "Fase máxima" if pt else "Max phase"
 		"skins": return "Skins" if pt else "Skins"
 		"debug_tools": return "DEBUG" if pt else "DEBUG"
@@ -978,11 +1206,21 @@ func _t(key: String) -> String:
 		"max_all_upgrades": return "Maximizar Todas as Melhorias" if pt else "Max All Upgrades"
 		"lock_starter_upgrades": return "Bloquear Exceto Starters" if pt else "Lock All Except Starter Upgrades"
 		"reset_upgrade_levels": return "Resetar Níveis de Melhorias" if pt else "Reset Upgrade Levels"
+		"unlock_random_skin": return "Liberar Skin Aleatória" if pt else "Unlock Random Skin"
+		"unlock_10_skins": return "Liberar 10 Skins" if pt else "Unlock 10 Skins"
 		"unlock_all_skins": return "Liberar Todas as Skins" if pt else "Unlock All Skins"
+		"skin_unlocked": return "Skin liberada" if pt else "Skin unlocked"
+		"skins_unlocked": return "Skins liberadas" if pt else "Skins unlocked"
+		"all_skins_unlocked": return "Todas as skins já estão liberadas" if pt else "All skins are already unlocked"
 		"level_up_equipped_skin": return "Upar Skin Equipada" if pt else "Level Up Equipped Skin"
 		"max_equipped_skin": return "Maximizar Skin Equipada" if pt else "Max Equipped Skin"
 		"max_all_skins": return "Maximizar Todas as Skins" if pt else "Max All Skins"
+		"max_collection_achievements": return "Maximizar Conquistas de Coleção" if pt else "Max Collection Achievements"
+		"reset_skin_achievements": return "Resetar Conquistas de Skin" if pt else "Reset Skin Achievements"
 		"reset_skin_levels": return "Resetar Níveis das Skins" if pt else "Reset Skin Levels"
+		"add_profile_stats_test_data": return _txt("Add Profile Stats Test Data", "Adicionar Dados de Teste do Perfil", "Añadir datos de prueba del perfil", "プロフィール統計テスト追加", "添加资料统计测试数据")
+		"reset_profile_stats": return _txt("Reset Profile Stats", "Resetar Estatísticas do Perfil", "Resetear estadísticas del perfil", "プロフィール統計リセット", "重置资料统计")
+		"print_profile_stats": return _txt("Print Profile Stats", "Print Estatísticas do Perfil", "Imprimir estadísticas del perfil", "プロフィール統計表示", "打印资料统计")
 		"skin_level": return "Nível da Skin" if pt else "Skin Level"
 		"level": return "Nível" if pt else "Level"
 		"max_level": return "Nível Máximo" if pt else "Max Level"
@@ -996,10 +1234,32 @@ func _t(key: String) -> String:
 		"not_enough_diamonds": return "Diamantes insuficientes" if pt else "Not enough diamonds"
 		"skin_upgraded": return "Skin melhorada" if pt else "Skin upgraded"
 		"reset_daily": return "Resetar Recompensa Diária" if pt else "Reset Daily Reward"
+		"reset_first_win": return _txt("Reset First Win of Day", "Resetar Primeira Vitória do Dia", "Resetear primera victoria del día", "初勝利リセット", "重置每日首胜")
+		"complete_first_win": return _txt("Complete First Win of Day", "Concluir Primeira Vitória do Dia", "Completar primera victoria del día", "初勝利を完了", "完成每日首胜")
+		"claim_first_win_reward": return _txt("Claim First Win Reward", "Coletar Bônus de Primeira Vitória", "Cobrar recompensa de primera victoria", "初勝利報酬を受取", "领取首胜奖励")
+		"completed_today": return _txt("Completed Today", "Concluído Hoje", "Completado hoy", "本日完了", "今日完成")
+		"available_today": return _txt("Available Today", "Disponível Hoje", "Disponible hoy", "本日利用可能", "今日可用")
 		"reset_daily_challenge": return "Resetar Desafio Diário" if pt else "Reset Daily Challenge"
 		"reroll_daily_challenge": return "Trocar Seed do Desafio" if pt else "Change Challenge Seed"
 		"next_daily_challenge": return "Simular Próximo Dia" if pt else "Simulate Next Day"
 		"daily_challenge_seed": return "Seed do desafio" if pt else "Challenge seed"
+		"event": return "Evento" if pt else "Event"
+		"force_event_index": return "Forçar Evento Semanal" if pt else "Force Event Index"
+		"force_event_index_desc": return "Escolha qual dos 26 eventos semanais ficará ativo durante o debug." if pt else "Choose which of the 26 weekly events is active while debugging."
+		"next_event": return "Próximo Evento" if pt else "Next Event"
+		"previous_event": return "Evento Anterior" if pt else "Previous Event"
+		"complete_current_event": return "Completar Evento Atual" if pt else "Complete Current Event"
+		"reset_current_event": return "Resetar Evento Atual" if pt else "Reset Current Event"
+		"claim_event_reward": return "Coletar Recompensa do Evento" if pt else "Claim Event Reward"
+		"reset_event_override": return "Voltar ao Evento Real" if pt else "Use Real Weekly Event"
+		"offline_rewards": return "Recompensas Offline" if pt else "Offline Rewards"
+		"simulate_10m_afk": return "Simular 10 min AFK" if pt else "Simulate 10 min AFK"
+		"simulate_1h_afk": return "Simular 1h AFK" if pt else "Simulate 1h AFK"
+		"simulate_8h_afk": return "Simular 8h AFK" if pt else "Simulate 8h AFK"
+		"clear_pending_afk": return "Limpar AFK Pendente" if pt else "Clear Pending AFK"
+		"force_show_afk": return "Forçar Modal AFK" if pt else "Force Show AFK Modal"
+		"no_offline_rewards": return "Sem recompensas offline" if pt else "No offline rewards"
+		"max_offline_time": return "Tempo offline máximo atingido" if pt else "Max offline time reached"
 		"reset_wheel": return "Resetar Timer da Roleta" if pt else "Reset Wheel Timer"
 		"reset_tutorial": return "Resetar Tutorial" if pt else "Reset Tutorial"
 		"export_debug_save": return "Exportar Save Debug" if pt else "Export Debug Save"

@@ -18,6 +18,12 @@ const ICON_PATHS := {
 	"league": "res://assets/ui/ui_league_neon.png",
 	"achievements": "res://assets/ui/ui_achievements.png",
 	"skins": "res://assets/ui/ui_skins.png",
+	"play": "res://assets/ui/ui_play.png",
+	"infinite": "res://assets/ui/ui_infinite.png",
+	"upgrades": "res://assets/ui/ui_upgrades.png",
+	"perfect": "res://assets/ui/ui_perfect.png",
+	"combo": "res://assets/ui/ui_combo.png",
+	"crit": "res://assets/ui/ui_crit.png",
 	"coin": "res://assets/ui/ui_coin.png",
 	"gem": "res://assets/ui/ui_gem.png",
 	"key": "res://assets/ui/ui_key.png",
@@ -178,6 +184,7 @@ const SHOP_TABS := [
 var _regular_font: Font
 var _bold_font: Font
 var _shop_tab := "chests"
+var _achievement_filter := "all"
 var _content: VBoxContainer
 var _shop_tab_buttons: Array[Button] = []
 var _feedback_label: Label
@@ -556,6 +563,23 @@ func _populate_daily_reward(data: Dictionary) -> void:
 		card["button"] = "claim" if can_claim and i == clampi(streak, 0, 6) else "done" if i < streak else "wait"
 		card["action"] = "daily_claim" if can_claim and i == clampi(streak, 0, 6) else ""
 		_content.add_child(_make_feature_card(card))
+	var first_win: Dictionary = GameState.get_first_win_of_day_state()
+	var completed := bool(first_win.get("completed_today", false))
+	var reward := Dictionary(first_win.get("preview_reward", first_win.get("reward", {})))
+	var status := _tr("completed_today", "Concluído Hoje") if completed else _tr("win_any_battle_to_claim", "Vença qualquer batalha para coletar")
+	_content.add_child(_make_section_title(_tr("first_win_of_day", "Primeira Vitória do Dia").to_upper()))
+	_content.add_child(_make_feature_card({
+		"title": _tr("first_win_of_day", "Primeira Vitória do Dia"),
+		"desc": "%s\n%s: %s\n%s: %s" % [
+			status,
+			_tr("reward", "Recompensa"), _daily_reward_label(reward, true),
+			_tr("time_until_reset", "Tempo até resetar"), _format_remaining(int(first_win.get("seconds_until_reset", 0))),
+		],
+		"icon": "daily_reward",
+		"button": "done" if completed else "wait",
+		"tone": "#00f0ff" if completed else "#ffd700",
+		"disabled": true,
+	}))
 
 
 func _populate_wheel(data: Dictionary) -> void:
@@ -615,6 +639,17 @@ func _populate_event() -> void:
 		"action": "event:%s" % String(final.get("id", "final_skin")) if final_completed and not final_claimed else "",
 		"disabled": not final_completed or final_claimed,
 	}))
+	var next_event: Dictionary = GameState.get_next_weekly_event_preview()
+	if not next_event.is_empty():
+		_content.add_child(_make_section_title(_txt("NEXT EVENT", "PROXIMO EVENTO", "PRÓXIMO EVENTO", "次のイベント", "下个活动")))
+		_content.add_child(_make_feature_card({
+			"title": String(next_event.get("title", "")),
+			"desc": "%s\n%s: %s" % [String(next_event.get("desc", "")), _txt("Bonus", "Bônus", "Bonificación", "ボーナス", "加成"), String(next_event.get("bonus_text", ""))],
+			"icon": String(next_event.get("icon", "event")),
+			"button": "locked",
+			"tone": String(next_event.get("color", "#00f0ff")),
+			"disabled": true,
+		}))
 
 
 func _populate_daily_challenge() -> void:
@@ -660,22 +695,24 @@ func _populate_daily_challenge() -> void:
 
 
 func _make_event_header(event: Dictionary) -> PanelContainer:
-	var card := _make_card("#00f0ff16", "#00f0ff88")
+	var accent := String(event.get("color", "#00f0ff"))
+	var card := _make_card("%s16" % accent, "%s88" % accent)
 	var body := _card_body(card, 14)
 	var row: BoxContainer = VBoxContainer.new() if _is_narrow_screen() else HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	body.add_child(row)
-	row.add_child(_make_icon("event", 54 if _is_narrow_screen() else 66))
+	row.add_child(_make_icon(String(event.get("icon", "event")), 54 if _is_narrow_screen() else 66))
 	var copy := VBoxContainer.new()
 	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	copy.add_theme_constant_override("separation", 4)
 	copy.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(copy)
-	copy.add_child(_make_label(String(event.get("title", "Evento Codex Neon")).to_upper(), 20, "#00f0ff", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
+	copy.add_child(_make_label(String(event.get("title", "Evento Codex Neon")).to_upper(), 20, accent, _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	var desc := _make_label(String(event.get("desc", "")), 13, "#ffffffbb", _regular_font, HORIZONTAL_ALIGNMENT_LEFT)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	copy.add_child(desc)
+	copy.add_child(_make_label("%s: %s" % [_txt("Bonus", "Bônus", "Bonificación", "ボーナス", "加成"), String(event.get("bonus_text", ""))], 12, "#00ff88", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	copy.add_child(_make_label(_txt("Ends in %s", "Termina em %s", "Termina en %s", "終了まで %s", "剩余 %s") % _format_remaining(int(event.get("seconds_remaining", 0))), 13, "#ffd700", _bold_font, HORIZONTAL_ALIGNMENT_LEFT))
 	return card
 
@@ -776,8 +813,9 @@ func _populate_missions() -> void:
 
 func _populate_achievements() -> void:
 	GameState._update_achievements(false)
+	var all_achievements := GameState.get_achievements()
 	var pending_claims := 0
-	for achievement in GameState.get_achievements():
+	for achievement in all_achievements:
 		var state: Dictionary = GameState.data.get("achievements", {}).get(String(achievement.get("id", "")), {})
 		if bool(state.get("completed", false)) and not bool(state.get("claimed", false)):
 			pending_claims += 1
@@ -790,7 +828,10 @@ func _populate_achievements() -> void:
 		"action": "achievement_all" if pending_claims > 0 else "",
 		"disabled": pending_claims <= 0,
 	}))
-	for achievement in GameState.get_achievements():
+	_content.add_child(_make_achievement_filter_row())
+	for achievement in all_achievements:
+		if not _achievement_matches_filter(achievement):
+			continue
 		var id := String(achievement["id"])
 		var state: Dictionary = GameState.data.get("achievements", {}).get(id, {})
 		var progress := int(state.get("progress", 0))
@@ -807,6 +848,43 @@ func _populate_achievements() -> void:
 			"progress": float(progress) / max(1.0, float(required)),
 			"action": "achievement:%s" % id if completed and not claimed else "",
 		}))
+
+
+func _make_achievement_filter_row() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_theme_constant_override("separation", 10)
+	for filter in [
+		{ "id": "all", "label": _txt("All", "Todas", "Todos", "すべて", "全部") },
+		{ "id": "skins", "label": _txt("Skins / Collection", "Skins / Colecao", "Skins / Coleccion", "スキン/コレクション", "皮肤/收藏") },
+	]:
+		var button := Button.new()
+		button.text = String(filter["label"])
+		button.custom_minimum_size = Vector2(0, 42)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_override("font", _bold_font)
+		button.add_theme_font_size_override("font_size", 14)
+		button.add_theme_color_override("font_color", Color("#001018") if String(filter["id"]) == _achievement_filter else Color("#ffffff"))
+		var tone := "#00f0ff" if String(filter["id"]) == _achievement_filter else "#ffffff22"
+		var border := "#ffffff" if String(filter["id"]) == _achievement_filter else "#00f0ff55"
+		_apply_button_style(button, _make_style(tone, 16, border, 1, "#00f0ff55", 8))
+		var filter_id := String(filter["id"])
+		button.pressed.connect(func() -> void:
+			_achievement_filter = filter_id
+			_build_screen()
+		)
+		row.add_child(button)
+	return row
+
+
+func _achievement_matches_filter(achievement: Dictionary) -> bool:
+	if _achievement_filter == "all":
+		return true
+	var category := String(achievement.get("category", ""))
+	var id := String(achievement.get("id", ""))
+	var metric := String(achievement.get("metric", ""))
+	var reward: Dictionary = Dictionary(achievement.get("reward", {}))
+	return category in ["skins", "collection"] or id.begins_with("skin_") or metric.begins_with("skin") or String(reward.get("type", "")) == "skin"
 
 
 func _localized_definition_title(definition: Dictionary) -> String:
@@ -1315,16 +1393,20 @@ func _reward_label(reward: Dictionary) -> String:
 	return String(reward.get("type", "Reward"))
 
 
-func _daily_reward_label(reward: Dictionary) -> String:
+func _daily_reward_label(reward: Dictionary, show_chance := false) -> String:
 	var parts: Array[String] = []
 	if int(reward.get("coins", 0)) > 0:
 		parts.append("%s %s" % [int(reward.get("coins", 0)), _txt("coins", "moedas", "monedas", "コイン", "金币")])
 	if int(reward.get("xp", 0)) > 0:
 		parts.append("%s XP" % int(reward.get("xp", 0)))
+	if int(reward.get("pass_xp", 0)) > 0:
+		parts.append("%s %s" % [int(reward.get("pass_xp", 0)), _tr("pass_xp", "XP do Passe")])
 	if int(reward.get("diamonds", 0)) > 0:
 		parts.append("%s %s" % [int(reward.get("diamonds", 0)), _tr("diamonds")])
 	if int(reward.get("keys", 0)) > 0:
 		parts.append("%s %s" % [int(reward.get("keys", 0)), _tr("keys")])
+	elif show_chance and float(reward.get("key_chance", 0.0)) > 0.0:
+		parts.append("%s%% %s" % [int(round(float(reward.get("key_chance", 0.0)) * 100.0)), _txt("key chance", "chance de chave", "probabilidad de llave", "鍵チャンス", "钥匙概率")])
 	if reward.has("chest_type"):
 		parts.append("%s %s" % [String(reward.get("chest_type", "rare")), _tr("chests")])
 	return ", ".join(parts)
